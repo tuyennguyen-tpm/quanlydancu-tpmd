@@ -356,7 +356,7 @@
   color: white;
   font-weight: 600;
   box-shadow: var(--shadow-lg);
-  z-index: 9999;
+  z-index: 100000 !important;
   animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   font-size: 0.95rem;
 }

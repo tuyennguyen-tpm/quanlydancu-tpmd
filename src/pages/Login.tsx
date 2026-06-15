@@ -129,7 +129,20 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                 />
               </div>
               <div className="form-actions" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowPinInput(false); setPinValue(''); }} style={{ flex: 1, color: 'white', borderColor: 'rgba(255, 255, 255, 0.15)' }}>Hủy</button>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => { setShowPinInput(false); setPinValue(''); }} 
+                  style={{ 
+                    flex: 1, 
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+                    color: '#f8fafc', 
+                    borderColor: 'rgba(255, 255, 255, 0.15)',
+                    boxShadow: 'none'
+                  }}
+                >
+                  Hủy
+                </button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1.2 }}>Xác nhận</button>
               </div>
             </form>
