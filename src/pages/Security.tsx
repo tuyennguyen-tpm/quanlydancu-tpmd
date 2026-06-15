@@ -5,6 +5,7 @@ import type { SecurityLog } from '../services/db';
 import { showToast } from '../utils/toast';
 
 const Security = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [logs, setLogs] = useState<SecurityLog[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -28,6 +29,10 @@ const Security = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      showToast('Khách không có quyền báo cáo sự vụ an ninh!', 'warning');
+      return;
+    }
     if (!title.trim() || !description.trim()) {
       showToast('Vui lòng nhập đầy đủ thông tin báo cáo!', 'warning');
       return;
@@ -64,36 +69,38 @@ const Security = () => {
           <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', flex: 1, minWidth: '280px' }}>
             Giám sát tình hình trật tự xã hội và lưu trữ nhật ký tuần tra bảo vệ khu dân cư.
           </p>
-          <button 
-            className="btn btn-primary" 
-            onClick={() => setIsFormOpen(true)}
-            style={{ 
-              padding: '8px 16px', 
-              borderRadius: '8px', 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '6px',
-              background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-              boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-              color: 'white',
-              border: 'none',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              height: 'auto',
-              minHeight: '36px'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
-            }}
-          >
-            <AlertTriangle size={16} /> Báo cáo vụ việc
-          </button>
+          {!isGuest && (
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setIsFormOpen(true)}
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '8px', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                color: 'white',
+                border: 'none',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                height: 'auto',
+                minHeight: '36px'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+              }}
+            >
+              <AlertTriangle size={16} /> Báo cáo vụ việc
+            </button>
+          )}
         </div>
       </div>
 

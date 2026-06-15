@@ -5,6 +5,7 @@ import { showToast } from '../utils/toast';
 import type { Document } from '../types';
 
 const Documents = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [docs, setDocs] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -48,6 +49,10 @@ const Documents = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      showToast('Khách không có quyền tải văn bản lên!', 'warning');
+      return;
+    }
     if (!title.trim()) {
       showToast('Vui lòng nhập tiêu đề văn bản!', 'warning');
       return;
@@ -132,36 +137,38 @@ Ban điều hành Tổ dân phố ${tdpName}.
           <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', flex: 1, minWidth: '280px' }}>
             Kho lưu trữ trực tuyến các văn bản chỉ đạo, nghị quyết, báo cáo của Tổ dân phố {tdpName}.
           </p>
-          <button 
-            className="btn btn-primary" 
-            onClick={() => setIsFormOpen(true)}
-            style={{ 
-              padding: '8px 16px', 
-              borderRadius: '8px', 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '6px',
-              background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-              boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-              color: 'white',
-              border: 'none',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              height: 'auto',
-              minHeight: '36px'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
-            }}
-          >
-            <FileDown size={16} /> Tải văn bản lên
-          </button>
+          {!isGuest && (
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setIsFormOpen(true)}
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '8px', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                color: 'white',
+                border: 'none',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                height: 'auto',
+                minHeight: '36px'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+              }}
+            >
+              <FileDown size={16} /> Tải văn bản lên
+            </button>
+          )}
         </div>
       </div>
 

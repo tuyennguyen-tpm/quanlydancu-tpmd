@@ -40,6 +40,7 @@ const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number
 };
 
 const CitizenMap = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   
@@ -150,7 +151,7 @@ const CitizenMap = () => {
       <div className="map-header">
         <div className="header-info">
           <h1>Bản đồ số dân cư {tdpName}</h1>
-          <p>Hiển thị vị trí thực tế của từng hộ dân. Click lên bản đồ để chấm tọa độ định vị hộ dân mới hoặc di chuyển hộ cũ.</p>
+          <p>{isGuest ? 'Hiển thị vị trí thực tế của từng hộ dân trên địa bàn.' : 'Hiển thị vị trí thực tế của từng hộ dân. Click lên bản đồ để chấm tọa độ định vị hộ dân mới hoặc di chuyển hộ cũ.'}</p>
         </div>
         <div className="map-filters">
            <select className="map-select" value={policyFilter} onChange={(e) => setPolicyFilter(e.target.value)}>
@@ -196,7 +197,7 @@ const CitizenMap = () => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <ChangeView center={mapCenter} zoom={mapZoom} />
-            <MapClickHandler onMapClick={handleMapClick} />
+            {!isGuest && <MapClickHandler onMapClick={handleMapClick} />}
             
             {mappedHouseholds.map(h => (
               <Marker 
@@ -218,7 +219,7 @@ const CitizenMap = () => {
       </div>
 
       {/* Click Map Location Assignment Pop-up form */}
-      {clickedCoords && (
+      {!isGuest && clickedCoords && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">

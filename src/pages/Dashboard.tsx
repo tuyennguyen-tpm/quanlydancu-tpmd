@@ -29,6 +29,7 @@ const StatCard = ({ title, value, subtext, icon: Icon, color, trend }: any) => (
 );
 
 const Dashboard = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [stats, setStats] = useState({
     totalHouseholds: 0,
     totalResidents: 0,
@@ -168,15 +169,19 @@ const Dashboard = () => {
     <div className="dashboard-container">
       <div className="welcome-section">
         <div>
-          <h1>Xin chào, Tổ trưởng! 👋</h1>
+          <h1>{isGuest ? 'Chào mừng bà con nhân dân! 👋' : 'Xin chào, Tổ trưởng! 👋'}</h1>
           <p>Hệ thống quản lý thông tin dân cư Tổ dân phố <strong style={{color: 'var(--primary)'}}>{tdpName}</strong></p>
         </div>
         <div className="action-btns">
-          <button className="btn btn-secondary" onClick={handleViewFinanceClick}>Quản lý thu chi</button>
-          <button className="btn btn-primary" onClick={handleAddResidentClick}>
-            <UserPlus size={18} />
-            Thêm nhân khẩu mới
+          <button className="btn btn-secondary" onClick={handleViewFinanceClick}>
+            {isGuest ? 'Xem chi tiết thu chi' : 'Quản lý thu chi'}
           </button>
+          {!isGuest && (
+            <button className="btn btn-primary" onClick={handleAddResidentClick}>
+              <UserPlus size={18} />
+              Thêm nhân khẩu mới
+            </button>
+          )}
         </div>
       </div>
 

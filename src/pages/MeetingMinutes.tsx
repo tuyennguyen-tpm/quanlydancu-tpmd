@@ -5,6 +5,7 @@ import { showToast } from '../utils/toast';
 import type { Meeting } from '../types';
 
 const MeetingMinutes = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState('');
   
@@ -192,6 +193,10 @@ const MeetingMinutes = () => {
   }, []);
 
   const handleReset = () => {
+    if (isGuest) {
+      showToast('Khách không có quyền đặt lại nội dung biên bản!', 'warning');
+      return;
+    }
     if (window.confirm('Bạn có muốn khôi phục nội dung biên bản về mặc định?')) {
       setSelectedMeetingId('');
       setTitle('Họp Tổ dân phố thường kỳ');
@@ -455,6 +460,7 @@ const MeetingMinutes = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ví dụ: Họp bàn phương án bê tông hóa ngõ 47"
+              disabled={isGuest}
               style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
             />
           </div>
@@ -466,6 +472,7 @@ const MeetingMinutes = () => {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                disabled={isGuest}
                 style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
               />
             </div>
@@ -476,6 +483,7 @@ const MeetingMinutes = () => {
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 placeholder="19:30"
+                disabled={isGuest}
                 style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
               />
             </div>
@@ -488,6 +496,7 @@ const MeetingMinutes = () => {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Nhà văn hóa Tổ dân phố"
+              disabled={isGuest}
               style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
             />
           </div>
@@ -499,6 +508,7 @@ const MeetingMinutes = () => {
                 type="text"
                 value={chairman}
                 onChange={(e) => setChairman(e.target.value)}
+                disabled={isGuest}
                 style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
               />
             </div>
@@ -508,6 +518,7 @@ const MeetingMinutes = () => {
                 type="text"
                 value={secretary}
                 onChange={(e) => setSecretary(e.target.value)}
+                disabled={isGuest}
                 style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
               />
             </div>
@@ -519,6 +530,7 @@ const MeetingMinutes = () => {
               type="number"
               value={attendance}
               onChange={(e) => setAttendance(e.target.value)}
+              disabled={isGuest}
               style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
             />
           </div>
@@ -529,6 +541,7 @@ const MeetingMinutes = () => {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Nhập diễn biến chính của cuộc họp..."
+              disabled={isGuest}
               style={{
                 height: '180px',
                 padding: '10px',
@@ -543,13 +556,15 @@ const MeetingMinutes = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-            <button
-              onClick={handleReset}
-              className="btn btn-secondary"
-              style={{ flex: 1, padding: '10px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-            >
-              <RotateCcw size={16} /> Đặt lại mặc định
-            </button>
+            {!isGuest && (
+              <button
+                onClick={handleReset}
+                className="btn btn-secondary"
+                style={{ flex: 1, padding: '10px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <RotateCcw size={16} /> Đặt lại mặc định
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="btn btn-primary"

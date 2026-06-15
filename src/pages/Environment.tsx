@@ -5,6 +5,7 @@ import type { EnvironmentLog } from '../services/db';
 import { showToast } from '../utils/toast';
 
 const Environment = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [logs, setLogs] = useState<EnvironmentLog[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -27,6 +28,10 @@ const Environment = () => {
 
   const handleCreateLog = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      showToast('Khách không có quyền lên lịch dọn dẹp vệ sinh!', 'warning');
+      return;
+    }
     if (!area.trim()) {
       showToast('Vui lòng nhập tên khu vực!', 'warning');
       return;
@@ -52,6 +57,10 @@ const Environment = () => {
   };
 
   const handleToggleStatus = async (log: EnvironmentLog) => {
+    if (isGuest) {
+      showToast('Khách không có quyền thay đổi trạng thái vệ sinh!', 'warning');
+      return;
+    }
     const nextStatusMap: Record<'ok' | 'warning' | 'danger', 'ok' | 'warning' | 'danger'> = {
       'ok': 'warning',
       'warning': 'danger',
@@ -90,36 +99,38 @@ const Environment = () => {
           <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', flex: 1, minWidth: '280px' }}>
             Giám sát vệ sinh ngõ xóm, lên lịch quét dọn định kỳ xây dựng khu dân cư xanh - sạch - đẹp.
           </p>
-          <button 
-            className="btn btn-primary" 
-            onClick={() => setIsFormOpen(true)}
-            style={{ 
-              padding: '8px 16px', 
-              borderRadius: '8px', 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '6px',
-              background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-              boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-              color: 'white',
-              border: 'none',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              height: 'auto',
-              minHeight: '36px'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
-            }}
-          >
-            <Calendar size={16} /> Lên lịch dọn vệ sinh
-          </button>
+          {!isGuest && (
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setIsFormOpen(true)}
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '8px', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                color: 'white',
+                border: 'none',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                height: 'auto',
+                minHeight: '36px'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+              }}
+            >
+              <Calendar size={16} /> Lên lịch dọn vệ sinh
+            </button>
+          )}
         </div>
       </div>
 
@@ -141,7 +152,7 @@ const Environment = () => {
       </div>
 
       <div className="env-status">
-         <h3>Tình hình vệ sinh các ngõ xóm (Bấm nút cập nhật để đổi trạng thái)</h3>
+         <h3>{isGuest ? 'Tình hình vệ sinh các ngõ xóm' : 'Tình hình vệ sinh các ngõ xóm (Bấm nút cập nhật để đổi trạng thái)'}</h3>
          <div className="list-wrapper">
            {logs.map(log => (
               <div key={log.id} className="status-box">
@@ -152,12 +163,14 @@ const Environment = () => {
                    </div>
                  </div>
                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                   <span className={`s-badge ${log.status}`}>
-                      {getStatusLabel(log.status)}
-                   </span>
-                   <button className="icon-btn-sm" onClick={() => handleToggleStatus(log)} title="Đổi trạng thái">
-                     <RefreshCw size={14} />
-                   </button>
+                    <span className={`s-badge ${log.status}`}>
+                       {getStatusLabel(log.status)}
+                    </span>
+                    {!isGuest && (
+                      <button className="icon-btn-sm" onClick={() => handleToggleStatus(log)} title="Đổi trạng thái">
+                        <RefreshCw size={14} />
+                      </button>
+                    )}
                  </div>
               </div>
            ))}
