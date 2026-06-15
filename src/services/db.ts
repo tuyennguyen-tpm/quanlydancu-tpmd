@@ -356,13 +356,14 @@ export const db = {
   getDocuments: async (): Promise<Document[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('documents').select('*').order('uploaded_at', { ascending: false });
+        const { data, error } = await supabase.from('documents').select('*').neq('id', 'CONFIG_PIN').order('uploaded_at', { ascending: false });
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getDocuments error, falling back to local storage', e);
       }
     }
-    return getStorageItem<Document[]>('documents', seedDocuments);
+    const list = getStorageItem<Document[]>('documents', seedDocuments);
+    return list.filter(d => d.id !== 'CONFIG_PIN');
   },
   saveDocument: async (doc: Document): Promise<Document> => {
     if (supabase) {
@@ -507,5 +508,36 @@ export const db = {
   },
   getGroupId: (): string => {
     return localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
+  },
+  getGuestPin: async (): Promise<string> => {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('documents').select('*').eq('id', 'CONFIG_PIN').maybeSingle();
+        if (!error && data) {
+          return data.title;
+        }
+      } catch (e) {
+        console.error('Supabase getGuestPin error', e);
+      }
+    }
+    return localStorage.getItem('guest_access_pin') || '1234';
+  },
+  saveGuestPin: async (pin: string): Promise<void> => {
+    localStorage.setItem('guest_access_pin', pin);
+    if (supabase) {
+      try {
+        const payload = {
+          id: 'CONFIG_PIN',
+          group_id: db.getGroupId(),
+          title: pin,
+          type: 'other',
+          file_url: '#',
+          uploaded_at: new Date().toISOString()
+        };
+        await supabase.from('documents').upsert(payload);
+      } catch (e) {
+        console.error('Supabase saveGuestPin error', e);
+      }
+    }
   }
 };

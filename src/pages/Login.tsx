@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Database, Users } from 'lucide-react';
-import { supabase } from '../services/db';
+import { supabase, db } from '../services/db';
 import { showToast } from '../utils/toast';
 
 interface LoginProps {
@@ -12,13 +12,22 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
   const [showPinInput, setShowPinInput] = React.useState(false);
   const [pinValue, setPinValue] = React.useState('');
 
-  const handleVerifyGuestPin = (e: React.FormEvent) => {
+  const handleVerifyGuestPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const correctPin = localStorage.getItem('guest_access_pin') || '1234';
-    if (pinValue.trim() === correctPin.trim()) {
-      onGuestMode();
-    } else {
-      showToast(`Mã PIN không chính xác! (PIN hiện tại: "${correctPin.trim()}")`, 'danger');
+    try {
+      const correctPin = await db.getGuestPin();
+      if (pinValue.trim() === correctPin.trim()) {
+        onGuestMode();
+      } else {
+        showToast(`Mã PIN không chính xác! (PIN hiện tại: "${correctPin.trim()}")`, 'danger');
+      }
+    } catch (err) {
+      const correctPin = localStorage.getItem('guest_access_pin') || '1234';
+      if (pinValue.trim() === correctPin.trim()) {
+        onGuestMode();
+      } else {
+        showToast('Mã PIN không chính xác!', 'danger');
+      }
     }
   };
 

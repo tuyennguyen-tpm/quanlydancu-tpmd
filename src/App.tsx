@@ -353,7 +353,7 @@ const App = () => {
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
 
     // Lưu mã PIN truy cập cho Bà con
-    localStorage.setItem('guest_access_pin', guestPinInput.trim() || '1234');
+    db.saveGuestPin(guestPinInput.trim() || '1234');
 
     // Lưu Supabase config
     localStorage.setItem('supabase_url', sbUrl.trim());
