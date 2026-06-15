@@ -1,5 +1,7 @@
+// v2.1 - Su dung bang app_config cho dong bo ma PIN (khong phu thuoc documents)
 import { createClient } from '@supabase/supabase-js';
 import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity } from '../types';
+
 
 // Types for logs not defined in index.ts
 export interface SecurityLog {
