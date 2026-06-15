@@ -90,6 +90,7 @@ const App = () => {
   const [targetNghieoInput, setTargetNghieoInput] = useState(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
   const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
   const [targetVeSinhInput, setTargetVeSinhInput] = useState(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
+  const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
 
   // Notifications states
   const [isNotifOpen, setNotifOpen] = useState(false);
@@ -309,6 +310,7 @@ const App = () => {
     setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
+    setGuestPinInput(localStorage.getItem('guest_access_pin') || '1234');
     setSettingsOpen(true);
   };
 
@@ -349,6 +351,9 @@ const App = () => {
     localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.trim() || '10000000');
     localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.trim() || '30000000');
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
+
+    // Lưu mã PIN truy cập cho Bà con
+    localStorage.setItem('guest_access_pin', guestPinInput.trim() || '1234');
 
     // Lưu Supabase config
     localStorage.setItem('supabase_url', sbUrl.trim());
@@ -798,6 +803,32 @@ const App = () => {
                     value={targetVeSinhInput}
                     onChange={(e) => setTargetVeSinhInput(e.target.value)}
                     placeholder="Ví dụ: 30000000"
+                  />
+                </div>
+              </div>
+
+              {/* ─── Phần 1c: Bảo mật truy cập công cộng ─── */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))',
+                border: '1.5px solid rgba(245,158,11,0.18)',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginTop: '12px'
+              }}>
+                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+                  🔒 Bảo mật truy cập công cộng
+                </div>
+                <div className="form-group">
+                  <label>Mã PIN truy cập cho Bà con</label>
+                  <input
+                    type="text"
+                    value={guestPinInput}
+                    onChange={(e) => setGuestPinInput(e.target.value)}
+                    placeholder="Mặc định: 1234"
+                    maxLength={10}
                   />
                 </div>
               </div>

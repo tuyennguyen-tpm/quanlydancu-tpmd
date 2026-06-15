@@ -9,6 +9,19 @@ interface LoginProps {
 }
 
 const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
+  const [showPinInput, setShowPinInput] = React.useState(false);
+  const [pinValue, setPinValue] = React.useState('');
+
+  const handleVerifyGuestPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const correctPin = localStorage.getItem('guest_access_pin') || '1234';
+    if (pinValue.trim() === correctPin.trim()) {
+      onGuestMode();
+    } else {
+      showToast('Mã PIN truy cập không chính xác!', 'danger');
+    }
+  };
+
   const handleGoogleLogin = async () => {
     if (!supabase) {
       showToast('Chưa cấu hình Supabase! Vui lòng sử dụng chế độ Offline hoặc cấu hình Supabase trong Cài đặt hệ thống.', 'warning');
@@ -61,7 +74,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
             Đăng nhập bằng Google
           </button>
 
-          <button className="google-login-btn" onClick={onGuestMode} style={{ marginTop: '8px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#60a5fa' }}>
+          <button className="google-login-btn" onClick={() => setShowPinInput(true)} style={{ marginTop: '8px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#60a5fa' }}>
             <Users size={20} style={{ marginRight: '10px' }} />
             Xem thông tin công khai (Bà con)
           </button>
@@ -80,6 +93,49 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
           <span>Phát triển bởi Tuyến Nguyễn - 6 / 2026</span>
         </div>
       </div>
+
+      {showPinInput && (
+        <div className="modal-overlay" style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.85)' }}>
+          <div className="modal-content" style={{ maxWidth: '340px', background: '#1e293b', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <div className="modal-header" style={{ justifyContent: 'center' }}>
+              <h3 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🔑 Nhập mã PIN truy cập
+              </h3>
+            </div>
+            <form onSubmit={handleVerifyGuestPin} className="modal-form" style={{ marginTop: '16px' }}>
+              <div className="form-group" style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '16px' }}>
+                  Vui lòng nhập mã PIN bảo mật của Tổ dân phố để xem thông tin công khai.
+                </p>
+                <input 
+                  type="password" 
+                  value={pinValue}
+                  onChange={(e) => setPinValue(e.target.value)}
+                  placeholder="Mã PIN..."
+                  autoFocus
+                  required
+                  style={{
+                    fontSize: '1.25rem',
+                    textAlign: 'center',
+                    letterSpacing: '4px',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(0, 0, 0, 0.2)',
+                    color: 'white',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div className="form-actions" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowPinInput(false); setPinValue(''); }} style={{ flex: 1, color: 'white', borderColor: 'rgba(255, 255, 255, 0.15)' }}>Hủy</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1.2 }}>Xác nhận</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .login-wrapper {
