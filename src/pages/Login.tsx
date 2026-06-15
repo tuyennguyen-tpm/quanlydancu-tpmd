@@ -18,7 +18,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
     if (pinValue.trim() === correctPin.trim()) {
       onGuestMode();
     } else {
-      showToast('Mã PIN truy cập không chính xác!', 'danger');
+      showToast('Mã PIN không chính xác! (Mặc định là 1234 nếu chưa cấu hình trên thiết bị này)', 'danger');
     }
   };
 
