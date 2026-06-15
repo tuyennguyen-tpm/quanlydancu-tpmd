@@ -314,7 +314,7 @@ const App = () => {
     setSettingsOpen(true);
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     // Lưu tên TDP
     const newName = tdpNameInput.trim() || 'Nam Sầm Sơn';
@@ -353,7 +353,11 @@ const App = () => {
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
 
     // Lưu mã PIN truy cập cho Bà con
-    db.saveGuestPin(guestPinInput.trim() || '1234');
+    try {
+      await db.saveGuestPin(guestPinInput.trim() || '1234');
+    } catch (err: any) {
+      showToast(`Không thể đồng bộ mã PIN lên Database: ${err.message || err}`, 'danger');
+    }
 
     // Lưu Supabase config
     localStorage.setItem('supabase_url', sbUrl.trim());

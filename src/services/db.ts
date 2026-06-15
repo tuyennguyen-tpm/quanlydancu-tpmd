@@ -513,11 +513,15 @@ export const db = {
     if (supabase) {
       try {
         const { data, error } = await supabase.from('documents').select('*').eq('id', 'CONFIG_PIN').maybeSingle();
-        if (!error && data) {
+        if (error) {
+          throw new Error(error.message);
+        }
+        if (data) {
           return data.title;
         }
       } catch (e) {
         console.error('Supabase getGuestPin error', e);
+        throw e;
       }
     }
     return localStorage.getItem('guest_access_pin') || '1234';
@@ -525,18 +529,17 @@ export const db = {
   saveGuestPin: async (pin: string): Promise<void> => {
     localStorage.setItem('guest_access_pin', pin);
     if (supabase) {
-      try {
-        const payload = {
-          id: 'CONFIG_PIN',
-          group_id: db.getGroupId(),
-          title: pin,
-          type: 'other',
-          file_url: '#',
-          uploaded_at: new Date().toISOString()
-        };
-        await supabase.from('documents').upsert(payload);
-      } catch (e) {
-        console.error('Supabase saveGuestPin error', e);
+      const payload = {
+        id: 'CONFIG_PIN',
+        group_id: db.getGroupId(),
+        title: pin,
+        type: 'other',
+        file_url: '#',
+        uploaded_at: new Date().toISOString()
+      };
+      const { error } = await supabase.from('documents').upsert(payload);
+      if (error) {
+        throw new Error(error.message);
       }
     }
   }

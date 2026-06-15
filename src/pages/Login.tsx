@@ -21,12 +21,12 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       } else {
         showToast(`Mã PIN không chính xác! (PIN hiện tại: "${correctPin.trim()}")`, 'danger');
       }
-    } catch (err) {
+    } catch (err: any) {
       const correctPin = localStorage.getItem('guest_access_pin') || '1234';
       if (pinValue.trim() === correctPin.trim()) {
         onGuestMode();
       } else {
-        showToast('Mã PIN không chính xác!', 'danger');
+        showToast(`Lỗi kết nối database: ${err.message || err}. (PIN hiện tại: "${correctPin}")`, 'danger');
       }
     }
   };
