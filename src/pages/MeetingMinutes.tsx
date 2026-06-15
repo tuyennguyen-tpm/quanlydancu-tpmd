@@ -367,6 +367,7 @@ const MeetingMinutes = () => {
           <table class="footer-table">
             <tr>
               <td>
+                <div style="font-style: italic; font-size: 11pt; margin-bottom: 3px; visibility: hidden;">&nbsp;</div>
                 <div style="font-weight: bold; text-transform: uppercase;">THƯ KÝ CUỘC HỌP</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
                 <div class="signature-space"></div>
@@ -667,6 +668,7 @@ const MeetingMinutes = () => {
             {/* Signatures */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', fontSize: '10.5pt' }}>
               <div style={{ textAlign: 'center', width: '45%' }}>
+                <div style={{ fontStyle: 'italic', fontSize: '9.5pt', visibility: 'hidden' }}>&nbsp;</div>
                 <div style={{ fontWeight: 'bold' }}>THƯ KÝ CUỘC HỌP</div>
                 <div style={{ height: '40px' }}></div>
                 <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
