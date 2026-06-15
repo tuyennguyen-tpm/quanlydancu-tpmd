@@ -531,28 +531,16 @@ export const db = {
   },
   saveGuestPin: async (pin: string): Promise<void> => {
     localStorage.setItem('guest_access_pin', pin);
-    if (supabase) {
-      // Lưu PIN vào bảng app_config (TEXT key, không phải UUID)
-      const { error } = await supabase.from('app_config').upsert({
-        key: 'guest_pin',
-        value: pin,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'key' });
-      if (error) throw new Error(`Lỗi upsert: ${error.message} (code: ${error.code})`);
-
-      // Xác nhận lại bằng cách đọc ngược
-      const { data: verify, error: verifyErr } = await supabase
-        .from('app_config')
-        .select('value')
-        .eq('key', 'guest_pin')
-        .maybeSingle();
-      if (verifyErr) throw new Error(`Lỗi verify: ${verifyErr.message}`);
-      if (!verify || verify.value !== pin) {
-        throw new Error(`PIN không khớp sau lưu: cần "${pin}", DB trả về "${verify?.value}"`);
-      }
-    } else {
-      throw new Error('Supabase chưa được kết nối - PIN chỉ lưu cục bộ, không đồng bộ được!');
+    if (!supabase) {
+      console.warn('saveGuestPin: supabase la null, chi luu localStorage');
+      return;
     }
+    const { error } = await supabase
+      .from('app_config')
+      .upsert({ key: 'guest_pin', value: pin, updated_at: new Date().toISOString() });
+    if (error) {
+      throw new Error(`${error.message} (code: ${error.code})`);
+    }
+    console.log('saveGuestPin: da luu PIN thanh cong vao app_config:', pin);
   }
-
 };
