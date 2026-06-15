@@ -215,7 +215,7 @@ const Households = () => {
         household_number: householdNumber,
         address,
         head_of_household_id: finalHeadId,
-        group_id: 'NAM_SAM_SON_01',
+        group_id: db.getGroupId(),
         latitude: parseFloat(lat) || 19.7420,
         longitude: parseFloat(lng) || 105.9230,
         policy_type: policyType,

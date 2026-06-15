@@ -56,12 +56,12 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }: NavItemProps) =>
   </button>
 );
 
-console.log("DEBUG: App.tsx top-level execution...");
+
 
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isOfflineMode, setOfflineMode] = useState<boolean>(localStorage.getItem('offline_mode') === 'true');
-  console.log("DEBUG: App rendering - session:", session, "isOfflineMode:", isOfflineMode);
+
   
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -72,6 +72,8 @@ const App = () => {
   const [tdpName, setTdpName] = useState(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn');
   const [wardName, setWardName] = useState(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn');
   const [leaderName, setLeaderName] = useState(localStorage.getItem('leader_name') || 'Kim Tuyến');
+  const [leaderPhone, setLeaderPhone] = useState(localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982');
+  const [groupId, setGroupId] = useState(localStorage.getItem('group_id') || 'NAM_SAM_SON_01');
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -80,6 +82,8 @@ const App = () => {
   const [tdpNameInput, setTdpNameInput] = useState(tdpName);
   const [wardNameInput, setWardNameInput] = useState(wardName);
   const [leaderNameInput, setLeaderNameInput] = useState(leaderName);
+  const [leaderPhoneInput, setLeaderPhoneInput] = useState(leaderPhone);
+  const [groupIdInput, setGroupIdInput] = useState(groupId);
 
   // Targets states for TDP Funds
   const [targetNghieoInput, setTargetNghieoInput] = useState(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
@@ -207,6 +211,19 @@ const App = () => {
     return () => window.removeEventListener('change-tab', handleChangeTab);
   }, []);
 
+  // Lắng nghe thay đổi kích thước cửa sổ để tự động đóng/mở sidebar
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Search effect
   useEffect(() => {
     const performSearch = async () => {
@@ -284,6 +301,8 @@ const App = () => {
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
     setLeaderNameInput(leaderName);
+    setLeaderPhoneInput(leaderPhone);
+    setGroupIdInput(groupId);
     setTargetNghieoInput(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
     setTargetDapNghiaInput(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
     setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
@@ -311,6 +330,18 @@ const App = () => {
     localStorage.setItem('leader_name', newLeaderName);
     setLeaderName(newLeaderName);
     window.dispatchEvent(new CustomEvent('leader-name-changed'));
+
+    // Lưu số điện thoại Tổ trưởng
+    const newLeaderPhone = leaderPhoneInput.trim() || '0912 083 018 - 0899 661 982';
+    localStorage.setItem('leader_phone', newLeaderPhone);
+    setLeaderPhone(newLeaderPhone);
+    window.dispatchEvent(new CustomEvent('leader-phone-changed'));
+
+    // Lưu group_id
+    const newGroupId = groupIdInput.trim() || 'NAM_SAM_SON_01';
+    localStorage.setItem('group_id', newGroupId);
+    setGroupId(newGroupId);
+    window.dispatchEvent(new CustomEvent('group-id-changed'));
 
     // Lưu định mức các loại quỹ
     localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.trim() || '15000000');
@@ -496,9 +527,7 @@ const App = () => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
               <span style={{ color: '#f8fafc', fontWeight: '700' }}>{leaderName}:</span>
-              <span style={{ color: '#60a5fa' }}>0912 083 018</span>
-              <span style={{ color: '#475569' }}>-</span>
-              <span style={{ color: '#60a5fa' }}>0899 661 982</span>
+              <span style={{ color: '#60a5fa' }}>{leaderPhone}</span>
             </div>
           </div>
         </div>
@@ -686,6 +715,27 @@ const App = () => {
                     onChange={(e) => setLeaderNameInput(e.target.value)}
                     placeholder="Ví dụ: Nguyễn Kim Tuyến..."
                     maxLength={50}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Số điện thoại Tổ trưởng</label>
+                  <input
+                    type="text"
+                    value={leaderPhoneInput}
+                    onChange={(e) => setLeaderPhoneInput(e.target.value)}
+                    placeholder="Ví dụ: 0912 083 018..."
+                    maxLength={50}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Mã định danh địa bàn (Group ID) *</label>
+                  <input
+                    type="text"
+                    value={groupIdInput}
+                    onChange={(e) => setGroupIdInput(e.target.value)}
+                    placeholder="Ví dụ: NAM_SAM_SON_01..."
+                    required
+                    maxLength={30}
                   />
                 </div>
               </div>

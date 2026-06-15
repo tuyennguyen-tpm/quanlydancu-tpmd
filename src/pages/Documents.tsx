@@ -55,7 +55,7 @@ const Documents = () => {
 
     const payload: Document = {
       id: `D-${Date.now()}`,
-      group_id: 'NAM_SAM_SON_01',
+      group_id: db.getGroupId(),
       title,
       type,
       file_url: '#',

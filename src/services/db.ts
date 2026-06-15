@@ -504,5 +504,8 @@ export const db = {
     }
     setStorageItem('policy_activities', acts);
     return act;
+  },
+  getGroupId: (): string => {
+    return localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
   }
 };

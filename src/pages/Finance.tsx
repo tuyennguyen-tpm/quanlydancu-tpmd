@@ -92,7 +92,7 @@ const Finance = () => {
 
     const payload: FinancialRecord = {
       id: editingRecord ? editingRecord.id : `F-${Date.now()}`,
-      group_id: 'NAM_SAM_SON_01',
+      group_id: db.getGroupId(),
       type,
       amount: parsedAmount,
       category,

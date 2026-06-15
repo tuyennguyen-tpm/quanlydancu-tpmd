@@ -50,7 +50,7 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
 
     const payload: Meeting = {
       id: `M-${Date.now()}`,
-      group_id: 'NAM_SAM_SON_01',
+      group_id: db.getGroupId(),
       title,
       content,
       date: new Date(date).toISOString(),

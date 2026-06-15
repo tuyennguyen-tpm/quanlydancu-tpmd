@@ -27,7 +27,7 @@ const Complaints = () => {
   const [residentName, setResidentName] = useState('');
   const [content, setContent] = useState('');
   const [replyText, setReplyText] = useState('');
-  const [replyStatus, setReplyStatus] = useState<'processing' | 'resolved' | 'rejected'>('resolved');
+  const [replyStatus, setReplyStatus] = useState<Complaint['status']>('resolved');
 
   const loadData = async () => {
     try {
@@ -83,7 +83,7 @@ const Complaints = () => {
 
     const payload: Complaint = {
       ...replyingComplaint,
-      status: replyStatus as any,
+      status: replyStatus,
       response: replyText,
     };
 
@@ -102,7 +102,7 @@ const Complaints = () => {
   const handleOpenReply = (c: Complaint) => {
     setReplyingComplaint(c);
     setReplyText(c.response || '');
-    setReplyStatus(c.status === 'pending' ? 'resolved' : (c.status as any));
+    setReplyStatus(c.status === 'pending' ? 'resolved' : c.status);
   };
 
   // Filter and Search
