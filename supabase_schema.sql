@@ -130,3 +130,19 @@ CREATE POLICY "Allow authorized access" ON security_logs FOR ALL USING (auth.rol
 CREATE POLICY "Allow authorized access" ON environment_logs FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Allow authorized access" ON policy_activities FOR ALL USING (auth.role() = 'authenticated');
 
+-- 10. Bảng Cấu hình ứng dụng (app_config)
+-- Bảng này dùng để lưu trữ các cấu hình toàn cục như mã PIN truy cập công khai
+-- Cần TEXT primary key (không phải UUID) và cho phép truy cập công khai
+CREATE TABLE IF NOT EXISTS app_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Không cần RLS cho bảng config - cho phép đọc/ghi công khai
+-- (mã PIN không phải dữ liệu bí mật cấp cao, chỉ để phân biệt người dùng thường)
+ALTER TABLE app_config DISABLE ROW LEVEL SECURITY;
+
+-- Thêm mã PIN mặc định
+INSERT INTO app_config (key, value) VALUES ('guest_pin', '1234')
+ON CONFLICT (key) DO NOTHING;
