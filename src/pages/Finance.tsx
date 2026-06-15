@@ -16,6 +16,7 @@ import { showToast } from '../utils/toast';
 import type { FinancialRecord } from '../types';
 
 const Finance = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -212,37 +213,39 @@ const Finance = () => {
             >
               <Download size={16} /> Sổ thu chi
             </button>
-            <button 
-              className="btn btn-primary" 
-              onClick={handleOpenAdd}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-                color: 'white',
-                border: 'none',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                height: 'auto',
-                minHeight: '36px',
-                fontSize: '0.85rem'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
-              }}
-            >
-              <Plus size={16} /> Lập phiếu mới
-            </button>
+            {!isGuest && (
+              <button 
+                className="btn btn-primary" 
+                onClick={handleOpenAdd}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                  boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                  color: 'white',
+                  border: 'none',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  height: 'auto',
+                  minHeight: '36px',
+                  fontSize: '0.85rem'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+                }}
+              >
+                <Plus size={16} /> Lập phiếu mới
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -300,7 +303,7 @@ const Finance = () => {
                   <th>Danh mục</th>
                   <th>Người lập</th>
                   <th style={{textAlign: 'right'}}>Số tiền</th>
-                  <th style={{textAlign: 'right', paddingRight: '20px'}}>Hành động</th>
+                  {!isGuest && <th style={{textAlign: 'right', paddingRight: '20px'}}>Hành động</th>}
                </tr>
             </thead>
             <tbody>
@@ -316,23 +319,25 @@ const Finance = () => {
                      <td className={`amount-cell ${t.type === 'income' ? 'success' : 'danger'}`}>
                         {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                      </td>
-                     <td style={{textAlign: 'right', whiteSpace: 'nowrap', paddingRight: '16px'}}>
-                        <button 
-                          className="icon-btn-action edit-btn" 
-                          onClick={() => handleOpenEdit(t)}
-                          title="Chỉnh sửa phiếu"
-                          style={{marginRight: '6px'}}
-                        >
-                          <Edit2 size={13} />
-                        </button>
-                        <button 
-                          className="icon-btn-action delete-btn" 
-                          onClick={() => handleDelete(t.id)}
-                          title="Xóa phiếu"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                     </td>
+                     {!isGuest && (
+                       <td style={{textAlign: 'right', whiteSpace: 'nowrap', paddingRight: '16px'}}>
+                          <button 
+                            className="icon-btn-action edit-btn" 
+                            onClick={() => handleOpenEdit(t)}
+                            title="Chỉnh sửa phiếu"
+                            style={{marginRight: '6px'}}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button 
+                            className="icon-btn-action delete-btn" 
+                            onClick={() => handleDelete(t.id)}
+                            title="Xóa phiếu"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                       </td>
+                     )}
                   </tr>
                ))}
                {filteredRecords.length === 0 && (

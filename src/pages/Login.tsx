@@ -1,13 +1,14 @@
 import React from 'react';
-import { ShieldCheck, Database } from 'lucide-react';
+import { ShieldCheck, Database, Users } from 'lucide-react';
 import { supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 
 interface LoginProps {
   onOfflineMode: () => void;
+  onGuestMode: () => void;
 }
 
-const Login = ({ onOfflineMode }: LoginProps) => {
+const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
   const handleGoogleLogin = async () => {
     if (!supabase) {
       showToast('Chưa cấu hình Supabase! Vui lòng sử dụng chế độ Offline hoặc cấu hình Supabase trong Cài đặt hệ thống.', 'warning');
@@ -58,6 +59,11 @@ const Login = ({ onOfflineMode }: LoginProps) => {
               />
             </svg>
             Đăng nhập bằng Google
+          </button>
+
+          <button className="google-login-btn" onClick={onGuestMode} style={{ marginTop: '8px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#60a5fa' }}>
+            <Users size={20} style={{ marginRight: '10px' }} />
+            Xem thông tin công khai (Bà con)
           </button>
 
           <div className="login-divider">

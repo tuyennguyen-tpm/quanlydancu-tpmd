@@ -15,6 +15,7 @@ import { showToast } from '../utils/toast';
 import type { Complaint } from '../types';
 
 const Complaints = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'resolved'>('all');
@@ -208,9 +209,11 @@ const Complaints = () => {
                         {c.status === 'pending' ? <Clock size={14} /> : c.status === 'resolved' ? <CheckCircle size={14} /> : <FileCheck size={14} />}
                         {getStatusLabel(c.status)}
                      </span>
-                     <button className="btn-reply" onClick={() => handleOpenReply(c)}>
-                       {c.response ? 'Sửa phản hồi' : 'Phản hồi / Xử lý'}
-                     </button>
+                      {!isGuest && (
+                        <button className="btn-reply" onClick={() => handleOpenReply(c)}>
+                          {c.response ? 'Sửa phản hồi' : 'Phản hồi / Xử lý'}
+                        </button>
+                      )}
                   </div>
                </div>
             </div>

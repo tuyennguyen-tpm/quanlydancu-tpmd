@@ -61,6 +61,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }: NavItemProps) =>
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [isOfflineMode, setOfflineMode] = useState<boolean>(localStorage.getItem('offline_mode') === 'true');
+  const [isGuestMode, setGuestMode] = useState<boolean>(localStorage.getItem('guest_mode') === 'true');
 
   
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
@@ -386,7 +387,9 @@ const App = () => {
       window.dispatchEvent(ev);
       
       localStorage.removeItem('offline_mode');
+      localStorage.removeItem('guest_mode');
       setOfflineMode(false);
+      setGuestMode(false);
       
       if (supabase) {
         try {
@@ -465,9 +468,15 @@ const App = () => {
     { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết' },
     { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI' },
-  ];
+  ].filter(item => {
+    if (isGuestMode) {
+      // Ẩn Quản lý Hộ dân, Quản lý Nhân khẩu, Họp chi bộ, Họp mặt trận, Trợ lý AI
+      return !['households', 'residents', 'meetings-party', 'meetings-front', 'ai-assistant'].includes(item.id);
+    }
+    return true;
+  });
 
-  if (!session && !isOfflineMode) {
+  if (!session && !isOfflineMode && !isGuestMode) {
     return (
       <>
         {toast && (
@@ -475,12 +484,20 @@ const App = () => {
             {toast.message}
           </div>
         )}
-        <Login onOfflineMode={() => {
-          localStorage.setItem('offline_mode', 'true');
-          setOfflineMode(true);
-          const ev = new CustomEvent('show-toast', { detail: { message: 'Đang chuyển sang chế độ ngoại tuyến...', type: 'info' } });
-          window.dispatchEvent(ev);
-        }} />
+        <Login 
+          onOfflineMode={() => {
+            localStorage.setItem('offline_mode', 'true');
+            setOfflineMode(true);
+            const ev = new CustomEvent('show-toast', { detail: { message: 'Đang chuyển sang chế độ ngoại tuyến...', type: 'info' } });
+            window.dispatchEvent(ev);
+          }} 
+          onGuestMode={() => {
+            localStorage.setItem('guest_mode', 'true');
+            setGuestMode(true);
+            const ev = new CustomEvent('show-toast', { detail: { message: 'Đang đăng nhập chế độ Đọc công khai...', type: 'info' } });
+            window.dispatchEvent(ev);
+          }}
+        />
       </>
     );
   }
@@ -653,9 +670,11 @@ const App = () => {
               )}
             </div>
 
-            <button className="icon-btn" onClick={handleOpenSettings} title="Cấu hình hệ thống">
-              <Settings size={20} />
-            </button>
+            {!isGuestMode && (
+              <button className="icon-btn" onClick={handleOpenSettings} title="Cấu hình hệ thống">
+                <Settings size={20} />
+              </button>
+            )}
           </div>
         </header>
 

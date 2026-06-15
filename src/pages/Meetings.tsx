@@ -5,6 +5,7 @@ import { showToast } from '../utils/toast';
 import type { Meeting } from '../types';
 
 const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }) => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -113,64 +114,66 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
                 : `Tổ chức và quản lý thông tin các cuộc họp Tổ dân phố ${tdpName}.`
             }
           </p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => handleCreateMinutes(undefined, type)}
-              style={{ 
-                padding: '8px 16px', 
-                borderRadius: '8px', 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                height: 'auto',
-                minHeight: '36px',
-                border: '2px solid var(--border)',
-                background: 'white',
-                color: 'var(--text-main)'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <FileText size={16} /> Tạo biên bản
-            </button>
-            <button 
-              className="btn btn-primary" 
-              onClick={() => setIsFormOpen(true)}
-              style={{ 
-                padding: '8px 16px', 
-                borderRadius: '8px', 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '6px',
-                background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-                color: 'white',
-                border: 'none',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                height: 'auto',
-                minHeight: '36px'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
-              }}
-            >
-              <Plus size={16} /> Tạo cuộc họp mới
-            </button>
-          </div>
+          {!isGuest && (
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => handleCreateMinutes(undefined, type)}
+                style={{ 
+                  padding: '8px 16px', 
+                  borderRadius: '8px', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  height: 'auto',
+                  minHeight: '36px',
+                  border: '2px solid var(--border)',
+                  background: 'white',
+                  color: 'var(--text-main)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <FileText size={16} /> Tạo biên bản
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setIsFormOpen(true)}
+                style={{ 
+                  padding: '8px 16px', 
+                  borderRadius: '8px', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                  boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                  color: 'white',
+                  border: 'none',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  height: 'auto',
+                  minHeight: '36px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+                }}
+              >
+                <Plus size={16} /> Tạo cuộc họp mới
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -187,29 +190,31 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
              </div>
              <div className="up-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                  <span>Trạng thái: Đang chuẩn bị</span>
-                 <button
-                   className="btn btn-secondary btn-sm"
-                   onClick={() => handleCreateMinutes(m.id, type)}
-                   style={{
-                     padding: '4px 10px',
-                     fontSize: '0.8rem',
-                     background: 'rgba(255, 255, 255, 0.15)',
-                     borderColor: 'rgba(255, 255, 255, 0.25)',
-                     color: 'white',
-                     height: '28px',
-                     display: 'inline-flex',
-                     alignItems: 'center',
-                     gap: '6px'
-                   }}
-                   onMouseOver={(e) => {
-                     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
-                   }}
-                   onMouseOut={(e) => {
-                     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                   }}
-                 >
-                   <FileText size={14} /> Lập biên bản
-                 </button>
+                 {!isGuest && (
+                   <button
+                     className="btn btn-secondary btn-sm"
+                     onClick={() => handleCreateMinutes(m.id, type)}
+                     style={{
+                       padding: '4px 10px',
+                       fontSize: '0.8rem',
+                       background: 'rgba(255, 255, 255, 0.15)',
+                       borderColor: 'rgba(255, 255, 255, 0.25)',
+                       color: 'white',
+                       height: '28px',
+                       display: 'inline-flex',
+                       alignItems: 'center',
+                       gap: '6px'
+                     }}
+                     onMouseOver={(e) => {
+                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
+                     }}
+                     onMouseOut={(e) => {
+                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                     }}
+                   >
+                     <FileText size={14} /> Lập biên bản
+                   </button>
+                 )}
               </div>
           </div>
         ))
@@ -232,30 +237,32 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
                     <div style={{fontSize: '0.9rem', color: '#475569', margin: '4px 0'}}>{m.content}</div>
                     <div className="m-s" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                        <span>{m.attendance_count} hộ tham gia - Địa điểm: {m.location}</span>
-                       <button
-                         className="btn btn-secondary btn-sm"
-                         onClick={() => handleCreateMinutes(m.id, type)}
-                         style={{
-                           padding: '4px 10px',
-                           fontSize: '0.8rem',
-                           height: '28px',
-                           border: '1.5px solid var(--border)',
-                           display: 'inline-flex',
-                           alignItems: 'center',
-                           gap: '6px',
-                           background: 'white',
-                           color: 'var(--text-main)',
-                           fontWeight: '600'
-                         }}
-                         onMouseOver={(e) => {
-                           e.currentTarget.style.transform = 'translateY(-1px)';
-                         }}
-                         onMouseOut={(e) => {
-                           e.currentTarget.style.transform = 'translateY(0)';
-                         }}
-                       >
-                         <FileText size={14} /> Lập biên bản
-                       </button>
+                       {!isGuest && (
+                         <button
+                           className="btn btn-secondary btn-sm"
+                           onClick={() => handleCreateMinutes(m.id, type)}
+                           style={{
+                             padding: '4px 10px',
+                             fontSize: '0.8rem',
+                             height: '28px',
+                             border: '1.5px solid var(--border)',
+                             display: 'inline-flex',
+                             alignItems: 'center',
+                             gap: '6px',
+                             background: 'white',
+                             color: 'var(--text-main)',
+                             fontWeight: '600'
+                           }}
+                           onMouseOver={(e) => {
+                             e.currentTarget.style.transform = 'translateY(-1px)';
+                           }}
+                           onMouseOut={(e) => {
+                             e.currentTarget.style.transform = 'translateY(0)';
+                           }}
+                         >
+                           <FileText size={14} /> Lập biên bản
+                         </button>
+                       )}
                      </div>
                  </div>
                  <span className="past-badge">Đã xong</span>
