@@ -353,10 +353,12 @@ const App = () => {
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
 
     // Lưu mã PIN truy cập cho Bà con
+    const pinToSave = guestPinInput.trim() || '1234';
     try {
-      await db.saveGuestPin(guestPinInput.trim() || '1234');
+      await db.saveGuestPin(pinToSave);
+      showToast(`✅ Đã đồng bộ mã PIN "${pinToSave}" lên Database!`, 'success');
     } catch (err: any) {
-      showToast(`Không thể đồng bộ mã PIN lên Database: ${err.message || err}`, 'danger');
+      showToast(`❌ Lỗi lưu PIN: ${err.message || err}`, 'danger');
     }
 
     // Lưu Supabase config
