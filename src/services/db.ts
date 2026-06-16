@@ -855,7 +855,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Households
   if (isAll || missingTables.includes('households')) {
     sql += `-- ─── CẬP NHẬT BẢNG HOUSEHOLDS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS households (\n`;
+    sql += `DROP TABLE IF EXISTS households CASCADE;\n\n`;
+    sql += `CREATE TABLE households (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    household_number TEXT NOT NULL,\n`;
@@ -876,7 +877,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Residents
   if (isAll || missingTables.includes('residents')) {
     sql += `-- ─── CẬP NHẬT BẢNG RESIDENTS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS residents (\n`;
+    sql += `DROP TABLE IF EXISTS residents CASCADE;\n\n`;
+    sql += `CREATE TABLE residents (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    household_id UUID REFERENCES households(id) ON DELETE CASCADE,\n`;
@@ -906,7 +908,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Financial records
   if (isAll || missingTables.includes('financial_records')) {
     sql += `-- ─── CẬP NHẬT BẢNG FINANCIAL_RECORDS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS financial_records (\n`;
+    sql += `DROP TABLE IF EXISTS financial_records CASCADE;\n\n`;
+    sql += `CREATE TABLE financial_records (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
@@ -928,7 +931,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Complaints
   if (isAll || missingTables.includes('complaints')) {
     sql += `-- ─── CẬP NHẬT BẢNG COMPLAINTS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS complaints (\n`;
+    sql += `DROP TABLE IF EXISTS complaints CASCADE;\n\n`;
+    sql += `CREATE TABLE complaints (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    resident_id TEXT,\n`;
@@ -951,7 +955,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Meetings
   if (isAll || missingTables.includes('meetings')) {
     sql += `-- ─── CẬP NHẬT BẢNG MEETINGS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS meetings (\n`;
+    sql += `DROP TABLE IF EXISTS meetings CASCADE;\n\n`;
+    sql += `CREATE TABLE meetings (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
@@ -972,7 +977,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Documents
   if (isAll || missingTables.includes('documents')) {
     sql += `-- ─── CẬP NHẬT BẢNG DOCUMENTS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS documents (\n`;
+    sql += `DROP TABLE IF EXISTS documents CASCADE;\n\n`;
+    sql += `CREATE TABLE documents (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
@@ -991,7 +997,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Security logs
   if (isAll || missingTables.includes('security_logs')) {
     sql += `-- ─── CẬP NHẬT BẢNG SECURITY_LOGS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS security_logs (\n`;
+    sql += `DROP TABLE IF EXISTS security_logs CASCADE;\n\n`;
+    sql += `CREATE TABLE security_logs (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    title TEXT NOT NULL,\n`;
@@ -1010,7 +1017,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Environment logs
   if (isAll || missingTables.includes('environment_logs')) {
     sql += `-- ─── CẬP NHẬT BẢNG ENVIRONMENT_LOGS ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS environment_logs (\n`;
+    sql += `DROP TABLE IF EXISTS environment_logs CASCADE;\n\n`;
+    sql += `CREATE TABLE environment_logs (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    area TEXT NOT NULL,\n`;
@@ -1028,7 +1036,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // Policy activities
   if (isAll || missingTables.includes('policy_activities')) {
     sql += `-- ─── CẬP NHẬT BẢNG POLICY_ACTIVITIES ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS policy_activities (\n`;
+    sql += `DROP TABLE IF EXISTS policy_activities CASCADE;\n\n`;
+    sql += `CREATE TABLE policy_activities (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    title TEXT NOT NULL,\n`;
@@ -1047,7 +1056,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   // App config
   if (isAll || missingTables.includes('app_config')) {
     sql += `-- ─── CẬP NHẬT BẢNG APP_CONFIG ───\n`;
-    sql += `CREATE TABLE IF NOT EXISTS app_config (\n`;
+    sql += `DROP TABLE IF EXISTS app_config CASCADE;\n\n`;
+    sql += `CREATE TABLE app_config (\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    key TEXT NOT NULL,\n`;
     sql += `    value TEXT NOT NULL,\n`;
