@@ -609,8 +609,18 @@ export const db = {
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách cuộc họp', error);
         if (!error && data) {
-          // Đảm bảo luôn có trường type (nếu DB chưa có cột type, mặc định 'general')
-          return data.map((m: any) => ({ ...m, type: m.type || 'general' })) as Meeting[];
+          return data.map((m: any) => {
+            // Giải mã loại cuộc họp từ group_id (dạng 'groupId|type')
+            // hoặc từ cột type (nếu DB đã có cột này)
+            let meetingType: string = m.type || 'general';
+            let groupId: string = m.group_id || '';
+            if (groupId.includes('|')) {
+              const parts = groupId.split('|');
+              groupId = parts[0];
+              meetingType = parts[1] || 'general';
+            }
+            return { ...m, group_id: groupId, type: meetingType };
+          }) as Meeting[];
         }
       } catch (e) {
         console.error('Supabase getMeetings error, falling back to local storage', e);
@@ -626,19 +636,13 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        // Loại bỏ 'type' khỏi payload Supabase (cột này có thể chưa tồn tại trong DB cũ)
-        // Nếu DB đã có cột type (sau migration), nó sẽ được gửi lên bình thường
-        const { type: meetingType, ...rest } = fullMeeting as any;
-        const payload = { ...rest, user_id: uId };
-        // Thử gửi có type trước
-        const payloadWithType = { ...fullMeeting, user_id: uId };
-        let { data, error } = await supabase.from('meetings').upsert(payloadWithType).select().single();
-        if (error && (error.message?.includes('type') || error.code === '42703')) {
-          // Nếu lỗi do cột type chưa tồn tại, thử lại không có type
-          const retry = await supabase.from('meetings').upsert(payload).select().single();
-          data = retry.data;
-          error = retry.error;
-        }
+        // Mã hóa loại cuộc họp vào group_id để lưu vào DB mà không cần cột type riêng
+        // Ví dụ: group_id = 'NAM_SAM_SON_01|party'
+        const meetingType = fullMeeting.type || 'general';
+        const encodedGroupId = (fullMeeting.group_id || 'NAM_SAM_SON_01') + '|' + meetingType;
+        const { type: _type, ...rest } = fullMeeting as any;
+        const payload = { ...rest, group_id: encodedGroupId, user_id: uId };
+        const { data, error } = await supabase.from('meetings').upsert(payload).select().single();
         if (error) handleDbError('lưu thông tin cuộc họp', error);
         if (!error && data) return { ...data, type: meetingType || 'general' } as Meeting;
       } catch (e) {
