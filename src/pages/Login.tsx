@@ -260,7 +260,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                 transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
-                justify-content: 'center'
+                justifyContent: 'center'
               }}
             >
               {loading ? 'Đang xử lý...' : (authMode === 'login' ? 'Đăng nhập' : 'Đăng ký tổ mới')}
