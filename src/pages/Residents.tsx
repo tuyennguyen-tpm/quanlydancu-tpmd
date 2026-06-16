@@ -62,6 +62,52 @@ const parseCSV = (text: string) => {
   return lines;
 };
 
+const formatToDisplayDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  return dateStr;
+};
+
+const formatToDbDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+  }
+  return dateStr;
+};
+
+const isValidDate = (dateStr: string) => {
+  const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  if (!dateRegex.test(dateStr.trim())) {
+    return false;
+  }
+  const match = dateStr.trim().match(dateRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1850 || year > new Date().getFullYear()) {
+      return false;
+    }
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const Residents = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -91,6 +137,21 @@ const Residents = () => {
   const [householdId, setHouseholdId] = useState('');
   const [pob, setPob] = useState('');
   const [notes, setNotes] = useState('');
+
+  const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    value = value.replace(/[^\d/]/g, '');
+    
+    if (value.length === 2 && dob.length === 1) {
+      value = value + '/';
+    } else if (value.length === 5 && dob.length === 4) {
+      value = value + '/';
+    }
+    
+    if (value.length <= 10) {
+      setDob(value);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -175,7 +236,7 @@ const Residents = () => {
     setEditingResident(r);
     setFullName(r.full_name);
     setGender(r.gender);
-    setDob(r.dob);
+    setDob(formatToDisplayDate(r.dob));
     setCccd(r.cccd || '');
     setPhone(r.phone || '');
     setOccupation(r.occupation || '');
@@ -198,12 +259,19 @@ const Residents = () => {
       return;
     }
 
+    if (!isValidDate(dob)) {
+      showToast('Ngày sinh không đúng định dạng dd/mm/yyyy (Ví dụ: 02/01/1940)!', 'warning');
+      return;
+    }
+
+    const dbDob = formatToDbDate(dob);
+
     const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
       id: editingResident ? editingResident.id : `R-${Date.now()}`,
       household_id: householdId,
       full_name: fullName,
       gender,
-      dob,
+      dob: dbDob,
       cccd,
       phone,
       occupation,
@@ -330,7 +398,7 @@ const Residents = () => {
     }
 
     const rowsHtml = filteredResidents.map((r, index) => {
-      const formattedDob = r.dob ? new Date(r.dob).toLocaleDateString('vi-VN') : '';
+      const formattedDob = r.dob ? formatToDisplayDate(r.dob) : '';
       const statusText = r.status === 'resident' ? 'Thường trú' :
                          r.status === 'temporary_resident' ? 'Tạm trú' :
                          r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất';
@@ -597,7 +665,16 @@ const Residents = () => {
           const fullName = row[0]?.trim();
           const csvGender = row[1]?.trim().toLowerCase();
           const gender = csvGender === 'nam' ? 'male' : csvGender === 'nữ' ? 'female' : 'other';
-          const dob = row[2]?.trim() || new Date().toISOString().slice(0, 10);
+          let dob = row[2]?.trim() || new Date().toISOString().slice(0, 10);
+          if (dob.includes('/')) {
+            const parts = dob.split('/');
+            if (parts.length === 3) {
+              const day = parts[0].padStart(2, '0');
+              const month = parts[1].padStart(2, '0');
+              const year = parts[2];
+              dob = `${year}-${month}-${day}`;
+            }
+          }
           const permAddress = row[3]?.trim() || '';
           const cccd = row[4]?.trim() || '';
           const phone = row[5]?.trim() || '';
@@ -806,7 +883,7 @@ const Residents = () => {
                   <span>{resident.gender === 'male' ? 'Nam' : 'Nữ'}</span>
                   <span className="age-badge">({getAge(resident.dob)} tuổi)</span>
                 </td>
-                <td>{new Date(resident.dob).toLocaleDateString('vi-VN')}</td>
+                <td>{formatToDisplayDate(resident.dob)}</td>
                 <td><code className="cccd-code">{resident.cccd || 'Chưa cấp'}</code></td>
                 <td>
                   <span className={`relation-badge ${resident.is_head ? 'head' : ''}`}>
@@ -880,9 +957,11 @@ const Residents = () => {
                 <div className="form-group">
                   <label>Ngày sinh *</label>
                   <input 
-                    type="date" 
+                    type="text" 
                     value={dob} 
-                    onChange={(e) => setDob(e.target.value)} 
+                    onChange={handleDobChange} 
+                    placeholder="Ví dụ: 02/01/1940"
+                    maxLength={10}
                     required
                   />
                 </div>

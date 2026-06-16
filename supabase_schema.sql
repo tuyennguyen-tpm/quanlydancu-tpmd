@@ -1,9 +1,23 @@
 -- QUẢN LÝ TỔ DÂN PHỐ - SUPABASE SCHEMA (POSTGRESQL)
+-- Hỗ trợ đa chi nhánh (Multi-tenant): dữ liệu của mỗi tài khoản (Tổ) được cô lập hoàn toàn
+
+-- Reset cơ sở dữ liệu cũ
+DROP TABLE IF EXISTS app_config CASCADE;
+DROP TABLE IF EXISTS policy_activities CASCADE;
+DROP TABLE IF EXISTS environment_logs CASCADE;
+DROP TABLE IF EXISTS security_logs CASCADE;
+DROP TABLE IF EXISTS documents CASCADE;
+DROP TABLE IF EXISTS meetings CASCADE;
+DROP TABLE IF EXISTS complaints CASCADE;
+DROP TABLE IF EXISTS financial_records CASCADE;
+DROP TABLE IF EXISTS residents CASCADE;
+DROP TABLE IF EXISTS households CASCADE;
 
 -- 1. Bảng Hộ gia đình (households)
 CREATE TABLE households (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    household_number TEXT UNIQUE, -- Số sổ hộ khẩu hoặc mã định danh
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    household_number TEXT NOT NULL, -- Số sổ hộ khẩu hoặc mã định danh
     address TEXT NOT NULL,
     group_id TEXT DEFAULT 'NAM_SAM_SON_01', 
     latitude DECIMAL(10, 8),
@@ -15,12 +29,13 @@ CREATE TABLE households (
 -- 2. Bảng Nhân khẩu (residents)
 CREATE TABLE residents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     household_id UUID REFERENCES households(id) ON DELETE CASCADE,
     full_name TEXT NOT NULL,
     other_name TEXT,
     gender TEXT CHECK (gender IN ('male', 'female', 'other')),
     dob DATE NOT NULL,
-    cccd TEXT UNIQUE,
+    cccd TEXT,
     phone TEXT,
     occupation TEXT,
     permanent_address TEXT,
@@ -28,12 +43,16 @@ CREATE TABLE residents (
     is_head BOOLEAN DEFAULT FALSE,
     relationship_with_head TEXT,
     status TEXT CHECK (status IN ('resident', 'temporary_absent', 'temporary_resident', 'deceased')) DEFAULT 'resident',
+    pob TEXT,
+    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 3. Bảng Thu chi (financial_records)
 CREATE TABLE financial_records (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    group_id TEXT DEFAULT 'NAM_SAM_SON_01',
     type TEXT CHECK (type IN ('income', 'expense')) NOT NULL,
     amount BIGINT NOT NULL,
     category TEXT NOT NULL,
@@ -46,6 +65,8 @@ CREATE TABLE financial_records (
 -- 4. Bảng Phản ánh kiến nghị (complaints)
 CREATE TABLE complaints (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    resident_id TEXT,
     resident_name TEXT NOT NULL,
     content TEXT NOT NULL,
     status TEXT CHECK (status IN ('pending', 'processing', 'resolved', 'rejected')) DEFAULT 'pending',
@@ -57,6 +78,8 @@ CREATE TABLE complaints (
 -- 5. Bảng Họp dân (meetings)
 CREATE TABLE meetings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    group_id TEXT DEFAULT 'NAM_SAM_SON_01',
     title TEXT NOT NULL,
     content TEXT,
     date TIMESTAMP WITH TIME ZONE,
@@ -65,23 +88,10 @@ CREATE TABLE meetings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- ENABLE RLS (Row Level Security)
-ALTER TABLE households ENABLE ROW LEVEL SECURITY;
-ALTER TABLE residents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE financial_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE complaints ENABLE ROW LEVEL SECURITY;
-ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
-
--- Tạo Policy đơn giản (Cho phép mọi người dùng đã đăng nhập có quyền xem và sửa - có thể tùy chỉnh thêm)
-CREATE POLICY "Allow authorized access" ON households FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authorized access" ON residents FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authorized access" ON financial_records FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authorized access" ON complaints FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authorized access" ON meetings FOR ALL USING (auth.role() = 'authenticated');
-
 -- 6. Bảng Tài liệu văn bản (documents)
 CREATE TABLE documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     group_id TEXT DEFAULT 'NAM_SAM_SON_01',
     title TEXT NOT NULL,
     type TEXT CHECK (type IN ('directive', 'plan', 'report', 'other')) NOT NULL,
@@ -92,6 +102,7 @@ CREATE TABLE documents (
 -- 7. Bảng Nhật ký an ninh (security_logs)
 CREATE TABLE security_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     type TEXT CHECK (type IN ('ok', 'alert')) NOT NULL,
@@ -102,6 +113,7 @@ CREATE TABLE security_logs (
 -- 8. Bảng Giám sát môi trường (environment_logs)
 CREATE TABLE environment_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     area TEXT NOT NULL,
     status TEXT CHECK (status IN ('ok', 'warning', 'danger')) NOT NULL,
     last_cleaned DATE DEFAULT CURRENT_DATE,
@@ -111,6 +123,7 @@ CREATE TABLE environment_logs (
 -- 9. Bảng Chương trình chính sách (policy_activities)
 CREATE TABLE policy_activities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     title TEXT NOT NULL,
     description TEXT NOT NULL,
     target_group TEXT NOT NULL,
@@ -118,31 +131,53 @@ CREATE TABLE policy_activities (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- ENABLE RLS (Row Level Security) FOR NEW TABLES
+-- 10. Bảng Cấu hình ứng dụng (app_config)
+CREATE TABLE app_config (
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (user_id, key)
+);
+
+-- KÍCH HOẠT ROW LEVEL SECURITY (RLS) CHO TẤT CẢ CÁC BẢNG
+ALTER TABLE households ENABLE ROW LEVEL SECURITY;
+ALTER TABLE residents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE complaints ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE security_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE environment_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE policy_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
 
--- Tạo Policy cho các bảng mới
-CREATE POLICY "Allow authorized access" ON documents FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authorized access" ON security_logs FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authorized access" ON environment_logs FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Allow authorized access" ON policy_activities FOR ALL USING (auth.role() = 'authenticated');
+-- TẠO CÁC CHÍNH SÁCH BẢO MẬT (RLS POLICIES)
 
--- 10. Bảng Cấu hình ứng dụng (app_config)
--- Bảng này dùng để lưu trữ các cấu hình toàn cục như mã PIN truy cập công khai
--- Cần TEXT primary key (không phải UUID) và cho phép truy cập công khai
-CREATE TABLE IF NOT EXISTS app_config (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- A. Quyền của quản trị viên (Authenticated): Chỉ thao tác trên dữ liệu của chính mình (user_id = auth.uid())
+CREATE POLICY "Allow admin access households" ON households FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access residents" ON residents FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access financial_records" ON financial_records FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access complaints" ON complaints FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access meetings" ON meetings FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access documents" ON documents FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access security_logs" ON security_logs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access environment_logs" ON environment_logs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access policy_activities" ON policy_activities FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access app_config" ON app_config FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
--- Không cần RLS cho bảng config - cho phép đọc/ghi công khai
--- (mã PIN không phải dữ liệu bí mật cấp cao, chỉ để phân biệt người dùng thường)
-ALTER TABLE app_config DISABLE ROW LEVEL SECURITY;
+-- B. Quyền của người dân (Anonymous/Guest): Chỉ được đọc thông tin của tổ (RLS sẽ kiểm tra trong mệnh đề WHERE ở client bằng .eq('user_id', tenantId))
+-- Chúng ta mở quyền SELECT công khai (TO anon) để người dân có thể truy vấn
+CREATE POLICY "Allow public read households" ON households FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read residents" ON residents FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read financial_records" ON financial_records FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read complaints" ON complaints FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read meetings" ON meetings FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read documents" ON documents FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read security_logs" ON security_logs FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read environment_logs" ON environment_logs FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read policy_activities" ON policy_activities FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO anon USING (true);
 
--- Thêm mã PIN mặc định
-INSERT INTO app_config (key, value) VALUES ('guest_pin', '1234')
-ON CONFLICT (key) DO NOTHING;
+-- Người dân được gửi phản ánh mới (INSERT vào bảng complaints)
+CREATE POLICY "Allow public submit complaint" ON complaints FOR INSERT TO anon WITH CHECK (true);

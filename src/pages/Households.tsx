@@ -18,6 +18,52 @@ import { db } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Household, Resident } from '../types';
 
+const formatToDisplayDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  return dateStr;
+};
+
+const formatToDbDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+  }
+  return dateStr;
+};
+
+const isValidDate = (dateStr: string) => {
+  const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  if (!dateRegex.test(dateStr.trim())) {
+    return false;
+  }
+  const match = dateStr.trim().match(dateRegex);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1850 || year > new Date().getFullYear()) {
+      return false;
+    }
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const Households = () => {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
@@ -62,6 +108,36 @@ const Households = () => {
   const [headId, setHeadId] = useState('');
   const [lat, setLat] = useState('19.7420');
   const [lng, setLng] = useState('105.9230');
+
+  const handleNewHeadDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    value = value.replace(/[^\d/]/g, '');
+    
+    if (value.length === 2 && newHeadDob.length === 1) {
+      value = value + '/';
+    } else if (value.length === 5 && newHeadDob.length === 4) {
+      value = value + '/';
+    }
+    
+    if (value.length <= 10) {
+      setNewHeadDob(value);
+    }
+  };
+
+  const handleMDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    value = value.replace(/[^\d/]/g, '');
+    
+    if (value.length === 2 && mDob.length === 1) {
+      value = value + '/';
+    } else if (value.length === 5 && mDob.length === 4) {
+      value = value + '/';
+    }
+    
+    if (value.length <= 10) {
+      setMDob(value);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -183,6 +259,10 @@ const Households = () => {
         showToast('Vui lòng nhập ngày sinh chủ hộ mới!', 'warning');
         return;
       }
+      if (!isValidDate(newHeadDob)) {
+        showToast('Ngày sinh chủ hộ không đúng định dạng dd/mm/yyyy (Ví dụ: 02/01/1940)!', 'warning');
+        return;
+      }
     }
 
     try {
@@ -191,12 +271,13 @@ const Households = () => {
 
       if (!editingHousehold && createNewHead) {
         const generatedHeadId = `R-${Date.now()}`;
+        const dbNewHeadDob = formatToDbDate(newHeadDob);
         const headPayload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
           id: generatedHeadId,
           household_id: hhId,
           full_name: newHeadName.trim(),
           gender: newHeadGender,
-          dob: newHeadDob,
+          dob: dbNewHeadDob,
           cccd: newHeadCccd.trim(),
           phone: newHeadPhone.trim(),
           occupation: newHeadOccupation.trim(),
@@ -246,7 +327,7 @@ const Households = () => {
     }
 
     const rowsHtml = members.map((r, index) => {
-      const formattedDob = r.dob ? new Date(r.dob).toLocaleDateString('vi-VN') : '';
+      const formattedDob = r.dob ? formatToDisplayDate(r.dob) : '';
       const statusText = r.status === 'resident' ? 'Thường trú' :
                          r.status === 'temporary_resident' ? 'Tạm trú' :
                          r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất';
@@ -535,12 +616,19 @@ const Households = () => {
       return;
     }
 
+    if (!isValidDate(mDob)) {
+      showToast('Ngày sinh thành viên không đúng định dạng dd/mm/yyyy (Ví dụ: 02/01/1940)!', 'warning');
+      return;
+    }
+
+    const dbMDob = formatToDbDate(mDob);
+
     const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
       id: `R-${Date.now()}`,
       household_id: targetHouseholdForMember.id,
       full_name: mFullName.trim(),
       gender: mGender,
-      dob: mDob,
+      dob: dbMDob,
       cccd: mCccd.trim(),
       phone: mPhone.trim(),
       occupation: mOccupation.trim(),
@@ -813,9 +901,11 @@ const Households = () => {
                         <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                           <label>Ngày sinh *</label>
                           <input 
-                            type="date" 
+                            type="text" 
                             value={newHeadDob} 
-                            onChange={(e) => setNewHeadDob(e.target.value)} 
+                            onChange={handleNewHeadDobChange} 
+                            placeholder="Ví dụ: 02/01/1940"
+                            maxLength={10}
                           />
                         </div>
                       </div>
@@ -914,7 +1004,7 @@ const Households = () => {
                           {member.relationship_with_head}
                         </span>
                       </td>
-                      <td>{new Date(member.dob).toLocaleDateString('vi-VN')}</td>
+                      <td>{formatToDisplayDate(member.dob)}</td>
                       <td><code>{member.cccd || 'Chưa cấp'}</code></td>
                       <td>{member.phone || '—'}</td>
                       <td>{member.occupation || 'Tự do'}</td>
@@ -976,9 +1066,11 @@ const Households = () => {
                 <div className="form-group">
                   <label>Ngày sinh *</label>
                   <input 
-                    type="date" 
+                    type="text" 
                     value={mDob} 
-                    onChange={(e) => setMDob(e.target.value)} 
+                    onChange={handleMDobChange} 
+                    placeholder="Ví dụ: 02/01/1940"
+                    maxLength={10}
                     required
                   />
                 </div>

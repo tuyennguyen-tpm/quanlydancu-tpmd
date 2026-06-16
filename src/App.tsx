@@ -125,6 +125,19 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Lắng nghe tham số URL để chuyển sang chế độ Bà con (Guest Mode) của tổ cụ thể
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tenant = params.get('t');
+    if (tenant) {
+      localStorage.setItem('guest_tenant_id', tenant);
+      localStorage.setItem('guest_mode', 'true');
+      localStorage.removeItem('offline_mode');
+      setGuestMode(true);
+      setOfflineMode(false);
+    }
+  }, []);
+
   useEffect(() => {
     const handleToast = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -299,6 +312,15 @@ const App = () => {
     }
   };
 
+  const handleCopyShareLink = () => {
+    const link = `${window.location.origin}/?t=${session?.user?.id || ''}`;
+    navigator.clipboard.writeText(link);
+    const ev = new CustomEvent('show-toast', { 
+      detail: { message: 'Đã sao chép đường dẫn chia sẻ cho Bà con!', type: 'success' } 
+    });
+    window.dispatchEvent(ev);
+  };
+
   const handleOpenSettings = () => {
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
@@ -404,6 +426,7 @@ const App = () => {
       
       localStorage.removeItem('offline_mode');
       localStorage.removeItem('guest_mode');
+      localStorage.removeItem('guest_tenant_id');
       setOfflineMode(false);
       setGuestMode(false);
       
@@ -417,7 +440,7 @@ const App = () => {
       setSession(null);
       
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = window.location.origin;
       }, 1000);
     }
   };
@@ -842,6 +865,31 @@ const App = () => {
                     maxLength={10}
                   />
                 </div>
+                {session?.user?.id && (
+                  <div className="form-group" style={{ marginTop: '4px' }}>
+                    <label>Đường dẫn chia sẻ cho Bà con</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${window.location.origin}/?t=${session.user.id}`}
+                        style={{ background: 'rgba(0,0,0,0.05)', color: '#64748b', fontSize: '0.82rem', flex: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)' }}
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={handleCopyShareLink}
+                        style={{ fontSize: '0.8rem', padding: '0 12px', height: 'auto', minHeight: '34px', borderRadius: '6px', flexShrink: 0 }}
+                      >
+                        Sao chép
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: '1.4', marginTop: '2px', display: 'block' }}>
+                      * Gửi link này cho Bà con để họ truy cập và xem công khai bằng mã PIN của tổ.
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* ─── Phần 2: Kết nối Supabase ─── */}

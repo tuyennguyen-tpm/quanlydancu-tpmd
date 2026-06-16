@@ -121,12 +121,120 @@ const setStorageItem = <T>(key: string, value: T): void => {
 };
 
 // General DB Interface
+// General DB Interface
+export const getSessionUserId = async (): Promise<string | null> => {
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user?.id || null;
+  }
+  return null;
+};
+
+const getTenantFilter = () => {
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const tenantId = localStorage.getItem('guest_tenant_id');
+  if (isGuest && tenantId) {
+    return tenantId;
+  }
+  return null;
+};
+
+export const seedTenantData = async (userId: string): Promise<void> => {
+  if (!supabase) return;
+  try {
+    console.log('Seeding initial data for tenant:', userId);
+    
+    // 1. Seed Households
+    const householdsPayload = seedHouseholds.map(h => ({
+      ...h,
+      user_id: userId
+    }));
+    await supabase.from('households').insert(householdsPayload);
+
+    // 2. Seed Residents
+    const residentsPayload = seedResidents.map(r => ({
+      ...r,
+      user_id: userId
+    }));
+    await supabase.from('residents').insert(residentsPayload);
+
+    // 3. Seed Financial Records
+    const financePayload = seedFinancialRecords.map(f => ({
+      ...f,
+      user_id: userId
+    }));
+    await supabase.from('financial_records').insert(financePayload);
+
+    // 4. Seed Complaints
+    const complaintsPayload = seedComplaints.map(c => ({
+      ...c,
+      user_id: userId
+    }));
+    await supabase.from('complaints').insert(complaintsPayload);
+
+    // 5. Seed Meetings
+    const meetingsPayload = seedMeetings.map(m => ({
+      ...m,
+      user_id: userId
+    }));
+    await supabase.from('meetings').insert(meetingsPayload);
+
+    // 6. Seed Documents
+    const docsPayload = seedDocuments.map(d => ({
+      ...d,
+      user_id: userId
+    }));
+    await supabase.from('documents').insert(docsPayload);
+
+    // 7. Seed Security Logs
+    const securityPayload = seedSecurityLogs.map(s => ({
+      ...s,
+      user_id: userId
+    }));
+    await supabase.from('security_logs').insert(securityPayload);
+
+    // 8. Seed Environment Logs
+    const envPayload = seedEnvironmentLogs.map(e => ({
+      ...e,
+      user_id: userId
+    }));
+    await supabase.from('environment_logs').insert(envPayload);
+
+    // 9. Seed Policy Activities
+    const policyPayload = seedPolicyActivities.map(p => ({
+      id: p.id,
+      title: p.title,
+      description: p.desc,
+      target_group: p.targetGroup,
+      date: p.date,
+      user_id: userId
+    }));
+    await supabase.from('policy_activities').insert(policyPayload);
+
+    // 10. Seed Guest PIN config
+    await supabase.from('app_config').insert({
+      user_id: userId,
+      key: 'guest_pin',
+      value: '1234'
+    });
+
+    console.log('Seed data completed successfully for tenant:', userId);
+  } catch (err) {
+    console.error('Failed to seed tenant data:', err);
+  }
+};
+
 export const db = {
   // --- Households ---
   getHouseholds: async (): Promise<Household[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('households').select('*');
+        let query = supabase.from('households').select('*');
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getHouseholds error, falling back to local storage', e);
@@ -141,7 +249,9 @@ export const db = {
     };
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('households').upsert(fullHousehold).select().single();
+        const uId = await getSessionUserId();
+        const payload = { ...fullHousehold, user_id: uId };
+        const { data, error } = await supabase.from('households').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveHousehold error, saving to local storage', e);
@@ -181,7 +291,12 @@ export const db = {
   getResidents: async (): Promise<Resident[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('residents').select('*');
+        let query = supabase.from('residents').select('*');
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getResidents error, falling back to local storage', e);
@@ -201,7 +316,9 @@ export const db = {
     };
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('residents').upsert(fullResident).select().single();
+        const uId = await getSessionUserId();
+        const payload = { ...fullResident, user_id: uId };
+        const { data, error } = await supabase.from('residents').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveResident error, saving to local storage', e);
@@ -236,7 +353,12 @@ export const db = {
   getFinancialRecords: async (): Promise<FinancialRecord[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('financial_records').select('*');
+        let query = supabase.from('financial_records').select('*');
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getFinancialRecords error, falling back to local storage', e);
@@ -251,7 +373,9 @@ export const db = {
     };
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('financial_records').upsert(fullRecord).select().single();
+        const uId = await getSessionUserId();
+        const payload = { ...fullRecord, user_id: uId };
+        const { data, error } = await supabase.from('financial_records').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveFinancialRecord error, saving to local storage', e);
@@ -286,7 +410,12 @@ export const db = {
   getComplaints: async (): Promise<Complaint[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('complaints').select('*');
+        let query = supabase.from('complaints').select('*');
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getComplaints error, falling back to local storage', e);
@@ -301,7 +430,10 @@ export const db = {
     };
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('complaints').upsert(fullComplaint).select().single();
+        const tenantId = getTenantFilter();
+        const uId = tenantId || (await getSessionUserId());
+        const payload = { ...fullComplaint, user_id: uId };
+        const { data, error } = await supabase.from('complaints').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveComplaint error, saving to local storage', e);
@@ -322,7 +454,12 @@ export const db = {
   getMeetings: async (): Promise<Meeting[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('meetings').select('*');
+        let query = supabase.from('meetings').select('*');
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getMeetings error, falling back to local storage', e);
@@ -337,7 +474,9 @@ export const db = {
     };
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('meetings').upsert(fullMeeting).select().single();
+        const uId = await getSessionUserId();
+        const payload = { ...fullMeeting, user_id: uId };
+        const { data, error } = await supabase.from('meetings').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveMeeting error, saving to local storage', e);
@@ -358,7 +497,12 @@ export const db = {
   getDocuments: async (): Promise<Document[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('documents').select('*').neq('id', 'CONFIG_PIN').order('uploaded_at', { ascending: false });
+        let query = supabase.from('documents').select('*').neq('id', 'CONFIG_PIN').order('uploaded_at', { ascending: false });
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getDocuments error, falling back to local storage', e);
@@ -370,7 +514,9 @@ export const db = {
   saveDocument: async (doc: Document): Promise<Document> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('documents').upsert(doc).select().single();
+        const uId = await getSessionUserId();
+        const payload = { ...doc, user_id: uId };
+        const { data, error } = await supabase.from('documents').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveDocument error, saving to local storage', e);
@@ -391,7 +537,12 @@ export const db = {
   getSecurityLogs: async (): Promise<SecurityLog[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('security_logs').select('*').order('date', { ascending: false });
+        let query = supabase.from('security_logs').select('*').order('date', { ascending: false });
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getSecurityLogs error, falling back to local storage', e);
@@ -402,7 +553,9 @@ export const db = {
   saveSecurityLog: async (log: SecurityLog): Promise<SecurityLog> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('security_logs').upsert(log).select().single();
+        const uId = await getSessionUserId();
+        const payload = { ...log, user_id: uId };
+        const { data, error } = await supabase.from('security_logs').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveSecurityLog error, saving to local storage', e);
@@ -423,7 +576,12 @@ export const db = {
   getEnvironmentLogs: async (): Promise<EnvironmentLog[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('environment_logs').select('*').order('last_cleaned', { ascending: false });
+        let query = supabase.from('environment_logs').select('*').order('last_cleaned', { ascending: false });
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getEnvironmentLogs error, falling back to local storage', e);
@@ -434,7 +592,9 @@ export const db = {
   saveEnvironmentLog: async (log: EnvironmentLog): Promise<EnvironmentLog> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('environment_logs').upsert(log).select().single();
+        const uId = await getSessionUserId();
+        const payload = { ...log, user_id: uId };
+        const { data, error } = await supabase.from('environment_logs').upsert(payload).select().single();
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveEnvironmentLog error, saving to local storage', e);
@@ -455,7 +615,12 @@ export const db = {
   getActivityPrograms: async (): Promise<PolicyActivity[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('policy_activities').select('*').order('date', { ascending: false });
+        let query = supabase.from('policy_activities').select('*').order('date', { ascending: false });
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
         if (!error && data) {
           return data.map((item: any) => ({
             id: item.id,
@@ -475,13 +640,15 @@ export const db = {
   saveActivityProgram: async (act: PolicyActivity): Promise<PolicyActivity> => {
     if (supabase) {
       try {
+        const uId = await getSessionUserId();
         const dbPayload = {
           id: act.id,
           title: act.title,
           description: act.desc,
           target_group: act.targetGroup,
           date: act.date,
-          created_at: act.created_at || new Date().toISOString()
+          created_at: act.created_at || new Date().toISOString(),
+          user_id: uId
         };
         const { data, error } = await supabase.from('policy_activities').upsert(dbPayload).select().single();
         if (!error && data) {
@@ -514,17 +681,16 @@ export const db = {
   getGuestPin: async (): Promise<string> => {
     if (supabase) {
       try {
-        // Đọc PIN từ bảng app_config (có TEXT key và public read access)
-        const { data, error } = await supabase
-          .from('app_config')
-          .select('value')
-          .eq('key', 'guest_pin')
-          .maybeSingle();
+        const tenantId = localStorage.getItem('guest_tenant_id');
+        let query = supabase.from('app_config').select('value').eq('key', 'guest_pin');
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query.maybeSingle();
         if (error) throw new Error(error.message);
         if (data && data.value) return data.value;
       } catch (e) {
         console.error('Supabase getGuestPin error', e);
-        // Không throw - fallback về localStorage
       }
     }
     return localStorage.getItem('guest_access_pin') || '1234';
@@ -535,9 +701,10 @@ export const db = {
       console.warn('saveGuestPin: supabase la null, chi luu localStorage');
       return;
     }
+    const uId = await getSessionUserId();
     const { error } = await supabase
       .from('app_config')
-      .upsert({ key: 'guest_pin', value: pin, updated_at: new Date().toISOString() });
+      .upsert({ user_id: uId, key: 'guest_pin', value: pin, updated_at: new Date().toISOString() });
     if (error) {
       throw new Error(`${error.message} (code: ${error.code})`);
     }
