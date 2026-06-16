@@ -135,6 +135,13 @@ const handleDbError = (action: string, error: any) => {
       if (action.includes('môi trường')) missingTable = 'environment_logs';
       else if (action.includes('an ninh')) missingTable = 'security_logs';
       else if (action.includes('chính sách')) missingTable = 'policy_activities';
+      else if (action.includes('thu chi')) missingTable = 'financial_records';
+      else if (action.includes('hộ dân')) missingTable = 'households';
+      else if (action.includes('nhân khẩu')) missingTable = 'residents';
+      else if (action.includes('phản ánh')) missingTable = 'complaints';
+      else if (action.includes('cuộc họp')) missingTable = 'meetings';
+      else if (action.includes('tài liệu')) missingTable = 'documents';
+      else if (action.includes('cấu hình') || action.includes('PIN')) missingTable = 'app_config';
     }
   }
 
@@ -841,10 +848,148 @@ export const db = {
 };
 
 export const getSqlPatchForMissingTables = (missingTables: string[]): string => {
+  const isAll = missingTables.includes('all') || missingTables.length > 3;
   let sql = `-- SQL PATCH CẬP NHẬT CƠ SỞ DỮ LIỆU TỔ DÂN PHỐ\n`;
   sql += `-- Hãy copy đoạn mã này và chạy trong mục SQL Editor trên Supabase Dashboard của bạn.\n\n`;
 
-  if (missingTables.includes('security_logs')) {
+  // Households
+  if (isAll || missingTables.includes('households')) {
+    sql += `-- ─── CẬP NHẬT BẢNG HOUSEHOLDS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS households (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    household_number TEXT NOT NULL,\n`;
+    sql += `    address TEXT NOT NULL,\n`;
+    sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
+    sql += `    latitude DECIMAL(10, 8),\n`;
+    sql += `    longitude DECIMAL(11, 8),\n`;
+    sql += `    policy_type TEXT CHECK (policy_type IN ('none', 'poor', 'near_poor', 'policy_family')) DEFAULT 'none',\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE households ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access households" ON households;\n`;
+    sql += `CREATE POLICY "Allow admin access households" ON households FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read households" ON households;\n`;
+    sql += `CREATE POLICY "Allow public read households" ON households FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  // Residents
+  if (isAll || missingTables.includes('residents')) {
+    sql += `-- ─── CẬP NHẬT BẢNG RESIDENTS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS residents (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    household_id UUID REFERENCES households(id) ON DELETE CASCADE,\n`;
+    sql += `    full_name TEXT NOT NULL,\n`;
+    sql += `    other_name TEXT,\n`;
+    sql += `    gender TEXT CHECK (gender IN ('male', 'female', 'other')),\n`;
+    sql += `    dob DATE NOT NULL,\n`;
+    sql += `    cccd TEXT,\n`;
+    sql += `    phone TEXT,\n`;
+    sql += `    occupation TEXT,\n`;
+    sql += `    permanent_address TEXT,\n`;
+    sql += `    temporary_address TEXT,\n`;
+    sql += `    is_head BOOLEAN DEFAULT FALSE,\n`;
+    sql += `    relationship_with_head TEXT,\n`;
+    sql += `    status TEXT CHECK (status IN ('resident', 'temporary_absent', 'temporary_resident', 'deceased')) DEFAULT 'resident',\n`;
+    sql += `    pob TEXT,\n`;
+    sql += `    notes TEXT,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE residents ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access residents" ON residents;\n`;
+    sql += `CREATE POLICY "Allow admin access residents" ON residents FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read residents" ON residents;\n`;
+    sql += `CREATE POLICY "Allow public read residents" ON residents FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  // Financial records
+  if (isAll || missingTables.includes('financial_records')) {
+    sql += `-- ─── CẬP NHẬT BẢNG FINANCIAL_RECORDS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS financial_records (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
+    sql += `    type TEXT CHECK (type IN ('income', 'expense')) NOT NULL,\n`;
+    sql += `    amount BIGINT NOT NULL,\n`;
+    sql += `    category TEXT NOT NULL,\n`;
+    sql += `    description TEXT,\n`;
+    sql += `    recorded_by TEXT,\n`;
+    sql += `    date DATE DEFAULT CURRENT_DATE,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE financial_records ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access financial_records" ON financial_records;\n`;
+    sql += `CREATE POLICY "Allow admin access financial_records" ON financial_records FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read financial_records" ON financial_records;\n`;
+    sql += `CREATE POLICY "Allow public read financial_records" ON financial_records FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  // Complaints
+  if (isAll || missingTables.includes('complaints')) {
+    sql += `-- ─── CẬP NHẬT BẢNG COMPLAINTS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS complaints (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    resident_id TEXT,\n`;
+    sql += `    resident_name TEXT NOT NULL,\n`;
+    sql += `    content TEXT NOT NULL,\n`;
+    sql += `    status TEXT CHECK (status IN ('pending', 'processing', 'resolved', 'rejected')) DEFAULT 'pending',\n`;
+    sql += `    response TEXT,\n`;
+    sql += `    date DATE DEFAULT CURRENT_DATE,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE complaints ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access complaints" ON complaints;\n`;
+    sql += `CREATE POLICY "Allow admin access complaints" ON complaints FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read complaints" ON complaints;\n`;
+    sql += `CREATE POLICY "Allow public read complaints" ON complaints FOR SELECT TO anon USING (true);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public submit complaint" ON complaints;\n`;
+    sql += `CREATE POLICY "Allow public submit complaint" ON complaints FOR INSERT TO anon WITH CHECK (true);\n\n`;
+  }
+
+  // Meetings
+  if (isAll || missingTables.includes('meetings')) {
+    sql += `-- ─── CẬP NHẬT BẢNG MEETINGS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS meetings (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
+    sql += `    title TEXT NOT NULL,\n`;
+    sql += `    content TEXT,\n`;
+    sql += `    date TIMESTAMP WITH TIME ZONE,\n`;
+    sql += `    location TEXT,\n`;
+    sql += `    attendance_count INTEGER DEFAULT 0,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access meetings" ON meetings;\n`;
+    sql += `CREATE POLICY "Allow admin access meetings" ON meetings FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read meetings" ON meetings;\n`;
+    sql += `CREATE POLICY "Allow public read meetings" ON meetings FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  // Documents
+  if (isAll || missingTables.includes('documents')) {
+    sql += `-- ─── CẬP NHẬT BẢNG DOCUMENTS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS documents (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
+    sql += `    title TEXT NOT NULL,\n`;
+    sql += `    type TEXT CHECK (type IN ('directive', 'plan', 'report', 'other')) NOT NULL,\n`;
+    sql += `    file_url TEXT DEFAULT '#',\n`;
+    sql += `    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE documents ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access documents" ON documents;\n`;
+    sql += `CREATE POLICY "Allow admin access documents" ON documents FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read documents" ON documents;\n`;
+    sql += `CREATE POLICY "Allow public read documents" ON documents FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  // Security logs
+  if (isAll || missingTables.includes('security_logs')) {
     sql += `-- ─── CẬP NHẬT BẢNG SECURITY_LOGS ───\n`;
     sql += `CREATE TABLE IF NOT EXISTS security_logs (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
@@ -862,7 +1007,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `CREATE POLICY "Allow public read security_logs" ON security_logs FOR SELECT TO anon USING (true);\n\n`;
   }
 
-  if (missingTables.includes('environment_logs')) {
+  // Environment logs
+  if (isAll || missingTables.includes('environment_logs')) {
     sql += `-- ─── CẬP NHẬT BẢNG ENVIRONMENT_LOGS ───\n`;
     sql += `CREATE TABLE IF NOT EXISTS environment_logs (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
@@ -879,7 +1025,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `CREATE POLICY "Allow public read environment_logs" ON environment_logs FOR SELECT TO anon USING (true);\n\n`;
   }
 
-  if (missingTables.includes('policy_activities')) {
+  // Policy activities
+  if (isAll || missingTables.includes('policy_activities')) {
     sql += `-- ─── CẬP NHẬT BẢNG POLICY_ACTIVITIES ───\n`;
     sql += `CREATE TABLE IF NOT EXISTS policy_activities (\n`;
     sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
@@ -897,7 +1044,8 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `CREATE POLICY "Allow public read policy_activities" ON policy_activities FOR SELECT TO anon USING (true);\n\n`;
   }
 
-  if (missingTables.includes('app_config')) {
+  // App config
+  if (isAll || missingTables.includes('app_config')) {
     sql += `-- ─── CẬP NHẬT BẢNG APP_CONFIG ───\n`;
     sql += `CREATE TABLE IF NOT EXISTS app_config (\n`;
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;

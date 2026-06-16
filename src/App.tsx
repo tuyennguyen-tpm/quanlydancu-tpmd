@@ -373,6 +373,16 @@ const App = () => {
     window.dispatchEvent(ev);
   };
 
+  const handleCloseSqlModal = () => {
+    setShowSqlPatchModal(false);
+    try {
+      const list = JSON.parse(localStorage.getItem('detected_missing_tables') || '[]');
+      setMissingTables(list);
+    } catch {
+      setMissingTables([]);
+    }
+  };
+
   const handleOpenSettings = () => {
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
@@ -1109,30 +1119,52 @@ const App = () => {
                   marginTop: '12px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px'
+                  gap: '12px'
                 }}>
                   <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    ⚠️ Cần cập nhật cơ sở dữ liệu Supabase
+                    ⚠️ LỖI KẾT NỐI & ĐỒNG BỘ CƠ SỞ DỮ LIỆU SUPABASE
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5', lineHeight: '1.4', textAlign: 'left' }}>
-                    Phát hiện phiên bản mới yêu cầu thêm các bảng sau trong CSDL của bạn: <strong>{missingTables.join(', ')}</strong>.
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5', lineHeight: '1.5', textAlign: 'left' }}>
+                    <strong>Cảnh báo dữ liệu:</strong> Do CSDL của bạn thiếu các bảng (như: <strong>{missingTables.filter(t => t !== 'all').join(', ')}</strong>), ứng dụng phải chuyển sang chế độ lưu trữ cục bộ tạm thời (LocalStorage).
                   </p>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowSqlPatchModal(true)}
-                    style={{
-                      background: 'rgba(239,68,68,0.1)',
-                      color: '#fca5a5',
-                      borderColor: 'rgba(239,68,68,0.25)',
-                      fontSize: '0.8rem',
-                      padding: '6px 12px',
-                      width: 'fit-content',
-                      boxShadow: 'none'
-                    }}
-                  >
-                    Xem SQL sửa lỗi & Hướng dẫn chạy
-                  </button>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5', lineHeight: '1.5', textAlign: 'left' }}>
+                    ❌ <strong>Hệ quả:</strong> Dữ liệu bạn nhập trên thiết bị này sẽ <strong>không được đồng bộ</strong> sang các máy tính/điện thoại khác. Để dữ liệu đồng bộ đồng nhất, bạn phải khởi tạo đầy đủ bảng trong Supabase.
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setShowSqlPatchModal(true)}
+                      style={{
+                        background: 'rgba(239,68,68,0.15)',
+                        color: '#fca5a5',
+                        borderColor: 'rgba(239,68,68,0.35)',
+                        fontSize: '0.78rem',
+                        padding: '6px 12px',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      Xem SQL sửa lỗi bảng thiếu
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setMissingTables(['all']);
+                        setShowSqlPatchModal(true);
+                      }}
+                      style={{
+                        background: 'rgba(59,130,246,0.15)',
+                        color: '#93c5fd',
+                        borderColor: 'rgba(59,130,246,0.35)',
+                        fontSize: '0.78rem',
+                        padding: '6px 12px',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      Lấy SQL khởi tạo toàn bộ CSDL (10 bảng)
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1162,13 +1194,13 @@ const App = () => {
           <div className="modal-content medium" style={{ background: '#1e293b', border: '1px solid rgba(239, 68, 68, 0.3)', maxWidth: '600px' }}>
             <div className="modal-header">
               <h2 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.25rem' }}>
-                🛠️ SQL cập nhật Cơ sở dữ liệu
+                🛠️ {missingTables.includes('all') ? 'SQL Cấu trúc toàn bộ Cơ sở dữ liệu' : 'SQL Cập nhật Bảng bị thiếu'}
               </h2>
-              <button className="close-btn" onClick={() => setShowSqlPatchModal(false)}><X size={24} /></button>
+              <button className="close-btn" onClick={handleCloseSqlModal}><X size={24} /></button>
             </div>
             <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
               <p style={{ fontSize: '0.88rem', color: '#94a3b8', margin: 0, lineHeight: '1.5' }}>
-                Vui lòng làm theo các bước dưới đây để bổ sung các bảng bị thiếu vào cơ sở dữ liệu của bạn:
+                Vui lòng làm theo các bước dưới đây để bổ sung cấu trúc bảng vào cơ sở dữ liệu Supabase của bạn:
               </p>
               <ol style={{ fontSize: '0.85rem', color: '#cbd5e1', paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <li>Truy cập vào trang quản trị <strong><a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Supabase Dashboard</a></strong>.</li>
@@ -1183,7 +1215,7 @@ const App = () => {
                   value={getSqlPatchForMissingTables(missingTables)}
                   style={{
                     width: '100%',
-                    height: '220px',
+                    height: '240px',
                     background: '#0f172a',
                     color: '#38bdf8',
                     fontFamily: 'Consolas, Monaco, monospace',
@@ -1226,9 +1258,7 @@ const App = () => {
               <button
                 type="button"
                 className="btn btn-secondary"
-                onClick={() => {
-                  setShowSqlPatchModal(false);
-                }}
+                onClick={handleCloseSqlModal}
                 style={{ width: '100%', justifyContent: 'center' }}
               >
                 Đóng cửa sổ
