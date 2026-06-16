@@ -121,10 +121,10 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">
-            <ShieldCheck size={48} color="#3b82f6" fill="rgba(59, 130, 246, 0.15)" />
+            <ShieldCheck size={38} color="#3b82f6" fill="rgba(59, 130, 246, 0.15)" />
           </div>
           <h1>Quản lý Tổ dân phố</h1>
-          <p>Hệ thống số hóa thông tin cư dân & thu chi cộng đồng</p>
+          <p>Hệ thống cư dân & thu chi cộng đồng</p>
         </div>
 
         <div className="login-body">
@@ -385,7 +385,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                       #0f172a;
           font-family: 'Inter', system-ui, sans-serif;
           color: #f8fafc;
-          padding: 20px;
+          padding: 40px 20px;
           margin: 0;
           box-sizing: border-box;
           position: fixed;
@@ -403,12 +403,13 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
           border-radius: 20px;
-          padding: 32px 28px;
+          padding: 24px 22px;
           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
                       inset 0 1px 0 rgba(255, 255, 255, 0.05);
           text-align: center;
           box-sizing: border-box;
           animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+          margin: auto;
         }
 
         @keyframes slideUp {
@@ -418,26 +419,36 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
 
         .login-logo {
           display: inline-flex;
-          padding: 16px;
+          padding: 12px;
           background: rgba(59, 130, 246, 0.08);
           border: 1px solid rgba(59, 130, 246, 0.2);
-          border-radius: 16px;
-          margin-bottom: 20px;
+          border-radius: 12px;
+          margin-bottom: 12px;
         }
 
         .login-header h1 {
-          font-size: 1.6rem;
+          font-size: 1.45rem;
           font-weight: 800;
           color: #ffffff;
-          margin: 0 0 8px 0;
+          margin: 0 0 6px 0;
           letter-spacing: -0.5px;
         }
 
         .login-header p {
-          font-size: 0.85rem;
+          font-size: 0.8rem;
           color: #94a3b8;
-          line-height: 1.5;
-          margin: 0 0 24px 0;
+          line-height: 1.4;
+          margin: 0 0 18px 0;
+        }
+
+        /* Override Chrome/Edge Auto-fill styles to prevent light background & black text */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px rgba(15, 23, 42, 0.8) inset !important;
+          -webkit-text-fill-color: white !important;
+          transition: background-color 5000s ease-in-out 0s;
         }
 
         .login-body {
