@@ -755,7 +755,7 @@ const App = () => {
             )}
           </div>
           
-          {/* Glassmorphic contact card for the leader */}
+          {/* Glassmorphic contact card for the software developer (Technical Support) */}
           <div className="sidebar-contact-card" style={{
             marginTop: '6px',
             background: 'rgba(59, 130, 246, 0.05)',
@@ -765,8 +765,8 @@ const App = () => {
             boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.02)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
-              <span style={{ color: '#f8fafc', fontWeight: '700' }}>{leaderName}:</span>
-              <span style={{ color: '#60a5fa' }}>{leaderPhone}</span>
+              <span style={{ color: '#f8fafc', fontWeight: '700' }}>Kim Tuyến:</span>
+              <span style={{ color: '#60a5fa' }}>0912 083 018</span>
             </div>
           </div>
         </div>
