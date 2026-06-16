@@ -365,7 +365,11 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...fullHousehold, user_id: uId };
+        const payload = { 
+          ...fullHousehold, 
+          user_id: uId,
+          head_of_household_id: fullHousehold.head_of_household_id || null
+        };
         const { data, error } = await supabase.from('households').upsert(payload).select().single();
         if (error) handleDbError('lưu hộ dân', error);
         if (!error && data) return data;
@@ -435,7 +439,11 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...fullResident, user_id: uId };
+        const payload = { 
+          ...fullResident, 
+          user_id: uId,
+          household_id: fullResident.household_id || null
+        };
         const { data, error } = await supabase.from('residents').upsert(payload).select().single();
         if (error) handleDbError('lưu nhân khẩu', error);
         if (!error && data) return data;
@@ -861,6 +869,7 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
     sql += `    household_number TEXT NOT NULL,\n`;
     sql += `    address TEXT NOT NULL,\n`;
+    sql += `    head_of_household_id UUID,\n`;
     sql += `    group_id TEXT DEFAULT 'NAM_SAM_SON_01',\n`;
     sql += `    latitude DECIMAL(10, 8),\n`;
     sql += `    longitude DECIMAL(11, 8),\n`;

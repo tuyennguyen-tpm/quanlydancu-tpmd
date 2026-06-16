@@ -19,6 +19,7 @@ CREATE TABLE households (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     household_number TEXT NOT NULL, -- Số sổ hộ khẩu hoặc mã định danh
     address TEXT NOT NULL,
+    head_of_household_id UUID,
     group_id TEXT DEFAULT 'NAM_SAM_SON_01', 
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
