@@ -122,12 +122,57 @@ const App = () => {
     document.title = `QL TDP – ${tdpName}`;
   }, [tdpName]);
 
+  const loadSystemConfig = async () => {
+    if (!supabase) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const uId = session?.user?.id;
+      if (!uId) return;
+      
+      const { data, error } = await supabase
+        .from('app_config')
+        .select('key, value')
+        .eq('user_id', uId);
+        
+      if (!error && data && data.length > 0) {
+        data.forEach(item => {
+          localStorage.setItem(item.key, item.value);
+        });
+        
+        // Update states from synchronized local storage values
+        const newTdp = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
+        const newWard = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+        const newLeader = localStorage.getItem('leader_name') || 'Kim Tuyến';
+        const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
+        const newGroup = localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
+        
+        setTdpName(newTdp);
+        setWardName(newWard);
+        setLeaderName(newLeader);
+        setLeaderPhone(newPhone);
+        setGroupId(newGroup);
+        
+        // Dispatch events for child tabs to pick up the updated names
+        window.dispatchEvent(new CustomEvent('tdp-name-changed'));
+        window.dispatchEvent(new CustomEvent('leader-name-changed'));
+        window.dispatchEvent(new CustomEvent('leader-phone-changed'));
+        window.dispatchEvent(new CustomEvent('group-id-changed'));
+        window.dispatchEvent(new CustomEvent('fund-targets-changed'));
+      }
+    } catch (e) {
+      console.error('Failed to load system config from Supabase:', e);
+    }
+  };
+
   // Cập nhật session và lắng nghe sự thay đổi Auth
   useEffect(() => {
     if (!supabase) return;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) {
+        loadSystemConfig();
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -135,6 +180,7 @@ const App = () => {
       if (session) {
         localStorage.removeItem('offline_mode');
         setOfflineMode(false);
+        loadSystemConfig();
       }
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecoveryMode(true);
@@ -449,6 +495,29 @@ const App = () => {
       }));
     }
 
+
+    // Đồng bộ các cấu hình khác lên bảng app_config của Supabase
+    if (supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const uId = session?.user?.id;
+        if (uId) {
+          const configItems = [
+            { user_id: uId, key: 'tdp_name', value: newName },
+            { user_id: uId, key: 'ward_name', value: newWardName },
+            { user_id: uId, key: 'leader_name', value: newLeaderName },
+            { user_id: uId, key: 'leader_phone', value: newLeaderPhone },
+            { user_id: uId, key: 'group_id', value: newGroupId },
+            { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '15000000' },
+            { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '10000000' },
+            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '30000000' }
+          ];
+          await supabase.from('app_config').upsert(configItems);
+        }
+      } catch (err) {
+        console.error('Failed to sync config settings to Supabase:', err);
+      }
+    }
 
     // Lưu Supabase config
     localStorage.setItem('supabase_url', sbUrl.trim());
