@@ -419,7 +419,16 @@ export const db = {
         }
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách nhân khẩu', error);
-        if (!error && data) return data;
+        if (!error && data) {
+          const currentYear = new Date().getFullYear();
+          return data.map((r: any) => {
+            const dobYear = r.dob ? new Date(r.dob).getFullYear() : 0;
+            return {
+              ...r,
+              is_senior: dobYear > 0 ? (currentYear - dobYear) >= 80 : false
+            };
+          });
+        }
       } catch (e) {
         console.error('Supabase getResidents error, falling back to local storage', e);
       }
@@ -439,14 +448,19 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { 
+        const { is_senior, ...dbPayload } = { 
           ...fullResident, 
           user_id: uId,
           household_id: fullResident.household_id || null
         };
-        const { data, error } = await supabase.from('residents').upsert(payload).select().single();
+        const { data, error } = await supabase.from('residents').upsert(dbPayload).select().single();
         if (error) handleDbError('lưu nhân khẩu', error);
-        if (!error && data) return data;
+        if (!error && data) {
+          return {
+            ...data,
+            is_senior: fullResident.is_senior
+          } as Resident;
+        }
       } catch (e) {
         console.error('Supabase saveResident error, saving to local storage', e);
       }
