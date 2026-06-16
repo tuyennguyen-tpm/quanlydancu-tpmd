@@ -363,20 +363,20 @@ export const db = {
       created_at: household.created_at || new Date().toISOString()
     };
     if (supabase) {
-      try {
-        const uId = await getSessionUserId();
-        const payload = { 
-          ...fullHousehold, 
-          user_id: uId,
-          head_of_household_id: fullHousehold.head_of_household_id || null
-        };
-        const { data, error } = await supabase.from('households').upsert(payload).select().single();
-        if (error) handleDbError('lưu hộ dân', error);
-        if (!error && data) return data;
-      } catch (e) {
-        console.error('Supabase saveHousehold error, saving to local storage', e);
+      const uId = await getSessionUserId();
+      const payload = { 
+        ...fullHousehold, 
+        user_id: uId,
+        head_of_household_id: fullHousehold.head_of_household_id || null
+      };
+      const { data, error } = await supabase.from('households').upsert(payload).select().single();
+      if (error) {
+        handleDbError('lưu hộ dân', error);
+        throw new Error(`Không thể lưu hộ dân: ${error.message}`);
       }
+      if (data) return data;
     }
+    // Fallback: chỉ lưu localStorage khi không có kết nối Supabase
     const households = getStorageItem<Household[]>('households', seedHouseholds);
     const index = households.findIndex(h => h.id === household.id);
     if (index >= 0) {
@@ -446,25 +446,25 @@ export const db = {
       created_at: resident.created_at || new Date().toISOString()
     };
     if (supabase) {
-      try {
-        const uId = await getSessionUserId();
-        const { is_senior, ...dbPayload } = { 
-          ...fullResident, 
-          user_id: uId,
-          household_id: fullResident.household_id || null
-        };
-        const { data, error } = await supabase.from('residents').upsert(dbPayload).select().single();
-        if (error) handleDbError('lưu nhân khẩu', error);
-        if (!error && data) {
-          return {
-            ...data,
-            is_senior: fullResident.is_senior
-          } as Resident;
-        }
-      } catch (e) {
-        console.error('Supabase saveResident error, saving to local storage', e);
+      const uId = await getSessionUserId();
+      const { is_senior, ...dbPayload } = { 
+        ...fullResident, 
+        user_id: uId,
+        household_id: fullResident.household_id || null
+      };
+      const { data, error } = await supabase.from('residents').upsert(dbPayload).select().single();
+      if (error) {
+        handleDbError('lưu nhân khẩu', error);
+        throw new Error(`Không thể lưu nhân khẩu: ${error.message}`);
+      }
+      if (data) {
+        return {
+          ...data,
+          is_senior: fullResident.is_senior
+        } as Resident;
       }
     }
+    // Fallback: chỉ lưu localStorage khi không có kết nối Supabase
     const residents = getStorageItem<Resident[]>('residents', seedResidents);
     const index = residents.findIndex(r => r.id === resident.id);
     if (index >= 0) {
@@ -608,7 +608,10 @@ export const db = {
         }
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách cuộc họp', error);
-        if (!error && data) return data;
+        if (!error && data) {
+          // Đảm bảo luôn có trường type (nếu DB chưa có cột type, mặc định 'general')
+          return data.map((m: any) => ({ ...m, type: m.type || 'general' })) as Meeting[];
+        }
       } catch (e) {
         console.error('Supabase getMeetings error, falling back to local storage', e);
       }
@@ -623,10 +626,21 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...fullMeeting, user_id: uId };
-        const { data, error } = await supabase.from('meetings').upsert(payload).select().single();
+        // Loại bỏ 'type' khỏi payload Supabase (cột này có thể chưa tồn tại trong DB cũ)
+        // Nếu DB đã có cột type (sau migration), nó sẽ được gửi lên bình thường
+        const { type: meetingType, ...rest } = fullMeeting as any;
+        const payload = { ...rest, user_id: uId };
+        // Thử gửi có type trước
+        const payloadWithType = { ...fullMeeting, user_id: uId };
+        let { data, error } = await supabase.from('meetings').upsert(payloadWithType).select().single();
+        if (error && (error.message?.includes('type') || error.code === '42703')) {
+          // Nếu lỗi do cột type chưa tồn tại, thử lại không có type
+          const retry = await supabase.from('meetings').upsert(payload).select().single();
+          data = retry.data;
+          error = retry.error;
+        }
         if (error) handleDbError('lưu thông tin cuộc họp', error);
-        if (!error && data) return data as Meeting;
+        if (!error && data) return { ...data, type: meetingType || 'general' } as Meeting;
       } catch (e) {
         console.error('Supabase saveMeeting error, saving to local storage', e);
       }

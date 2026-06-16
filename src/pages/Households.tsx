@@ -269,6 +269,21 @@ const Households = () => {
       const hhId = editingHousehold ? editingHousehold.id : generateUUID();
       let finalHeadId = headId;
 
+      // Bước 1: Tạo hộ gia đình TRƯỚC (vì nhân khẩu có ràng buộc FK tới households)
+      const payload: Household = {
+        id: hhId,
+        household_number: householdNumber,
+        address,
+        head_of_household_id: finalHeadId || null,
+        group_id: db.getGroupId(),
+        latitude: parseFloat(lat) || 19.7420,
+        longitude: parseFloat(lng) || 105.9230,
+        policy_type: policyType,
+        created_at: editingHousehold ? editingHousehold.created_at : new Date().toISOString()
+      };
+      await db.saveHousehold(payload);
+
+      // Bước 2: Tạo chủ hộ mới (nếu có), sau khi hộ đã được tạo thành công
       if (!editingHousehold && createNewHead) {
         const generatedHeadId = generateUUID();
         const dbNewHeadDob = formatToDbDate(newHeadDob);
@@ -289,21 +304,10 @@ const Households = () => {
         };
         await db.saveResident(headPayload);
         finalHeadId = generatedHeadId;
+
+        // Bước 3: Cập nhật lại hộ với head_of_household_id đúng
+        await db.saveHousehold({ ...payload, head_of_household_id: finalHeadId });
       }
-
-      const payload: Household = {
-        id: hhId,
-        household_number: householdNumber,
-        address,
-        head_of_household_id: finalHeadId,
-        group_id: db.getGroupId(),
-        latitude: parseFloat(lat) || 19.7420,
-        longitude: parseFloat(lng) || 105.9230,
-        policy_type: policyType,
-        created_at: editingHousehold ? editingHousehold.created_at : new Date().toISOString()
-      };
-
-      await db.saveHousehold(payload);
       showToast(editingHousehold ? 'Cập nhật hộ dân thành công!' : 'Thêm hộ dân mới thành công!', 'success');
       setIsFormOpen(false);
       loadData();
