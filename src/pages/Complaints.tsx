@@ -10,7 +10,7 @@ import {
   FileCheck,
   Send
 } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Complaint } from '../types';
 
@@ -51,7 +51,7 @@ const Complaints = () => {
     }
 
     const payload: Complaint = {
-      id: `C-${Date.now()}`,
+      id: generateUUID(),
       resident_id: `R-GUEST`,
       resident_name: residentName,
       content,

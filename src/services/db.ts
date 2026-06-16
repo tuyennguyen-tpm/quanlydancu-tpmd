@@ -139,6 +139,40 @@ const getTenantFilter = () => {
   return null;
 };
 
+const mapToUUID = (id: string): string => {
+  if (!id) return '';
+  if (id.length === 36 && id.includes('-')) return id;
+  
+  const prefix = id.charAt(0);
+  const numStr = id.replace(/[^0-9]/g, '');
+  const num = parseInt(numStr, 10) || 0;
+  const hexNum = num.toString(16).padStart(12, '0');
+  
+  let typePrefix = '0';
+  if (prefix === 'H') typePrefix = 'a';
+  else if (prefix === 'R') typePrefix = 'b';
+  else if (prefix === 'F') typePrefix = 'c';
+  else if (prefix === 'C') typePrefix = 'd';
+  else if (prefix === 'M') typePrefix = 'e';
+  else if (prefix === 'D') typePrefix = 'f';
+  else if (prefix === 'S') typePrefix = '1';
+  else if (prefix === 'E') typePrefix = '2';
+  else if (prefix === 'P') typePrefix = '3';
+  
+  return `${typePrefix}0000000-0000-0000-0000-${hexNum}`;
+};
+
+export const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export const seedTenantData = async (userId: string): Promise<void> => {
   if (!supabase) return;
   try {
@@ -147,6 +181,8 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 1. Seed Households
     const householdsPayload = seedHouseholds.map(h => ({
       ...h,
+      id: mapToUUID(h.id),
+      head_of_household_id: mapToUUID(h.head_of_household_id),
       user_id: userId
     }));
     await supabase.from('households').insert(householdsPayload);
@@ -154,6 +190,8 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 2. Seed Residents
     const residentsPayload = seedResidents.map(r => ({
       ...r,
+      id: mapToUUID(r.id),
+      household_id: mapToUUID(r.household_id),
       user_id: userId
     }));
     await supabase.from('residents').insert(residentsPayload);
@@ -161,6 +199,7 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 3. Seed Financial Records
     const financePayload = seedFinancialRecords.map(f => ({
       ...f,
+      id: mapToUUID(f.id),
       user_id: userId
     }));
     await supabase.from('financial_records').insert(financePayload);
@@ -168,6 +207,8 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 4. Seed Complaints
     const complaintsPayload = seedComplaints.map(c => ({
       ...c,
+      id: mapToUUID(c.id),
+      resident_id: mapToUUID(c.resident_id),
       user_id: userId
     }));
     await supabase.from('complaints').insert(complaintsPayload);
@@ -175,6 +216,7 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 5. Seed Meetings
     const meetingsPayload = seedMeetings.map(m => ({
       ...m,
+      id: mapToUUID(m.id),
       user_id: userId
     }));
     await supabase.from('meetings').insert(meetingsPayload);
@@ -182,6 +224,7 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 6. Seed Documents
     const docsPayload = seedDocuments.map(d => ({
       ...d,
+      id: mapToUUID(d.id),
       user_id: userId
     }));
     await supabase.from('documents').insert(docsPayload);
@@ -189,6 +232,7 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 7. Seed Security Logs
     const securityPayload = seedSecurityLogs.map(s => ({
       ...s,
+      id: mapToUUID(s.id),
       user_id: userId
     }));
     await supabase.from('security_logs').insert(securityPayload);
@@ -196,13 +240,14 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     // 8. Seed Environment Logs
     const envPayload = seedEnvironmentLogs.map(e => ({
       ...e,
+      id: mapToUUID(e.id),
       user_id: userId
     }));
     await supabase.from('environment_logs').insert(envPayload);
 
     // 9. Seed Policy Activities
     const policyPayload = seedPolicyActivities.map(p => ({
-      id: p.id,
+      id: mapToUUID(p.id),
       title: p.title,
       description: p.desc,
       target_group: p.targetGroup,

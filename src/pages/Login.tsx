@@ -13,7 +13,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
   const [pinValue, setPinValue] = React.useState('');
   
   // Email/Password Auth states
-  const [authMode, setAuthMode] = React.useState<'login' | 'register'>('login');
+  const [authMode, setAuthMode] = React.useState<'login' | 'register' | 'forgot_password'>('login');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -130,199 +130,285 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">
-            <ShieldCheck size={38} color="#3b82f6" fill="rgba(59, 130, 246, 0.15)" />
+            <ShieldCheck size={34} color="#3b82f6" fill="rgba(59, 130, 246, 0.15)" />
           </div>
           <h1>Quản lý Tổ dân phố</h1>
-          <p>Hệ thống cư dân & thu chi cộng đồng</p>
+          <p>Hệ thống số hóa dân cư & tài chính</p>
         </div>
 
         <div className="login-body">
           {/* Tabs Đăng nhập / Đăng ký */}
-          <div className="login-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-            <button 
-              type="button" 
-              className={`login-tab-btn ${authMode === 'login' ? 'active' : ''}`}
-              onClick={() => { setAuthMode('login'); setPassword(''); setConfirmPassword(''); }}
-              style={{
-                flex: 1,
-                padding: '10px',
-                background: authMode === 'login' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
-                border: '1px solid',
-                borderColor: authMode === 'login' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.06)',
-                borderRadius: '8px',
-                color: authMode === 'login' ? '#60a5fa' : '#94a3b8',
-                fontWeight: '600',
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              Đăng nhập
-            </button>
-            <button 
-              type="button" 
-              className={`login-tab-btn ${authMode === 'register' ? 'active' : ''}`}
-              onClick={() => { setAuthMode('register'); setPassword(''); setConfirmPassword(''); }}
-              style={{
-                flex: 1,
-                padding: '10px',
-                background: authMode === 'register' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
-                border: '1px solid',
-                borderColor: authMode === 'register' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.06)',
-                borderRadius: '8px',
-                color: authMode === 'register' ? '#60a5fa' : '#94a3b8',
-                fontWeight: '600',
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              Đăng ký tổ mới
-            </button>
-          </div>
-
-          {/* Form Email / Mật khẩu */}
-          <form onSubmit={authMode === 'login' ? handleEmailLogin : handleEmailRegister} style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
-            <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: '500' }}>Tài khoản Email</label>
-              <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="to_dan_pho@gmail.com"
-                required
+          {authMode !== 'forgot_password' ? (
+            <div className="login-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <button 
+                type="button" 
+                className={`login-tab-btn ${authMode === 'login' ? 'active' : ''}`}
+                onClick={() => { setAuthMode('login'); setPassword(''); setConfirmPassword(''); }}
                 style={{
-                  padding: '11px 14px',
+                  flex: 1,
+                  padding: '10px',
+                  background: authMode === 'login' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                  border: '1px solid',
+                  borderColor: authMode === 'login' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.06)',
                   borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  background: 'rgba(15, 23, 42, 0.4)',
-                  color: 'white',
-                  fontSize: '0.92rem',
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box'
+                  color: authMode === 'login' ? '#60a5fa' : '#94a3b8',
+                  fontWeight: '600',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
-              />
-            </div>
-            
-            <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: '500' }}>Mật khẩu</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••"
-                required
+              >
+                Đăng nhập
+              </button>
+              <button 
+                type="button" 
+                className={`login-tab-btn ${authMode === 'register' ? 'active' : ''}`}
+                onClick={() => { setAuthMode('register'); setPassword(''); setConfirmPassword(''); }}
                 style={{
-                  padding: '11px 14px',
+                  flex: 1,
+                  padding: '10px',
+                  background: authMode === 'register' ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                  border: '1px solid',
+                  borderColor: authMode === 'register' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.06)',
                   borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  background: 'rgba(15, 23, 42, 0.4)',
-                  color: 'white',
-                  fontSize: '0.92rem',
-                  outline: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box'
+                  color: authMode === 'register' ? '#60a5fa' : '#94a3b8',
+                  fontWeight: '600',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
-              />
+              >
+                Đăng ký tổ mới
+              </button>
             </div>
+          ) : (
+            <div style={{ textAlign: 'left', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#ffffff', fontWeight: '700' }}>Khôi phục mật khẩu</h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.4' }}>
+                Vui lòng nhập Email đã đăng ký. Hệ thống sẽ gửi liên kết khôi phục mật khẩu vào hòm thư của bạn.
+              </p>
+            </div>
+          )}
 
-            {authMode === 'register' && (
-              <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: '500' }}>Xác nhận mật khẩu</label>
+          {/* Form Email / Mật khẩu / Khôi phục */}
+          {authMode === 'forgot_password' ? (
+            <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+              <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Tài khoản Email</label>
                 <input 
-                  type="password" 
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••"
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="to_dan_pho@gmail.com"
                   required
                   style={{
-                    padding: '11px 14px',
+                    padding: '9px 12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    background: 'rgba(15, 23, 42, 0.4)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(15, 23, 42, 0.65)',
                     color: 'white',
-                    fontSize: '0.92rem',
+                    fontSize: '0.88rem',
                     outline: 'none',
                     width: '100%',
                     boxSizing: 'border-box'
                   }}
                 />
               </div>
-            )}
-            
-            <button 
-              type="submit" 
-              disabled={loading}
-              style={{
-                padding: '12px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                color: 'white',
-                fontSize: '0.92rem',
-                fontWeight: '600',
-                border: 'none',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                marginTop: '6px',
-                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.2)',
-                opacity: loading ? 0.75 : 1,
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {loading ? 'Đang xử lý...' : (authMode === 'login' ? 'Đăng nhập' : 'Đăng ký tổ mới')}
-            </button>
-          </form>
+              
+              <button 
+                type="submit" 
+                disabled={loading}
+                style={{
+                  padding: '10px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  marginTop: '6px',
+                  boxShadow: '0 4px 10px rgba(37, 99, 235, 0.2)',
+                  opacity: loading ? 0.75 : 1,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {loading ? 'Đang gửi...' : 'Gửi liên kết khôi phục'}
+              </button>
+              
+              <button 
+                type="button" 
+                onClick={() => setAuthMode('login')} 
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#60a5fa',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginTop: '10px',
+                  padding: '4px'
+                }}
+              >
+                Quay lại đăng nhập
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={authMode === 'login' ? handleEmailLogin : handleEmailRegister} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+              <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Tài khoản Email</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="to_dan_pho@gmail.com"
+                  required
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(15, 23, 42, 0.65)',
+                    color: 'white',
+                    fontSize: '0.88rem',
+                    outline: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              
+              <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Mật khẩu</label>
+                  <button 
+                    type="button" 
+                    onClick={() => { setAuthMode('forgot_password'); setPassword(''); }} 
+                    style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                  >
+                    Quên mật khẩu?
+                  </button>
+                </div>
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••"
+                  required
+                  style={{
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(15, 23, 42, 0.65)',
+                    color: 'white',
+                    fontSize: '0.88rem',
+                    outline: 'none',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              {authMode === 'register' && (
+                <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Xác nhận mật khẩu</label>
+                  <input 
+                    type="password" 
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••"
+                    required
+                    style={{
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      background: 'rgba(15, 23, 42, 0.65)',
+                      color: 'white',
+                      fontSize: '0.88rem',
+                      outline: 'none',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              )}
+              
+              <button 
+                type="submit" 
+                disabled={loading}
+                style={{
+                  padding: '10px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  marginTop: '4px',
+                  boxShadow: '0 4px 10px rgba(37, 99, 235, 0.2)',
+                  opacity: loading ? 0.75 : 1,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {loading ? 'Đang xử lý...' : (authMode === 'login' ? 'Đăng nhập' : 'Đăng ký tổ mới')}
+              </button>
+            </form>
+          )}
 
           {/* Các nút phụ */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px', width: '100%' }}>
-            
-            {authMode === 'login' && (
-              <>
-                <button className="google-login-btn" onClick={handleGoogleLogin}>
-                  <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginRight: '10px' }}>
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  Đăng nhập nhanh bằng Google
-                </button>
-                
-                <button className="google-login-btn" onClick={() => setShowPinInput(true)} style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.25)', color: '#60a5fa' }}>
-                  <Users size={18} style={{ marginRight: '8px' }} />
-                  Xem thông tin công khai (Bà con)
-                </button>
-              </>
-            )}
+          {authMode !== 'forgot_password' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px', width: '100%' }}>
+              {authMode === 'login' && (
+                <>
+                  <button className="google-login-btn" onClick={handleGoogleLogin}>
+                    <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginRight: '10px' }}>
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                    Đăng nhập nhanh bằng Google
+                  </button>
+                  
+                  <button className="google-login-btn" onClick={() => setShowPinInput(true)} style={{ background: 'rgba(59, 130, 246, 0.12)', border: '1px solid rgba(59, 130, 246, 0.25)', color: '#60a5fa' }}>
+                    <Users size={18} style={{ marginRight: '8px' }} />
+                    Xem thông tin công khai (Bà con)
+                  </button>
+                </>
+              )}
 
-            <div className="login-divider">
-              <span>Hoặc</span>
+              <div className="login-divider">
+                <span>Hoặc</span>
+              </div>
+
+              <button className="offline-mode-btn" onClick={onOfflineMode}>
+                <Database size={16} />
+                Dùng thử chế độ Offline (LocalStorage)
+              </button>
             </div>
-
-            <button className="offline-mode-btn" onClick={onOfflineMode}>
-              <Database size={16} />
-              Dùng thử chế độ Offline (LocalStorage)
-            </button>
-          </div>
+          )}
         </div>
 
-        <div className="login-footer">
-          <span>Phát triển bởi Tuyến Nguyễn - 6 / 2026</span>
+        <div className="login-footer" style={{ marginTop: '20px', fontSize: '0.8rem', color: '#cbd5e1', fontWeight: '500' }}>
+          <span>Phát triển bởi <strong style={{ color: '#60a5fa', fontWeight: '700' }}>Tuyến Nguyễn</strong> - 6 / 2026</span>
         </div>
       </div>
 
@@ -387,14 +473,15 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
           min-height: 100vh;
           width: 100vw;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: center;
-          background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 40%),
-                      radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.1), transparent 40%),
-                      #0f172a;
+          justify-content: flex-start;
+          background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 45%),
+                      radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.15), transparent 45%),
+                      #0a0f1d;
           font-family: 'Inter', system-ui, sans-serif;
           color: #f8fafc;
-          padding: 40px 20px;
+          padding: 30px 20px;
           margin: 0;
           box-sizing: border-box;
           position: fixed;
@@ -406,15 +493,16 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
 
         .login-card {
           width: 100%;
-          max-width: 420px;
-          background: rgba(30, 41, 59, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          max-width: 400px;
+          background: rgba(15, 23, 42, 0.85);
+          border: 1px solid rgba(59, 130, 246, 0.25);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
           border-radius: 20px;
-          padding: 24px 22px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
-                      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          padding: 24px 20px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5),
+                      0 0 30px rgba(59, 130, 246, 0.12),
+                      inset 0 1px 1px rgba(255, 255, 255, 0.1);
           text-align: center;
           box-sizing: border-box;
           animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -428,26 +516,26 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
 
         .login-logo {
           display: inline-flex;
-          padding: 12px;
-          background: rgba(59, 130, 246, 0.08);
-          border: 1px solid rgba(59, 130, 246, 0.2);
+          padding: 10px;
+          background: rgba(59, 130, 246, 0.1);
+          border: 1px solid rgba(59, 130, 246, 0.3);
           border-radius: 12px;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
         }
 
         .login-header h1 {
-          font-size: 1.45rem;
+          font-size: 1.35rem;
           font-weight: 800;
           color: #ffffff;
-          margin: 0 0 6px 0;
+          margin: 0 0 4px 0;
           letter-spacing: -0.5px;
         }
 
         .login-header p {
-          font-size: 0.8rem;
+          font-size: 0.78rem;
           color: #94a3b8;
-          line-height: 1.4;
-          margin: 0 0 18px 0;
+          line-height: 1.3;
+          margin: 0 0 14px 0;
         }
 
         /* Override Chrome/Edge Auto-fill styles to prevent light background & black text */
@@ -463,16 +551,16 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         .login-body {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .google-login-btn {
-          height: 44px;
+          height: 38px;
           border-radius: 8px;
           border: 1px solid rgba(255, 255, 255, 0.15);
           background: #ffffff;
           color: #1e293b;
-          font-size: 0.88rem;
+          font-size: 0.85rem;
           font-weight: 600;
           cursor: pointer;
           display: flex;
@@ -500,8 +588,8 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
           align-items: center;
           text-align: center;
           color: #64748b;
-          font-size: 0.75rem;
-          margin: 4px 0;
+          font-size: 0.72rem;
+          margin: 2px 0;
         }
 
         .login-divider::before,
@@ -518,18 +606,18 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         }
 
         .offline-mode-btn {
-          height: 44px;
+          height: 38px;
           border-radius: 8px;
           border: 1px solid rgba(255, 255, 255, 0.08);
           background: rgba(255, 255, 255, 0.03);
           color: #e2e8f0;
-          font-size: 0.85rem;
+          font-size: 0.82rem;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
           transition: all 0.2s ease;
           width: 100%;
           box-sizing: border-box;
@@ -542,9 +630,10 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         }
 
         .login-footer {
-          margin-top: 28px;
-          font-size: 0.72rem;
-          color: #475569;
+          margin-top: 18px;
+          font-size: 0.8rem;
+          color: #cbd5e1;
+          font-weight: 500;
         }
       `}</style>
     </div>

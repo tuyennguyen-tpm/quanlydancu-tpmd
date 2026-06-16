@@ -11,7 +11,7 @@ import {
   Edit2,
   Trash2
 } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { FinancialRecord } from '../types';
 
@@ -92,7 +92,7 @@ const Finance = () => {
     }
 
     const payload: FinancialRecord = {
-      id: editingRecord ? editingRecord.id : `F-${Date.now()}`,
+      id: editingRecord ? editingRecord.id : generateUUID(),
       group_id: db.getGroupId(),
       type,
       amount: parsedAmount,

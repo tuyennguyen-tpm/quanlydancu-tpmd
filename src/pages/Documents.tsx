@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileText, Download, Eye, Search, FileDown, X, Plus } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Document } from '../types';
 
@@ -59,7 +59,7 @@ const Documents = () => {
     }
 
     const payload: Document = {
-      id: `D-${Date.now()}`,
+      id: generateUUID(),
       group_id: db.getGroupId(),
       title,
       type,

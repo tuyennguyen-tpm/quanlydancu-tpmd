@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Calendar, Droplets, X, Leaf, RefreshCw } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import type { EnvironmentLog } from '../services/db';
 import { showToast } from '../utils/toast';
 
@@ -38,7 +38,7 @@ const Environment = () => {
     }
 
     const payload: EnvironmentLog = {
-      id: `E-${Date.now()}`,
+      id: generateUUID(),
       area,
       status,
       last_cleaned: new Date().toISOString().slice(0, 10)

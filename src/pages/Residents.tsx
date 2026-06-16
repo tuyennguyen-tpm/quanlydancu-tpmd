@@ -15,7 +15,7 @@ import {
   X,
   Printer
 } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Resident, Household } from '../types';
 
@@ -267,7 +267,7 @@ const Residents = () => {
     const dbDob = formatToDbDate(dob);
 
     const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
-      id: editingResident ? editingResident.id : `R-${Date.now()}`,
+      id: editingResident ? editingResident.id : generateUUID(),
       household_id: householdId,
       full_name: fullName,
       gender,
@@ -690,7 +690,7 @@ const Residents = () => {
           const isHead = relWithHead.toLowerCase().includes('chủ hộ') || relWithHead.toLowerCase() === 'chủ' || relWithHead.toLowerCase() === 'bản thân';
 
           const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
-            id: `R-IMP-${Date.now()}-${i}`,
+            id: generateUUID(),
             household_id: '',
             full_name: fullName,
             gender,

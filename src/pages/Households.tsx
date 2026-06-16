@@ -14,7 +14,7 @@ import {
   Printer,
   UserPlus
 } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Household, Resident } from '../types';
 
@@ -266,11 +266,11 @@ const Households = () => {
     }
 
     try {
-      const hhId = editingHousehold ? editingHousehold.id : `H-${Date.now()}`;
+      const hhId = editingHousehold ? editingHousehold.id : generateUUID();
       let finalHeadId = headId;
 
       if (!editingHousehold && createNewHead) {
-        const generatedHeadId = `R-${Date.now()}`;
+        const generatedHeadId = generateUUID();
         const dbNewHeadDob = formatToDbDate(newHeadDob);
         const headPayload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
           id: generatedHeadId,
@@ -624,7 +624,7 @@ const Households = () => {
     const dbMDob = formatToDbDate(mDob);
 
     const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
-      id: `R-${Date.now()}`,
+      id: generateUUID(),
       household_id: targetHouseholdForMember.id,
       full_name: mFullName.trim(),
       gender: mGender,

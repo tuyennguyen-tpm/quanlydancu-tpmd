@@ -9,7 +9,7 @@ import {
   Plus,
   HeartHandshake
 } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Resident, Household } from '../types';
 
@@ -69,7 +69,7 @@ const Policies = () => {
     }
 
     const newActivity: ActivityProgram = {
-      id: `P-${Date.now()}`,
+      id: generateUUID(),
       title,
       desc,
       targetGroup,

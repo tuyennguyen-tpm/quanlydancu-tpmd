@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ShieldCheck, AlertTriangle, Eye, ShieldAlert, X } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import type { SecurityLog } from '../services/db';
 import { showToast } from '../utils/toast';
 
@@ -39,7 +39,7 @@ const Security = () => {
     }
 
     const payload: SecurityLog = {
-      id: `S-${Date.now()}`,
+      id: generateUUID(),
       title,
       description,
       type,

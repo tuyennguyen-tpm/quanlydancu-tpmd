@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Users, MapPin, Clock, Plus, X, ListCollapse, FileText } from 'lucide-react';
-import { db } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Meeting } from '../types';
 
@@ -50,7 +50,7 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
     }
 
     const payload: Meeting = {
-      id: `M-${Date.now()}`,
+      id: generateUUID(),
       group_id: db.getGroupId(),
       title,
       content,
