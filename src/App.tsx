@@ -766,7 +766,7 @@ const App = () => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
               <span style={{ color: '#f8fafc', fontWeight: '700' }}>Kim Tuyến:</span>
-              <span style={{ color: '#60a5fa' }}>0912 083 018</span>
+              <span style={{ color: '#60a5fa' }}>0912 083 018 - 0899661982</span>
             </div>
           </div>
         </div>
