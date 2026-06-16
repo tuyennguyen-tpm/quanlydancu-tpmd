@@ -224,6 +224,22 @@ export const seedTenantData = async (userId: string): Promise<void> => {
   }
 };
 
+export const checkAndSeedUser = async (userId: string): Promise<void> => {
+  if (!supabase) return;
+  try {
+    const { count, error } = await supabase
+      .from('households')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if (!error && count === 0) {
+      console.log('No households found, seeding tenant default data...');
+      await seedTenantData(userId);
+    }
+  } catch (err) {
+    console.error('Failed to check or seed user data:', err);
+  }
+};
+
 export const db = {
   // --- Households ---
   getHouseholds: async (): Promise<Household[]> => {

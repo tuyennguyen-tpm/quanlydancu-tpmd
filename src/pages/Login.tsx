@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Database, Users } from 'lucide-react';
-import { supabase, db, seedTenantData } from '../services/db';
+import { supabase, db, seedTenantData, checkAndSeedUser } from '../services/db';
 import { showToast } from '../utils/toast';
 
 interface LoginProps {
@@ -64,12 +64,16 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password
       });
       if (error) throw error;
       showToast('Đăng nhập thành công!', 'success');
+      
+      if (data && data.user) {
+        await checkAndSeedUser(data.user.id);
+      }
     } catch (err: any) {
       showToast(`Lỗi đăng nhập: ${err.message || err}`, 'danger');
     } finally {
@@ -99,10 +103,15 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       });
       if (error) throw error;
       if (data && data.user) {
-        showToast('Đăng ký tài khoản thành công! Đang khởi tạo dữ liệu mẫu cho tổ...', 'success');
-        // Seed database for this user
-        await seedTenantData(data.user.id);
-        showToast('Khởi tạo dữ liệu mẫu thành công! Vui lòng đăng nhập.', 'success');
+        if (!data.session) {
+          // Email confirmation is enabled in Supabase
+          showToast('Đăng ký thành công! Vui lòng mở Email để nhấn liên kết xác thực tài khoản trước khi đăng nhập.', 'warning');
+        } else {
+          // Email confirmation is disabled, user is immediately logged in/session is available
+          showToast('Đăng ký tài khoản thành công! Đang khởi tạo dữ liệu mẫu...', 'success');
+          await seedTenantData(data.user.id);
+          showToast('Khởi tạo dữ liệu mẫu thành công! Vui lòng đăng nhập.', 'success');
+        }
         setAuthMode('login');
         setPassword('');
         setConfirmPassword('');
