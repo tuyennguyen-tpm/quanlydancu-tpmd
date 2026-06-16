@@ -872,7 +872,7 @@ const App = () => {
                       <input
                         type="text"
                         readOnly
-                        value={`${window.location.origin}/?t=${session.user.id}`}
+                        value={`${window.location.origin}/?t=${session?.user?.id}`}
                         style={{ background: 'rgba(0,0,0,0.05)', color: '#64748b', fontSize: '0.82rem', flex: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)' }}
                         onClick={(e) => (e.target as HTMLInputElement).select()}
                       />
