@@ -120,6 +120,17 @@ const setStorageItem = <T>(key: string, value: T): void => {
   localStorage.setItem(key, JSON.stringify(value));
 };
 
+const handleDbError = (action: string, error: any) => {
+  console.error(`Supabase DB Error during ${action}:`, error);
+  const ev = new CustomEvent('show-toast', { 
+    detail: { 
+      message: `Cảnh báo: Lỗi kết nối CSDL khi ${action} (${error.message || error}). Dữ liệu đang ghi tạm cục bộ.`, 
+      type: 'warning' 
+    } 
+  });
+  window.dispatchEvent(ev);
+};
+
 // General DB Interface
 // General DB Interface
 export const getSessionUserId = async (): Promise<string | null> => {
@@ -296,6 +307,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải danh sách hộ dân', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getHouseholds error, falling back to local storage', e);
@@ -313,6 +325,7 @@ export const db = {
         const uId = await getSessionUserId();
         const payload = { ...fullHousehold, user_id: uId };
         const { data, error } = await supabase.from('households').upsert(payload).select().single();
+        if (error) handleDbError('lưu hộ dân', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveHousehold error, saving to local storage', e);
@@ -332,6 +345,7 @@ export const db = {
     if (supabase) {
       try {
         const { error } = await supabase.from('households').delete().eq('id', id);
+        if (error) handleDbError('xóa hộ dân', error);
         if (!error) return true;
       } catch (e) {
         console.error('Supabase deleteHousehold error, falling back to local storage', e);
@@ -358,6 +372,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải danh sách nhân khẩu', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getResidents error, falling back to local storage', e);
@@ -380,6 +395,7 @@ export const db = {
         const uId = await getSessionUserId();
         const payload = { ...fullResident, user_id: uId };
         const { data, error } = await supabase.from('residents').upsert(payload).select().single();
+        if (error) handleDbError('lưu nhân khẩu', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveResident error, saving to local storage', e);
@@ -399,6 +415,7 @@ export const db = {
     if (supabase) {
       try {
         const { error } = await supabase.from('residents').delete().eq('id', id);
+        if (error) handleDbError('xóa nhân khẩu', error);
         if (!error) return true;
       } catch (e) {
         console.error('Supabase deleteResident error, falling back to local storage', e);
@@ -420,6 +437,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải danh sách thu chi', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getFinancialRecords error, falling back to local storage', e);
@@ -437,6 +455,7 @@ export const db = {
         const uId = await getSessionUserId();
         const payload = { ...fullRecord, user_id: uId };
         const { data, error } = await supabase.from('financial_records').upsert(payload).select().single();
+        if (error) handleDbError('lưu bản ghi thu chi', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveFinancialRecord error, saving to local storage', e);
@@ -456,6 +475,7 @@ export const db = {
     if (supabase) {
       try {
         const { error } = await supabase.from('financial_records').delete().eq('id', id);
+        if (error) handleDbError('xóa bản ghi thu chi', error);
         if (!error) return true;
       } catch (e) {
         console.error('Supabase deleteFinancialRecord error, falling back to local storage', e);
@@ -477,6 +497,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải danh sách phản ánh', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getComplaints error, falling back to local storage', e);
@@ -495,6 +516,7 @@ export const db = {
         const uId = tenantId || (await getSessionUserId());
         const payload = { ...fullComplaint, user_id: uId };
         const { data, error } = await supabase.from('complaints').upsert(payload).select().single();
+        if (error) handleDbError('gửi phản ánh', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveComplaint error, saving to local storage', e);
@@ -521,6 +543,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải danh sách cuộc họp', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getMeetings error, falling back to local storage', e);
@@ -538,6 +561,7 @@ export const db = {
         const uId = await getSessionUserId();
         const payload = { ...fullMeeting, user_id: uId };
         const { data, error } = await supabase.from('meetings').upsert(payload).select().single();
+        if (error) handleDbError('lưu thông tin cuộc họp', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveMeeting error, saving to local storage', e);
@@ -564,6 +588,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải danh sách tài liệu', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getDocuments error, falling back to local storage', e);
@@ -578,6 +603,7 @@ export const db = {
         const uId = await getSessionUserId();
         const payload = { ...doc, user_id: uId };
         const { data, error } = await supabase.from('documents').upsert(payload).select().single();
+        if (error) handleDbError('lưu tài liệu', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveDocument error, saving to local storage', e);
@@ -604,6 +630,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải nhật ký an ninh', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getSecurityLogs error, falling back to local storage', e);
@@ -617,6 +644,7 @@ export const db = {
         const uId = await getSessionUserId();
         const payload = { ...log, user_id: uId };
         const { data, error } = await supabase.from('security_logs').upsert(payload).select().single();
+        if (error) handleDbError('lưu nhật ký an ninh', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveSecurityLog error, saving to local storage', e);
@@ -643,6 +671,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải nhật ký môi trường', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getEnvironmentLogs error, falling back to local storage', e);
@@ -656,6 +685,7 @@ export const db = {
         const uId = await getSessionUserId();
         const payload = { ...log, user_id: uId };
         const { data, error } = await supabase.from('environment_logs').upsert(payload).select().single();
+        if (error) handleDbError('lưu nhật ký môi trường', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase saveEnvironmentLog error, saving to local storage', e);
@@ -682,6 +712,7 @@ export const db = {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
+        if (error) handleDbError('tải chương trình chính sách', error);
         if (!error && data) {
           return data.map((item: any) => ({
             id: item.id,
@@ -712,6 +743,7 @@ export const db = {
           user_id: uId
         };
         const { data, error } = await supabase.from('policy_activities').upsert(dbPayload).select().single();
+        if (error) handleDbError('lưu chương trình chính sách', error);
         if (!error && data) {
           return {
             id: data.id,

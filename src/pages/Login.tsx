@@ -515,19 +515,35 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         .login-card {
           width: 100%;
           max-width: 400px;
-          background: rgba(15, 23, 42, 0.85);
-          border: 1px solid rgba(59, 130, 246, 0.25);
+          max-height: calc(100vh - 60px);
+          overflow-y: auto;
+          background: rgba(30, 41, 59, 0.88);
+          border: 1px solid rgba(59, 130, 246, 0.35);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
           border-radius: 20px;
           padding: 24px 20px;
           box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5),
-                      0 0 30px rgba(59, 130, 246, 0.12),
-                      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+                      0 0 30px rgba(59, 130, 246, 0.15),
+                      inset 0 1px 1px rgba(255, 255, 255, 0.15);
           text-align: center;
           box-sizing: border-box;
           animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
           margin: auto;
+        }
+
+        .login-card::-webkit-scrollbar {
+          width: 6px;
+        }
+        .login-card::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .login-card::-webkit-scrollbar-thumb {
+          background: rgba(59, 130, 246, 0.35);
+          border-radius: 3px;
+        }
+        .login-card::-webkit-scrollbar-thumb:hover {
+          background: rgba(59, 130, 246, 0.65);
         }
 
         @keyframes slideUp {
