@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db, refreshSupabaseClient, supabase } from './services/db';
+import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables } from './services/db';
 import type { Session } from '@supabase/supabase-js';
 import Dashboard from './pages/Dashboard';
 import AIAssistant from './pages/AIAssistant';
@@ -98,6 +98,15 @@ const App = () => {
   const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
   const [targetVeSinhInput, setTargetVeSinhInput] = useState(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
   const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
+
+  const [missingTables, setMissingTables] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('detected_missing_tables') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [showSqlPatchModal, setShowSqlPatchModal] = useState(false);
 
   // Notifications states
   const [isNotifOpen, setNotifOpen] = useState(false);
@@ -226,9 +235,36 @@ const App = () => {
   };
 
   useEffect(() => {
-    loadPendingCountAndAlerts();
-    window.addEventListener('db-changed', loadPendingCountAndAlerts);
-    return () => window.removeEventListener('db-changed', loadPendingCountAndAlerts);
+    const handleDbChanged = () => {
+      if (session || isOfflineMode || isGuestMode) {
+        loadPendingCountAndAlerts();
+      }
+    };
+
+    if (session || isOfflineMode || isGuestMode) {
+      loadPendingCountAndAlerts();
+    }
+
+    window.addEventListener('db-changed', handleDbChanged);
+    return () => window.removeEventListener('db-changed', handleDbChanged);
+  }, [session, isOfflineMode, isGuestMode]);
+
+  useEffect(() => {
+    const handleMissingTables = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail) {
+        setMissingTables(customEvent.detail);
+      } else {
+        try {
+          const list = JSON.parse(localStorage.getItem('detected_missing_tables') || '[]');
+          setMissingTables(list);
+        } catch {
+          setMissingTables([]);
+        }
+      }
+    };
+    window.addEventListener('missing-tables-updated', handleMissingTables);
+    return () => window.removeEventListener('missing-tables-updated', handleMissingTables);
   }, []);
 
   useEffect(() => {
@@ -1063,6 +1099,43 @@ const App = () => {
                 </div>
               </div>
 
+              {/* ─── Phần 2.5: Cảnh báo nâng cấp CSDL (Chỉ hiển thị khi phát hiện thiếu bảng) ─── */}
+              {missingTables.length > 0 && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.02))',
+                  border: '1.5px solid rgba(239,68,68,0.3)',
+                  borderRadius: '12px',
+                  padding: '16px 18px',
+                  marginTop: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ⚠️ Cần cập nhật cơ sở dữ liệu Supabase
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#fca5a5', lineHeight: '1.4', textAlign: 'left' }}>
+                    Phát hiện phiên bản mới yêu cầu thêm các bảng sau trong CSDL của bạn: <strong>{missingTables.join(', ')}</strong>.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowSqlPatchModal(true)}
+                    style={{
+                      background: 'rgba(239,68,68,0.1)',
+                      color: '#fca5a5',
+                      borderColor: 'rgba(239,68,68,0.25)',
+                      fontSize: '0.8rem',
+                      padding: '6px 12px',
+                      width: 'fit-content',
+                      boxShadow: 'none'
+                    }}
+                  >
+                    Xem SQL sửa lỗi & Hướng dẫn chạy
+                  </button>
+                </div>
+              )}
+
               {/* ─── Phần 3: Nguy hiểm ─── */}
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
@@ -1080,6 +1153,87 @@ const App = () => {
                 <button type="submit" className="btn btn-primary">💾 Lưu cấu hình</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showSqlPatchModal && (
+        <div className="modal-overlay" style={{ zIndex: 10001, background: 'rgba(15, 23, 42, 0.85)' }}>
+          <div className="modal-content medium" style={{ background: '#1e293b', border: '1px solid rgba(239, 68, 68, 0.3)', maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h2 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.25rem' }}>
+                🛠️ SQL cập nhật Cơ sở dữ liệu
+              </h2>
+              <button className="close-btn" onClick={() => setShowSqlPatchModal(false)}><X size={24} /></button>
+            </div>
+            <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
+              <p style={{ fontSize: '0.88rem', color: '#94a3b8', margin: 0, lineHeight: '1.5' }}>
+                Vui lòng làm theo các bước dưới đây để bổ sung các bảng bị thiếu vào cơ sở dữ liệu của bạn:
+              </p>
+              <ol style={{ fontSize: '0.85rem', color: '#cbd5e1', paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <li>Truy cập vào trang quản trị <strong><a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Supabase Dashboard</a></strong>.</li>
+                <li>Mở dự án của bạn, chọn mục <strong>SQL Editor</strong> ở thanh menu bên trái.</li>
+                <li>Nhấn <strong>New Query</strong>, dán toàn bộ đoạn mã SQL dưới đây vào khung soạn thảo.</li>
+                <li>Nhấn nút <strong>Run</strong> để chạy lệnh tạo bảng. Sau đó quay lại ứng dụng này và tải lại trang.</li>
+              </ol>
+
+              <div style={{ position: 'relative', marginTop: '12px' }}>
+                <textarea
+                  readOnly
+                  value={getSqlPatchForMissingTables(missingTables)}
+                  style={{
+                    width: '100%',
+                    height: '220px',
+                    background: '#0f172a',
+                    color: '#38bdf8',
+                    fontFamily: 'Consolas, Monaco, monospace',
+                    fontSize: '0.8rem',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxSizing: 'border-box',
+                    resize: 'none',
+                    outline: 'none'
+                  }}
+                  onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(getSqlPatchForMissingTables(missingTables));
+                    const ev = new CustomEvent('show-toast', { 
+                      detail: { message: 'Đã sao chép đoạn mã SQL cập nhật!', type: 'success' } 
+                    });
+                    window.dispatchEvent(ev);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    bottom: '16px',
+                    fontSize: '0.78rem',
+                    padding: '4px 10px',
+                    height: 'auto',
+                    minHeight: '28px',
+                    borderRadius: '6px'
+                  }}
+                >
+                  Sao chép SQL
+                </button>
+              </div>
+            </div>
+            <div className="form-actions" style={{ marginTop: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowSqlPatchModal(false);
+                }}
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                Đóng cửa sổ
+              </button>
+            </div>
           </div>
         </div>
       )}

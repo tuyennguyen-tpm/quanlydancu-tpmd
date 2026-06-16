@@ -39,6 +39,8 @@ export let supabase = getSupabaseClient();
 
 export const refreshSupabaseClient = () => {
   supabase = getSupabaseClient();
+  localStorage.removeItem('detected_missing_tables');
+  window.dispatchEvent(new CustomEvent('missing-tables-updated', { detail: [] }));
 };
 
 // Initial Seed Data for LocalStorage Fallback
@@ -122,13 +124,46 @@ const setStorageItem = <T>(key: string, value: T): void => {
 
 const handleDbError = (action: string, error: any) => {
   console.error(`Supabase DB Error during ${action}:`, error);
-  const ev = new CustomEvent('show-toast', { 
-    detail: { 
-      message: `Cảnh báo: Lỗi kết nối CSDL khi ${action} (${error.message || error}). Dữ liệu đang ghi tạm cục bộ.`, 
-      type: 'warning' 
-    } 
-  });
-  window.dispatchEvent(ev);
+  
+  const message = error?.message || (typeof error === 'string' ? error : '');
+  let missingTable = '';
+  if (message.includes('Could not find the table') || message.includes('does not exist')) {
+    const match = message.match(/table ['"]public\.(\w+)['"]/) || message.match(/relation ["']public\.(\w+)["']/);
+    if (match && match[1]) {
+      missingTable = match[1];
+    } else {
+      if (action.includes('môi trường')) missingTable = 'environment_logs';
+      else if (action.includes('an ninh')) missingTable = 'security_logs';
+      else if (action.includes('chính sách')) missingTable = 'policy_activities';
+    }
+  }
+
+  let isAlreadyFlagged = false;
+  if (missingTable) {
+    try {
+      const missingList = JSON.parse(localStorage.getItem('detected_missing_tables') || '[]');
+      if (!missingList.includes(missingTable)) {
+        missingList.push(missingTable);
+        localStorage.setItem('detected_missing_tables', JSON.stringify(missingList));
+        window.dispatchEvent(new CustomEvent('missing-tables-updated', { detail: missingList }));
+      } else {
+        isAlreadyFlagged = true;
+      }
+    } catch (e) {
+      console.error('Failed to update detected_missing_tables in localStorage', e);
+    }
+  }
+
+  // Only show the toast warning if it's not a missing table error that has already been flagged
+  if (!isAlreadyFlagged) {
+    const ev = new CustomEvent('show-toast', { 
+      detail: { 
+        message: `Cảnh báo: Lỗi kết nối CSDL khi ${action} (${message}). Dữ liệu đang ghi tạm cục bộ.`, 
+        type: 'warning' 
+      } 
+    });
+    window.dispatchEvent(ev);
+  }
 };
 
 // General DB Interface
@@ -803,4 +838,80 @@ export const db = {
     }
     console.log('saveGuestPin: da luu PIN thanh cong vao app_config:', pin);
   }
+};
+
+export const getSqlPatchForMissingTables = (missingTables: string[]): string => {
+  let sql = `-- SQL PATCH CẬP NHẬT CƠ SỞ DỮ LIỆU TỔ DÂN PHỐ\n`;
+  sql += `-- Hãy copy đoạn mã này và chạy trong mục SQL Editor trên Supabase Dashboard của bạn.\n\n`;
+
+  if (missingTables.includes('security_logs')) {
+    sql += `-- ─── CẬP NHẬT BẢNG SECURITY_LOGS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS security_logs (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    title TEXT NOT NULL,\n`;
+    sql += `    description TEXT NOT NULL,\n`;
+    sql += `    type TEXT CHECK (type IN ('ok', 'alert')) NOT NULL,\n`;
+    sql += `    date DATE DEFAULT CURRENT_DATE,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE security_logs ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access security_logs" ON security_logs;\n`;
+    sql += `CREATE POLICY "Allow admin access security_logs" ON security_logs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read security_logs" ON security_logs;\n`;
+    sql += `CREATE POLICY "Allow public read security_logs" ON security_logs FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  if (missingTables.includes('environment_logs')) {
+    sql += `-- ─── CẬP NHẬT BẢNG ENVIRONMENT_LOGS ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS environment_logs (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    area TEXT NOT NULL,\n`;
+    sql += `    status TEXT CHECK (status IN ('ok', 'warning', 'danger')) NOT NULL,\n`;
+    sql += `    last_cleaned DATE DEFAULT CURRENT_DATE,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE environment_logs ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access environment_logs" ON environment_logs;\n`;
+    sql += `CREATE POLICY "Allow admin access environment_logs" ON environment_logs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read environment_logs" ON environment_logs;\n`;
+    sql += `CREATE POLICY "Allow public read environment_logs" ON environment_logs FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  if (missingTables.includes('policy_activities')) {
+    sql += `-- ─── CẬP NHẬT BẢNG POLICY_ACTIVITIES ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS policy_activities (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    title TEXT NOT NULL,\n`;
+    sql += `    description TEXT NOT NULL,\n`;
+    sql += `    target_group TEXT NOT NULL,\n`;
+    sql += `    date DATE DEFAULT CURRENT_DATE,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE policy_activities ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access policy_activities" ON policy_activities;\n`;
+    sql += `CREATE POLICY "Allow admin access policy_activities" ON policy_activities FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read policy_activities" ON policy_activities;\n`;
+    sql += `CREATE POLICY "Allow public read policy_activities" ON policy_activities FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  if (missingTables.includes('app_config')) {
+    sql += `-- ─── CẬP NHẬT BẢNG APP_CONFIG ───\n`;
+    sql += `CREATE TABLE IF NOT EXISTS app_config (\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    key TEXT NOT NULL,\n`;
+    sql += `    value TEXT NOT NULL,\n`;
+    sql += `    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),\n`;
+    sql += `    PRIMARY KEY (user_id, key)\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access app_config" ON app_config;\n`;
+    sql += `CREATE POLICY "Allow admin access app_config" ON app_config FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read app_config" ON app_config;\n`;
+    sql += `CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  return sql;
 };
