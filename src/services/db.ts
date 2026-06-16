@@ -664,14 +664,16 @@ export const db = {
   getDocuments: async (): Promise<Document[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('documents').select('*').neq('id', 'CONFIG_PIN').order('uploaded_at', { ascending: false });
+        // Không dùng .neq('id', 'CONFIG_PIN') vì cột id là UUID, không so sánh được với chuỗi text
+        // Thay vào đó lọc bằng JavaScript sau khi nhận dữ liệu
+        let query = supabase.from('documents').select('*').order('uploaded_at', { ascending: false });
         const tenantId = getTenantFilter();
         if (tenantId) {
           query = query.eq('user_id', tenantId);
         }
         const { data, error } = await query;
-        if (error) handleDbError('tải danh sách tài liệu', error);
-        if (!error && data) return data;
+        if (error) handleDbError('t\u1ea3i danh s\u00e1ch t\u00e0i li\u1ec7u', error);
+        if (!error && data) return data.filter((d: any) => d.id !== 'CONFIG_PIN');
       } catch (e) {
         console.error('Supabase getDocuments error, falling back to local storage', e);
       }
