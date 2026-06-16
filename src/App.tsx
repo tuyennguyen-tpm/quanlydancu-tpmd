@@ -758,8 +758,31 @@ const App = () => {
                 <Menu size={24} />
               </button>
             )}
-            <h2 className="page-title">
-              {menuItems.find(i => i.id === activeTab)?.label}
+            <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span>{menuItems.find(i => i.id === activeTab)?.label}</span>
+              {activeTab === 'dashboard' && leaderPhone && (
+                <span 
+                  className="header-phone-badge" 
+                  onClick={handleOpenSettings}
+                  title="Nhấp để thay đổi số điện thoại trong cấu hình"
+                  style={{
+                    fontSize: '0.82rem',
+                    fontWeight: '600',
+                    color: 'var(--primary)',
+                    background: 'rgba(37, 99, 235, 0.08)',
+                    padding: '4px 10px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(37, 99, 235, 0.15)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  📞 SĐT Tổ trưởng: {leaderPhone}
+                </span>
+              )}
             </h2>
           </div>
 
