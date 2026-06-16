@@ -626,7 +626,7 @@ export const db = {
         const payload = { ...fullMeeting, user_id: uId };
         const { data, error } = await supabase.from('meetings').upsert(payload).select().single();
         if (error) handleDbError('lưu thông tin cuộc họp', error);
-        if (!error && data) return data;
+        if (!error && data) return data as Meeting;
       } catch (e) {
         console.error('Supabase saveMeeting error, saving to local storage', e);
       }

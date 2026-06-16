@@ -86,6 +86,7 @@ CREATE TABLE meetings (
     date TIMESTAMP WITH TIME ZONE,
     location TEXT,
     attendance_count INTEGER DEFAULT 0,
+    type TEXT DEFAULT 'general', -- loại cuộc họp: general | party | front
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
