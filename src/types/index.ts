@@ -12,7 +12,7 @@ export interface Household {
   id: string;
   household_number: string; // Số sổ hộ khẩu (nếu còn dùng) hoặc mã định danh hộ
   address: string;
-  head_of_household_id: string;
+  head_of_household_id: string | null;
   group_id: string;
   latitude?: number;
   longitude?: number;
