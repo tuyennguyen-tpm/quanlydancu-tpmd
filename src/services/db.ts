@@ -235,7 +235,7 @@ export const seedTenantData = async (userId: string): Promise<void> => {
     const householdsPayload = seedHouseholds.map(h => ({
       ...h,
       id: mapToUUID(h.id),
-      head_of_household_id: mapToUUID(h.head_of_household_id),
+      head_of_household_id: h.head_of_household_id ? mapToUUID(h.head_of_household_id) : null,
       user_id: userId
     }));
     await supabase.from('households').insert(householdsPayload);
