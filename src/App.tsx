@@ -356,10 +356,15 @@ const App = () => {
     const pinToSave = guestPinInput.trim() || '1234';
     try {
       await db.saveGuestPin(pinToSave);
-      showToast(`✅ Đã đồng bộ mã PIN "${pinToSave}" lên Database!`, 'success');
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message: `✅ Mã PIN "${pinToSave}" đã đồng bộ lên Database!`, type: 'success' }
+      }));
     } catch (err: any) {
-      showToast(`❌ Lỗi lưu PIN: ${err.message || err}`, 'danger');
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message: `❌ Lỗi lưu PIN: ${(err as Error).message || err}`, type: 'danger' }
+      }));
     }
+
 
     // Lưu Supabase config
     localStorage.setItem('supabase_url', sbUrl.trim());
