@@ -125,6 +125,27 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase) {
+      showToast('Chưa cấu hình Supabase! Vui lòng cấu hình trong Cài đặt hệ thống.', 'warning');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin
+      });
+      if (error) throw error;
+      showToast('Đã gửi email khôi phục mật khẩu! Vui lòng kiểm tra hòm thư của bạn.', 'success');
+      setAuthMode('login');
+    } catch (err: any) {
+      showToast(`Lỗi: ${err.message || err}`, 'danger');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-wrapper">
       <div className="login-card">

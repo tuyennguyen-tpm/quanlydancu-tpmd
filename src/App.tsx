@@ -86,6 +86,13 @@ const App = () => {
   const [leaderPhoneInput, setLeaderPhoneInput] = useState(leaderPhone);
   const [groupIdInput, setGroupIdInput] = useState(groupId);
 
+  // Password change states
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+
+
   // Targets states for TDP Funds
   const [targetNghieoInput, setTargetNghieoInput] = useState(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
   const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
@@ -114,13 +121,22 @@ const App = () => {
       setSession(session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session) {
         localStorage.removeItem('offline_mode');
         setOfflineMode(false);
       }
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+        setSettingsOpen(true);
+        const ev = new CustomEvent('show-toast', { 
+          detail: { message: 'Vui lòng thiết lập mật khẩu mới trong phần cấu hình!', type: 'info' } 
+        });
+        window.dispatchEvent(ev);
+      }
     });
+
 
     return () => subscription.unsubscribe();
   }, []);
@@ -405,6 +421,58 @@ const App = () => {
       }, 1500);
     }
   };
+
+  const handleChangePassword = async () => {
+    if (!newPassword.trim()) {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: 'Vui lòng nhập mật khẩu mới!', type: 'warning' } 
+      });
+      window.dispatchEvent(ev);
+      return;
+    }
+    if (newPassword.length < 6) {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: 'Mật khẩu phải chứa ít nhất 6 ký tự!', type: 'warning' } 
+      });
+      window.dispatchEvent(ev);
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: 'Mật khẩu xác nhận không khớp!', type: 'warning' } 
+      });
+      window.dispatchEvent(ev);
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      if (!supabase) throw new Error('Supabase client chưa được cấu hình.');
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: 'Đổi mật khẩu tài khoản thành công!', type: 'success' } 
+      });
+      window.dispatchEvent(ev);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setIsRecoveryMode(false);
+      
+      // Clear hash recovery tokens if any
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    } catch (err: any) {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: `Lỗi đổi mật khẩu: ${err.message || err}`, type: 'danger' } 
+      });
+      window.dispatchEvent(ev);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
 
   const handleClearDatabase = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa tất cả dữ liệu trong LocalStorage và đặt lại dữ liệu mẫu ban đầu?')) {
@@ -891,6 +959,75 @@ const App = () => {
                   </div>
                 )}
               </div>
+
+              {/* ─── Phần 1d: Đổi mật khẩu tài khoản (Chỉ hiển thị khi đã đăng nhập Supabase) ─── */}
+              {session && !isOfflineMode && !isGuestMode && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(99,102,241,0.02))',
+                  border: '1.5px solid rgba(99,102,241,0.18)',
+                  borderRadius: '12px',
+                  padding: '16px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  marginTop: '12px'
+                }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+                    🔒 Đổi mật khẩu tài khoản
+                  </div>
+                  
+                  {isRecoveryMode && (
+                    <div style={{
+                      background: 'rgba(245,158,11,0.1)',
+                      border: '1px solid rgba(245,158,11,0.3)',
+                      borderRadius: '6px',
+                      padding: '8px 10px',
+                      fontSize: '0.78rem',
+                      color: '#d97706',
+                      lineHeight: '1.4'
+                    }}>
+                      ⚠️ Bạn đang trong phiên khôi phục mật khẩu. Vui lòng cập nhật mật khẩu mới ngay dưới đây.
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label>Mật khẩu mới</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)..."
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Xác nhận mật khẩu mới</label>
+                    <input
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Xác nhận mật khẩu mới..."
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleChangePassword}
+                    disabled={passwordLoading}
+                    style={{
+                      marginTop: '4px',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                      borderColor: '#4f46e5',
+                      justifyContent: 'center',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {passwordLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+                  </button>
+                </div>
+              )}
 
               {/* ─── Phần 2: Kết nối Supabase ─── */}
               <div style={{
