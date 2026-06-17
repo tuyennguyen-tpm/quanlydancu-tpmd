@@ -125,7 +125,12 @@ const setStorageItem = <T>(key: string, value: T): void => {
 const handleDbError = (action: string, error: any) => {
   console.error(`Supabase DB Error during ${action}:`, error);
   
-  const message = error?.message || (typeof error === 'string' ? error : '');
+  const message = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+  const details = error?.details ? ` (Details: ${error.details})` : '';
+  const hint = error?.hint ? ` (Hint: ${error.hint})` : '';
+  const code = error?.code ? ` [Code: ${error.code}]` : '';
+  const fullErrorMessage = `${message}${details}${hint}${code}`;
+
   let missingTable = '';
   if (message.includes('Could not find the table') || message.includes('does not exist')) {
     const match = message.match(/table ['"]public\.(\w+)['"]/) || message.match(/relation ["']public\.(\w+)["']/);
@@ -165,7 +170,7 @@ const handleDbError = (action: string, error: any) => {
   if (!isAlreadyFlagged) {
     const ev = new CustomEvent('show-toast', { 
       detail: { 
-        message: `Cảnh báo: Lỗi kết nối CSDL khi ${action} (${message}). Dữ liệu đang ghi tạm cục bộ.`, 
+        message: `Cảnh báo: Lỗi kết nối CSDL khi ${action} (${fullErrorMessage}). Dữ liệu đang ghi tạm cục bộ.`, 
         type: 'warning' 
       } 
     });
