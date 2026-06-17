@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { FileText, Printer, RotateCcw, Calendar, User, Clock, MapPin } from 'lucide-react';
-import { db } from '../services/db';
+import { FileText, Printer, RotateCcw, Calendar, User, Clock, MapPin, Trash2, Plus } from 'lucide-react';
+import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import type { Meeting } from '../types';
+import type { Meeting, MeetingMinutesData } from '../types';
 
 const MeetingMinutes = () => {
   const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState('');
+  const [savedMinutes, setSavedMinutes] = useState<MeetingMinutesData[]>([]);
+  const [currentMinutesId, setCurrentMinutesId] = useState<string | null>(null);
   
   // Form/Document fields
   const [tdpName, setTdpName] = useState(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn');
@@ -21,6 +23,15 @@ const MeetingMinutes = () => {
   const [secretary, setSecretary] = useState('Lê Thị Dung - Thư ký');
   const [attendance, setAttendance] = useState('85');
   const [content, setContent] = useState('');
+
+  const loadSavedMinutes = async () => {
+    try {
+      const list = await db.getMeetingMinutes();
+      setSavedMinutes(list);
+    } catch (e) {
+      console.error('Lỗi tải danh sách biên bản:', e);
+    }
+  };
 
   // Helper to get custom default template contents based on meeting type
   const applyDefaultContentCustom = (
@@ -190,6 +201,7 @@ const MeetingMinutes = () => {
       }
     };
     loadMeetings();
+    loadSavedMinutes();
   }, []);
 
   const handleReset = () => {
@@ -209,6 +221,91 @@ const MeetingMinutes = () => {
       setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
       showToast('Đã khôi phục mặc định!', 'info');
     }
+  };
+
+  const handleSaveMinutes = async () => {
+    if (isGuest) {
+      showToast('Khách không có quyền lưu biên bản!', 'warning');
+      return;
+    }
+    if (!title.trim() || !content.trim()) {
+      showToast('Vui lòng điền tiêu đề và nội dung diễn biến biên bản!', 'warning');
+      return;
+    }
+
+    const payload: MeetingMinutesData = {
+      id: currentMinutesId || generateUUID(),
+      meeting_id: selectedMeetingId || null,
+      title,
+      date,
+      time,
+      location,
+      chairman,
+      secretary,
+      attendance: parseInt(attendance) || 0,
+      content,
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      await db.saveMeetingMinutes(payload);
+      showToast(currentMinutesId ? 'Cập nhật biên bản thành công!' : 'Lưu biên bản mới thành công!', 'success');
+      setCurrentMinutesId(payload.id);
+      loadSavedMinutes();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e: any) {
+      showToast(`Lỗi lưu biên bản: ${e.message || e}`, 'danger');
+    }
+  };
+
+  const handleDeleteMinutes = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isGuest) {
+      showToast('Khách không có quyền xóa biên bản!', 'warning');
+      return;
+    }
+    if (!window.confirm('Bạn có chắc chắn muốn xóa biên bản này khỏi hệ thống?')) {
+      return;
+    }
+
+    try {
+      await db.deleteMeetingMinutes(id);
+      showToast('Đã xóa biên bản thành công!', 'success');
+      if (currentMinutesId === id) {
+        handleCreateNewMinutes();
+      }
+      loadSavedMinutes();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (err: any) {
+      showToast(`Lỗi xóa biên bản: ${err.message || err}`, 'danger');
+    }
+  };
+
+  const handleSelectSavedMinutes = (minutes: MeetingMinutesData) => {
+    setCurrentMinutesId(minutes.id);
+    setSelectedMeetingId(minutes.meeting_id || '');
+    setTitle(minutes.title);
+    setDate(minutes.date);
+    setTime(minutes.time);
+    setLocation(minutes.location);
+    setChairman(minutes.chairman);
+    setSecretary(minutes.secretary);
+    setAttendance(minutes.attendance.toString());
+    setContent(minutes.content);
+    showToast('Đã mở biên bản đã lưu!', 'success');
+  };
+
+  const handleCreateNewMinutes = () => {
+    setCurrentMinutesId(null);
+    setSelectedMeetingId('');
+    setTitle('Họp Tổ dân phố thường kỳ');
+    setDate(new Date().toISOString().slice(0, 10));
+    setTime('19:30');
+    setLocation('Nhà văn hóa Tổ dân phố');
+    setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
+    setSecretary('Lê Thị Dung - Thư ký');
+    setAttendance('85');
+    setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
   };
 
   const handlePrint = () => {
@@ -411,11 +508,110 @@ const MeetingMinutes = () => {
       {/* Main Grid Layout */}
       <div className="minutes-container" style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1.2fr',
+        gridTemplateColumns: '280px 1.1fr 1.3fr',
         gap: '24px',
         alignItems: 'start'
       }}>
         
+        {/* Left Column: Saved Minutes List */}
+        <div className="saved-list-card" style={{
+          background: 'white',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: 'var(--shadow-sm)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+          maxHeight: 'calc(100vh - 120px)',
+          overflowY: 'auto'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)' }}>
+              📁 Biên bản đã lưu
+            </h3>
+            {!isGuest && (
+              <button 
+                onClick={handleCreateNewMinutes}
+                style={{
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: 'none',
+                  color: 'var(--primary)',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.78rem',
+                  fontWeight: '600'
+                }}
+              >
+                <Plus size={12} /> Thêm mới
+              </button>
+            )}
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {savedMinutes.map(m => (
+              <div 
+                key={m.id}
+                onClick={() => handleSelectSavedMinutes(m)}
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  background: currentMinutesId === m.id ? 'rgba(59, 130, 246, 0.08)' : 'rgba(248, 250, 252, 0.6)',
+                  border: '1px solid',
+                  borderColor: currentMinutesId === m.id ? 'var(--primary)' : 'var(--border)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: '10px'
+                }}
+                className="saved-item"
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.85rem', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {m.title}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    <Calendar size={10} /> {new Date(m.date).toLocaleDateString('vi-VN')}
+                  </div>
+                </div>
+                {!isGuest && (
+                  <button 
+                    onClick={(e) => handleDeleteMinutes(m.id, e)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0.65,
+                      transition: 'opacity 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                    onMouseOut={(e) => e.currentTarget.style.opacity = '0.65'}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+            {savedMinutes.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
+                Chưa có biên bản nào được lưu trữ.
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Left Side: Form Controls */}
         <div className="form-card" style={{
           background: 'white',
@@ -556,34 +752,55 @@ const MeetingMinutes = () => {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
             {!isGuest && (
               <button
                 onClick={handleReset}
                 className="btn btn-secondary"
-                style={{ flex: 1, padding: '10px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                style={{ flex: '1 1 120px', padding: '9px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
               >
-                <RotateCcw size={16} /> Đặt lại mặc định
+                <RotateCcw size={14} /> Reset form
+              </button>
+            )}
+            {!isGuest && (
+              <button
+                onClick={handleSaveMinutes}
+                className="btn btn-primary"
+                style={{
+                  flex: '1.2 1 140px',
+                  padding: '9px',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)',
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                <FileText size={14} /> {currentMinutesId ? 'Cập nhật biên bản' : 'Lưu biên bản'}
               </button>
             )}
             <button
               onClick={handlePrint}
               className="btn btn-primary"
               style={{
-                flex: 1.2,
-                padding: '10px',
-                fontSize: '0.85rem',
+                flex: '1.2 1 140px',
+                padding: '9px',
+                fontSize: '0.82rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
+                gap: '4px',
                 background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
                 boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
                 color: 'white',
                 border: 'none'
               }}
             >
-              <Printer size={16} /> In biên bản (A4)
+              <Printer size={14} /> In biên bản (A4)
             </button>
           </div>
         </div>
@@ -688,13 +905,24 @@ const MeetingMinutes = () => {
         .minutes-page {
           animation: fadeIn 0.4s ease-out;
         }
-        @media (max-width: 1024px) {
+        .saved-item:hover {
+          background: rgba(59, 130, 246, 0.04) !important;
+          border-color: rgba(59, 130, 246, 0.4) !important;
+        }
+        @media (max-width: 1200px) {
+          .minutes-container {
+            grid-template-columns: 280px 1fr !important;
+          }
+          .preview-card {
+            display: none !important; /* Hide preview on medium screens */
+          }
+        }
+        @media (max-width: 768px) {
           .minutes-container {
             grid-template-columns: 1fr !important;
           }
-          .preview-card {
-            position: relative !important;
-            top: 0 !important;
+          .saved-list-card {
+            max-height: 250px !important;
           }
         }
       `}</style>

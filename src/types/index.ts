@@ -94,3 +94,17 @@ export interface PolicyActivity {
   created_at?: string;
 }
 
+export interface MeetingMinutesData {
+  id: string;
+  meeting_id: string | null;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  chairman: string;
+  secretary: string;
+  attendance: number;
+  content: string;
+  created_at: string;
+}
+

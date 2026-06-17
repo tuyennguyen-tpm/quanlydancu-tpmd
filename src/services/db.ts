@@ -1,6 +1,6 @@
 // v2.1 - Su dung bang app_config cho dong bo ma PIN (khong phu thuoc documents)
 import { createClient } from '@supabase/supabase-js';
-import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity } from '../types';
+import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData } from '../types';
 
 
 // Types for logs not defined in index.ts
@@ -146,6 +146,7 @@ const handleDbError = (action: string, error: any) => {
       else if (action.includes('phản ánh')) missingTable = 'complaints';
       else if (action.includes('cuộc họp')) missingTable = 'meetings';
       else if (action.includes('tài liệu')) missingTable = 'documents';
+      else if (action.includes('biên bản')) missingTable = 'meeting_minutes';
       else if (action.includes('cấu hình') || action.includes('PIN')) missingTable = 'app_config';
     }
   }
@@ -894,6 +895,62 @@ export const db = {
       throw new Error(`${error.message} (code: ${error.code})`);
     }
     console.log('saveGuestPin: da luu PIN thanh cong vao app_config:', pin);
+  },
+
+  // --- Meeting Minutes ---
+  getMeetingMinutes: async (): Promise<MeetingMinutesData[]> => {
+    if (supabase) {
+      try {
+        let query = supabase.from('meeting_minutes').select('*').order('created_at', { ascending: false });
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
+        if (error) handleDbError('tải danh sách biên bản cuộc họp', error);
+        if (!error && data) return data;
+      } catch (e) {
+        console.error('Supabase getMeetingMinutes error, falling back to local storage', e);
+      }
+    }
+    return getStorageItem<MeetingMinutesData[]>('meeting_minutes', []);
+  },
+  saveMeetingMinutes: async (minutes: MeetingMinutesData): Promise<MeetingMinutesData> => {
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        const payload = { ...minutes, user_id: uId };
+        const { data, error } = await supabase.from('meeting_minutes').upsert(payload).select().single();
+        if (error) handleDbError('lưu biên bản cuộc họp', error);
+        if (!error && data) return data;
+      } catch (e) {
+        console.error('Supabase saveMeetingMinutes error, saving to local storage', e);
+      }
+    }
+    const list = getStorageItem<MeetingMinutesData[]>('meeting_minutes', []);
+    const index = list.findIndex(m => m.id === minutes.id);
+    if (index >= 0) {
+      list[index] = minutes;
+    } else {
+      list.push(minutes);
+    }
+    setStorageItem('meeting_minutes', list);
+    return minutes;
+  },
+  deleteMeetingMinutes: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('meeting_minutes').delete().eq('id', id);
+        if (error) handleDbError('xóa biên bản cuộc họp', error);
+        if (!error) return true;
+      } catch (e) {
+        console.error('Supabase deleteMeetingMinutes error, falling back to local storage', e);
+      }
+    }
+    const list = getStorageItem<MeetingMinutesData[]>('meeting_minutes', []);
+    const filtered = list.filter(m => m.id !== id);
+    setStorageItem('meeting_minutes', filtered);
+    return true;
   }
 };
 
@@ -1120,6 +1177,31 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `CREATE POLICY "Allow admin access app_config" ON app_config FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
     sql += `DROP POLICY IF EXISTS "Allow public read app_config" ON app_config;\n`;
     sql += `CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  // Meeting Minutes
+  if (isAll || missingTables.includes('meeting_minutes')) {
+    sql += `-- ─── CẬP NHẬT BẢNG MEETING_MINUTES ───\n`;
+    sql += `DROP TABLE IF EXISTS meeting_minutes CASCADE;\n\n`;
+    sql += `CREATE TABLE meeting_minutes (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    meeting_id UUID REFERENCES meetings(id) ON DELETE SET NULL,\n`;
+    sql += `    title TEXT NOT NULL,\n`;
+    sql += `    date DATE NOT NULL,\n`;
+    sql += `    time TEXT NOT NULL,\n`;
+    sql += `    location TEXT NOT NULL,\n`;
+    sql += `    chairman TEXT NOT NULL,\n`;
+    sql += `    secretary TEXT NOT NULL,\n`;
+    sql += `    attendance INTEGER DEFAULT 0,\n`;
+    sql += `    content TEXT NOT NULL,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE meeting_minutes ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access meeting_minutes" ON meeting_minutes;\n`;
+    sql += `CREATE POLICY "Allow admin access meeting_minutes" ON meeting_minutes FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read meeting_minutes" ON meeting_minutes;\n`;
+    sql += `CREATE POLICY "Allow public read meeting_minutes" ON meeting_minutes FOR SELECT TO anon USING (true);\n\n`;
   }
 
   return sql;

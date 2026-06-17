@@ -142,6 +142,22 @@ CREATE TABLE app_config (
     PRIMARY KEY (user_id, key)
 );
 
+-- 11. Bảng Biên bản cuộc họp (meeting_minutes)
+CREATE TABLE meeting_minutes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    meeting_id UUID REFERENCES meetings(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    date DATE NOT NULL,
+    time TEXT NOT NULL,
+    location TEXT NOT NULL,
+    chairman TEXT NOT NULL,
+    secretary TEXT NOT NULL,
+    attendance INTEGER DEFAULT 0,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- KÍCH HOẠT ROW LEVEL SECURITY (RLS) CHO TẤT CẢ CÁC BẢNG
 ALTER TABLE households ENABLE ROW LEVEL SECURITY;
 ALTER TABLE residents ENABLE ROW LEVEL SECURITY;
@@ -153,6 +169,7 @@ ALTER TABLE security_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE environment_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE policy_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_minutes ENABLE ROW LEVEL SECURITY;
 
 -- TẠO CÁC CHÍNH SÁCH BẢO MẬT (RLS POLICIES)
 
@@ -167,6 +184,7 @@ CREATE POLICY "Allow admin access security_logs" ON security_logs FOR ALL TO aut
 CREATE POLICY "Allow admin access environment_logs" ON environment_logs FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow admin access policy_activities" ON policy_activities FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Allow admin access app_config" ON app_config FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Allow admin access meeting_minutes" ON meeting_minutes FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- B. Quyền của người dân (Anonymous/Guest): Chỉ được đọc thông tin của tổ (RLS sẽ kiểm tra trong mệnh đề WHERE ở client bằng .eq('user_id', tenantId))
 -- Chúng ta mở quyền SELECT công khai (TO anon) để người dân có thể truy vấn
@@ -180,6 +198,7 @@ CREATE POLICY "Allow public read security_logs" ON security_logs FOR SELECT TO a
 CREATE POLICY "Allow public read environment_logs" ON environment_logs FOR SELECT TO anon USING (true);
 CREATE POLICY "Allow public read policy_activities" ON policy_activities FOR SELECT TO anon USING (true);
 CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read meeting_minutes" ON meeting_minutes FOR SELECT TO anon USING (true);
 
 -- Người dân được gửi phản ánh mới (INSERT vào bảng complaints)
 CREATE POLICY "Allow public submit complaint" ON complaints FOR INSERT TO anon WITH CHECK (true);
