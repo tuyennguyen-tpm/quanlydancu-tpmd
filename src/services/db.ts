@@ -641,12 +641,15 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        // Mã hóa loại cuộc họp vào group_id để lưu vào DB mà không cần cột type riêng
-        // Ví dụ: group_id = 'NAM_SAM_SON_01|party'
+        // Gửi trực tiếp cột type và vẫn lưu group_id mã hóa để tương thích ngược
         const meetingType = fullMeeting.type || 'general';
         const encodedGroupId = (fullMeeting.group_id || 'NAM_SAM_SON_01') + '|' + meetingType;
-        const { type: _type, ...rest } = fullMeeting as any;
-        const payload = { ...rest, group_id: encodedGroupId, user_id: uId };
+        const payload = { 
+          ...fullMeeting, 
+          group_id: encodedGroupId, 
+          type: meetingType, 
+          user_id: uId 
+        };
         const { data, error } = await supabase.from('meetings').upsert(payload).select().single();
         if (error) handleDbError('lưu thông tin cuộc họp', error);
         if (!error && data) return { ...data, type: meetingType || 'general' } as Meeting;
