@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Database, Users } from 'lucide-react';
+import { ShieldCheck, Users } from 'lucide-react';
 import { supabase, db, seedTenantData, checkAndSeedUser } from '../services/db';
 import { showToast } from '../utils/toast';
 
@@ -416,14 +416,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                 </>
               )}
 
-              <div className="login-divider">
-                <span>Hoặc</span>
-              </div>
 
-              <button className="offline-mode-btn" onClick={onOfflineMode}>
-                <Database size={16} />
-                Dùng thử chế độ Offline (LocalStorage)
-              </button>
             </div>
           )}
         </div>
