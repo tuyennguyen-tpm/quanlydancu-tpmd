@@ -1317,10 +1317,10 @@ const FeesTab: React.FC = () => {
   return (
     <>
       {/* Thông tin quy định */}
-      <div style={{ background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '0.78rem', color: '#fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+      <div style={{ background: '#0f172a', border: '1.5px solid #d97706', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.82rem', color: '#ffffff', display: 'flex', alignItems: 'flex-start', gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
         <span style={{ fontSize: '1rem', flexShrink: 0 }}>📋</span>
         <span>
-          <strong>Quy định 01-QĐ/TW (01/02/2026):</strong> Có BHXH = 1% lương | Lương hưu = 0,5% | Không BHXH chưa hưu = 0,3% LTT vùng | Đủ tuổi hưu chưa hưởng = 0,2% | Học sinh = 5.000đ/tháng.{' '}
+          <strong style={{ color: '#fef08a' }}>Quy định 01-QĐ/TW (01/02/2026):</strong> Có BHXH = 1% lương | Lương hưu = 0,5% | Không BHXH chưa hưu = 0,3% LTT vùng | Đủ tuổi hưu chưa hưởng = 0,2% | Học sinh = 5.000đ/tháng.{' '}
           <strong style={{ color: '#fca5a5' }}>⚠️ Không đóng 3 tháng trong năm → Chi bộ xem xét và Bí thư thực hiện xóa tên thủ công trong danh sách (hệ thống không tự động xóa).</strong>
         </span>
       </div>
@@ -1328,21 +1328,21 @@ const FeesTab: React.FC = () => {
       {/* Thống kê + Chọn năm */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'stretch' }}>
         <div className="party-stat-card" style={{ flex: '1 1 130px' }}>
-          <div className="stat-num" style={{ color: '#22c55e', fontSize: '1.1rem' }}>{fmtMoney(totalCollected)}</div>
+          <div className="stat-num" style={{ color: '#4ade80', fontSize: '1.4rem', fontWeight: 900 }}>{fmtMoney(totalCollected)}</div>
           <div className="stat-label">Đã thu được</div>
         </div>
         <div className="party-stat-card" style={{ flex: '1 1 130px' }}>
-          <div className="stat-num" style={{ color: '#f59e0b', fontSize: '1.1rem' }}>{fmtMoney(Math.max(0, totalExpected - totalCollected))}</div>
+          <div className="stat-num" style={{ color: '#f59e0b', fontSize: '1.4rem', fontWeight: 900 }}>{fmtMoney(Math.max(0, totalExpected - totalCollected))}</div>
           <div className="stat-label">Còn phải thu</div>
         </div>
         <div className="party-stat-card" style={{ flex: '1 1 90px' }}>
-          <div className="stat-num" style={{ color: alertMembers.length > 0 ? '#ef4444' : '#22c55e' }}>{alertMembers.length}</div>
+          <div className="stat-num" style={{ color: alertMembers.length > 0 ? '#f87171' : '#4ade80' }}>{alertMembers.length}</div>
           <div className="stat-label">⚠️ Nợ ≥3 tháng</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          <label style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
+          <label style={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 700 }}>Năm:</label>
           <select value={year} onChange={e => setYear(parseInt(e.target.value))}
-            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none' }}>
+            style={{ background: '#0f172a', border: '2px solid #cbd5e1', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none', fontWeight: 650 }}>
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
@@ -1350,17 +1350,17 @@ const FeesTab: React.FC = () => {
 
       {/* Cảnh báo nợ phí */}
       {alertMembers.length > 0 && (
-        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.8rem', color: '#fca5a5' }}>
+        <div style={{ background: '#991b1b', border: '1.5px solid #ef4444', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', color: '#ffffff', fontWeight: 650, boxShadow: '0 4px 12px rgba(239,68,68,0.2)' }}>
           <strong>⚠️ Cảnh báo nợ đảng phí:</strong>{' '}
           {alertMembers.map(m => `${m.full_name} (${getUnpaidCount(m.id)} tháng)`).join(' • ')}
         </div>
       )}
 
       {/* Chú thích */}
-      <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: '0.72rem', color: '#64748b', flexWrap: 'wrap' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><CheckCircle size={11} color="#22c55e" /> Đã nộp</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><XCircle size={11} color="#475569" /> Chưa nộp — click để đánh dấu đã nộp</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Pencil size={11} color="#60a5fa" /> Nhấn ✏️ để cài mức phí từng đảng viên</span>
+      <div style={{ display: 'flex', gap: 14, marginBottom: 12, fontSize: '0.8rem', color: '#ffffff', fontWeight: 600, flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} color="#4ade80" /> Đã nộp</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XCircle size={12} color="#94a3b8" /> Chưa nộp — click để đánh dấu đã nộp</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Pencil size={12} color="#38bdf8" /> Nhấn ✏️ để cài mức phí từng đảng viên</span>
       </div>
 
       {loading ? <div className="no-data">Đang tải...</div> : members.length === 0 ? (
@@ -1389,13 +1389,13 @@ const FeesTab: React.FC = () => {
                     <td className="name-col">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {isAlert && <span title={`Nợ ${unpaid} tháng!`}>⚠️</span>}
-                        <span style={{ fontWeight: 600 }}>{member.full_name}</span>
+                        <span style={{ fontWeight: 700, color: '#ffffff' }}>{member.full_name}</span>
                       </div>
-                      <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{POSITION_LABEL[member.position]}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: 2, fontWeight: 550 }}>{POSITION_LABEL[member.position]}</div>
                     </td>
                     <td style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: 700, color: '#60a5fa', fontSize: '0.82rem' }}>{fmtMoney(monthlyFee)}</div>
-                      <div style={{ fontSize: '0.62rem', color: '#64748b' }}>{FEE_CATEGORY_LABEL[member.fee_category || 'bhxh']?.split('(')[0]?.trim()}</div>
+                      <div style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.88rem' }}>{fmtMoney(monthlyFee)}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: 2, fontWeight: 500 }}>{FEE_CATEGORY_LABEL[member.fee_category || 'bhxh']?.split('(')[0]?.trim()}</div>
                     </td>
                     {months.map(month => {
                       const paid = isPaid(member.id, month);
@@ -1413,10 +1413,10 @@ const FeesTab: React.FC = () => {
                       );
                     })}
                     <td>
-                      <div style={{ fontWeight: 700, fontSize: '0.8rem', color: paidMonths === 12 ? '#22c55e' : paidMonths > 0 ? '#f59e0b' : '#ef4444' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.82rem', color: paidMonths === 12 ? '#4ade80' : paidMonths > 0 ? '#f59e0b' : '#f87171' }}>
                         {paidMonths}/12 tháng
                       </div>
-                      <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{fmtMoney(totalPaidAmt)}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: 2, fontWeight: 600 }}>{fmtMoney(totalPaidAmt)}</div>
                     </td>
                     <td>
                       <button className="party-btn-icon" title="Cài mức phí cho đảng viên này"
