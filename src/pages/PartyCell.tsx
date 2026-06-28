@@ -106,32 +106,33 @@ const PartyCell: React.FC = () => {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
         .party-header {
-          background: linear-gradient(135deg, rgba(220,38,38,0.18) 0%, rgba(239,68,68,0.08) 100%);
-          border: 1px solid rgba(220,38,38,0.25);
+          background: linear-gradient(135deg, rgba(220,38,38,0.25) 0%, rgba(185,28,28,0.1) 100%);
+          border: 1px solid rgba(220,38,38,0.35);
           border-radius: 14px 14px 0 0;
-          padding: 18px 24px 16px;
+          padding: 20px 24px 18px;
           display: flex;
           align-items: center;
           gap: 16px;
         }
         .party-title-group h2 {
-          font-size: 1.25rem;
-          font-weight: 800;
-          color: #fff;
+          font-size: 1.35rem;
+          font-weight: 850;
+          color: #ffffff;
           margin: 6px 0 2px;
           letter-spacing: -0.3px;
+          text-shadow: 0 2px 10px rgba(220,38,38,0.3);
         }
-        .party-title-group p { font-size: 0.8rem; color: #94a3b8; margin: 0; }
+        .party-title-group p { font-size: 0.85rem; color: #cbd5e1; margin: 0; font-weight: 500; }
         .party-badge {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          background: rgba(220,38,38,0.2);
-          color: #f87171;
-          border: 1px solid rgba(220,38,38,0.4);
+          background: rgba(220,38,38,0.3);
+          color: #ffffff;
+          border: 1px solid rgba(220,38,38,0.5);
           border-radius: 6px;
-          padding: 3px 10px;
-          font-size: 0.7rem;
+          padding: 4px 10px;
+          font-size: 0.72rem;
           font-weight: 800;
           letter-spacing: 1px;
         }
@@ -139,159 +140,163 @@ const PartyCell: React.FC = () => {
         .party-tabs {
           display: flex;
           gap: 0;
-          background: rgba(15,23,42,0.6);
-          border-left: 1px solid rgba(220,38,38,0.2);
-          border-right: 1px solid rgba(220,38,38,0.2);
+          background: rgba(15,23,42,0.85);
+          border-left: 1px solid rgba(220,38,38,0.3);
+          border-right: 1px solid rgba(220,38,38,0.3);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
           overflow-x: auto;
         }
         .party-tab-btn {
           display: flex;
           align-items: center;
-          gap: 7px;
-          padding: 11px 18px;
+          gap: 8px;
+          padding: 14px 22px;
           border: none;
           background: transparent;
-          color: #cbd5e1;
-          font-size: 0.85rem;
+          color: #e2e8f0;
+          font-size: 0.88rem;
           font-weight: 700;
           cursor: pointer;
-          border-bottom: 2px solid transparent;
+          border-bottom: 3px solid transparent;
           transition: all 0.2s;
           white-space: nowrap;
         }
-        .party-tab-btn:hover { color: #ffffff; background: rgba(220,38,38,0.1); }
-        .party-tab-btn.active { color: #f87171; border-bottom-color: #ef4444; background: rgba(220,38,38,0.15); }
+        .party-tab-btn:hover { color: #ffffff; background: rgba(220,38,38,0.12); }
+        .party-tab-btn.active { color: #fca5a5; border-bottom-color: #ef4444; background: rgba(220,38,38,0.18); text-shadow: 0 0 10px rgba(239,68,68,0.2); }
 
         .party-content {
-          background: rgba(15,23,42,0.5);
-          border: 1px solid rgba(220,38,38,0.2);
+          background: rgba(15,23,42,0.7);
+          border: 1px solid rgba(220,38,38,0.3);
           border-top: none;
           border-radius: 0 0 14px 14px;
-          padding: 20px;
-          min-height: 400px;
+          padding: 24px;
+          min-height: 420px;
         }
 
         /* ── Stats row ── */
-        .party-stats { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+        .party-stats { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
         .party-stat-card {
-          flex: 1; min-width: 100px;
-          background: rgba(30,41,59,0.7);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 10px;
-          padding: 12px 16px;
+          flex: 1; min-width: 110px;
+          background: rgba(30,41,59,0.9);
+          border: 1px solid rgba(220,38,38,0.2);
+          border-radius: 12px;
+          padding: 14px 18px;
           text-align: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .party-stat-card .stat-num { font-size: 1.6rem; font-weight: 800; color: #f87171; }
-        .party-stat-card .stat-label { font-size: 0.72rem; color: #cbd5e1; margin-top: 2px; }
+        .party-stat-card .stat-num { font-size: 1.8rem; font-weight: 900; color: #fca5a5; }
+        .party-stat-card .stat-label { font-size: 0.78rem; color: #e2e8f0; margin-top: 4px; font-weight: 600; }
 
         /* ── Table ── */
-        .party-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
-        .party-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .party-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+        .party-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         .party-table th {
-          background: rgba(220,38,38,0.15);
-          color: #fca5a5;
-          font-weight: 700;
-          font-size: 0.72rem;
+          background: rgba(220,38,38,0.2);
+          color: #ffffff;
+          font-weight: 800;
+          font-size: 0.78rem;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          padding: 10px 14px;
+          padding: 12px 14px;
           text-align: left;
           white-space: nowrap;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .party-table td { padding: 10px 14px; color: #f1f5f9; border-top: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
-        .party-table tr:hover td { background: rgba(220,38,38,0.05); }
+        .party-table td { padding: 12px 14px; color: #f8fafc; border-top: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+        .party-table tr:hover td { background: rgba(220,38,38,0.06); }
 
         /* ── Buttons ── */
         .party-btn-primary {
           display: inline-flex; align-items: center; gap: 6px;
           background: linear-gradient(135deg, #dc2626, #b91c1c);
           color: white; border: none; border-radius: 8px;
-          padding: 8px 16px; font-size: 0.82rem; font-weight: 600;
+          padding: 9px 18px; font-size: 0.85rem; font-weight: 700;
           cursor: pointer; transition: all 0.2s;
+          box-shadow: 0 4px 10px rgba(220,38,38,0.25);
         }
-        .party-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220,38,38,0.4); }
+        .party-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(220,38,38,0.45); }
         .party-btn-icon {
           background: none; border: none; cursor: pointer;
-          padding: 5px; border-radius: 6px; transition: all 0.2s;
-          color: #cbd5e1;
+          padding: 6px; border-radius: 6px; transition: all 0.2s;
+          color: #e2e8f0;
         }
-        .party-btn-icon:hover { background: rgba(220,38,38,0.12); color: #f87171; }
-        .party-btn-icon.delete:hover { background: rgba(239,68,68,0.12); color: #ef4444; }
+        .party-btn-icon:hover { background: rgba(220,38,38,0.15); color: #fca5a5; }
+        .party-btn-icon.delete:hover { background: rgba(239,68,68,0.18); color: #ef4444; }
 
         /* ── Status badges ── */
         .status-badge {
           display: inline-flex; align-items: center; gap: 4px;
-          padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700;
+          padding: 3px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800;
           white-space: nowrap;
         }
 
         /* ── Modal ── */
         .party-modal-overlay {
           position: fixed; inset: 0; z-index: 10000;
-          background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+          background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
           display: flex; align-items: center; justify-content: center; padding: 20px;
         }
         .party-modal {
           background: #1e293b;
-          border: 1px solid rgba(220,38,38,0.3);
+          border: 1px solid rgba(220,38,38,0.4);
           border-radius: 16px;
           width: 100%; max-width: 520px;
           max-height: 90vh; overflow-y: auto;
-          box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+          box-shadow: 0 25px 60px rgba(0,0,0,0.75);
           animation: fadeIn 0.2s ease;
         }
         .party-modal-header {
           display: flex; justify-content: space-between; align-items: center;
           padding: 18px 22px 14px;
-          border-bottom: 1px solid rgba(255,255,255,0.07);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-        .party-modal-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: #fff; }
-        .party-modal-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+        .party-modal-header h3 { margin: 0; font-size: 1.05rem; font-weight: 800; color: #fff; }
+        .party-modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
         .party-modal-footer {
           display: flex; gap: 10px; justify-content: flex-end;
           padding: 14px 22px 18px;
-          border-top: 1px solid rgba(255,255,255,0.07);
+          border-top: 1px solid rgba(255,255,255,0.08);
         }
 
-        .party-form-group { display: flex; flex-direction: column; gap: 5px; }
-        .party-form-group label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; }
+        .party-form-group { display: flex; flex-direction: column; gap: 6px; }
+        .party-form-group label { font-size: 0.78rem; color: #cbd5e1; font-weight: 700; }
         .party-form-group input,
         .party-form-group select,
         .party-form-group textarea {
-          background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12);
-          border-radius: 8px; color: #fff; padding: 9px 12px;
-          font-size: 0.85rem; outline: none; width: 100%; box-sizing: border-box;
-          transition: border-color 0.2s;
+          background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
+          border-radius: 8px; color: #fff; padding: 10px 14px;
+          font-size: 0.88rem; outline: none; width: 100%; box-sizing: border-box;
+          transition: all 0.2s;
         }
         .party-form-group input:focus,
         .party-form-group select:focus,
-        .party-form-group textarea:focus { border-color: rgba(220,38,38,0.5); }
+        .party-form-group textarea:focus { border-color: rgba(220,38,38,0.6); box-shadow: 0 0 8px rgba(220,38,38,0.25); }
         .party-form-group textarea { resize: vertical; min-height: 80px; }
         .party-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .party-form-group select option { background: #1e293b; }
 
         .btn-cancel {
-          background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
-          color: #94a3b8; border-radius: 8px; padding: 8px 16px;
-          font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+          background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+          color: #cbd5e1; border-radius: 8px; padding: 8px 16px;
+          font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
         }
-        .btn-cancel:hover { background: rgba(255,255,255,0.12); color: #fff; }
+        .btn-cancel:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
         /* ── Fee matrix ── */
         .fee-matrix-wrap { overflow-x: auto; }
-        .fee-table { border-collapse: collapse; font-size: 0.78rem; min-width: 700px; width: 100%; }
-        .fee-table th { background: rgba(220,38,38,0.12); color: #f87171; font-weight: 700; padding: 8px 10px; text-align: center; border: 1px solid rgba(255,255,255,0.06); font-size: 0.7rem; }
-        .fee-table th.name-col { text-align: left; min-width: 140px; }
-        .fee-table td { padding: 7px 10px; border: 1px solid rgba(255,255,255,0.04); text-align: center; color: #e2e8f0; vertical-align: middle; }
-        .fee-table td.name-col { text-align: left; font-weight: 600; color: #fff; white-space: nowrap; }
+        .fee-table { border-collapse: collapse; font-size: 0.82rem; min-width: 720px; width: 100%; }
+        .fee-table th { background: rgba(220,38,38,0.22); color: #ffffff; font-weight: 800; padding: 10px 8px; text-align: center; border: 1px solid rgba(255,255,255,0.08); font-size: 0.72rem; }
+        .fee-table th.name-col { text-align: left; min-width: 150px; }
+        .fee-table td { padding: 8px 8px; border: 1px solid rgba(255,255,255,0.07); text-align: center; color: #f8fafc; vertical-align: middle; }
+        .fee-table td.name-col { text-align: left; font-weight: 700; color: #fff; white-space: nowrap; }
         .fee-cell-btn {
-          width: 28px; height: 28px; border-radius: 6px; border: none; cursor: pointer;
+          width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer;
           display: flex; align-items: center; justify-content: center; margin: auto;
           transition: all 0.2s;
         }
-        .fee-cell-btn.paid { background: rgba(34,197,94,0.15); color: #22c55e; }
-        .fee-cell-btn.unpaid { background: rgba(255,255,255,0.05); color: #475569; }
-        .fee-cell-btn:hover { transform: scale(1.15); }
+        .fee-cell-btn.paid { background: rgba(34,197,94,0.25); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+        .fee-cell-btn.unpaid { background: rgba(255,255,255,0.08); color: #94a3b8; border: 1px solid rgba(255,255,255,0.12); }
+        .fee-cell-btn:hover { transform: scale(1.18); }
 
         /* ── Progress bar ── */
         .rating-bar { height: 6px; border-radius: 3px; margin-top: 3px; transition: width 0.5s ease; }
@@ -301,17 +306,18 @@ const PartyCell: React.FC = () => {
           position: relative; flex: 1;
         }
         .party-search input {
-          width: 100%; padding: 8px 12px 8px 36px;
-          background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 8px; color: #fff; font-size: 0.82rem; outline: none;
+          width: 100%; padding: 9px 12px 9px 38px;
+          background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
+          border-radius: 8px; color: #fff; font-size: 0.85rem; outline: none;
           box-sizing: border-box;
+          transition: all 0.2s;
         }
-        .party-search input:focus { border-color: rgba(220,38,38,0.4); }
-        .party-search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #64748b; pointer-events: none; }
+        .party-search input:focus { border-color: rgba(220,38,38,0.5); box-shadow: 0 0 8px rgba(220,38,38,0.2); }
+        .party-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #cbd5e1; pointer-events: none; }
 
-        .party-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
-        .no-data { text-align: center; color: #64748b; padding: 40px 20px; font-size: 0.88rem; }
-        .no-data svg { margin: 0 auto 12px; display: block; opacity: 0.4; }
+        .party-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+        .no-data { text-align: center; color: #cbd5e1; padding: 40px 20px; font-size: 0.9rem; }
+        .no-data svg { margin: 0 auto 12px; display: block; opacity: 0.6; }
       `}</style>
     </div>
   );
