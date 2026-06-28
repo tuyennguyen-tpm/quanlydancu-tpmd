@@ -865,14 +865,17 @@ export const db = {
     return localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
   },
   getGuestPin: async (): Promise<string> => {
+    const tenantId = localStorage.getItem('guest_tenant_id');
+    if (!tenantId) {
+      return localStorage.getItem('guest_access_pin') || '1234';
+    }
     if (supabase) {
       try {
-        const tenantId = localStorage.getItem('guest_tenant_id');
-        let query = supabase.from('app_config').select('value').eq('key', 'guest_pin');
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
-        }
-        const { data, error } = await query;
+        const { data, error } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', 'guest_pin')
+          .eq('user_id', tenantId);
         if (error) throw new Error(error.message);
         if (data && data.length > 0) {
           return data[0].value;

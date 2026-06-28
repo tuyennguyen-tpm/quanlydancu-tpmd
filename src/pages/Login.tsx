@@ -459,6 +459,11 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                 <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '16px' }}>
                   Vui lòng nhập mã PIN bảo mật của Tổ dân phố để xem thông tin công khai.
                 </p>
+                {!localStorage.getItem('guest_tenant_id') && (
+                  <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginBottom: '16px', background: 'rgba(245, 158, 11, 0.08)', padding: '8px', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.2)', textAlign: 'left', lineHeight: '1.4' }}>
+                    ⚠️ Bạn đang truy cập trực tiếp. Để hiển thị đúng dữ liệu của tổ, hãy sử dụng <strong>Đường dẫn chia sẻ cho Bà con</strong> (dạng <code>?t=...</code>) lấy từ <strong>Cài đặt hệ thống</strong>.
+                  </p>
+                )}
                 <input 
                   type="password" 
                   value={pinValue}
