@@ -456,21 +456,21 @@ const MembersTab: React.FC = () => {
             <tbody>
               {filtered.map((m, i) => (
                 <tr key={m.id}>
-                  <td style={{ color: '#64748b' }}>{i + 1}</td>
-                  <td style={{ fontWeight: 600, color: '#fff' }}>{m.full_name}</td>
-                  <td style={{ color: '#94a3b8' }}>{m.party_code || '—'}</td>
+                  <td style={{ color: '#cbd5e1', fontWeight: 700 }}>{i + 1}</td>
+                  <td style={{ fontWeight: 700, color: '#fff' }}>{m.full_name}</td>
+                  <td style={{ color: '#f1f5f9' }}>{m.party_code || '—'}</td>
                   <td>
-                    <span className="status-badge" style={{ background: 'rgba(220,38,38,0.12)', color: '#f87171', border: '1px solid rgba(220,38,38,0.25)' }}>
+                    <span className="status-badge" style={{ background: 'rgba(220,38,38,0.12)', color: '#fca5a5', border: '1px solid rgba(220,38,38,0.25)' }}>
                       {POSITION_LABEL[m.position] || m.position}
                     </span>
                   </td>
-                  <td style={{ color: '#94a3b8' }}>{fmtDate(m.join_date)}</td>
+                  <td style={{ color: '#f1f5f9' }}>{fmtDate(m.join_date)}</td>
                   <td>
-                    <span className="status-badge" style={{ background: `${STATUS_COLOR[m.status]}20`, color: STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}40` }}>
+                    <span className="status-badge" style={{ background: `${STATUS_COLOR[m.status]}20`, color: STATUS_COLOR[m.status] === '#64748b' ? '#cbd5e1' : STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}40` }}>
                       {STATUS_LABEL[m.status]}
                     </span>
                   </td>
-                  <td style={{ color: '#64748b', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.notes || '—'}</td>
+                  <td style={{ color: '#cbd5e1', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.notes || '—'}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button className="party-btn-icon" onClick={() => openEdit(m)} title="Sửa"><Pencil size={15} /></button>
@@ -637,7 +637,7 @@ const MeetingsTab: React.FC = () => {
     <>
       <div className="party-toolbar">
         <div style={{ flex: 1 }}>
-          <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+          <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600 }}>
             <BookOpen size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
             Tổng cộng <strong style={{ color: '#f87171' }}>{meetings.length}</strong> buổi sinh hoạt
           </span>
@@ -654,12 +654,12 @@ const MeetingsTab: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem', marginBottom: 4 }}>{m.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'flex', gap: 16, flexWrap: 'wrap', fontWeight: 500 }}>
                     <span>📅 {fmtDate(m.date)}{m.time ? ` — ${m.time}` : ''}</span>
                     {m.location && <span>📍 {m.location}</span>}
                     <span>👥 {m.attendance_count} đảng viên tham dự</span>
                   </div>
-                  {m.content && <div style={{ marginTop: 8, fontSize: '0.8rem', color: '#94a3b8', lineHeight: 1.5 }}>{m.content}</div>}
+                  {m.content && <div style={{ marginTop: 8, fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.5 }}>{m.content}</div>}
                   {m.resolution && (
                     <div style={{ marginTop: 8, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: '0.78rem', color: '#fca5a5' }}>
                       <strong>Nghị quyết:</strong> {m.resolution}
@@ -780,13 +780,13 @@ const EvaluationsTab: React.FC = () => {
       {/* Selector & stats */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
+          <label style={{ color: '#cbd5e1', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
           <select value={year} onChange={e => setYear(parseInt(e.target.value))}
             style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none' }}>
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <span style={{ color: '#64748b', fontSize: '0.8rem' }}>
+        <span style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
           Đã đánh giá <strong style={{ color: '#f87171' }}>{rated}/{total}</strong> đảng viên
         </span>
       </div>
@@ -797,7 +797,7 @@ const EvaluationsTab: React.FC = () => {
           {(['excellent', 'good', 'average', 'weak'] as const).map(r => (
             <div key={r} style={{ background: 'rgba(30,41,59,0.6)', border: `1px solid ${RATING_COLOR[r]}30`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, color: RATING_COLOR[r] }}>{ratingCounts[r]}</div>
-              <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 2 }}>{RATING_LABEL[r]}</div>
+              <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: 2, fontWeight: 700 }}>{RATING_LABEL[r]}</div>
               <div className="rating-bar" style={{ background: `${RATING_COLOR[r]}30`, marginTop: 6 }}>
                 <div className="rating-bar" style={{ width: total > 0 ? `${(ratingCounts[r] / total) * 100}%` : '0%', background: RATING_COLOR[r] }} />
               </div>
@@ -823,9 +823,9 @@ const EvaluationsTab: React.FC = () => {
                 const isSaving = saving === m.id;
                 return (
                   <tr key={m.id}>
-                    <td style={{ color: '#64748b' }}>{i + 1}</td>
-                    <td style={{ fontWeight: 600, color: '#fff' }}>{m.full_name}</td>
-                    <td style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{POSITION_LABEL[m.position]}</td>
+                    <td style={{ color: '#cbd5e1', fontWeight: 700 }}>{i + 1}</td>
+                    <td style={{ fontWeight: 700, color: '#fff' }}>{m.full_name}</td>
+                    <td style={{ color: '#e2e8f0', fontSize: '0.82rem', fontWeight: 600 }}>{POSITION_LABEL[m.position]}</td>
                     {(['excellent', 'good', 'average', 'weak'] as const).map(r => (
                       <td key={r}>
                         <button
@@ -833,15 +833,15 @@ const EvaluationsTab: React.FC = () => {
                           disabled={isSaving}
                           style={{
                             width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: isSaving ? 'wait' : 'pointer',
-                            background: ev?.rating === r ? `${RATING_COLOR[r]}25` : 'rgba(255,255,255,0.04)',
-                            color: ev?.rating === r ? RATING_COLOR[r] : '#475569',
+                            background: ev?.rating === r ? `${RATING_COLOR[r]}25` : 'rgba(255,255,255,0.06)',
+                            color: ev?.rating === r ? RATING_COLOR[r] : '#94a3b8',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 'auto',
                             transition: 'all 0.2s',
-                            boxShadow: ev?.rating === r ? `0 0 0 2px ${RATING_COLOR[r]}60` : 'none',
+                            boxShadow: ev?.rating === r ? `0 0 0 2px ${RATING_COLOR[r]}60` : '1px 1px 3px rgba(0,0,0,0.1)',
                           }}
                           title={`Xếp loại: ${RATING_LABEL[r]}`}
                         >
-                          {ev?.rating === r ? <CheckCircle size={16} /> : <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'currentColor', opacity: 0.4 }} />}
+                          {ev?.rating === r ? <CheckCircle size={18} /> : <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'currentColor', opacity: 0.7 }} />}
                         </button>
                       </td>
                     ))}
