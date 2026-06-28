@@ -361,6 +361,14 @@ const MembersTab: React.FC = () => {
 
   const handleSave = async () => {
     if (!form.full_name?.trim()) { showToast('Vui lòng nhập họ tên đảng viên!', 'warning'); return; }
+    if (form.status === 'official' && !form.join_date) {
+      showToast('Đảng viên chính thức bắt buộc phải nhập Ngày vào Đảng (chính thức)!', 'warning');
+      return;
+    }
+    if (form.status === 'probation' && !form.probation_date) {
+      showToast('Đảng viên dự bị bắt buộc phải nhập Ngày kết nạp (dự bị)!', 'warning');
+      return;
+    }
     try {
       const payload: Omit<PartyMember, 'created_at'> = {
         id: editing?.id || generateUUID(),
@@ -533,11 +541,11 @@ const MembersTab: React.FC = () => {
 
               <div className="party-form-row">
                 <div className="party-form-group">
-                  <label>Ngày kết nạp (dự bị)</label>
+                  <label>Ngày kết nạp (dự bị) {form.status === 'probation' && <span style={{ color: '#f87171' }}>*</span>}</label>
                   <input type="date" value={form.probation_date || ''} onChange={e => setForm(f => ({ ...f, probation_date: e.target.value }))} />
                 </div>
                 <div className="party-form-group">
-                  <label>Ngày vào Đảng (chính thức)</label>
+                  <label>Ngày vào Đảng (chính thức) {form.status === 'official' && <span style={{ color: '#f87171' }}>*</span>}</label>
                   <input type="date" value={form.join_date || ''} onChange={e => setForm(f => ({ ...f, join_date: e.target.value }))} />
                 </div>
               </div>
