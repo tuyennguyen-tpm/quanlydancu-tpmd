@@ -409,17 +409,42 @@ const MembersTab: React.FC = () => {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const getPositionFromLabel = (lbl: string): string => {
+    const val = lbl.trim().toLowerCase();
+    if (val.includes('bí thư') && !val.includes('phó')) return 'secretary';
+    if (val.includes('phó bí thư')) return 'deputy_secretary';
+    return 'member';
+  };
+
+  const getStatusFromLabel = (lbl: string): string => {
+    const val = lbl.trim().toLowerCase();
+    if (val.includes('chính thức')) return 'official';
+    if (val.includes('dự bị')) return 'probation';
+    if (val.includes('miễn') || val.includes('tạm miễn') || val.includes('không hoạt động')) return 'inactive';
+    return 'official';
+  };
+
+  const getFeeCatFromLabel = (lbl: string): string => {
+    const val = lbl.trim().toLowerCase();
+    if (val.includes('bắt buộc') || val.includes('bhxh')) return 'bhxh';
+    if (val.includes('hưu')) return 'pension';
+    if (val.includes('chưa đến tuổi') || val.includes('chưa hưu')) return 'no_bhxh_under_retire';
+    if (val.includes('đủ tuổi') || val.includes('chưa có chế độ')) return 'no_bhxh_over_retire';
+    if (val.includes('học sinh') || val.includes('sinh viên')) return 'student';
+    return 'bhxh';
+  };
+
   const handleExportExcel = () => {
     const csvContent = "\uFEFF" + [
-      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (secretary/deputy_secretary/member)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (official/probation/inactive)", "Loại đảng phí (bhxh/pension/no_bhxh_under_retire/no_bhxh_over_retire/student)", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
+      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (Chính thức/Dự bị/Miễn sinh hoạt)", "Loại đảng phí", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
       ...filtered.map(m => [
         `"${m.full_name.replace(/"/g, '""')}"`,
         `"${(m.party_code || '').replace(/"/g, '""')}"`,
-        m.position,
+        POSITION_LABEL[m.position] || m.position,
         m.probation_date || '',
         m.join_date || '',
-        m.status,
-        m.fee_category || 'bhxh',
+        STATUS_LABEL[m.status] || m.status,
+        FEE_CATEGORY_LABEL[m.fee_category || 'bhxh'] || m.fee_category || 'bhxh',
         m.salary_base || 0,
         m.wage_zone || 3,
         `"${(m.notes || '').replace(/"/g, '""')}"`
@@ -439,9 +464,9 @@ const MembersTab: React.FC = () => {
 
   const handleExportTemplate = () => {
     const csvContent = "\uFEFF" + [
-      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (secretary/deputy_secretary/member)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (official/probation/inactive)", "Loại đảng phí (bhxh/pension/no_bhxh_under_retire/no_bhxh_over_retire/student)", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
-      ["Nguyễn Văn A", "DV-0001", "member", "2024-05-19", "2025-05-19", "official", "bhxh", "6500000", "3", "Mẫu đảng viên chính thức"],
-      ["Trần Thị B", "DV-0002", "member", "2025-10-01", "", "probation", "student", "0", "3", "Mẫu đảng viên dự bị"]
+      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (Chính thức/Dự bị/Miễn sinh hoạt)", "Loại đảng phí", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
+      ["Nguyễn Văn A", "DV-0001", "Đảng viên", "2024-05-19", "2025-05-19", "Chính thức", "Có BHXH bắt buộc", "6500000", "3", "Mẫu đảng viên chính thức"],
+      ["Trần Thị B", "DV-0002", "Đảng viên", "2025-10-01", "", "Dự bị", "Học sinh, sinh viên", "0", "3", "Mẫu đảng viên dự bị"]
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -500,11 +525,11 @@ const MembersTab: React.FC = () => {
 
           const fullName = columns[0];
           const partyCode = columns[1] || '';
-          const pos = (columns[2] || 'member') as any;
+          const pos = getPositionFromLabel(columns[2] || 'Đảng viên') as any;
           const probationD = columns[3] || null;
           const joinD = columns[4] || null;
-          const stat = (columns[5] || 'official') as any;
-          const feeCat = (columns[6] || 'bhxh') as any;
+          const stat = getStatusFromLabel(columns[5] || 'Chính thức') as any;
+          const feeCat = getFeeCatFromLabel(columns[6] || 'Có BHXH bắt buộc') as any;
           const salary = parseInt(columns[7]) || 0;
           const zone = (parseInt(columns[8]) || 3) as any;
           const notesStr = columns[9] || '';
@@ -519,11 +544,11 @@ const MembersTab: React.FC = () => {
             id: matched ? matched.id : generateUUID(),
             full_name: fullName,
             party_code: partyCode || (matched ? matched.party_code : ''),
-            position: ['secretary', 'deputy_secretary', 'member'].includes(pos) ? pos : 'member',
+            position: pos,
             probation_date: probationD || (matched ? matched.probation_date : undefined),
             join_date: joinD || (matched ? matched.join_date : undefined),
-            status: ['official', 'probation', 'inactive'].includes(stat) ? stat : 'official',
-            fee_category: ['bhxh', 'pension', 'no_bhxh_under_retire', 'no_bhxh_over_retire', 'student'].includes(feeCat) ? feeCat : 'bhxh',
+            status: stat,
+            fee_category: feeCat,
             salary_base: salary,
             wage_zone: [1, 2, 3, 4].includes(zone) ? zone : 3,
             notes: notesStr || (matched ? matched.notes : ''),
