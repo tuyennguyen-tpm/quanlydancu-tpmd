@@ -1283,7 +1283,12 @@ export const partyDb = {
     return getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
   },
   savePartyMember: async (member: Omit<PartyMember, 'created_at'> & { created_at?: string }): Promise<PartyMember> => {
-    const full: PartyMember = { ...member, created_at: member.created_at || new Date().toISOString() };
+    const cleanMember = {
+      ...member,
+      join_date: member.join_date || null,
+      probation_date: member.probation_date || null,
+    };
+    const full: PartyMember = { ...cleanMember, created_at: member.created_at || new Date().toISOString() } as PartyMember;
     if (supabase) {
       const uId = await getSessionUserId();
       const { data, error } = await supabase.from('party_members').upsert({ ...full, user_id: uId, resident_id: full.resident_id || null }).select().single();
