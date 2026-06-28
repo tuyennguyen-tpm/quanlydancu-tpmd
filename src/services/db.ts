@@ -22,8 +22,8 @@ export interface EnvironmentLog {
 const getSupabaseClient = () => {
   const localUrl = localStorage.getItem('supabase_url');
   const localKey = localStorage.getItem('supabase_anon_key');
-  const url = localUrl || import.meta.env.VITE_SUPABASE_URL || '';
-  const key = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const url = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://yvtmckpdpinipxyvphdm.supabase.co';
+  const key = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_2Zkgkwp7OmzMUH_j7mUD5w_migssOX8';
   if (url && key) {
     try {
       return createClient(url, key);
