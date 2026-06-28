@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShieldCheck, Users } from 'lucide-react';
-import { supabase, db, seedTenantData, checkAndSeedUser } from '../services/db';
+import { supabase, db, seedTenantData, checkAndSeedUser, refreshSupabaseClient } from '../services/db';
 import { showToast } from '../utils/toast';
 
 interface LoginProps {
@@ -12,12 +12,29 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
   const [showPinInput, setShowPinInput] = React.useState(false);
   const [pinValue, setPinValue] = React.useState('');
   
+  // Database config states
+  const [showConfigModal, setShowConfigModal] = React.useState(false);
+  const [sbUrl, setSbUrl] = React.useState(localStorage.getItem('supabase_url') || '');
+  const [sbKey, setSbKey] = React.useState(localStorage.getItem('supabase_anon_key') || '');
+
   // Email/Password Auth states
   const [authMode, setAuthMode] = React.useState<'login' | 'register' | 'forgot_password'>('login');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('supabase_url', sbUrl.trim());
+    localStorage.setItem('supabase_anon_key', sbKey.trim());
+    refreshSupabaseClient();
+    showConfigModal && setShowConfigModal(false);
+    showToast('Đã lưu cấu hình kết nối! Đang tải lại ứng dụng...', 'success');
+    setTimeout(() => {
+      window.location.reload();
+    }, 1200);
+  };
 
   const handleVerifyGuestPin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -433,6 +450,10 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                     <Users size={18} style={{ marginRight: '8px' }} />
                     Xem thông tin công khai (Bà con)
                   </button>
+
+                  <button className="google-login-btn" onClick={() => setShowConfigModal(true)} style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.25)', color: '#fbbf24', marginTop: '4px' }}>
+                    ⚙️ Cấu hình kết nối cơ sở dữ liệu (Supabase)
+                  </button>
                 </>
               )}
 
@@ -496,6 +517,65 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                   Hủy
                 </button>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1.2 }}>Xác nhận</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showConfigModal && (
+        <div className="modal-overlay" style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.85)' }}>
+          <div className="modal-content" style={{ maxWidth: '440px', background: '#1e293b', border: '1px solid rgba(255, 255, 255, 0.15)', padding: '24px', borderRadius: '12px' }}>
+            <div className="modal-header" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem' }}>
+                ⚙️ Cấu hình kết nối cơ sở dữ liệu
+              </h3>
+            </div>
+            <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+              <p style={{ fontSize: '0.82rem', color: '#cbd5e1', margin: 0, lineHeight: '1.4', textAlign: 'left' }}>
+                Nhập thông tin kết nối Supabase của Tổ dân phố để đồng bộ dữ liệu trực tuyến. Thông tin này bạn lấy từ trang quản trị Supabase.
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
+                <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Supabase URL</label>
+                <input 
+                  type="text" 
+                  value={sbUrl} 
+                  onChange={e => setSbUrl(e.target.value)} 
+                  placeholder="https://xxx.supabase.co" 
+                  required
+                  style={{ padding: '9px 12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '8px', color: 'white', fontSize: '0.88rem', width: '100%', boxSizing: 'border-box' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'left' }}>
+                <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Supabase API Key (Anon Key)</label>
+                <input 
+                  type="password" 
+                  value={sbKey} 
+                  onChange={e => setSbKey(e.target.value)} 
+                  placeholder="eyJhbGciOi..." 
+                  required
+                  style={{ padding: '9px 12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '8px', color: 'white', fontSize: '0.88rem', width: '100%', boxSizing: 'border-box' }} 
+                />
+              </div>
+
+              <div className="form-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowConfigModal(false)} 
+                  style={{ 
+                    flex: 1, 
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+                    color: '#f8fafc', 
+                    borderColor: 'rgba(255, 255, 255, 0.15)',
+                    boxShadow: 'none'
+                  }}
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1.2 }}>Lưu cấu hình</button>
               </div>
             </form>
           </div>

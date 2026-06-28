@@ -2,13 +2,16 @@
   "name": "csdl-tpd-qg",
   "private": true,
   "version": "0.0.0",
+  "main": "main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "push": "git add . && git commit -m \"update\" && git push origin main"
+    "push": "git add . && git commit -m \"update\" && git push origin main",
+    "electron:start": "npm run build && electron .",
+    "electron:pack": "npm run build && electron-builder build --win --x64"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",
@@ -27,6 +30,8 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -34,5 +39,33 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
+  },
+  "build": {
+    "appId": "com.tuyennguyen.quanlydancu",
+    "productName": "QuanLyDanCuTDPQuangGiao",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "main.cjs"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Quản lý Dân cư TDP Quảng Giao"
+    }
   }
 }

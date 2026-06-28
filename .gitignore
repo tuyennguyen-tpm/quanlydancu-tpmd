@@ -26,3 +26,7 @@ dist-ssr
 # Backup folders
 *- Copy/
 * - Copy/
+
+# Electron build outputs
+dist-electron/
+*.exe
