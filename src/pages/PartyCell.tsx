@@ -843,20 +843,51 @@ const EvaluationsTab: React.FC = () => {
 };
 
 // ═══════════════════════════════════════════════════════════
-// TAB 4: THU ĐẢNG PHÍ
+// TAB 4: THU ĐẢNG PHÍ — Theo Quy định 01-QĐ/TW ngày 03/02/2026
 // ═══════════════════════════════════════════════════════════
+
+// Mức lương tối thiểu vùng từ 01/01/2026 (Nghị định 293/2025/NĐ-CP)
+const MIN_WAGE: Record<number, number> = { 1: 5310000, 2: 4730000, 3: 4140000, 4: 3700000 };
+
+// Tính mức đảng phí theo loại đảng viên
+const calcMonthlyFee = (member: PartyMember, year: number): number => {
+  const cat = member.fee_category || 'bhxh';
+  const salary = member.salary_base || 0;
+  const zone = member.wage_zone || 3;
+  const minWage = MIN_WAGE[zone];
+  switch (cat) {
+    case 'bhxh':                 return Math.round(salary * 0.01);
+    case 'pension':              return Math.round(salary * 0.005);
+    case 'no_bhxh_under_retire': return Math.round(minWage * (year < 2028 ? 0.003 : 0.005));
+    case 'no_bhxh_over_retire':  return Math.round(minWage * (year < 2028 ? 0.002 : 0.003));
+    case 'student':              return 5000;
+    default:                     return 10000;
+  }
+};
+
+const FEE_CATEGORY_LABEL: Record<string, string> = {
+  bhxh:                  'Có BHXH bắt buộc (1% lương)',
+  pension:               'Hưởng lương hưu (0,5% lương hưu)',
+  no_bhxh_under_retire:  'Chưa đến tuổi hưu, không BHXH (0,3% LTT vùng)',
+  no_bhxh_over_retire:   'Đủ tuổi hưu chưa hưởng (0,2% LTT vùng)',
+  student:               'Học sinh/Sinh viên (5.000đ cố định)',
+};
+
+const fmtMoney = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
+
 const FeesTab: React.FC = () => {
   const [members, setMembers] = useState<PartyMember[]>([]);
   const [fees, setFees] = useState<PartyFee[]>([]);
   const [year, setYear] = useState(currentYear);
-  const [feeAmount, setFeeAmount] = useState(10000);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [editingMember, setEditingMember] = useState<PartyMember | null>(null);
+  const [feeForm, setFeeForm] = useState<Partial<PartyMember>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
     const [m, f] = await Promise.all([partyDb.getPartyMembers(), partyDb.getPartyFees(year)]);
-    setMembers(m.filter(m => m.status !== 'inactive'));
+    setMembers(m.filter(x => x.status !== 'inactive'));
     setFees(f);
     setLoading(false);
   }, [year]);
@@ -865,75 +896,98 @@ const FeesTab: React.FC = () => {
   const isPaid = (memberId: string, month: number) =>
     fees.some(f => f.member_id === memberId && f.month === month && f.paid_at);
 
+  const getUnpaidCount = (memberId: string) =>
+    Array.from({ length: 12 }, (_, i) => i + 1).filter(m => !isPaid(memberId, m)).length;
+
   const toggleFee = async (member: PartyMember, month: number) => {
     const key = `${member.id}-${month}`;
     if (toggling === key) return;
     setToggling(key);
     const existing = fees.find(f => f.member_id === member.id && f.month === month);
     const paid = isPaid(member.id, month);
+    const monthlyFee = calcMonthlyFee(member, year);
     try {
       await partyDb.savePartyFee({
         id: existing?.id,
         member_id: member.id,
         year,
         month,
-        amount: feeAmount,
+        amount: monthlyFee,
         paid_at: paid ? null : new Date().toISOString().slice(0, 10),
       });
-      // Optimistic update
       setFees(prev => {
         const filtered = prev.filter(f => !(f.member_id === member.id && f.month === month));
-        filtered.push({
-          id: existing?.id || generateUUID(),
-          member_id: member.id,
-          year,
-          month,
-          amount: feeAmount,
-          paid_at: paid ? null : new Date().toISOString().slice(0, 10),
-        });
+        filtered.push({ id: existing?.id || generateUUID(), member_id: member.id, year, month, amount: monthlyFee, paid_at: paid ? null : new Date().toISOString().slice(0, 10) });
         return filtered;
       });
     } catch (e: any) {
       showToast(`Lỗi: ${e.message}`, 'danger');
       load();
-    } finally {
-      setToggling(null);
-    }
+    } finally { setToggling(null); }
+  };
+
+  const handleSaveFeeConfig = async () => {
+    if (!editingMember) return;
+    try {
+      await partyDb.savePartyMember({ ...editingMember, ...feeForm });
+      showToast('Đã cập nhật thông tin đảng phí!', 'success');
+      setEditingMember(null);
+      load();
+    } catch (e: any) { showToast(`Lỗi: ${e.message}`, 'danger'); }
   };
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const totalPaid = fees.filter(f => f.paid_at).length;
-  const totalAmount = totalPaid * feeAmount;
+  const totalCollected = fees.filter(f => f.paid_at).reduce((s, f) => s + (f.amount || 0), 0);
+  const totalExpected = members.reduce((s, m) => s + calcMonthlyFee(m, year) * 12, 0);
+  const alertMembers = members.filter(m => getUnpaidCount(m.id) >= 3);
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Thông tin quy định */}
+      <div style={{ background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '0.78rem', color: '#fca5a5', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <span style={{ fontSize: '1rem', flexShrink: 0 }}>📋</span>
+        <span>
+          <strong>Quy định 01-QĐ/TW (01/02/2026):</strong> Có BHXH = 1% lương | Lương hưu = 0,5% | Không BHXH chưa hưu = 0,3% LTT vùng | Đủ tuổi hưu chưa hưởng = 0,2% | Học sinh = 5.000đ/tháng.{' '}
+          <strong style={{ color: '#f87171' }}>⚠️ Không đóng 3 tháng trong năm → xem xét xóa tên đảng viên!</strong>
+        </span>
+      </div>
+
+      {/* Thống kê + Chọn năm */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'stretch' }}>
+        <div className="party-stat-card" style={{ flex: '1 1 130px' }}>
+          <div className="stat-num" style={{ color: '#22c55e', fontSize: '1.1rem' }}>{fmtMoney(totalCollected)}</div>
+          <div className="stat-label">Đã thu được</div>
+        </div>
+        <div className="party-stat-card" style={{ flex: '1 1 130px' }}>
+          <div className="stat-num" style={{ color: '#f59e0b', fontSize: '1.1rem' }}>{fmtMoney(Math.max(0, totalExpected - totalCollected))}</div>
+          <div className="stat-label">Còn phải thu</div>
+        </div>
+        <div className="party-stat-card" style={{ flex: '1 1 90px' }}>
+          <div className="stat-num" style={{ color: alertMembers.length > 0 ? '#ef4444' : '#22c55e' }}>{alertMembers.length}</div>
+          <div className="stat-label">⚠️ Nợ ≥3 tháng</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
           <label style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
           <select value={year} onChange={e => setYear(parseInt(e.target.value))}
             style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none' }}>
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600 }}>Mức phí/tháng:</label>
-          <input type="number" step={1000} value={feeAmount}
-            onChange={e => setFeeAmount(parseInt(e.target.value) || 10000)}
-            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 8, padding: '5px 10px', fontSize: '0.82rem', outline: 'none', width: 100 }} />
-          <span style={{ color: '#64748b', fontSize: '0.78rem' }}>đ</span>
-        </div>
-        <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-          <div style={{ color: '#22c55e', fontWeight: 700, fontSize: '0.9rem' }}>
-            {new Intl.NumberFormat('vi-VN').format(totalAmount)}đ đã thu
-          </div>
-          <div style={{ color: '#64748b', fontSize: '0.72rem' }}>{totalPaid} lượt / {members.length * 12} tổng</div>
-        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: '0.75rem', color: '#64748b' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} color="#22c55e" /> Đã nộp</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XCircle size={12} color="#475569" /> Chưa nộp</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} color="#f59e0b" /> (click để thay đổi)</span>
+      {/* Cảnh báo nợ phí */}
+      {alertMembers.length > 0 && (
+        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: '0.8rem', color: '#fca5a5' }}>
+          <strong>⚠️ Cảnh báo nợ đảng phí:</strong>{' '}
+          {alertMembers.map(m => `${m.full_name} (${getUnpaidCount(m.id)} tháng)`).join(' • ')}
+        </div>
+      )}
+
+      {/* Chú thích */}
+      <div style={{ display: 'flex', gap: 14, marginBottom: 8, fontSize: '0.72rem', color: '#64748b', flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><CheckCircle size={11} color="#22c55e" /> Đã nộp</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><XCircle size={11} color="#475569" /> Chưa nộp — click để đánh dấu đã nộp</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Pencil size={11} color="#60a5fa" /> Nhấn ✏️ để cài mức phí từng đảng viên</span>
       </div>
 
       {loading ? <div className="no-data">Đang tải...</div> : members.length === 0 ? (
@@ -943,48 +997,128 @@ const FeesTab: React.FC = () => {
           <table className="fee-table">
             <thead>
               <tr>
-                <th className="name-col">Đảng viên</th>
+                <th className="name-col">Họ và tên</th>
+                <th style={{ minWidth: 90, textAlign: 'left' }}>Mức phí/tháng</th>
                 {months.map(m => <th key={m}>T{m}</th>)}
-                <th>Đã nộp</th>
+                <th>Đã thu</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {members.map(member => {
-                const paidCount = months.filter(m => isPaid(member.id, m)).length;
+                const paidMonths = months.filter(m => isPaid(member.id, m)).length;
+                const monthlyFee = calcMonthlyFee(member, year);
+                const totalPaidAmt = fees.filter(f => f.member_id === member.id && f.paid_at).reduce((s, f) => s + (f.amount || monthlyFee), 0);
+                const unpaid = getUnpaidCount(member.id);
+                const isAlert = unpaid >= 3;
                 return (
-                  <tr key={member.id}>
+                  <tr key={member.id} style={{ background: isAlert ? 'rgba(239,68,68,0.05)' : undefined }}>
                     <td className="name-col">
-                      <div>{member.full_name}</div>
-                      <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{POSITION_LABEL[member.position]}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {isAlert && <span title={`Nợ ${unpaid} tháng!`}>⚠️</span>}
+                        <span style={{ fontWeight: 600 }}>{member.full_name}</span>
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{POSITION_LABEL[member.position]}</div>
+                    </td>
+                    <td style={{ textAlign: 'left' }}>
+                      <div style={{ fontWeight: 700, color: '#60a5fa', fontSize: '0.82rem' }}>{fmtMoney(monthlyFee)}</div>
+                      <div style={{ fontSize: '0.62rem', color: '#64748b' }}>{FEE_CATEGORY_LABEL[member.fee_category || 'bhxh']?.split('(')[0]?.trim()}</div>
                     </td>
                     {months.map(month => {
                       const paid = isPaid(member.id, month);
                       const key = `${member.id}-${month}`;
                       return (
                         <td key={month}>
-                          <button
-                            className={`fee-cell-btn ${paid ? 'paid' : 'unpaid'}`}
+                          <button className={`fee-cell-btn ${paid ? 'paid' : 'unpaid'}`}
                             onClick={() => toggleFee(member, month)}
                             disabled={toggling === key}
-                            title={paid ? `Tháng ${month}: Đã nộp` : `Tháng ${month}: Chưa nộp — click để xác nhận`}
+                            title={paid ? `T${month}: Đã nộp ${fmtMoney(monthlyFee)}` : `T${month}: Chưa nộp — click để xác nhận`}
                           >
-                            {paid ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                            {paid ? <CheckCircle size={13} /> : <XCircle size={13} />}
                           </button>
                         </td>
                       );
                     })}
                     <td>
-                      <span style={{
-                        fontWeight: 700,
-                        color: paidCount === 12 ? '#22c55e' : paidCount > 0 ? '#f59e0b' : '#64748b',
-                        fontSize: '0.82rem',
-                      }}>{paidCount}/12</span>
+                      <div style={{ fontWeight: 700, fontSize: '0.8rem', color: paidMonths === 12 ? '#22c55e' : paidMonths > 0 ? '#f59e0b' : '#ef4444' }}>
+                        {paidMonths}/12 tháng
+                      </div>
+                      <div style={{ fontSize: '0.65rem', color: '#64748b' }}>{fmtMoney(totalPaidAmt)}</div>
+                    </td>
+                    <td>
+                      <button className="party-btn-icon" title="Cài mức phí cho đảng viên này"
+                        onClick={() => { setEditingMember(member); setFeeForm({ fee_category: member.fee_category || 'bhxh', salary_base: member.salary_base || 0, wage_zone: member.wage_zone || 3 }); }}>
+                        <Pencil size={13} />
+                      </button>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal cài mức phí */}
+      {editingMember && (
+        <div className="party-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setEditingMember(null); }}>
+          <div className="party-modal" style={{ maxWidth: 460 }}>
+            <div className="party-modal-header">
+              <h3>💰 Cài mức đảng phí — {editingMember.full_name}</h3>
+              <button className="party-btn-icon" onClick={() => setEditingMember(null)}><X size={18} /></button>
+            </div>
+            <div className="party-modal-body">
+              <div className="party-form-group">
+                <label>Loại đảng viên (căn cứ tính đảng phí theo QĐ 01-QĐ/TW)</label>
+                <select value={feeForm.fee_category || 'bhxh'} onChange={e => setFeeForm(f => ({ ...f, fee_category: e.target.value as any }))}>
+                  <option value="bhxh">Có tham gia BHXH bắt buộc → 1% lương đóng BHXH</option>
+                  <option value="pension">Đang hưởng lương hưu → 0,5% lương hưu</option>
+                  <option value="no_bhxh_under_retire">Chưa đến tuổi hưu, không có BHXH → 0,3% LTT vùng</option>
+                  <option value="no_bhxh_over_retire">Đủ tuổi nghỉ hưu nhưng chưa hưởng → 0,2% LTT vùng</option>
+                  <option value="student">Học sinh / Sinh viên → 5.000đ/tháng cố định</option>
+                </select>
+              </div>
+
+              {(feeForm.fee_category === 'bhxh' || feeForm.fee_category === 'pension') && (
+                <div className="party-form-group">
+                  <label>{feeForm.fee_category === 'bhxh' ? 'Mức lương đóng BHXH (đ/tháng)' : 'Mức lương hưu (đ/tháng)'}</label>
+                  <input type="number" step={100000}
+                    value={feeForm.salary_base || ''}
+                    onChange={e => setFeeForm(f => ({ ...f, salary_base: parseInt(e.target.value) || 0 }))}
+                    placeholder="VD: 6000000" />
+                  <span style={{ fontSize: '0.72rem', color: '#60a5fa', marginTop: 2 }}>
+                    → Đảng phí tính được: <strong>{fmtMoney(calcMonthlyFee({ ...editingMember, ...feeForm, salary_base: feeForm.salary_base || 0 } as PartyMember, year))}/tháng</strong>
+                  </span>
+                </div>
+              )}
+
+              {(feeForm.fee_category === 'no_bhxh_under_retire' || feeForm.fee_category === 'no_bhxh_over_retire') && (
+                <div className="party-form-group">
+                  <label>Vùng lương tối thiểu (nơi đảng viên sinh hoạt)</label>
+                  <select value={feeForm.wage_zone || 3} onChange={e => setFeeForm(f => ({ ...f, wage_zone: parseInt(e.target.value) as any }))}>
+                    <option value={1}>Vùng I — 5.310.000đ/tháng (TP Hà Nội, TP.HCM...)</option>
+                    <option value={2}>Vùng II — 4.730.000đ/tháng (TP lớn)</option>
+                    <option value={3}>Vùng III — 4.140.000đ/tháng (Thị xã, huyện tỉnh lỵ)</option>
+                    <option value={4}>Vùng IV — 3.700.000đ/tháng (Nông thôn, miền núi)</option>
+                  </select>
+                  <span style={{ fontSize: '0.72rem', color: '#60a5fa', marginTop: 2 }}>
+                    → Đảng phí: <strong>{fmtMoney(calcMonthlyFee({ ...editingMember, ...feeForm } as PartyMember, year))}/tháng</strong>
+                    <em style={{ color: '#94a3b8', marginLeft: 4 }}>({year < 2028 ? 'mức 2026-2027' : 'mức từ 2028'})</em>
+                  </span>
+                </div>
+              )}
+
+              {feeForm.fee_category === 'student' && (
+                <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: '10px 12px', fontSize: '0.82rem', color: '#86efac' }}>
+                  ✅ Học sinh/Sinh viên: Mức cố định <strong>5.000đ/tháng</strong> theo quy định Đảng.
+                </div>
+              )}
+            </div>
+            <div className="party-modal-footer">
+              <button className="btn-cancel" onClick={() => setEditingMember(null)}>Hủy</button>
+              <button className="party-btn-primary" onClick={handleSaveFeeConfig}>💾 Lưu cài đặt</button>
+            </div>
+          </div>
         </div>
       )}
     </>
