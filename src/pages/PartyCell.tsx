@@ -951,7 +951,11 @@ const FeesTab: React.FC = () => {
   };
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const totalCollected = fees.filter(f => f.paid_at).reduce((s, f) => s + (f.amount || 0), 0);
+  const totalCollected = fees.filter(f => f.paid_at).reduce((s, f) => {
+    const mem = members.find(m => m.id === f.member_id);
+    const mFee = mem ? calcMonthlyFee(mem, year) : 10000;
+    return s + (f.amount || mFee);
+  }, 0);
   const totalExpected = members.reduce((s, m) => s + calcMonthlyFee(m, year) * 12, 0);
   const alertMembers = members.filter(m => getUnpaidCount(m.id) >= 3);
 
