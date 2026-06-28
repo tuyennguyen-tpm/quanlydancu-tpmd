@@ -407,6 +407,131 @@ const MembersTab: React.FC = () => {
     load();
   };
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExportExcel = () => {
+    const csvContent = "\uFEFF" + [
+      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (secretary/deputy_secretary/member)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (official/probation/inactive)", "Loại đảng phí (bhxh/pension/no_bhxh_under_retire/no_bhxh_over_retire/student)", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
+      ...filtered.map(m => [
+        `"${m.full_name.replace(/"/g, '""')}"`,
+        `"${(m.party_code || '').replace(/"/g, '""')}"`,
+        m.position,
+        m.probation_date || '',
+        m.join_date || '',
+        m.status,
+        m.fee_category || 'bhxh',
+        m.salary_base || 0,
+        m.wage_zone || 3,
+        `"${(m.notes || '').replace(/"/g, '""')}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Danh_sach_Dang_vien_Chi_bo_${currentYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Đã xuất file Excel thành công!', 'success');
+  };
+
+  const handleExportTemplate = () => {
+    const csvContent = "\uFEFF" + [
+      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (secretary/deputy_secretary/member)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (official/probation/inactive)", "Loại đảng phí (bhxh/pension/no_bhxh_under_retire/no_bhxh_over_retire/student)", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
+      ["Nguyễn Văn A", "DV-0001", "member", "2024-05-19", "2025-05-19", "official", "bhxh", "6500000", "3", "Mẫu đảng viên chính thức"],
+      ["Trần Thị B", "DV-0002", "member", "2025-10-01", "", "probation", "student", "0", "3", "Mẫu đảng viên dự bị"]
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Mau_Nhap_Dang_Vien.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Đã tải file Excel mẫu thành công!', 'success');
+  };
+
+  const parseCSVLine = (text: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const text = evt.target?.result as string;
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        if (lines.length <= 1) {
+          showToast('File Excel trống hoặc không đúng định dạng!', 'danger');
+          return;
+        }
+
+        let importCount = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i];
+          const columns = parseCSVLine(row).map(val => val.replace(/^"|"$/g, '').trim());
+
+          if (columns.length < 1 || !columns[0]) continue;
+
+          const fullName = columns[0];
+          const partyCode = columns[1] || '';
+          const pos = (columns[2] || 'member') as any;
+          const probationD = columns[3] || null;
+          const joinD = columns[4] || null;
+          const stat = (columns[5] || 'official') as any;
+          const feeCat = (columns[6] || 'bhxh') as any;
+          const salary = parseInt(columns[7]) || 0;
+          const zone = (parseInt(columns[8]) || 3) as any;
+          const notesStr = columns[9] || '';
+
+          await partyDb.savePartyMember({
+            id: generateUUID(),
+            full_name: fullName,
+            party_code: partyCode,
+            position: ['secretary', 'deputy_secretary', 'member'].includes(pos) ? pos : 'member',
+            probation_date: probationD || undefined,
+            join_date: joinD || undefined,
+            status: ['official', 'probation', 'inactive'].includes(stat) ? stat : 'official',
+            fee_category: ['bhxh', 'pension', 'no_bhxh_under_retire', 'no_bhxh_over_retire', 'student'].includes(feeCat) ? feeCat : 'bhxh',
+            salary_base: salary,
+            wage_zone: [1, 2, 3, 4].includes(zone) ? zone : 3,
+            notes: notesStr,
+          });
+          importCount++;
+        }
+
+        showToast(`Đã nhập thành công ${importCount} đảng viên từ Excel!`, 'success');
+        load();
+      } catch (err: any) {
+        showToast(`Lỗi phân tích file: ${err.message}`, 'danger');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+    if (e.target) e.target.value = '';
+  };
+
   const filtered = members.filter(m =>
     m.full_name.toLowerCase().includes(search.toLowerCase()) ||
     (m.party_code || '').includes(search)
@@ -577,13 +702,18 @@ const MembersTab: React.FC = () => {
       </div>
 
       {/* Toolbar */}
-      <div className="party-toolbar">
-        <div className="party-search">
+      <div className="party-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div className="party-search" style={{ minWidth: 260 }}>
           <Search size={15} className="party-search-icon" />
           <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', borderColor: '#15803d', boxShadow: '0 4px 10px rgba(22,163,74,0.2)' }} onClick={handleExportExcel}>📤 Xuất Excel</button>
+          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)', borderColor: '#0f766e', boxShadow: '0 4px 10px rgba(13,148,136,0.2)' }} onClick={() => fileInputRef.current?.click()}>📥 Nhập Excel</button>
+          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', borderColor: '#374151', boxShadow: '0 4px 10px rgba(75,85,99,0.2)' }} onClick={handleExportTemplate} title="Tải file Excel mẫu để nhập dữ liệu">📄 Tải mẫu</button>
+          <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv" onChange={handleImportExcel} />
+          
+          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
           <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
         </div>
       </div>
