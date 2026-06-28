@@ -649,7 +649,9 @@ const Residents = () => {
           return;
         }
 
-        let importCount = 0;
+        const currentResidents = await db.getResidents();
+        let addedCount = 0;
+        let updatedCount = 0;
         let skipCount = 0;
 
         // Bỏ qua dòng tiêu đề nếu dòng đầu tiên có chữ "họ" hoặc "họ tên"
@@ -689,29 +691,39 @@ const Residents = () => {
           const notes = row[10]?.trim() || '';
           const isHead = relWithHead.toLowerCase().includes('chủ hộ') || relWithHead.toLowerCase() === 'chủ' || relWithHead.toLowerCase() === 'bản thân';
 
+          // Đối chiếu xem nhân khẩu đã tồn tại hay chưa dựa trên Họ tên + Ngày sinh
+          const matched = currentResidents.find(r => 
+            r.full_name.toLowerCase().trim() === fullName.toLowerCase().trim() && 
+            r.dob === dob
+          );
+
           const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
-            id: generateUUID(),
-            household_id: '',
+            id: matched ? matched.id : generateUUID(),
+            household_id: matched ? matched.household_id : '',
             full_name: fullName,
             gender,
             dob,
             pob,
-            cccd,
-            phone,
-            is_head: isHead,
-            relationship_with_head: relWithHead,
-            occupation,
-            status,
-            permanent_address: permAddress,
-            notes,
-            created_at: new Date().toISOString()
+            cccd: cccd || (matched ? matched.cccd : ''),
+            phone: phone || (matched ? matched.phone : ''),
+            is_head: matched ? matched.is_head : isHead,
+            relationship_with_head: matched ? matched.relationship_with_head : relWithHead,
+            occupation: occupation || (matched ? matched.occupation : ''),
+            status: status || (matched ? matched.status : 'resident'),
+            permanent_address: permAddress || (matched ? matched.permanent_address : ''),
+            notes: notes || (matched ? matched.notes : ''),
+            created_at: matched ? matched.created_at : new Date().toISOString()
           };
 
           await db.saveResident(payload);
-          importCount++;
+          if (matched) {
+            updatedCount++;
+          } else {
+            addedCount++;
+          }
         }
 
-        showToast(`Nhập dữ liệu thành công! Đã thêm ${importCount} nhân khẩu${skipCount > 0 ? ` (bỏ qua ${skipCount} dòng lỗi)` : ''}.`, 'success');
+        showToast(`Nhập dữ liệu thành công! Đã thêm mới ${addedCount} và cập nhật ${updatedCount} nhân khẩu${skipCount > 0 ? ` (bỏ qua ${skipCount} dòng lỗi)` : ''}.`, 'success');
         loadData();
         window.dispatchEvent(new CustomEvent('db-changed'));
       } catch (err) {

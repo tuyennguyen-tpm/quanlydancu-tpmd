@@ -488,7 +488,10 @@ const MembersTab: React.FC = () => {
           return;
         }
 
-        let importCount = 0;
+        const currentMembers = await partyDb.getPartyMembers();
+        let addedCount = 0;
+        let updatedCount = 0;
+
         for (let i = 1; i < lines.length; i++) {
           const row = lines[i];
           const columns = parseCSVLine(row).map(val => val.replace(/^"|"$/g, '').trim());
@@ -506,23 +509,35 @@ const MembersTab: React.FC = () => {
           const zone = (parseInt(columns[8]) || 3) as any;
           const notesStr = columns[9] || '';
 
+          // Đối chiếu dựa trên Họ tên hoặc Số thẻ Đảng
+          const matched = currentMembers.find(m => 
+            (partyCode && m.party_code === partyCode) || 
+            (m.full_name.toLowerCase().trim() === fullName.toLowerCase().trim())
+          );
+
           await partyDb.savePartyMember({
-            id: generateUUID(),
+            id: matched ? matched.id : generateUUID(),
             full_name: fullName,
-            party_code: partyCode,
+            party_code: partyCode || (matched ? matched.party_code : ''),
             position: ['secretary', 'deputy_secretary', 'member'].includes(pos) ? pos : 'member',
-            probation_date: probationD || undefined,
-            join_date: joinD || undefined,
+            probation_date: probationD || (matched ? matched.probation_date : undefined),
+            join_date: joinD || (matched ? matched.join_date : undefined),
             status: ['official', 'probation', 'inactive'].includes(stat) ? stat : 'official',
             fee_category: ['bhxh', 'pension', 'no_bhxh_under_retire', 'no_bhxh_over_retire', 'student'].includes(feeCat) ? feeCat : 'bhxh',
             salary_base: salary,
             wage_zone: [1, 2, 3, 4].includes(zone) ? zone : 3,
-            notes: notesStr,
+            notes: notesStr || (matched ? matched.notes : ''),
+            created_at: matched ? matched.created_at : undefined,
           });
-          importCount++;
+
+          if (matched) {
+            updatedCount++;
+          } else {
+            addedCount++;
+          }
         }
 
-        showToast(`Đã nhập thành công ${importCount} đảng viên từ Excel!`, 'success');
+        showToast(`Đã nhập thành công! Thêm mới ${addedCount} và cập nhật ${updatedCount} đảng viên từ Excel.`, 'success');
         load();
       } catch (err: any) {
         showToast(`Lỗi phân tích file: ${err.message}`, 'danger');
