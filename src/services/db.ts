@@ -872,9 +872,11 @@ export const db = {
         if (tenantId) {
           query = query.eq('user_id', tenantId);
         }
-        const { data, error } = await query.maybeSingle();
+        const { data, error } = await query;
         if (error) throw new Error(error.message);
-        if (data && data.value) return data.value;
+        if (data && data.length > 0) {
+          return data[0].value;
+        }
       } catch (e) {
         console.error('Supabase getGuestPin error', e);
       }
