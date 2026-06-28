@@ -75,7 +75,14 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         await checkAndSeedUser(data.user.id);
       }
     } catch (err: any) {
-      showToast(`Lỗi đăng nhập: ${err.message || err}`, 'danger');
+      const msg = err.message || '';
+      let viMsg = 'Đăng nhập thất bại. Vui lòng thử lại.';
+      if (msg.includes('Invalid login credentials')) viMsg = 'Email hoặc mật khẩu không đúng!';
+      else if (msg.includes('Email not confirmed')) viMsg = 'Tài khoản chưa xác thực email! Vui lòng kiểm tra hộp thư và nhấn liên kết xác nhận.';
+      else if (msg.includes('Too many requests')) viMsg = 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng chờ vài phút rồi thử lại.';
+      else if (msg.includes('User not found')) viMsg = 'Không tìm thấy tài khoản với email này!';
+      else if (msg.includes('network') || msg.includes('fetch')) viMsg = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
+      showToast(viMsg, 'danger');
     } finally {
       setLoading(false);
     }
@@ -119,7 +126,15 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         showToast('Đăng ký thành công! Vui lòng xác thực tài khoản qua email gửi đến.', 'info');
       }
     } catch (err: any) {
-      showToast(`Lỗi đăng ký: ${err.message || err}`, 'danger');
+      const msg = err.message || '';
+      let viMsg = 'Đăng ký thất bại. Vui lòng thử lại.';
+      if (msg.includes('User already registered') || msg.includes('already registered')) viMsg = 'Email này đã được đăng ký! Vui lòng đăng nhập hoặc dùng email khác.';
+      else if (msg.includes('Password should be')) viMsg = 'Mật khẩu phải có ít nhất 6 ký tự!';
+      else if (msg.includes('Unable to validate email')) viMsg = 'Định dạng email không hợp lệ!';
+      else if (msg.includes('Signup is disabled')) viMsg = 'Chức năng đăng ký hiện đang bị vô hiệu hóa trên hệ thống!';
+      else if (msg.includes('Too many requests')) viMsg = 'Bạn đã thử quá nhiều lần. Vui lòng chờ vài phút rồi thử lại.';
+      else if (msg.includes('network') || msg.includes('fetch')) viMsg = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
+      showToast(viMsg, 'danger');
     } finally {
       setLoading(false);
     }
@@ -140,7 +155,12 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       showToast('Đã gửi email khôi phục mật khẩu! Vui lòng kiểm tra hòm thư của bạn.', 'success');
       setAuthMode('login');
     } catch (err: any) {
-      showToast(`Lỗi: ${err.message || err}`, 'danger');
+      const msg = err.message || '';
+      let viMsg = 'Gửi email thất bại. Vui lòng thử lại.';
+      if (msg.includes('User not found')) viMsg = 'Không tìm thấy tài khoản với email này!';
+      else if (msg.includes('Too many requests')) viMsg = 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng chờ vài phút rồi thử lại.';
+      else if (msg.includes('network') || msg.includes('fetch')) viMsg = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
+      showToast(viMsg, 'danger');
     } finally {
       setLoading(false);
     }

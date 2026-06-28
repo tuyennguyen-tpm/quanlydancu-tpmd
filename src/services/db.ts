@@ -1206,3 +1206,196 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
 
   return sql;
 };
+
+// ═══════════════════════════════════════════════════════════
+// MODULE CHI BỘ ĐẢNG — Types & CRUD
+// ═══════════════════════════════════════════════════════════
+
+export interface PartyMember {
+  id: string;
+  user_id?: string;
+  resident_id?: string | null;
+  full_name: string;
+  party_code?: string;
+  join_date?: string;
+  probation_date?: string;
+  position: 'secretary' | 'deputy_secretary' | 'member';
+  status: 'official' | 'probation' | 'inactive';
+  notes?: string;
+  created_at?: string;
+}
+
+export interface PartyMeeting {
+  id: string;
+  user_id?: string;
+  title: string;
+  date: string;
+  time?: string;
+  location?: string;
+  content?: string;
+  attendance_count: number;
+  resolution?: string;
+  created_at?: string;
+}
+
+export interface PartyEvaluation {
+  id: string;
+  user_id?: string;
+  member_id: string;
+  year: number;
+  rating: 'excellent' | 'good' | 'average' | 'weak';
+  notes?: string;
+  created_at?: string;
+}
+
+export interface PartyFee {
+  id: string;
+  user_id?: string;
+  member_id: string;
+  year: number;
+  month: number;
+  amount: number;
+  paid_at?: string | null;
+  note?: string;
+}
+
+// LocalStorage seed data cho chi bộ (fallback offline)
+const seedPartyMembers: PartyMember[] = [
+  { id: 'PM001', full_name: 'Nguyễn Kim Tuyến', party_code: 'DV-0001', join_date: '2005-02-03', probation_date: '2004-02-03', position: 'secretary', status: 'official', notes: 'Bí thư Chi bộ', created_at: new Date().toISOString() },
+  { id: 'PM002', full_name: 'Lê Thị Dung', party_code: 'DV-0002', join_date: '2010-05-19', probation_date: '2009-05-19', position: 'deputy_secretary', status: 'official', notes: 'Phó Bí thư Chi bộ', created_at: new Date().toISOString() },
+  { id: 'PM003', full_name: 'Trần Văn Cường', party_code: 'DV-0003', join_date: '2018-07-27', probation_date: '2017-07-27', position: 'member', status: 'official', created_at: new Date().toISOString() },
+];
+
+export const partyDb = {
+  // --- Đảng viên ---
+  getPartyMembers: async (): Promise<PartyMember[]> => {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('party_members').select('*').order('created_at', { ascending: true });
+        if (error) handleDbError('tải danh sách đảng viên', error);
+        if (!error && data) return data;
+      } catch (e) { console.error('getPartyMembers fallback:', e); }
+    }
+    return getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
+  },
+  savePartyMember: async (member: Omit<PartyMember, 'created_at'> & { created_at?: string }): Promise<PartyMember> => {
+    const full: PartyMember = { ...member, created_at: member.created_at || new Date().toISOString() };
+    if (supabase) {
+      const uId = await getSessionUserId();
+      const { data, error } = await supabase.from('party_members').upsert({ ...full, user_id: uId, resident_id: full.resident_id || null }).select().single();
+      if (error) { handleDbError('lưu đảng viên', error); throw new Error(error.message); }
+      if (data) return data;
+    }
+    const list = getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
+    const idx = list.findIndex(m => m.id === member.id);
+    if (idx >= 0) list[idx] = full; else list.push(full);
+    setStorageItem('party_members', list);
+    return full;
+  },
+  deletePartyMember: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('party_members').delete().eq('id', id);
+        if (error) handleDbError('xóa đảng viên', error);
+        if (!error) return true;
+      } catch (e) { console.error('deletePartyMember fallback:', e); }
+    }
+    const list = getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
+    setStorageItem('party_members', list.filter(m => m.id !== id));
+    return true;
+  },
+
+  // --- Sinh hoạt Chi bộ ---
+  getPartyMeetings: async (): Promise<PartyMeeting[]> => {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('party_meetings').select('*').order('date', { ascending: false });
+        if (error) handleDbError('tải danh sách sinh hoạt chi bộ', error);
+        if (!error && data) return data;
+      } catch (e) { console.error('getPartyMeetings fallback:', e); }
+    }
+    return getStorageItem<PartyMeeting[]>('party_meetings', []);
+  },
+  savePartyMeeting: async (meeting: Omit<PartyMeeting, 'created_at'> & { created_at?: string }): Promise<PartyMeeting> => {
+    const full: PartyMeeting = { ...meeting, created_at: meeting.created_at || new Date().toISOString() };
+    if (supabase) {
+      const uId = await getSessionUserId();
+      const { data, error } = await supabase.from('party_meetings').upsert({ ...full, user_id: uId }).select().single();
+      if (error) { handleDbError('lưu sinh hoạt chi bộ', error); throw new Error(error.message); }
+      if (data) return data;
+    }
+    const list = getStorageItem<PartyMeeting[]>('party_meetings', []);
+    const idx = list.findIndex(m => m.id === meeting.id);
+    if (idx >= 0) list[idx] = full; else list.push(full);
+    setStorageItem('party_meetings', list);
+    return full;
+  },
+  deletePartyMeeting: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('party_meetings').delete().eq('id', id);
+        if (error) handleDbError('xóa sinh hoạt chi bộ', error);
+        if (!error) return true;
+      } catch (e) { console.error('deletePartyMeeting fallback:', e); }
+    }
+    const list = getStorageItem<PartyMeeting[]>('party_meetings', []);
+    setStorageItem('party_meetings', list.filter(m => m.id !== id));
+    return true;
+  },
+
+  // --- Đánh giá Đảng viên ---
+  getPartyEvaluations: async (year?: number): Promise<PartyEvaluation[]> => {
+    if (supabase) {
+      try {
+        let q = supabase.from('party_evaluations').select('*');
+        if (year) q = q.eq('year', year);
+        const { data, error } = await q;
+        if (error) handleDbError('tải đánh giá đảng viên', error);
+        if (!error && data) return data;
+      } catch (e) { console.error('getPartyEvaluations fallback:', e); }
+    }
+    const all = getStorageItem<PartyEvaluation[]>('party_evaluations', []);
+    return year ? all.filter(e => e.year === year) : all;
+  },
+  savePartyEvaluation: async (ev: Omit<PartyEvaluation, 'created_at'> & { created_at?: string }): Promise<PartyEvaluation> => {
+    const full: PartyEvaluation = { ...ev, created_at: ev.created_at || new Date().toISOString() };
+    if (supabase) {
+      const uId = await getSessionUserId();
+      const { data, error } = await supabase.from('party_evaluations').upsert({ ...full, user_id: uId }, { onConflict: 'member_id,year' }).select().single();
+      if (error) { handleDbError('lưu đánh giá đảng viên', error); throw new Error(error.message); }
+      if (data) return data;
+    }
+    const list = getStorageItem<PartyEvaluation[]>('party_evaluations', []);
+    const idx = list.findIndex(e => e.member_id === ev.member_id && e.year === ev.year);
+    if (idx >= 0) list[idx] = full; else list.push(full);
+    setStorageItem('party_evaluations', list);
+    return full;
+  },
+
+  // --- Thu đảng phí ---
+  getPartyFees: async (year: number): Promise<PartyFee[]> => {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('party_fees').select('*').eq('year', year);
+        if (error) handleDbError('tải đảng phí', error);
+        if (!error && data) return data;
+      } catch (e) { console.error('getPartyFees fallback:', e); }
+    }
+    const all = getStorageItem<PartyFee[]>('party_fees', []);
+    return all.filter(f => f.year === year);
+  },
+  savePartyFee: async (fee: Omit<PartyFee, 'id'> & { id?: string }): Promise<PartyFee> => {
+    const full: PartyFee = { id: fee.id || generateUUID(), ...fee };
+    if (supabase) {
+      const uId = await getSessionUserId();
+      const { data, error } = await supabase.from('party_fees').upsert({ ...full, user_id: uId }, { onConflict: 'member_id,year,month' }).select().single();
+      if (error) { handleDbError('lưu đảng phí', error); throw new Error(error.message); }
+      if (data) return data;
+    }
+    const list = getStorageItem<PartyFee[]>('party_fees', []);
+    const idx = list.findIndex(f => f.member_id === fee.member_id && f.year === fee.year && f.month === fee.month);
+    if (idx >= 0) list[idx] = full; else list.push(full);
+    setStorageItem('party_fees', list);
+    return full;
+  },
+};

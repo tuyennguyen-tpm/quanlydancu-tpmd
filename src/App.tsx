@@ -14,6 +14,7 @@ import Meetings from './pages/Meetings';
 import MeetingMinutes from './pages/MeetingMinutes';
 import Documents from './pages/Documents';
 import Complaints from './pages/Complaints';
+import PartyCell from './pages/PartyCell';
 import Login from './pages/Login';
 import { 
   Users, 
@@ -33,7 +34,8 @@ import {
   Bell,
   Search,
   Settings,
-  BrainCircuit
+  BrainCircuit,
+  Star
 } from 'lucide-react';
 import './App.css';
 
@@ -647,6 +649,8 @@ const App = () => {
         return <Environment />;
       case 'finance':
         return <Finance />;
+      case 'party-cell':
+        return <PartyCell />;
       case 'meetings':
         return <Meetings type="general" />;
       case 'meetings-party':
@@ -688,12 +692,13 @@ const App = () => {
     { id: 'meetings-front', icon: Calendar, label: 'Họp mặt trận' },
     { id: 'meetings-minutes', icon: FileText, label: 'Biên bản cuộc họp' },
     { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết' },
+    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng' },
     { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI' },
   ].filter(item => {
     if (isGuestMode) {
-      // Ẩn Quản lý Hộ dân, Quản lý Nhân khẩu, Họp chi bộ, Họp mặt trận, Trợ lý AI
-      return !['households', 'residents', 'meetings-party', 'meetings-front', 'ai-assistant'].includes(item.id);
+      // Ẩn các mục nhạy cảm với chế độ khách
+      return !['households', 'residents', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant'].includes(item.id);
     }
     return true;
   });
