@@ -284,19 +284,20 @@ const PartyCell: React.FC = () => {
 
         /* ── Fee matrix ── */
         .fee-matrix-wrap { overflow-x: auto; }
-        .fee-table { border-collapse: collapse; font-size: 0.82rem; min-width: 720px; width: 100%; }
-        .fee-table th { background: rgba(220,38,38,0.22); color: #ffffff; font-weight: 800; padding: 10px 8px; text-align: center; border: 1px solid rgba(255,255,255,0.08); font-size: 0.72rem; }
+        .fee-table { border-collapse: collapse; font-size: 0.88rem; min-width: 720px; width: 100%; }
+        .fee-table th { background: #0f172a; color: #fbbf24; font-weight: 800; padding: 10px 8px; text-align: center; border: 1px solid #475569; font-size: 0.78rem; text-transform: uppercase; }
         .fee-table th.name-col { text-align: left; min-width: 150px; }
-        .fee-table td { padding: 8px 8px; border: 1px solid rgba(255,255,255,0.07); text-align: center; color: #f8fafc; vertical-align: middle; }
+        .fee-table td { padding: 8px 8px; border: 1px solid #334155; text-align: center; color: #ffffff; vertical-align: middle; }
         .fee-table td.name-col { text-align: left; font-weight: 700; color: #fff; white-space: nowrap; }
         .fee-cell-btn {
           width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer;
           display: flex; align-items: center; justify-content: center; margin: auto;
           transition: all 0.2s;
         }
-        .fee-cell-btn.paid { background: rgba(34,197,94,0.25); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
-        .fee-cell-btn.unpaid { background: rgba(255,255,255,0.08); color: #94a3b8; border: 1px solid rgba(255,255,255,0.12); }
-        .fee-cell-btn:hover { transform: scale(1.18); }
+        .fee-cell-btn.paid { background: #16a34a; color: #ffffff; border: 1px solid #15803d; box-shadow: 0 2px 6px rgba(22,163,74,0.35); }
+        .fee-cell-btn.unpaid { background: #334155; color: #cbd5e1; border: 1px solid #475569; }
+        .fee-cell-btn.paid:hover { background: #15803d; transform: scale(1.18); }
+        .fee-cell-btn.unpaid:hover { background: #475569; color: #ffffff; transform: scale(1.18); }
 
         /* ── Progress bar ── */
         .rating-bar { height: 6px; border-radius: 3px; margin-top: 3px; transition: width 0.5s ease; }
@@ -1148,10 +1149,10 @@ const EvaluationsTab: React.FC = () => {
       {rated > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
           {(['excellent', 'good', 'average', 'weak'] as const).map(r => (
-            <div key={r} style={{ background: 'rgba(30,41,59,0.6)', border: `1px solid ${RATING_COLOR[r]}30`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: RATING_COLOR[r] }}>{ratingCounts[r]}</div>
-              <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: 2, fontWeight: 700 }}>{RATING_LABEL[r]}</div>
-              <div className="rating-bar" style={{ background: `${RATING_COLOR[r]}30`, marginTop: 6 }}>
+            <div key={r} style={{ background: '#0f172a', border: `2px solid ${RATING_COLOR[r]}`, borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: RATING_COLOR[r] }}>{ratingCounts[r]}</div>
+              <div style={{ fontSize: '0.78rem', color: '#ffffff', marginTop: 2, fontWeight: 700 }}>{RATING_LABEL[r]}</div>
+              <div className="rating-bar" style={{ background: '#334155', marginTop: 8 }}>
                 <div className="rating-bar" style={{ width: total > 0 ? `${(ratingCounts[r] / total) * 100}%` : '0%', background: RATING_COLOR[r] }} />
               </div>
             </div>
@@ -1185,16 +1186,17 @@ const EvaluationsTab: React.FC = () => {
                           onClick={() => handleRate(m, r)}
                           disabled={isSaving}
                           style={{
-                            width: 32, height: 32, borderRadius: '50%', border: 'none', cursor: isSaving ? 'wait' : 'pointer',
-                            background: ev?.rating === r ? `${RATING_COLOR[r]}25` : 'rgba(255,255,255,0.06)',
-                            color: ev?.rating === r ? RATING_COLOR[r] : '#94a3b8',
+                            width: 32, height: 32, borderRadius: '50%', cursor: isSaving ? 'wait' : 'pointer',
+                            background: ev?.rating === r ? RATING_COLOR[r] : '#334155',
+                            color: ev?.rating === r ? '#ffffff' : '#cbd5e1',
+                            border: ev?.rating === r ? `2px solid ${RATING_COLOR[r]}` : '2px solid #475569',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 'auto',
                             transition: 'all 0.2s',
-                            boxShadow: ev?.rating === r ? `0 0 0 2px ${RATING_COLOR[r]}60` : '1px 1px 3px rgba(0,0,0,0.1)',
+                            boxShadow: ev?.rating === r ? `0 4px 10px ${RATING_COLOR[r]}40` : '1px 1px 3px rgba(0,0,0,0.1)',
                           }}
                           title={`Xếp loại: ${RATING_LABEL[r]}`}
                         >
-                          {ev?.rating === r ? <CheckCircle size={18} /> : <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'currentColor', opacity: 0.7 }} />}
+                          {ev?.rating === r ? <CheckCircle size={18} /> : <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'currentColor', opacity: 0.6 }} />}
                         </button>
                       </td>
                     ))}
