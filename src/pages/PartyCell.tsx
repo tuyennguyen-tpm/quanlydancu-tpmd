@@ -151,16 +151,16 @@ const PartyCell: React.FC = () => {
           padding: 11px 18px;
           border: none;
           background: transparent;
-          color: #64748b;
-          font-size: 0.82rem;
-          font-weight: 600;
+          color: #cbd5e1;
+          font-size: 0.85rem;
+          font-weight: 700;
           cursor: pointer;
           border-bottom: 2px solid transparent;
           transition: all 0.2s;
           white-space: nowrap;
         }
-        .party-tab-btn:hover { color: #f87171; background: rgba(220,38,38,0.06); }
-        .party-tab-btn.active { color: #f87171; border-bottom-color: #dc2626; background: rgba(220,38,38,0.08); }
+        .party-tab-btn:hover { color: #ffffff; background: rgba(220,38,38,0.1); }
+        .party-tab-btn.active { color: #f87171; border-bottom-color: #ef4444; background: rgba(220,38,38,0.15); }
 
         .party-content {
           background: rgba(15,23,42,0.5);
@@ -182,14 +182,14 @@ const PartyCell: React.FC = () => {
           text-align: center;
         }
         .party-stat-card .stat-num { font-size: 1.6rem; font-weight: 800; color: #f87171; }
-        .party-stat-card .stat-label { font-size: 0.72rem; color: #94a3b8; margin-top: 2px; }
+        .party-stat-card .stat-label { font-size: 0.72rem; color: #cbd5e1; margin-top: 2px; }
 
         /* ── Table ── */
         .party-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
         .party-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
         .party-table th {
-          background: rgba(220,38,38,0.12);
-          color: #f87171;
+          background: rgba(220,38,38,0.15);
+          color: #fca5a5;
           font-weight: 700;
           font-size: 0.72rem;
           text-transform: uppercase;
@@ -198,7 +198,7 @@ const PartyCell: React.FC = () => {
           text-align: left;
           white-space: nowrap;
         }
-        .party-table td { padding: 10px 14px; color: #e2e8f0; border-top: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        .party-table td { padding: 10px 14px; color: #f1f5f9; border-top: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
         .party-table tr:hover td { background: rgba(220,38,38,0.05); }
 
         /* ── Buttons ── */
@@ -213,7 +213,7 @@ const PartyCell: React.FC = () => {
         .party-btn-icon {
           background: none; border: none; cursor: pointer;
           padding: 5px; border-radius: 6px; transition: all 0.2s;
-          color: #64748b;
+          color: #cbd5e1;
         }
         .party-btn-icon:hover { background: rgba(220,38,38,0.12); color: #f87171; }
         .party-btn-icon.delete:hover { background: rgba(239,68,68,0.12); color: #ef4444; }
