@@ -106,8 +106,9 @@ const PartyCell: React.FC = () => {
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
         .party-header {
-          background: #991b1b;
-          border: 1px solid #7f1d1d;
+          background: linear-gradient(135deg, #310813 0%, #1e293b 100%);
+          border: 1px solid #4c0519;
+          border-bottom: 3px solid #d97706;
           border-radius: 14px 14px 0 0;
           padding: 20px 24px 18px;
           display: flex;
@@ -115,20 +116,20 @@ const PartyCell: React.FC = () => {
           gap: 16px;
         }
         .party-title-group h2 {
-          font-size: 1.4rem;
+          font-size: 1.45rem;
           font-weight: 850;
           color: #ffffff;
           margin: 6px 0 2px;
           letter-spacing: -0.3px;
         }
-        .party-title-group p { font-size: 0.88rem; color: #fecaca; margin: 0; font-weight: 600; }
+        .party-title-group p { font-size: 0.88rem; color: #fef08a; margin: 0; font-weight: 600; }
         .party-badge {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          background: #7f1d1d;
+          background: #d97706;
           color: #ffffff;
-          border: 1px solid #b91c1c;
+          border: 1px solid #f59e0b;
           border-radius: 6px;
           padding: 4px 10px;
           font-size: 0.72rem;
@@ -140,9 +141,9 @@ const PartyCell: React.FC = () => {
           display: flex;
           gap: 0;
           background: #0f172a;
-          border-left: 1px solid #7f1d1d;
-          border-right: 1px solid #7f1d1d;
-          border-bottom: 2px solid #b91c1c;
+          border-left: 1px solid #334155;
+          border-right: 1px solid #334155;
+          border-bottom: 3px solid #d97706;
           overflow-x: auto;
         }
         .party-tab-btn {
@@ -160,12 +161,12 @@ const PartyCell: React.FC = () => {
           transition: all 0.2s;
           white-space: nowrap;
         }
-        .party-tab-btn:hover { color: #ffffff; background: rgba(220,38,38,0.15); }
-        .party-tab-btn.active { color: #ffffff; border-bottom-color: #f87171; background: #dc2626; }
+        .party-tab-btn:hover { color: #ffffff; background: rgba(217,119,6,0.1); }
+        .party-tab-btn.active { color: #fef08a; border-bottom-color: #fbbf24; background: rgba(217,119,6,0.15); }
 
         .party-content {
           background: #1e293b;
-          border: 1px solid #b91c1c;
+          border: 1px solid #334155;
           border-top: none;
           border-radius: 0 0 14px 14px;
           padding: 24px;
@@ -177,21 +178,21 @@ const PartyCell: React.FC = () => {
         .party-stat-card {
           flex: 1; min-width: 110px;
           background: #0f172a;
-          border: 1px solid #334155;
+          border: 1px solid rgba(217,119,6,0.2);
           border-radius: 12px;
           padding: 14px 18px;
           text-align: center;
           box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
-        .party-stat-card .stat-num { font-size: 2rem; font-weight: 900; color: #f87171; }
+        .party-stat-card .stat-num { font-size: 2.2rem; font-weight: 900; color: #fbbf24; }
         .party-stat-card .stat-label { font-size: 0.8rem; color: #ffffff; margin-top: 4px; font-weight: 700; }
 
         /* ── Table ── */
         .party-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #475569; }
         .party-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
         .party-table th {
-          background: #dc2626;
-          color: #ffffff;
+          background: #0f172a;
+          color: #fbbf24;
           font-weight: 800;
           font-size: 0.8rem;
           text-transform: uppercase;
@@ -199,7 +200,7 @@ const PartyCell: React.FC = () => {
           padding: 12px 14px;
           text-align: left;
           white-space: nowrap;
-          border-bottom: 2px solid #991b1b;
+          border-bottom: 2px solid #fbbf24;
         }
         .party-table td { padding: 12px 14px; color: #ffffff; border-top: 1px solid #334155; vertical-align: middle; }
         .party-table tr:hover td { background: #334155; }
@@ -207,13 +208,13 @@ const PartyCell: React.FC = () => {
         /* ── Buttons ── */
         .party-btn-primary {
           display: inline-flex; align-items: center; gap: 6px;
-          background: linear-gradient(135deg, #dc2626, #b91c1c);
-          color: white; border: none; border-radius: 8px;
+          background: linear-gradient(135deg, #991b1b, #7f1d1d);
+          color: white; border: 1px solid #7f1d1d; border-radius: 8px;
           padding: 10px 20px; font-size: 0.88rem; font-weight: 750;
           cursor: pointer; transition: all 0.2s;
-          box-shadow: 0 4px 10px rgba(220,38,38,0.3);
+          box-shadow: 0 4px 10px rgba(153,27,27,0.3);
         }
-        .party-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(220,38,38,0.5); }
+        .party-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(153,27,27,0.5); }
         .party-btn-icon {
           background: none; border: none; cursor: pointer;
           padding: 6px; border-radius: 6px; transition: all 0.2s;
@@ -613,7 +614,12 @@ const MembersTab: React.FC = () => {
                   <td style={{ fontWeight: 700, color: '#fff' }}>{m.full_name}</td>
                   <td style={{ color: '#f1f5f9' }}>{m.party_code || '—'}</td>
                   <td>
-                    <span className="status-badge" style={{ background: 'rgba(220,38,38,0.12)', color: '#fca5a5', border: '1px solid rgba(220,38,38,0.25)' }}>
+                    <span className="status-badge" style={{ 
+                      background: m.position === 'secretary' ? '#991b1b' : m.position === 'deputy_secretary' ? '#b45309' : '#334155', 
+                      color: '#ffffff', 
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      fontWeight: 'bold'
+                    }}>
                       {POSITION_LABEL[m.position] || m.position}
                     </span>
                   </td>
