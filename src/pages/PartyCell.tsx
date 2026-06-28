@@ -1143,7 +1143,7 @@ const FeesTab: React.FC = () => {
         <span style={{ fontSize: '1rem', flexShrink: 0 }}>📋</span>
         <span>
           <strong>Quy định 01-QĐ/TW (01/02/2026):</strong> Có BHXH = 1% lương | Lương hưu = 0,5% | Không BHXH chưa hưu = 0,3% LTT vùng | Đủ tuổi hưu chưa hưởng = 0,2% | Học sinh = 5.000đ/tháng.{' '}
-          <strong style={{ color: '#f87171' }}>⚠️ Không đóng 3 tháng trong năm → xem xét xóa tên đảng viên!</strong>
+          <strong style={{ color: '#fca5a5' }}>⚠️ Không đóng 3 tháng trong năm → Chi bộ xem xét và Bí thư thực hiện xóa tên thủ công trong danh sách (hệ thống không tự động xóa).</strong>
         </span>
       </div>
 
