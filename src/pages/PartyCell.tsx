@@ -413,12 +413,158 @@ const MembersTab: React.FC = () => {
     probation: members.filter(m => m.status === 'probation').length,
   };
 
+  const badgeNominees = members
+    .map(m => {
+      const dateStr = m.probation_date || m.join_date;
+      if (!dateStr) return null;
+      const year = new Date(dateStr).getFullYear();
+      if (isNaN(year)) return null;
+      const age = currentYear - year;
+      const milestones = [30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
+      if (milestones.includes(age)) {
+        return { name: m.full_name, age };
+      }
+      return null;
+    })
+    .filter(Boolean) as { name: string; age: number }[];
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Vui lòng cho phép mở cửa sổ bật lên để in!', 'warning');
+      return;
+    }
+    
+    const rowsHtml = filtered.map((m, idx) => {
+      const dateStr = m.probation_date || m.join_date;
+      let tuoiDangStr = '—';
+      if (dateStr) {
+        const yr = new Date(dateStr).getFullYear();
+        if (!isNaN(yr)) tuoiDangStr = `${currentYear - yr} năm`;
+      }
+      
+      return `
+        <tr>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${idx + 1}</td>
+          <td style="border: 1px solid #000; padding: 6px;"><strong>${m.full_name}</strong></td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${m.party_code || '—'}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${POSITION_LABEL[m.position] || m.position}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${fmtDate(m.probation_date)}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${fmtDate(m.join_date)}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${STATUS_LABEL[m.status] || m.status}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${tuoiDangStr}</td>
+          <td style="border: 1px solid #000; padding: 6px;">${m.notes || '—'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Danh sach Dang vien - Chi bo To dan pho Quang Giao</title>
+          <style>
+            body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.4; padding: 25px; color: #000; }
+            .header-table { width: 100%; border: none; margin-bottom: 25px; border-collapse: collapse; }
+            .header-table td { border: none; padding: 0; vertical-align: top; }
+            .title { text-align: center; margin-bottom: 20px; }
+            .title h2 { margin: 5px 0; font-size: 15pt; font-weight: bold; text-transform: uppercase; }
+            .title p { margin: 5px 0; font-style: italic; }
+            .main-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            .main-table th, .main-table td { border: 1px solid #000; padding: 8px 6px; font-size: 11pt; }
+            .main-table th { font-weight: bold; background-color: #f2f2f2; text-align: center; text-transform: uppercase; }
+            .footer-section { width: 100%; margin-top: 35px; border: none; border-collapse: collapse; }
+            .footer-section td { border: none; padding: 0; text-align: center; width: 50%; vertical-align: top; }
+            .footer-date { font-style: italic; margin-bottom: 5px; }
+            .footer-role { font-weight: bold; margin-bottom: 60px; }
+            @media print {
+              body { padding: 0; }
+              @page { size: A4 portrait; margin: 1.5cm 1cm 1.5cm 1.5cm; }
+            }
+          </style>
+        </head>
+        <body>
+          <table class="header-table">
+            <tr>
+              <td style="width: 45%; text-align: center; line-height: 1.3;">
+                <strong>ĐẢNG BỘ PHƯỜNG QUẢNG GIAO</strong><br>
+                <strong style="text-decoration: underline;">CHI BỘ TDP QUẢNG GIAO</strong>
+              </td>
+              <td style="width: 55%; text-align: center; line-height: 1.3;">
+                <strong>ĐẢNG CỘNG SẢN VIỆT NAM</strong><br>
+                <span style="font-size: 10pt; font-style: italic;">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</span>
+              </td>
+            </tr>
+          </table>
+
+          <div class="title">
+            <h2>DANH SÁCH ĐẢNG VIÊN</h2>
+            <p>Chi bộ Tổ dân phố Quảng Giao - Năm ${currentYear}</p>
+          </div>
+
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th style="width: 5%;">STT</th>
+                <th style="width: 22%;">Họ và tên</th>
+                <th style="width: 12%;">Số thẻ Đảng</th>
+                <th style="width: 12%;">Chức vụ</th>
+                <th style="width: 12%;">Ngày kết nạp</th>
+                <th style="width: 12%;">Ngày chính thức</th>
+                <th style="width: 10%;">Trạng thái</th>
+                <th style="width: 10%;">Tuổi Đảng</th>
+                <th style="width: 15%;">Ghi chú</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <table class="footer-section">
+            <tr>
+              <td></td>
+              <td>
+                <div class="footer-date">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</div>
+                <div class="footer-role">T/M CHI BỘ<br>BÍ THƯ</div>
+                <div style="font-weight: bold; margin-top: 50px;">Nguyễn Kim Tuyến</div>
+              </td>
+            </tr>
+          </table>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const filteredResidents = residents.filter(r =>
     r.full_name.toLowerCase().includes(residentSearch.toLowerCase())
   ).slice(0, 6);
 
   return (
     <>
+      {/* Cảnh báo Huy hiệu Đảng */}
+      {badgeNominees.length > 0 && (
+        <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.82rem', color: '#fef08a', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🎖️</span>
+          <span>
+            <strong>Đề nghị nhận Huy hiệu Đảng năm {currentYear}:</strong>{' '}
+            {badgeNominees.map((n, idx) => (
+              <span key={idx}>
+                <strong>{n.name}</strong> (đủ {n.age} năm tuổi Đảng)
+                {idx < badgeNominees.length - 1 ? ' • ' : ''}
+              </span>
+            ))}
+          </span>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="party-stats">
         <div className="party-stat-card"><div className="stat-num">{stats.total}</div><div className="stat-label">Tổng đảng viên</div></div>
@@ -432,7 +578,10 @@ const MembersTab: React.FC = () => {
           <Search size={15} className="party-search-icon" />
           <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
+          <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+        </div>
       </div>
 
       {/* Table */}
@@ -448,6 +597,7 @@ const MembersTab: React.FC = () => {
                 <th>Số thẻ</th>
                 <th>Chức vụ</th>
                 <th>Ngày vào Đảng</th>
+                <th>Tuổi Đảng</th>
                 <th>Trạng thái</th>
                 <th>Ghi chú</th>
                 <th></th>
@@ -465,6 +615,30 @@ const MembersTab: React.FC = () => {
                     </span>
                   </td>
                   <td style={{ color: '#f1f5f9' }}>{fmtDate(m.join_date)}</td>
+                  <td style={{ color: '#f1f5f9' }}>
+                    {(() => {
+                      const dateStr = m.probation_date || m.join_date;
+                      if (!dateStr) return '—';
+                      const yr = new Date(dateStr).getFullYear();
+                      if (isNaN(yr)) return '—';
+                      const tuoiDang = currentYear - yr;
+                      const milestones = [30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
+                      const hasBadge = milestones.includes(tuoiDang);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span>{tuoiDang} năm</span>
+                          {hasBadge && (
+                            <span 
+                              title={`Đủ điều kiện nhận Huy hiệu ${tuoiDang} năm tuổi Đảng!`} 
+                              style={{ color: '#fbbf24', fontSize: '0.92rem', cursor: 'help' }}
+                            >
+                              🎖️
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td>
                     <span className="status-badge" style={{ background: `${STATUS_COLOR[m.status]}20`, color: STATUS_COLOR[m.status] === '#64748b' ? '#cbd5e1' : STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}40` }}>
                       {STATUS_LABEL[m.status]}
