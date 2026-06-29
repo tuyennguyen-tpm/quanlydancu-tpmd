@@ -445,8 +445,12 @@ TỔ TRƯỞNG DÂN PHỐ
   const templates = [
     { title: 'Thông báo họp dân', prompt: 'Viết thông báo họp dân về việc tổng vệ sinh môi trường ngõ xóm vào sáng Chủ Nhật tuần này.' },
     { title: 'Biên bản họp tổ', prompt: 'Viết biên bản cuộc họp tổ dân phố thảo luận dự án bê tông hóa ngõ 47 tối thứ Hai vừa rồi.' },
-    { title: 'Báo cáo tháng', prompt: `Soạn báo cáo tình hình hoạt động tháng của Tổ dân phố ${currentTdpName} để gửi lên UBND ${currentWardName.toLowerCase().startsWith('phường') || currentWardName.toLowerCase().startsWith('xã') || currentWardName.toLowerCase().startsWith('thị trấn') ? '' : 'phường '}${currentWardName}.` },
-    { title: 'Thư ngỏ vận động quỹ', prompt: `Viết thư ngỏ kêu gọi toàn thể nhân dân đóng góp ủng hộ quỹ Vì người nghèo năm 2026. Tổ dân phố ${currentTdpName}, ${currentWardName.toLowerCase().startsWith('phường') || currentWardName.toLowerCase().startsWith('xã') || currentWardName.toLowerCase().startsWith('thị trấn') ? '' : 'phường '}${currentWardName.toLowerCase()}` },
+    { title: 'Báo cáo tháng TDP', prompt: `Soạn báo cáo tình hình hoạt động tháng của Tổ dân phố ${currentTdpName} để gửi lên UBND Phường.` },
+    { title: 'Thư ngỏ vận động quỹ', prompt: `Viết thư ngỏ kêu gọi toàn thể nhân dân đóng góp ủng hộ quỹ Vì người nghèo năm 2026.` },
+    { title: 'Nghị quyết Chi bộ', prompt: `Soạn Nghị quyết cuộc họp Chi bộ Tổ dân phố ${currentTdpName} tháng này lãnh đạo công tác an ninh trật tự.` },
+    { title: 'Báo cáo công tác Chi bộ', prompt: `Viết báo cáo đánh giá hoạt động định kỳ của Chi bộ Tổ dân phố ${currentTdpName} gửi Đảng ủy phường.` },
+    { title: 'Báo cáo Đại đoàn kết', prompt: `Soạn báo cáo kết quả tổ chức Ngày hội Đại đoàn kết toàn dân tộc của Ban công tác Mặt trận.` },
+    { title: 'Báo cáo quỹ Mặt trận', prompt: `Viết báo cáo tổng kết kết quả vận động ủng hộ Quỹ Vì người nghèo của Ban công tác Mặt trận.` },
   ];
 
   return (
