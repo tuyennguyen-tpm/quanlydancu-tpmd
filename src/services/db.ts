@@ -349,7 +349,7 @@ export const db = {
   getHouseholds: async (): Promise<Household[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('households').select('*');
+        let query = supabase.from('households').select('*').order('created_at', { ascending: true });
         const tenantId = getTenantFilter();
         if (tenantId) {
           query = query.eq('user_id', tenantId);
@@ -361,7 +361,8 @@ export const db = {
         console.error('Supabase getHouseholds error, falling back to local storage', e);
       }
     }
-    return getStorageItem<Household[]>('households', seedHouseholds);
+    const list = getStorageItem<Household[]>('households', seedHouseholds);
+    return list.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
   },
   saveHousehold: async (household: Omit<Household, 'created_at'> & { created_at?: string }): Promise<Household> => {
     const fullHousehold: Household = {
@@ -418,7 +419,7 @@ export const db = {
   getResidents: async (): Promise<Resident[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('residents').select('*');
+        let query = supabase.from('residents').select('*').order('created_at', { ascending: true });
         const tenantId = getTenantFilter();
         if (tenantId) {
           query = query.eq('user_id', tenantId);
@@ -427,19 +428,21 @@ export const db = {
         if (error) handleDbError('tải danh sách nhân khẩu', error);
         if (!error && data) {
           const currentYear = new Date().getFullYear();
-          return data.map((r: any) => {
+          const mapped = data.map((r: any) => {
             const dobYear = r.dob ? new Date(r.dob).getFullYear() : 0;
             return {
               ...r,
               is_senior: dobYear > 0 ? (currentYear - dobYear) >= 80 : false
             };
           });
+          return mapped;
         }
       } catch (e) {
         console.error('Supabase getResidents error, falling back to local storage', e);
       }
     }
-    return getStorageItem<Resident[]>('residents', seedResidents);
+    const list = getStorageItem<Resident[]>('residents', seedResidents);
+    return list.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
   },
   saveResident: async (resident: Omit<Resident, 'created_at' | 'is_senior'> & { created_at?: string; is_senior?: boolean }): Promise<Resident> => {
     const dobYear = new Date(resident.dob).getFullYear();
