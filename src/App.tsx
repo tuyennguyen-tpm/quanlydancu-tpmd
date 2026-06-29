@@ -15,6 +15,7 @@ import MeetingMinutes from './pages/MeetingMinutes';
 import Documents from './pages/Documents';
 import Complaints from './pages/Complaints';
 import PartyCell from './pages/PartyCell';
+import Regulations from './pages/Regulations';
 import Login from './pages/Login';
 import { 
   Users, 
@@ -35,7 +36,8 @@ import {
   Search,
   Settings,
   BrainCircuit,
-  Star
+  Star,
+  BookOpen
 } from 'lucide-react';
 import './App.css';
 
@@ -665,6 +667,8 @@ const App = () => {
         return <CitizenMap />;
       case 'ai-assistant':
         return <AIAssistant />;
+      case 'regulations':
+        return <Regulations />;
       default:
         return (
           <div className="content-card">
@@ -692,6 +696,7 @@ const App = () => {
     { id: 'meetings-front', icon: Calendar, label: 'Họp mặt trận' },
     { id: 'meetings-minutes', icon: FileText, label: 'Biên bản cuộc họp' },
     { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết' },
+    { id: 'regulations', icon: BookOpen, label: 'Quy định & Nhiệm vụ' },
     { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng' },
     { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI' },
