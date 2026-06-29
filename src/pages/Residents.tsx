@@ -910,16 +910,49 @@ const Residents = () => {
                   {getStatusText(resident.status)}
                 </td>
                 <td>
-                  <div className="action-menu-container">
-                    <button className="icon-btn-sm" onClick={() => setActiveMenuId(activeMenuId === resident.id ? null : resident.id)}>
-                      <MoreHorizontal size={16} />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      className="icon-btn-sm" 
+                      onClick={() => handleOpenEdit(resident)} 
+                      title="Chỉnh sửa hồ sơ"
+                      style={{ 
+                        border: '1px solid var(--border)', 
+                        background: '#f8fafc',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
+                        e.currentTarget.style.borderColor = 'var(--primary-light)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                      }}
+                    >
+                      <Edit2 size={14} style={{ color: 'var(--primary)' }} />
                     </button>
-                    {activeMenuId === resident.id && (
-                      <div className="dropdown-menu-res">
-                        <button onClick={() => handleOpenEdit(resident)}><Edit2 size={14} /> Chỉnh sửa</button>
-                        <button className="delete-opt" onClick={() => handleDelete(resident.id)}><Trash2 size={14} /> Xóa hồ sơ</button>
-                      </div>
-                    )}
+                    <button 
+                      className="icon-btn-sm" 
+                      onClick={() => handleDelete(resident.id)} 
+                      title="Xóa nhân khẩu"
+                      style={{ 
+                        border: '1px solid rgba(239, 68, 68, 0.2)', 
+                        background: 'rgba(239, 68, 68, 0.02)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+                        e.currentTarget.style.borderColor = 'var(--danger)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.02)';
+                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                      }}
+                    >
+                      <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                    </button>
                   </div>
                 </td>
               </tr>
