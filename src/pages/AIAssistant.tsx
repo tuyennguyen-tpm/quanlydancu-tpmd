@@ -7,7 +7,8 @@ import {
   Download,
   Sparkles,
   RefreshCw,
-  ClipboardCheck
+  ClipboardCheck,
+  Printer
 } from 'lucide-react';
 import { db } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -237,6 +238,65 @@ TỔ TRƯỞNG DÂN PHỐ
     showToast('Tải văn bản (.txt) thành công!', 'success');
   };
 
+  const handlePrint = () => {
+    if (!result) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép mở popup trên trình duyệt!', 'danger');
+      return;
+    }
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>In văn bản hành chính</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 20mm 20mm 20mm 25mm; /* Trên, dưới, phải 20mm, trái 25mm */
+            }
+            body {
+              font-family: "Times New Roman", Times, serif;
+              font-size: 14pt;
+              line-height: 1.6;
+              color: #000;
+              margin: 0;
+              padding: 0;
+              background-color: #fff;
+            }
+            .document-container {
+              width: 100%;
+              white-space: pre-wrap;
+              word-wrap: break-word;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="document-container">${result}</div>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const getPrintButtonText = () => {
+    if (!result) return 'In văn bản (A4)';
+    if (result.includes('BIÊN BẢN')) return 'In biên bản (A4)';
+    if (result.includes('BÁO CÁO')) return 'In báo cáo (A4)';
+    if (result.includes('THÔNG BÁO')) return 'In thông báo (A4)';
+    if (result.includes('THƯ NGỎ')) return 'In thư ngỏ (A4)';
+    return 'In văn bản (A4)';
+  };
+
   const currentTdpName = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
   const currentWardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
 
@@ -308,6 +368,9 @@ TỔ TRƯỞNG DÂN PHỐ
                   <button className="icon-btn-sm" onClick={handleCopy} title="Sao chép">
                     {isCopied ? <ClipboardCheck size={18} style={{color: 'var(--success)'}} /> : <Copy size={18} />}
                   </button>
+                  <button className="icon-btn-sm" onClick={handlePrint} title="In văn bản (A4)">
+                    <Printer size={18} />
+                  </button>
                   <button className="icon-btn-sm" onClick={handleDownload} title="Tải xuống tệp .txt">
                     <Download size={18} />
                   </button>
@@ -322,6 +385,23 @@ TỔ TRƯỞNG DÂN PHỐ
                 value={result} 
                 onChange={(e) => setResult(e.target.value)}
               />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={handlePrint}
+                  style={{
+                    borderRadius: '24px',
+                    padding: '10px 24px',
+                    fontSize: '0.95rem',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Printer size={18} /> {getPrintButtonText()}
+                </button>
+              </div>
             </div>
           ) : (
              <div className="empty-state">
@@ -440,6 +520,31 @@ TỔ TRƯỞNG DÂN PHỐ
           margin-bottom: 16px;
           padding-bottom: 12px;
           border-bottom: 1px solid var(--border);
+        }
+
+        .result-btns {
+          display: flex;
+          gap: 8px;
+        }
+
+        .icon-btn-sm {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          border: 1px solid var(--border);
+          background: white;
+          color: var(--text-muted);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .icon-btn-sm:hover {
+          background: #f1f5f9;
+          color: var(--primary);
+          border-color: var(--primary);
         }
 
         .result-content {
