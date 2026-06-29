@@ -668,6 +668,21 @@ export const db = {
     setStorageItem('meetings', meetings);
     return fullMeeting;
   },
+  deleteMeeting: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('meetings').delete().eq('id', id);
+        if (error) handleDbError('xóa thông tin cuộc họp', error);
+        if (!error) return true;
+      } catch (e) {
+        console.error('Supabase deleteMeeting error, falling back to local storage', e);
+      }
+    }
+    const meetings = getStorageItem<Meeting[]>('meetings', seedMeetings);
+    const filtered = meetings.filter(m => m.id !== id);
+    setStorageItem('meetings', filtered);
+    return true;
+  },
 
   // --- Documents ---
   getDocuments: async (): Promise<Document[]> => {

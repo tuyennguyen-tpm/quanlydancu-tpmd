@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Users, MapPin, Clock, Plus, X, ListCollapse, FileText } from 'lucide-react';
+import { Calendar, Users, MapPin, Clock, Plus, X, ListCollapse, FileText, Trash2 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Meeting } from '../types';
@@ -86,6 +86,19 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
       localStorage.removeItem('selected_meeting_minutes_type');
     }
     window.dispatchEvent(new CustomEvent('change-tab', { detail: 'meetings-minutes' }));
+  };
+
+  const handleDeleteMeeting = async (id: string, title: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa cuộc họp "${title}" không?`)) {
+      try {
+        await db.deleteMeeting(id);
+        showToast('Xóa cuộc họp thành công!', 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (e) {
+        showToast('Lỗi khi xóa cuộc họp!', 'danger');
+      }
+    }
   };
 
   const now = new Date();
@@ -191,29 +204,55 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
              <div className="up-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                  <span>Trạng thái: Đang chuẩn bị</span>
                  {!isGuest && (
-                   <button
-                     className="btn btn-secondary btn-sm"
-                     onClick={() => handleCreateMinutes(m.id, type)}
-                     style={{
-                       padding: '4px 10px',
-                       fontSize: '0.8rem',
-                       background: 'rgba(255, 255, 255, 0.15)',
-                       borderColor: 'rgba(255, 255, 255, 0.25)',
-                       color: 'white',
-                       height: '28px',
-                       display: 'inline-flex',
-                       alignItems: 'center',
-                       gap: '6px'
-                     }}
-                     onMouseOver={(e) => {
-                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
-                     }}
-                     onMouseOut={(e) => {
-                       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                     }}
-                   >
-                     <FileText size={14} /> Lập biên bản
-                   </button>
+                   <div style={{ display: 'flex', gap: '8px' }}>
+                     <button
+                       className="btn btn-secondary btn-sm"
+                       onClick={() => handleCreateMinutes(m.id, type)}
+                       style={{
+                         padding: '4px 10px',
+                         fontSize: '0.8rem',
+                         background: 'rgba(255, 255, 255, 0.15)',
+                         borderColor: 'rgba(255, 255, 255, 0.25)',
+                         color: 'white',
+                         height: '28px',
+                         display: 'inline-flex',
+                         alignItems: 'center',
+                         gap: '6px'
+                       }}
+                       onMouseOver={(e) => {
+                         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
+                       }}
+                       onMouseOut={(e) => {
+                         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                       }}
+                     >
+                       <FileText size={14} /> Lập biên bản
+                     </button>
+                     <button
+                       className="btn btn-danger btn-sm"
+                       onClick={() => handleDeleteMeeting(m.id, m.title)}
+                       style={{
+                         padding: '4px 8px',
+                         fontSize: '0.8rem',
+                         background: 'rgba(239, 68, 68, 0.2)',
+                         borderColor: 'rgba(239, 68, 68, 0.4)',
+                         color: '#f87171',
+                         height: '28px',
+                         display: 'inline-flex',
+                         alignItems: 'center',
+                         gap: '4px',
+                         cursor: 'pointer'
+                       }}
+                       onMouseOver={(e) => {
+                         e.currentTarget.style.background = 'rgba(239, 68, 68, 0.4)';
+                       }}
+                       onMouseOut={(e) => {
+                         e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                       }}
+                     >
+                       <Trash2 size={14} /> Xóa
+                     </button>
+                   </div>
                  )}
               </div>
           </div>
@@ -238,30 +277,56 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
                     <div className="m-s" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                        <span>{m.attendance_count} hộ tham gia - Địa điểm: {m.location}</span>
                        {!isGuest && (
-                         <button
-                           className="btn btn-secondary btn-sm"
-                           onClick={() => handleCreateMinutes(m.id, type)}
-                           style={{
-                             padding: '4px 10px',
-                             fontSize: '0.8rem',
-                             height: '28px',
-                             border: '1.5px solid var(--border)',
-                             display: 'inline-flex',
-                             alignItems: 'center',
-                             gap: '6px',
-                             background: 'white',
-                             color: 'var(--text-main)',
-                             fontWeight: '600'
-                           }}
-                           onMouseOver={(e) => {
-                             e.currentTarget.style.transform = 'translateY(-1px)';
-                           }}
-                           onMouseOut={(e) => {
-                             e.currentTarget.style.transform = 'translateY(0)';
-                           }}
-                         >
-                           <FileText size={14} /> Lập biên bản
-                         </button>
+                         <div style={{ display: 'flex', gap: '8px' }}>
+                           <button
+                             className="btn btn-secondary btn-sm"
+                             onClick={() => handleCreateMinutes(m.id, type)}
+                             style={{
+                               padding: '4px 10px',
+                               fontSize: '0.8rem',
+                               height: '28px',
+                               border: '1.5px solid var(--border)',
+                               display: 'inline-flex',
+                               alignItems: 'center',
+                               gap: '6px',
+                               background: 'white',
+                               color: 'var(--text-main)',
+                               fontWeight: '600'
+                             }}
+                             onMouseOver={(e) => {
+                               e.currentTarget.style.transform = 'translateY(-1px)';
+                             }}
+                             onMouseOut={(e) => {
+                               e.currentTarget.style.transform = 'translateY(0)';
+                             }}
+                           >
+                             <FileText size={14} /> Lập biên bản
+                           </button>
+                           <button
+                             className="btn btn-danger btn-sm"
+                             onClick={() => handleDeleteMeeting(m.id, m.title)}
+                             style={{
+                               padding: '4px 8px',
+                               fontSize: '0.8rem',
+                               height: '28px',
+                               border: '1.5px solid var(--border)',
+                               display: 'inline-flex',
+                               alignItems: 'center',
+                               gap: '6px',
+                               background: 'white',
+                               color: '#ef4444',
+                               fontWeight: '600'
+                             }}
+                             onMouseOver={(e) => {
+                               e.currentTarget.style.transform = 'translateY(-1px)';
+                             }}
+                             onMouseOut={(e) => {
+                               e.currentTarget.style.transform = 'translateY(0)';
+                             }}
+                           >
+                             <Trash2 size={14} /> Xóa
+                           </button>
+                         </div>
                        )}
                      </div>
                  </div>
