@@ -414,6 +414,44 @@ export const db = {
     setStorageItem('residents', filteredResidents);
     return true;
   },
+  saveHouseholdsBulk: async (households: Household[]): Promise<boolean> => {
+    if (households.length === 0) return true;
+    const fullHouseholds = households.map(h => ({
+      ...h,
+      created_at: h.created_at || new Date().toISOString()
+    }));
+    
+    if (supabase) {
+      const uId = await getSessionUserId();
+      const payload = fullHouseholds.map(h => ({
+        ...h,
+        user_id: uId,
+        head_of_household_id: h.head_of_household_id || null
+      }));
+      
+      // Chia nhỏ thành các chunks (mỗi chunk 500 bản ghi) để tránh lỗi Timeout/Rate limit
+      const chunkSize = 500;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        const { error } = await supabase.from('households').upsert(chunk);
+        if (error) {
+          handleDbError('lưu danh sách hộ dân (bulk)', error);
+          throw new Error(`Không thể lưu hộ dân: ${error.message}`);
+        }
+      }
+      return true;
+    }
+    
+    // Fallback LocalStorage
+    const currentHouseholds = getStorageItem<Household[]>('households', seedHouseholds);
+    fullHouseholds.forEach(h => {
+      const idx = currentHouseholds.findIndex(ext => ext.id === h.id);
+      if (idx >= 0) currentHouseholds[idx] = h;
+      else currentHouseholds.push(h);
+    });
+    setStorageItem('households', currentHouseholds);
+    return true;
+  },
 
   // --- Residents ---
   getResidents: async (): Promise<Resident[]> => {
@@ -497,6 +535,47 @@ export const db = {
     const residents = getStorageItem<Resident[]>('residents', seedResidents);
     const filtered = residents.filter(r => r.id !== id);
     setStorageItem('residents', filtered);
+    return true;
+  },
+  saveResidentsBulk: async (residents: Resident[]): Promise<boolean> => {
+    if (residents.length === 0) return true;
+    
+    const currentYear = new Date().getFullYear();
+    const fullResidents = residents.map(r => {
+      const dobYear = new Date(r.dob).getFullYear();
+      return {
+        ...r,
+        is_senior: (currentYear - dobYear) >= 80,
+        created_at: r.created_at || new Date().toISOString()
+      };
+    });
+
+    if (supabase) {
+      const uId = await getSessionUserId();
+      const payload = fullResidents.map(r => ({
+        ...r,
+        user_id: uId
+      }));
+      
+      const chunkSize = 500;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        const { error } = await supabase.from('residents').upsert(chunk);
+        if (error) {
+          handleDbError('lưu danh sách nhân khẩu (bulk)', error);
+          throw new Error(`Không thể lưu nhân khẩu: ${error.message}`);
+        }
+      }
+      return true;
+    }
+
+    const currentResidents = getStorageItem<Resident[]>('residents', seedResidents);
+    fullResidents.forEach(r => {
+      const idx = currentResidents.findIndex(ext => ext.id === r.id);
+      if (idx >= 0) currentResidents[idx] = r;
+      else currentResidents.push(r);
+    });
+    setStorageItem('residents', currentResidents);
     return true;
   },
 

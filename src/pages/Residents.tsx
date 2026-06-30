@@ -761,6 +761,9 @@ const Residents = () => {
         let updatedCount = 0;
         let skipCount = 0;
 
+        const householdsToSave: Household[] = [];
+        const residentsToSave: Resident[] = [];
+
         let currentHouseholdId = '';
         let currentHouseholdNumber = Date.now();
 
@@ -848,22 +851,22 @@ const Residents = () => {
           if (isHead) {
             currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
             if (!matched || !matched.household_id) {
-              await db.saveHousehold({
+              householdsToSave.push({
                 id: currentHouseholdId,
                 household_number: `HH${(currentHouseholdNumber).toString().slice(-6)}`,
                 address: permAddress || '',
-                head_of_household_id: null, // Lưu null trước để tránh lỗi khoá ngoại
+                head_of_household_id: residentId,
                 group_id: 'default',
                 policy_type: 'none',
                 created_at: new Date().toISOString()
-              });
+              } as Household);
               isNewHousehold = true;
               currentHouseholdNumber++;
             }
           } else if (!currentHouseholdId) {
              currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
              if (!matched || !matched.household_id) {
-               await db.saveHousehold({
+               householdsToSave.push({
                  id: currentHouseholdId,
                  household_number: `HH${(currentHouseholdNumber).toString().slice(-6)}`,
                  address: permAddress || '',
@@ -871,7 +874,7 @@ const Residents = () => {
                  group_id: 'default',
                  policy_type: 'none',
                  created_at: new Date().toISOString()
-               });
+               } as Household);
                currentHouseholdNumber++;
              }
           }
@@ -894,19 +897,14 @@ const Residents = () => {
             created_at: matched ? matched.created_at : new Date().toISOString()
           };
 
-          await db.saveResident(payload);
+          residentsToSave.push(payload as Resident);
 
-          // Cập nhật lại ID chủ hộ sau khi resident đã tồn tại trong DB
-          if (isHead && isNewHousehold) {
-            await db.saveHousehold({
-              id: currentHouseholdId,
-              household_number: `HH${(currentHouseholdNumber - 1).toString().slice(-6)}`,
-              address: permAddress || '',
-              head_of_household_id: residentId, // Cập nhật ID chủ hộ
-              group_id: 'default',
-              policy_type: 'none',
-              created_at: payload.created_at
-            });
+          // Cập nhật lại ID chủ hộ trong mảng tạm nếu đã có household
+          if (isHead) {
+            const tempHh = householdsToSave.find(h => h.id === currentHouseholdId);
+            if (tempHh) {
+              tempHh.head_of_household_id = residentId;
+            }
           }
 
           if (matched) {
@@ -916,7 +914,23 @@ const Residents = () => {
           }
         }
 
-        showToast(`Nhập dữ liệu thành công! Đã thêm mới ${addedCount} và cập nhật ${updatedCount} nhân khẩu${skipCount > 0 ? ` (bỏ qua ${skipCount} dòng lỗi)` : ''}.`, 'success');
+        if (householdsToSave.length > 0 || residentsToSave.length > 0) {
+          showToast(`Đang đẩy dữ liệu lên máy chủ... (Xin đợi ít phút, không tắt trình duyệt)`, 'success');
+          // Lưu Household có head = null trước để tránh lỗi khoá ngoại
+          const householdsWithoutHead = householdsToSave.map(h => ({...h, head_of_household_id: null}));
+          await (db as any).saveHouseholdsBulk(householdsWithoutHead);
+          
+          // Lưu Resident
+          await (db as any).saveResidentsBulk(residentsToSave);
+          
+          // Cập nhật lại Household với head_of_household_id chuẩn xác
+          const householdsWithHead = householdsToSave.filter(h => h.head_of_household_id !== null);
+          if (householdsWithHead.length > 0) {
+            await (db as any).saveHouseholdsBulk(householdsWithHead);
+          }
+        }
+
+        showToast(`Nhập dữ liệu hoàn tất! Đã thêm mới ${addedCount} và cập nhật ${updatedCount} nhân khẩu${skipCount > 0 ? ` (bỏ qua ${skipCount} dòng lỗi)` : ''}.`, 'success');
         loadData();
         window.dispatchEvent(new CustomEvent('db-changed'));
       } catch (err) {
