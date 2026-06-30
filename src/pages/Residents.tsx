@@ -559,7 +559,7 @@ const Residents = () => {
     const rows = filteredResidents.map(r => [
       r.full_name,
       r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
-      r.dob ? `\t${r.dob}` : '',
+      r.dob ? `\t${formatToDisplayDate(r.dob)}` : '',
       r.cccd ? `\t${r.cccd}` : '',
       r.phone ? `\t${r.phone}` : '',
       r.permanent_address || '',
@@ -573,7 +573,7 @@ const Residents = () => {
       r.education_level || '12/12',
       r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
       r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
-      r.temporary_residence_expiry || '',
+      r.temporary_residence_expiry ? `\t${formatToDisplayDate(r.temporary_residence_expiry)}` : '',
       r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất',
       r.notes || ''
     ]);
