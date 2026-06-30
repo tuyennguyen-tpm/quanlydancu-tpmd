@@ -349,14 +349,33 @@ export const db = {
   getHouseholds: async (): Promise<Household[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('households').select('*').order('created_at', { ascending: true }).order('id', { ascending: true });
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        let allData: any[] = [];
+        let from = 0;
+        const limit = 1000;
+        let hasMore = true;
+        
+        while (hasMore) {
+          let query = supabase.from('households').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
+          const tenantId = getTenantFilter();
+          if (tenantId) {
+            query = query.eq('user_id', tenantId);
+          }
+          const { data, error } = await query;
+          if (error) {
+            handleDbError('tải danh sách hộ dân', error);
+            if (allData.length > 0) return allData; // Trả về phần đã lấy được nếu lỗi giữa chừng
+            break;
+          }
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < limit) hasMore = false;
+            else from += limit;
+          } else {
+            hasMore = false;
+          }
         }
-        const { data, error } = await query;
-        if (error) handleDbError('tải danh sách hộ dân', error);
-        if (!error && data) return data;
+        
+        if (allData.length > 0) return allData;
       } catch (e) {
         console.error('Supabase getHouseholds error, falling back to local storage', e);
       }
@@ -461,16 +480,35 @@ export const db = {
   getResidents: async (): Promise<Resident[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('residents').select('*').order('created_at', { ascending: true }).order('id', { ascending: true });
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        let allData: any[] = [];
+        let from = 0;
+        const limit = 1000;
+        let hasMore = true;
+        
+        while (hasMore) {
+          let query = supabase.from('residents').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
+          const tenantId = getTenantFilter();
+          if (tenantId) {
+            query = query.eq('user_id', tenantId);
+          }
+          const { data, error } = await query;
+          if (error) {
+            handleDbError('tải danh sách nhân khẩu', error);
+            if (allData.length > 0) break; // Thoát vòng lặp và xử lý phần data đã lấy được
+            else break;
+          }
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < limit) hasMore = false;
+            else from += limit;
+          } else {
+            hasMore = false;
+          }
         }
-        const { data, error } = await query;
-        if (error) handleDbError('tải danh sách nhân khẩu', error);
-        if (!error && data) {
+        
+        if (allData.length > 0) {
           const currentYear = new Date().getFullYear();
-          const mapped = data.map((r: any) => {
+          const mapped = allData.map((r: any) => {
             const dobYear = r.dob ? new Date(r.dob).getFullYear() : 0;
             return {
               ...r,
