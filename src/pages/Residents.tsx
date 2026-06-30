@@ -1629,8 +1629,8 @@ const Residents = () => {
           padding: 10px 16px;
           border-radius: 8px;
           border: 1px solid var(--border);
-          min-width: 350px;
-          max-width: 500px;
+          min-width: 250px;
+          max-width: 350px;
         }
 
         .search-box input {
