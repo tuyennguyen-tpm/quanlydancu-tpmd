@@ -26,46 +26,66 @@ const parseCSV = (text: string) => {
   
   // Tự động nhận diện dấu phân cách (Excel VN thường xuất dấu chấm phẩy)
   const firstLine = text.split('\n')[0] || '';
-  const delimiter = firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
+  let delimiter = ',';
+  if (firstLine.split(';').length > firstLine.split(',').length) delimiter = ';';
+  if (firstLine.split('\t').length > firstLine.split(delimiter).length) delimiter = '\t';
+  
+  const rawLines = text.split(/\r?\n/);
   
   let row: string[] = [];
   let inQuotes = false;
   let entry = '';
 
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    const next = text[i+1];
-
-    if (c === '"') {
-      if (inQuotes && next === '"') {
-        entry += '"';
-        i++;
+  for (let l = 0; l < rawLines.length; l++) {
+    const line = rawLines[l];
+    
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      const next = line[i+1];
+      
+      if (c === '"') {
+        if (!inQuotes && entry.trim() === '') {
+          // Bắt đầu chuỗi có ngoặc kép
+          inQuotes = true;
+        } else if (inQuotes) {
+          if (next === '"') {
+            // Escaped quote ("")
+            entry += '"';
+            i++;
+          } else {
+            // Kết thúc ngoặc kép
+            inQuotes = false;
+          }
+        } else {
+          // Ngoặc kép thừa (rogue quote) nằm giữa chuỗi (vd: Tivi 32") -> coi như ký tự thường
+          entry += '"';
+        }
+      } else if (c === delimiter && !inQuotes) {
+        row.push(entry);
+        entry = '';
       } else {
-        inQuotes = !inQuotes;
+        entry += c;
       }
-    } else if (c === delimiter && !inQuotes) {
-      row.push(entry.trim());
-      entry = '';
-    } else if ((c === '\r' || c === '\n') && !inQuotes) {
-      if (c === '\r' && next === '\n') {
-        i++;
-      }
-      row.push(entry.trim());
-      if (row.length > 0 && row.some(cell => cell !== '')) {
-        lines.push(row);
+    }
+    
+    if (inQuotes) {
+      // Vẫn đang trong ngoặc kép -> xuống dòng thực sự của dữ liệu
+      entry += '\n';
+    } else {
+      row.push(entry);
+      if (row.some(cell => cell.trim() !== '')) {
+        lines.push(row.map(c => c.trim()));
       }
       row = [];
       entry = '';
-    } else {
-      entry += c;
     }
   }
-  if (entry || row.length > 0) {
-    row.push(entry.trim());
-    if (row.some(cell => cell !== '')) {
-      lines.push(row);
-    }
+  
+  if (inQuotes && row.length > 0) {
+    row.push(entry);
+    lines.push(row.map(c => c.trim()));
   }
+  
   return lines;
 };
 
