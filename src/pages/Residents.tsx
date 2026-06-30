@@ -559,9 +559,9 @@ const Residents = () => {
     const rows = filteredResidents.map(r => [
       r.full_name,
       r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
-      r.dob || '',
-      r.cccd || '',
-      r.phone || '',
+      r.dob ? `\t${r.dob}` : '',
+      r.cccd ? `\t${r.cccd}` : '',
+      r.phone ? `\t${r.phone}` : '',
       r.permanent_address || '',
       r.relationship_with_head,
       r.occupation || '',
