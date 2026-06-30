@@ -427,13 +427,14 @@ const Residents = () => {
       return;
     }
 
-    const headers = ['Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 'Ghi chú'];
+    const headers = ['Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Thường trú', 'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 'Ghi chú'];
     const rows = filteredResidents.map(r => [
       r.full_name,
       r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
       r.dob || '',
       r.cccd || '',
       r.phone || '',
+      r.permanent_address || '',
       r.relationship_with_head,
       r.occupation || '',
       r.pob || '',
@@ -782,7 +783,6 @@ const Residents = () => {
         let startIdx = 0;
 
         if (headerRowIdx !== -1) {
-          // Nhận diện qua Tiêu đề
           startIdx = headerRowIdx + 1;
           const headers = rows[headerRowIdx].map(h => (typeof h === 'string' ? h.toLowerCase() : ''));
           const findIdx = (keywords: string[], fallback: number) => {
@@ -793,16 +793,15 @@ const Residents = () => {
           nameIdx = findIdx(['họ', 'tên', 'name'], 0);
           genderIdx = findIdx(['giới', 'nam', 'nữ', 'gender'], 1);
           dobIdx = findIdx(['sinh', 'dob', 'date'], 2);
-          addressIdx = findIdx(['địa chỉ', 'thường trú', 'nơi ở', 'address'], 3);
-          cccdIdx = findIdx(['cccd', 'cmnd', 'căn cước', 'định danh'], 4);
-          phoneIdx = findIdx(['điện thoại', 'sđt', 'phone'], 5);
+          addressIdx = findIdx(['địa chỉ', 'thường trú', 'nơi ở', 'address'], -1);
+          cccdIdx = findIdx(['cccd', 'cmnd', 'căn cước', 'định danh'], -1);
+          phoneIdx = findIdx(['điện thoại', 'sđt', 'phone'], -1);
           relIdx = findIdx(['quan hệ', 'chủ hộ', 'relation'], 6);
-          occIdx = findIdx(['nghề', 'công việc', 'job'], 7);
-          pobIdx = findIdx(['nơi sinh', 'quê'], 8);
-          statusIdx = findIdx(['trạng thái', 'cư trú', 'status'], 9);
-          notesIdx = findIdx(['ghi chú', 'note'], 10);
+          occIdx = findIdx(['nghề', 'công việc', 'job'], -1);
+          pobIdx = findIdx(['nơi sinh', 'quê'], -1);
+          statusIdx = findIdx(['trạng thái', 'cư trú', 'status'], -1);
+          notesIdx = findIdx(['ghi chú', 'note'], -1);
         } else if (rows.length > 0) {
-          // Trí tuệ nhân tạo (Heuristics) tự nhận diện dựa trên nội dung nếu KHÔNG có dòng tiêu đề
           const firstData = rows[0].map(c => (typeof c === 'string' ? c.toLowerCase().trim() : ''));
           
           const findByRegex = (regex: RegExp, fallback: number) => {
@@ -816,8 +815,10 @@ const Residents = () => {
 
           genderIdx = findByKeywords(['nam', 'nữ', 'male', 'female'], 1);
           relIdx = findByKeywords(['chủ hộ', 'vợ', 'chồng', 'con', 'cháu', 'bố', 'mẹ', 'ông', 'bà', 'anh', 'chị', 'em'], 6);
-          dobIdx = findByRegex(/^(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{1,2}-\d{1,2})$/, 2);
-          cccdIdx = findByRegex(/^\d{9,12}$/, 4);
+          dobIdx = findByRegex(/^(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}-\w{3}-\d{4})$/, 2);
+          cccdIdx = findByRegex(/^\d{9,12}$/, -1);
+          phoneIdx = findByRegex(/^\d{10,11}$/, -1);
+          addressIdx = -1;
           
           const usedIndices = [genderIdx, relIdx, dobIdx, cccdIdx];
           const possibleNameIdx = firstData.findIndex((c, idx) => c.length > 3 && !usedIndices.includes(idx) && !/^\d/.test(c));
@@ -834,21 +835,9 @@ const Residents = () => {
           const fullName = row[nameIdx]?.trim();
           const csvGender = row[genderIdx]?.trim().toLowerCase() || '';
           const gender = (csvGender === 'nam' || csvGender === 'male') ? 'male' : (csvGender === 'nữ' || csvGender === 'female') ? 'female' : 'other';
-          let dob = row[dobIdx]?.trim() || new Date().toISOString().slice(0, 10);
-          if (dob.includes('/')) {
-            const parts = dob.split('/');
-            if (parts.length === 3) {
-              if (parts[2].length === 4) {
-                let day = parts[0];
-                let month = parts[1];
-                if (parseInt(month) > 12) {
-                  day = parts[1];
-                  month = parts[0];
-                }
-                dob = `${parts[2]}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-              }
-            }
-          }
+          
+          let rawDob = row[dobIdx]?.trim() || '';
+          let finalDob = '';
           
           const isValidSQLDate = (dStr: string) => {
              const pts = dStr.split('-');
@@ -859,22 +848,52 @@ const Residents = () => {
              return d >= 1 && d <= daysInMonth;
           };
 
-          const dateObj = new Date(dob);
-          if (isNaN(dateObj.getTime()) || !isValidSQLDate(dob)) {
-            dob = '2000-01-01';
+          if (rawDob.includes('/')) {
+            const parts = rawDob.split('/');
+            if (parts.length === 3) {
+              if (parts[2].length === 4) {
+                let day = parseInt(parts[0], 10);
+                let month = parseInt(parts[1], 10);
+                let year = parseInt(parts[2], 10);
+                if (month > 12) {
+                  const temp = day;
+                  day = month;
+                  month = temp;
+                }
+                const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                if (isValidSQLDate(formatted)) finalDob = formatted;
+              }
+            }
           }
-          const permAddress = row[addressIdx]?.trim() || '';
-          const cccd = row[cccdIdx]?.trim() || '';
-          const phone = row[phoneIdx]?.trim() || '';
+          
+          if (!finalDob) {
+            if (isValidSQLDate(rawDob)) {
+              finalDob = rawDob;
+            } else {
+              const dateObj = new Date(rawDob);
+              if (!isNaN(dateObj.getTime())) {
+                const isoDate = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                if (isValidSQLDate(isoDate)) {
+                  finalDob = isoDate;
+                }
+              }
+            }
+          }
+          
+          const dob = finalDob || '2000-01-01';
+
+          const permAddress = addressIdx !== -1 ? row[addressIdx]?.trim() : '';
+          const cccd = cccdIdx !== -1 ? row[cccdIdx]?.trim() : '';
+          const phone = phoneIdx !== -1 ? row[phoneIdx]?.trim() : '';
           const relWithHead = row[relIdx]?.trim() || 'Con';
-          const occupation = row[occIdx]?.trim() || '';
-          const pob = row[pobIdx]?.trim() || '';
-          const csvStatus = row[statusIdx]?.trim().toLowerCase() || '';
+          const occupation = occIdx !== -1 ? row[occIdx]?.trim() : '';
+          const pob = pobIdx !== -1 ? row[pobIdx]?.trim() : '';
+          const csvStatus = statusIdx !== -1 ? row[statusIdx]?.trim().toLowerCase() : '';
           const status = csvStatus.includes('thường trú') ? 'resident' :
                          csvStatus.includes('tạm trú') ? 'temporary_resident' :
                          csvStatus.includes('tạm vắng') ? 'temporary_absent' :
                          csvStatus.includes('mất') || csvStatus.includes('deceased') ? 'deceased' : 'resident';
-          const notes = row[notesIdx]?.trim() || '';
+          const notes = notesIdx !== -1 ? row[notesIdx]?.trim() : '';
           const isHead = relWithHead.toLowerCase().includes('chủ hộ') || relWithHead.toLowerCase() === 'chủ' || relWithHead.toLowerCase() === 'bản thân';
 
           // Đối chiếu xem nhân khẩu đã tồn tại hay chưa dựa trên Họ tên + Ngày sinh
