@@ -925,7 +925,7 @@ const Residents = () => {
             <Search size={20} />
             <input 
               type="text" 
-              placeholder="Tìm theo tên, số CCCD hoặc số điện thoại..." 
+              placeholder="Tìm theo tên, số CCCD, Sđt..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
