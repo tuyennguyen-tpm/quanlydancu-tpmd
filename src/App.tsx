@@ -1058,7 +1058,7 @@ const App = () => {
                     value={leaderPhoneInput}
                     onChange={(e) => setLeaderPhoneInput(e.target.value)}
                     placeholder="Ví dụ: 0912 083 018..."
-                    maxLength={50}
+                    maxLength={150}
                   />
                 </div>
                 <div className="form-group">
