@@ -764,27 +764,49 @@ const Residents = () => {
         let currentHouseholdId = '';
         let currentHouseholdNumber = Date.now();
 
-        // Bỏ qua dòng tiêu đề nếu dòng đầu tiên có chữ "họ" hoặc "họ tên"
-        const startIdx = (rows[0][0]?.toLowerCase().includes('họ') || rows[0][0]?.toLowerCase().includes('name')) ? 1 : 0;
+        // Tự động nhận diện vị trí các cột từ dòng tiêu đề (dòng 0)
+        let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10;
+        
+        const firstRow = rows[0] || [];
+        const isHeader = firstRow.some(cell => typeof cell === 'string' && (cell.toLowerCase().includes('họ') || cell.toLowerCase().includes('tên') || cell.toLowerCase().includes('name')));
+        
+        const startIdx = isHeader ? 1 : 0;
+
+        if (isHeader) {
+          const headers = firstRow.map(h => (typeof h === 'string' ? h.toLowerCase() : ''));
+          const findIdx = (keywords: string[], fallback: number) => {
+            const idx = headers.findIndex(h => keywords.some(kw => h.includes(kw)));
+            return idx !== -1 ? idx : fallback;
+          };
+          
+          nameIdx = findIdx(['họ', 'tên', 'name'], 0);
+          genderIdx = findIdx(['giới', 'nam', 'nữ', 'gender'], 1);
+          dobIdx = findIdx(['sinh', 'dob', 'date'], 2);
+          addressIdx = findIdx(['địa chỉ', 'thường trú', 'nơi ở', 'address'], 3);
+          cccdIdx = findIdx(['cccd', 'cmnd', 'căn cước', 'định danh'], 4);
+          phoneIdx = findIdx(['điện thoại', 'sđt', 'phone'], 5);
+          relIdx = findIdx(['quan hệ', 'chủ hộ', 'relation'], 6);
+          occIdx = findIdx(['nghề', 'công việc', 'job'], 7);
+          pobIdx = findIdx(['nơi sinh', 'quê'], 8);
+          statusIdx = findIdx(['trạng thái', 'cư trú', 'status'], 9);
+          notesIdx = findIdx(['ghi chú', 'note'], 10);
+        }
 
         for (let i = startIdx; i < rows.length; i++) {
           const row = rows[i];
-          if (!row || row.length === 0 || !row[0]?.trim()) {
+          if (!row || row.length === 0 || !row[nameIdx]?.trim()) {
             skipCount++;
             continue;
           }
 
-          const fullName = row[0]?.trim();
-          const csvGender = row[1]?.trim().toLowerCase();
-          const gender = csvGender === 'nam' ? 'male' : csvGender === 'nữ' ? 'female' : 'other';
-          let dob = row[2]?.trim() || new Date().toISOString().slice(0, 10);
+          const fullName = row[nameIdx]?.trim();
+          const csvGender = row[genderIdx]?.trim().toLowerCase() || '';
+          const gender = (csvGender === 'nam' || csvGender === 'male') ? 'male' : (csvGender === 'nữ' || csvGender === 'female') ? 'female' : 'other';
+          let dob = row[dobIdx]?.trim() || new Date().toISOString().slice(0, 10);
           if (dob.includes('/')) {
             const parts = dob.split('/');
             if (parts.length === 3) {
-              // Phán đoán định dạng: nếu parts[2] là năm (4 chữ số)
               if (parts[2].length === 4) {
-                // Kiểm tra xem phần nào là tháng, phần nào là ngày. 
-                // Thường ở VN là DD/MM/YYYY. Nếu parts[1] > 12 thì chắc chắn parts[1] là ngày (định dạng MM/DD/YYYY).
                 let day = parts[0];
                 let month = parts[1];
                 if (parseInt(month) > 12) {
@@ -795,23 +817,22 @@ const Residents = () => {
               }
             }
           }
-          // Validate SQL date format and range, default to 2000-01-01 if invalid
           const dateObj = new Date(dob);
           if (isNaN(dateObj.getTime()) || dob.includes('-24-') || dob.includes('-13-')) {
-            dob = '2000-01-01'; // Fallback an toàn
+            dob = '2000-01-01';
           }
-          const permAddress = row[3]?.trim() || '';
-          const cccd = row[4]?.trim() || '';
-          const phone = row[5]?.trim() || '';
-          const relWithHead = row[6]?.trim() || 'Con';
-          const occupation = row[7]?.trim() || '';
-          const pob = row[8]?.trim() || '';
-          const csvStatus = row[9]?.trim().toLowerCase();
+          const permAddress = row[addressIdx]?.trim() || '';
+          const cccd = row[cccdIdx]?.trim() || '';
+          const phone = row[phoneIdx]?.trim() || '';
+          const relWithHead = row[relIdx]?.trim() || 'Con';
+          const occupation = row[occIdx]?.trim() || '';
+          const pob = row[pobIdx]?.trim() || '';
+          const csvStatus = row[statusIdx]?.trim().toLowerCase() || '';
           const status = csvStatus.includes('thường trú') ? 'resident' :
                          csvStatus.includes('tạm trú') ? 'temporary_resident' :
                          csvStatus.includes('tạm vắng') ? 'temporary_absent' :
                          csvStatus.includes('mất') || csvStatus.includes('deceased') ? 'deceased' : 'resident';
-          const notes = row[10]?.trim() || '';
+          const notes = row[notesIdx]?.trim() || '';
           const isHead = relWithHead.toLowerCase().includes('chủ hộ') || relWithHead.toLowerCase() === 'chủ' || relWithHead.toLowerCase() === 'bản thân';
 
           // Đối chiếu xem nhân khẩu đã tồn tại hay chưa dựa trên Họ tên + Ngày sinh
