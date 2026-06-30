@@ -761,6 +761,9 @@ const Residents = () => {
         let updatedCount = 0;
         let skipCount = 0;
 
+        let currentHouseholdId = '';
+        let currentHouseholdNumber = Date.now();
+
         // Bỏ qua dòng tiêu đề nếu dòng đầu tiên có chữ "họ" hoặc "họ tên"
         const startIdx = (rows[0][0]?.toLowerCase().includes('họ') || rows[0][0]?.toLowerCase().includes('name')) ? 1 : 0;
 
@@ -817,9 +820,40 @@ const Residents = () => {
             r.dob === dob
           );
 
+          const residentId = matched ? matched.id : generateUUID();
+
+          // Xử lý tạo và nhóm hộ gia đình tự động
+          if (isHead) {
+            currentHouseholdId = matched ? matched.household_id : generateUUID();
+            if (!matched || !matched.household_id) {
+              await db.saveHousehold({
+                id: currentHouseholdId,
+                household_number: `HH${(currentHouseholdNumber++).toString().slice(-6)}`,
+                address: permAddress || '',
+                head_of_household_id: residentId,
+                group_id: 'default',
+                policy_type: 'none',
+                created_at: new Date().toISOString()
+              });
+            }
+          } else if (!currentHouseholdId) {
+             currentHouseholdId = matched ? (matched.household_id || generateUUID()) : generateUUID();
+             if (!matched || !matched.household_id) {
+               await db.saveHousehold({
+                 id: currentHouseholdId,
+                 household_number: `HH${(currentHouseholdNumber++).toString().slice(-6)}`,
+                 address: permAddress || '',
+                 head_of_household_id: null,
+                 group_id: 'default',
+                 policy_type: 'none',
+                 created_at: new Date().toISOString()
+               });
+             }
+          }
+
           const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
-            id: matched ? matched.id : generateUUID(),
-            household_id: matched ? matched.household_id : '',
+            id: residentId,
+            household_id: currentHouseholdId,
             full_name: fullName,
             gender,
             dob,
