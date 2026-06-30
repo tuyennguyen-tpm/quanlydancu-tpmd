@@ -820,8 +820,18 @@ const Residents = () => {
               }
             }
           }
+          
+          const isValidSQLDate = (dStr: string) => {
+             const pts = dStr.split('-');
+             if (pts.length !== 3) return false;
+             const y = parseInt(pts[0], 10), m = parseInt(pts[1], 10), d = parseInt(pts[2], 10);
+             if (isNaN(y) || isNaN(m) || isNaN(d) || m < 1 || m > 12) return false;
+             const daysInMonth = new Date(y, m, 0).getDate();
+             return d >= 1 && d <= daysInMonth;
+          };
+
           const dateObj = new Date(dob);
-          if (isNaN(dateObj.getTime()) || dob.includes('-24-') || dob.includes('-13-')) {
+          if (isNaN(dateObj.getTime()) || !isValidSQLDate(dob)) {
             dob = '2000-01-01';
           }
           const permAddress = row[addressIdx]?.trim() || '';
