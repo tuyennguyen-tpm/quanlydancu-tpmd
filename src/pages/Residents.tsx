@@ -1365,6 +1365,10 @@ const Residents = () => {
                     <input type="checkbox" checked={hasAssociation('dt')} onChange={() => toggleAssociation('dt')} />
                     Chi đoàn Thanh niên
                   </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                    <input type="checkbox" checked={hasAssociation('nd')} onChange={() => toggleAssociation('nd')} />
+                    Chi hội Nông dân
+                  </label>
                 </div>
               </div>
 
@@ -1468,6 +1472,7 @@ const Residents = () => {
                     else if (code === 'ccb') { label = 'Hội Cựu chiến binh'; }
                     else if (code === 'pn') { label = 'Hội Liên hiệp Phụ nữ'; }
                     else if (code === 'dt') { label = 'Đoàn Thanh niên'; }
+                    else if (code === 'nd') { label = 'Hội Nông dân'; }
                     if (!label) return null;
                     return (
                       <span key={code} style={{
@@ -1475,8 +1480,8 @@ const Residents = () => {
                         borderRadius: '20px',
                         fontSize: '0.8rem',
                         fontWeight: '600',
-                        backgroundColor: code === 'nct' ? '#dbeafe' : code === 'ccb' ? '#d1fae5' : code === 'pn' ? '#fce7f3' : '#e0f2fe',
-                        color: code === 'nct' ? '#1e40af' : code === 'ccb' ? '#065f46' : code === 'pn' ? '#9d174d' : '#0369a1'
+                        backgroundColor: code === 'nct' ? '#dbeafe' : code === 'ccb' ? '#d1fae5' : code === 'pn' ? '#fce7f3' : code === 'nd' ? '#fef3c7' : '#e0f2fe',
+                        color: code === 'nct' ? '#1e40af' : code === 'ccb' ? '#065f46' : code === 'pn' ? '#9d174d' : code === 'nd' ? '#92400e' : '#0369a1'
                       }}>
                         {label}
                       </span>

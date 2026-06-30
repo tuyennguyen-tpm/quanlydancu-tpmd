@@ -16,6 +16,10 @@ ALTER TABLE residents
   ADD COLUMN IF NOT EXISTS temporary_residence_expiry DATE,
   ADD COLUMN IF NOT EXISTS association_membership TEXT;
 
+-- Cập nhật check constraint cho cột status để hỗ trợ 'stay' (Lưu trú)
+ALTER TABLE residents DROP CONSTRAINT IF EXISTS residents_status_check;
+ALTER TABLE residents ADD CONSTRAINT residents_status_check CHECK (status IN ('resident', 'temporary_absent', 'temporary_resident', 'deceased', 'stay'));
+
 -- 2. Cập nhật bảng chi bộ đảng (party_members) cho Đảng viên 213 và miễn sinh hoạt
 ALTER TABLE party_members
   ADD COLUMN IF NOT EXISTS is_exempt_party_activities BOOLEAN DEFAULT FALSE;
