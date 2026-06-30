@@ -919,7 +919,7 @@ const App = () => {
                     userSelect: 'none'
                   }}
                 >
-                  📞 SĐT Tổ trưởng: {leaderPhone}
+                  📞 SĐT: {leaderPhone}
                 </span>
               )}
             </h2>
