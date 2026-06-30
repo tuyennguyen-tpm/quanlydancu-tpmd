@@ -353,6 +353,7 @@ export const db = {
         let from = 0;
         const limit = 1000;
         let hasMore = true;
+        let hasError = false;
         
         while (hasMore) {
           let query = supabase.from('households').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
@@ -363,7 +364,7 @@ export const db = {
           const { data, error } = await query;
           if (error) {
             handleDbError('tải danh sách hộ dân', error);
-            if (allData.length > 0) return allData; // Trả về phần đã lấy được nếu lỗi giữa chừng
+            hasError = true;
             break;
           }
           if (data && data.length > 0) {
@@ -375,7 +376,9 @@ export const db = {
           }
         }
         
-        if (allData.length > 0) return allData;
+        if (!hasError || allData.length > 0) {
+          return allData;
+        }
       } catch (e) {
         console.error('Supabase getHouseholds error, falling back to local storage', e);
       }
@@ -484,6 +487,7 @@ export const db = {
         let from = 0;
         const limit = 1000;
         let hasMore = true;
+        let hasError = false;
         
         while (hasMore) {
           let query = supabase.from('residents').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
@@ -494,8 +498,8 @@ export const db = {
           const { data, error } = await query;
           if (error) {
             handleDbError('tải danh sách nhân khẩu', error);
-            if (allData.length > 0) break; // Thoát vòng lặp và xử lý phần data đã lấy được
-            else break;
+            hasError = true;
+            break;
           }
           if (data && data.length > 0) {
             allData = [...allData, ...data];
@@ -506,7 +510,7 @@ export const db = {
           }
         }
         
-        if (allData.length > 0) {
+        if (!hasError || allData.length > 0) {
           const currentYear = new Date().getFullYear();
           const mapped = allData.map((r: any) => {
             const dobYear = r.dob ? new Date(r.dob).getFullYear() : 0;
