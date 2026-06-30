@@ -955,7 +955,7 @@ const Residents = () => {
                 head_of_household_id: residentId,
                 group_id: 'default',
                 policy_type: 'none',
-                created_at: new Date().toISOString()
+                created_at: new Date(Date.now() + i).toISOString()
               } as Household);
               isNewHousehold = true;
               currentHouseholdNumber++;
@@ -970,7 +970,7 @@ const Residents = () => {
                  head_of_household_id: null,
                  group_id: 'default',
                  policy_type: 'none',
-                 created_at: new Date().toISOString()
+                 created_at: new Date(Date.now() + i).toISOString()
                } as Household);
                currentHouseholdNumber++;
              }
@@ -991,7 +991,7 @@ const Residents = () => {
             status: status || (matched ? matched.status : 'resident'),
             permanent_address: permAddress || (matched ? matched.permanent_address : ''),
             notes: notes || (matched ? matched.notes : ''),
-            created_at: matched ? matched.created_at : new Date().toISOString()
+            created_at: matched ? matched.created_at : new Date(Date.now() + i).toISOString()
           };
 
           residentsToSave.push(payload as Resident);

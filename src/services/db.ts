@@ -349,7 +349,7 @@ export const db = {
   getHouseholds: async (): Promise<Household[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('households').select('*').order('created_at', { ascending: true });
+        let query = supabase.from('households').select('*').order('created_at', { ascending: true }).order('id', { ascending: true });
         const tenantId = getTenantFilter();
         if (tenantId) {
           query = query.eq('user_id', tenantId);
@@ -362,7 +362,11 @@ export const db = {
       }
     }
     const list = getStorageItem<Household[]>('households', seedHouseholds);
-    return list.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+    return list.sort((a, b) => {
+      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    });
   },
   saveHousehold: async (household: Omit<Household, 'created_at'> & { created_at?: string }): Promise<Household> => {
     const fullHousehold: Household = {
@@ -457,7 +461,7 @@ export const db = {
   getResidents: async (): Promise<Resident[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('residents').select('*').order('created_at', { ascending: true });
+        let query = supabase.from('residents').select('*').order('created_at', { ascending: true }).order('id', { ascending: true });
         const tenantId = getTenantFilter();
         if (tenantId) {
           query = query.eq('user_id', tenantId);
@@ -480,7 +484,11 @@ export const db = {
       }
     }
     const list = getStorageItem<Resident[]>('residents', seedResidents);
-    return list.sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime());
+    return list.sort((a, b) => {
+      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    });
   },
   saveResident: async (resident: Omit<Resident, 'created_at' | 'is_senior'> & { created_at?: string; is_senior?: boolean }): Promise<Resident> => {
     const dobYear = new Date(resident.dob).getFullYear();
