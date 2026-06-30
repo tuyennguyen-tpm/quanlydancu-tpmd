@@ -24,7 +24,6 @@ import type { Resident, Household } from '../types';
 const parseCSV = (text: string) => {
   const lines: string[][] = [];
   
-  // Tự động nhận diện dấu phân cách (Excel VN thường xuất dấu chấm phẩy)
   const firstLine = text.split('\n')[0] || '';
   let delimiter = ',';
   if (firstLine.split(';').length > firstLine.split(',').length) delimiter = ';';
@@ -32,58 +31,43 @@ const parseCSV = (text: string) => {
   
   const rawLines = text.split(/\r?\n/);
   
-  let row: string[] = [];
-  let inQuotes = false;
-  let entry = '';
-
   for (let l = 0; l < rawLines.length; l++) {
     const line = rawLines[l];
-    
+    if (!line.trim()) continue;
+
+    let row: string[] = [];
+    let inQuotes = false;
+    let entry = '';
+
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
       const next = line[i+1];
       
       if (c === '"') {
         if (!inQuotes && entry.trim() === '') {
-          // Bắt đầu chuỗi có ngoặc kép
           inQuotes = true;
         } else if (inQuotes) {
           if (next === '"') {
-            // Escaped quote ("")
             entry += '"';
             i++;
           } else {
-            // Kết thúc ngoặc kép
             inQuotes = false;
           }
         } else {
-          // Ngoặc kép thừa (rogue quote) nằm giữa chuỗi (vd: Tivi 32") -> coi như ký tự thường
           entry += '"';
         }
       } else if (c === delimiter && !inQuotes) {
-        row.push(entry);
+        row.push(entry.trim());
         entry = '';
       } else {
         entry += c;
       }
     }
     
-    if (inQuotes) {
-      // Vẫn đang trong ngoặc kép -> xuống dòng thực sự của dữ liệu
-      entry += '\n';
-    } else {
-      row.push(entry);
-      if (row.some(cell => cell.trim() !== '')) {
-        lines.push(row.map(c => c.trim()));
-      }
-      row = [];
-      entry = '';
+    row.push(entry.trim());
+    if (row.some(cell => cell !== '')) {
+      lines.push(row);
     }
-  }
-  
-  if (inQuotes && row.length > 0) {
-    row.push(entry);
-    lines.push(row.map(c => c.trim()));
   }
   
   return lines;
