@@ -555,8 +555,12 @@ const Residents = () => {
       return;
     }
 
-    const headers = ['Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Thường trú', 'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 'Ghi chú'];
-    const rows = filteredResidents.map(r => [
+    const headers = ['Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Thường trú', 'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 'Ghi chú'];
+    const rows = filteredResidents.map(r => {
+      const hh = households.find(h => h.id === r.household_id);
+      const hhNum = hh ? hh.household_number : '';
+      return [
+      hhNum ? `\t${hhNum}` : '',
       r.full_name,
       r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
       r.dob ? `\t${formatToDisplayDate(r.dob)}` : '',
@@ -576,7 +580,7 @@ const Residents = () => {
       r.temporary_residence_expiry ? `\t${formatToDisplayDate(r.temporary_residence_expiry)}` : '',
       r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất',
       r.notes || ''
-    ]);
+    ]});
 
     const csvContent = '\uFEFF' + [
       headers.join(','),
@@ -886,6 +890,7 @@ const Residents = () => {
         }
 
         const currentResidents = await db.getResidents();
+        const currentHouseholds = await db.getHouseholds();
         let addedCount = 0;
         let updatedCount = 0;
         let skipCount = 0;
@@ -897,7 +902,7 @@ const Residents = () => {
         let currentHouseholdNumber = Date.now();
 
         // 1. Phân tích để tìm dòng tiêu đề (Header Row)
-        let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10;
+        let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10, hhNumIdx = -1;
         
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(5, rows.length); i++) {
@@ -929,6 +934,7 @@ const Residents = () => {
           pobIdx = findIdx(['nơi sinh', 'quê'], -1);
           statusIdx = findIdx(['trạng thái', 'cư trú', 'status'], -1);
           notesIdx = findIdx(['ghi chú', 'note'], -1);
+          hhNumIdx = findIdx(['sổ hộ khẩu', 'mã hộ', 'số hộ'], -1);
         } else if (rows.length > 0) {
           const firstData = rows[0].map(c => (typeof c === 'string' ? c.toLowerCase().trim() : ''));
           
@@ -947,6 +953,7 @@ const Residents = () => {
           cccdIdx = findByRegex(/^\d{9,12}$/, -1);
           phoneIdx = findByRegex(/^\d{10,11}$/, -1);
           addressIdx = -1;
+          hhNumIdx = -1;
           
           const usedIndices = [genderIdx, relIdx, dobIdx, cccdIdx];
           const possibleNameIdx = firstData.findIndex((c, idx) => c.length > 3 && !usedIndices.includes(idx) && !/^\d/.test(c));
@@ -1031,37 +1038,48 @@ const Residents = () => {
           );
 
           const residentId = mapToUUID(matched ? matched.id : generateUUID());
+          const csvHhNum = hhNumIdx !== -1 ? row[hhNumIdx]?.trim() : '';
 
           // Xử lý tạo và nhóm hộ gia đình tự động
           let isNewHousehold = false;
           if (isHead) {
             currentHouseholdId = mapToUUID((matched && matched.household_id) ? matched.household_id : generateUUID());
-            if (!matched || !matched.household_id) {
+            const existingHh = currentHouseholds.find(h => h.id === currentHouseholdId);
+            const needsHhUpdate = matched && existingHh && csvHhNum && existingHh.household_number !== csvHhNum;
+
+            if (!matched || !matched.household_id || needsHhUpdate) {
               householdsToSave.push({
                 id: currentHouseholdId,
-                household_number: `HH${(currentHouseholdNumber).toString().slice(-6)}`,
-                address: permAddress || '',
+                household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
+                address: permAddress || (existingHh ? existingHh.address : ''),
                 head_of_household_id: residentId,
-                group_id: 'default',
-                policy_type: 'none',
-                created_at: new Date(Date.now() + i).toISOString()
+                group_id: existingHh ? existingHh.group_id : 'default',
+                policy_type: existingHh ? existingHh.policy_type : 'none',
+                created_at: existingHh ? existingHh.created_at : new Date(Date.now() + i).toISOString()
               } as Household);
-              isNewHousehold = true;
-              currentHouseholdNumber++;
+              if (!matched || !matched.household_id) {
+                isNewHousehold = true;
+                currentHouseholdNumber++;
+              }
             }
           } else if (!currentHouseholdId) {
-             currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
-             if (!matched || !matched.household_id) {
+             currentHouseholdId = mapToUUID((matched && matched.household_id) ? matched.household_id : generateUUID());
+             const existingHh = currentHouseholds.find(h => h.id === currentHouseholdId);
+             const needsHhUpdate = matched && existingHh && csvHhNum && existingHh.household_number !== csvHhNum;
+
+             if (!matched || !matched.household_id || needsHhUpdate) {
                householdsToSave.push({
                  id: currentHouseholdId,
-                 household_number: `HH${(currentHouseholdNumber).toString().slice(-6)}`,
-                 address: permAddress || '',
-                 head_of_household_id: null,
-                 group_id: 'default',
-                 policy_type: 'none',
-                 created_at: new Date(Date.now() + i).toISOString()
+                 household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
+                 address: permAddress || (existingHh ? existingHh.address : ''),
+                 head_of_household_id: existingHh ? existingHh.head_of_household_id : null,
+                 group_id: existingHh ? existingHh.group_id : 'default',
+                 policy_type: existingHh ? existingHh.policy_type : 'none',
+                 created_at: existingHh ? existingHh.created_at : new Date(Date.now() + i).toISOString()
                } as Household);
-               currentHouseholdNumber++;
+               if (!matched || !matched.household_id) {
+                 currentHouseholdNumber++;
+               }
              }
           }
 
