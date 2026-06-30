@@ -1630,7 +1630,7 @@ const Residents = () => {
           border-radius: 8px;
           border: 1px solid var(--border);
           min-width: 400px;
-          max-width: 600px;
+          max-width: 500px;
         }
 
         .search-box input {
