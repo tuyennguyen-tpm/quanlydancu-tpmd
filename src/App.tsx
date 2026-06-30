@@ -836,7 +836,7 @@ const App = () => {
                 <ShieldCheck size={36} color="rgba(251, 255, 0, 1)" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
               )}
               <div className="logo-text" style={{ gap: '2px', display: 'flex', flexDirection: 'column' }}>
-                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1.0px' }}>TỔ DÂN PHỐ</span>
+                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TỔ DÂN PHỐ</span>
                 <span className="logo-subtitle" style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 1, lineHeight: '1.2' }}>{tdpName}</span>
                 <span className="logo-ward" style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{wardName}</span>
               </div>
