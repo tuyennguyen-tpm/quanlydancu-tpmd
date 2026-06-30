@@ -933,7 +933,7 @@ const App = () => {
             )}
             <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <span>{menuItems.find(i => i.id === activeTab)?.label}</span>
-              {activeTab === 'dashboard' && leaderPhone && (
+              {leaderPhone && (
                 <span 
                   className="header-phone-badge" 
                   onClick={handleOpenSettings}
