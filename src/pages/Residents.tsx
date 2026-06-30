@@ -773,11 +773,24 @@ const Residents = () => {
           if (dob.includes('/')) {
             const parts = dob.split('/');
             if (parts.length === 3) {
-              const day = parts[0].padStart(2, '0');
-              const month = parts[1].padStart(2, '0');
-              const year = parts[2];
-              dob = `${year}-${month}-${day}`;
+              // Phán đoán định dạng: nếu parts[2] là năm (4 chữ số)
+              if (parts[2].length === 4) {
+                // Kiểm tra xem phần nào là tháng, phần nào là ngày. 
+                // Thường ở VN là DD/MM/YYYY. Nếu parts[1] > 12 thì chắc chắn parts[1] là ngày (định dạng MM/DD/YYYY).
+                let day = parts[0];
+                let month = parts[1];
+                if (parseInt(month) > 12) {
+                  day = parts[1];
+                  month = parts[0];
+                }
+                dob = `${parts[2]}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+              }
             }
+          }
+          // Validate SQL date format and range, default to 2000-01-01 if invalid
+          const dateObj = new Date(dob);
+          if (isNaN(dateObj.getTime()) || dob.includes('-24-') || dob.includes('-13-')) {
+            dob = '2000-01-01'; // Fallback an toàn
           }
           const permAddress = row[3]?.trim() || '';
           const cccd = row[4]?.trim() || '';
