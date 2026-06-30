@@ -582,6 +582,26 @@ export const db = {
     setStorageItem('residents', currentResidents);
     return true;
   },
+  deleteAllData: async (): Promise<boolean> => {
+    if (supabase) {
+      const uId = await getSessionUserId();
+      try {
+        // Xóa residents trước (khóa ngoại) rồi xóa households
+        const resDelete = await supabase.from('residents').delete().eq('user_id', uId);
+        if (resDelete.error) throw resDelete.error;
+        
+        const hhDelete = await supabase.from('households').delete().eq('user_id', uId);
+        if (hhDelete.error) throw hhDelete.error;
+        return true;
+      } catch (e) {
+        console.error('Lỗi khi xóa toàn bộ dữ liệu:', e);
+        return false;
+      }
+    }
+    setStorageItem('residents', []);
+    setStorageItem('households', []);
+    return true;
+  },
 
   // --- Financial Records ---
   getFinancialRecords: async (): Promise<FinancialRecord[]> => {

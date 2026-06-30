@@ -420,6 +420,22 @@ const Residents = () => {
     setActiveMenuId(null);
   };
 
+  const handleDeleteAll = async () => {
+    if (window.confirm('CẢNH BÁO NGUY HIỂM: Bạn có chắc chắn muốn XÓA SẠCH TOÀN BỘ dữ liệu nhân khẩu và hộ gia đình khỏi hệ thống không? Hành động này KHÔNG THỂ PHỤC HỒI!')) {
+      if (window.confirm('Vui lòng xác nhận lại một lần nữa: XÓA TOÀN BỘ DỮ LIỆU?')) {
+        try {
+          showToast('Đang tiến hành xóa toàn bộ dữ liệu...', 'warning');
+          await (db as any).deleteAllData();
+          showToast('Đã xóa sạch toàn bộ dữ liệu thành công!', 'success');
+          loadData();
+          window.dispatchEvent(new CustomEvent('db-changed'));
+        } catch (e) {
+          showToast('Lỗi khi xóa dữ liệu!', 'danger');
+        }
+      }
+    }
+  };
+
   // Export to Excel/CSV Functionality
   const handleExportCSV = () => {
     if (filteredResidents.length === 0) {
@@ -1080,6 +1096,10 @@ const Residents = () => {
           <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
             <FileDown size={16} />
             Xuất Excel/CSV
+          </button>
+          <button className="btn btn-danger" onClick={handleDeleteAll} style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}>
+            <Trash2 size={16} />
+            Xóa toàn bộ
           </button>
           <button className="btn btn-primary" onClick={handleOpenAdd}>
             <UserPlus size={16} />
