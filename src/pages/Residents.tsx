@@ -119,6 +119,111 @@ const isValidDate = (dateStr: string) => {
   return true;
 };
 
+const SearchableHouseholdSelect = ({ households, residents, value, onChange }: { households: Household[], residents: Resident[], value: string, onChange: (val: string) => void }) => {
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedHousehold = households.find(h => h.id === value);
+  let displayValue = '-- Chọn hộ dân cư trú --';
+  if (selectedHousehold) {
+    const headRes = residents.find(r => r.id === selectedHousehold.head_of_household_id);
+    displayValue = `${selectedHousehold.address} (Chủ hộ: ${headRes ? headRes.full_name : selectedHousehold.household_number})`;
+  }
+
+  const filtered = households.filter(h => {
+    if (!search) return true;
+    const headRes = residents.find(r => r.id === h.head_of_household_id);
+    const text = `${h.address} ${headRes ? headRes.full_name : h.household_number}`.toLowerCase();
+    return text.includes(search.toLowerCase());
+  }).slice(0, 50);
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ 
+          padding: '10px', 
+          border: '1px solid var(--border)', 
+          borderRadius: '8px', 
+          backgroundColor: 'white', 
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayValue}</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>▼</span>
+      </div>
+
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          marginTop: '4px',
+          backgroundColor: 'white',
+          border: '1px solid var(--border)',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+          zIndex: 50,
+          maxHeight: '280px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <input
+            type="text"
+            placeholder="Tìm theo tên chủ hộ, địa chỉ..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ margin: '8px', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none' }}
+            autoFocus
+          />
+          <div style={{ overflowY: 'auto', flex: 1, paddingBottom: '8px' }}>
+            <div 
+              onClick={() => { onChange(''); setIsOpen(false); setSearch(''); }}
+              style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+            >
+              -- Không chọn hộ dân --
+            </div>
+            {filtered.map(h => {
+              const headRes = residents.find(r => r.id === h.head_of_household_id);
+              return (
+                <div 
+                  key={h.id}
+                  onClick={() => { onChange(h.id); setIsOpen(false); setSearch(''); }}
+                  style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f1f5f9')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
+                >
+                  {h.address} (Chủ hộ: <strong>{headRes ? headRes.full_name : h.household_number}</strong>)
+                </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)' }}>Không tìm thấy hộ dân nào khớp!</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Residents = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -1440,17 +1545,12 @@ const Residents = () => {
 
               <div className="form-group">
                 <label>Hộ gia đình cư trú liên kết</label>
-                <select value={householdId} onChange={(e) => setHouseholdId(e.target.value)}>
-                  <option value="">-- Chọn hộ dân cư trú --</option>
-                  {households.map(h => {
-                    const headRes = residents.find(r => r.id === h.head_of_household_id);
-                    return (
-                      <option key={h.id} value={h.id}>
-                        {h.address} (Chủ hộ: {headRes ? headRes.full_name : h.household_number})
-                      </option>
-                    );
-                  })}
-                </select>
+                <SearchableHouseholdSelect 
+                  households={households} 
+                  residents={residents} 
+                  value={householdId} 
+                  onChange={setHouseholdId} 
+                />
               </div>
 
               <div className="form-row">
