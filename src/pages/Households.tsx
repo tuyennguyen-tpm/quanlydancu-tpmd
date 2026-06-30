@@ -88,7 +88,7 @@ const Households = () => {
   const [mPhone, setMPhone] = useState('');
   const [mOccupation, setMOccupation] = useState('');
   const [mRelationship, setMRelationship] = useState('Con');
-  const [mStatus, setMStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased'>('resident');
+  const [mStatus, setMStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay'>('resident');
   const [mPob, setMPob] = useState('');
   const [mNotes, setMNotes] = useState('');
 
@@ -108,6 +108,8 @@ const Households = () => {
   const [headId, setHeadId] = useState('');
   const [lat, setLat] = useState('19.7420');
   const [lng, setLng] = useState('105.9230');
+  const [fireSafetyGroup, setFireSafetyGroup] = useState('');
+  const [selfManagementGroup, setSelfManagementGroup] = useState('');
 
   const handleNewHeadDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
@@ -214,6 +216,8 @@ const Households = () => {
     setHeadId('');
     setLat((19.740 + Math.random() * 0.005).toFixed(4));
     setLng((105.920 + Math.random() * 0.005).toFixed(4));
+    setFireSafetyGroup('');
+    setSelfManagementGroup('');
     setCreateNewHead(false);
     setNewHeadName('');
     setNewHeadGender('male');
@@ -232,6 +236,8 @@ const Households = () => {
     setHeadId(h.head_of_household_id || '');
     setLat(h.latitude?.toString() || '19.7420');
     setLng(h.longitude?.toString() || '105.9230');
+    setFireSafetyGroup(h.fire_safety_group || '');
+    setSelfManagementGroup(h.self_management_group || '');
     setCreateNewHead(false);
     setNewHeadName('');
     setNewHeadGender('male');
@@ -279,6 +285,8 @@ const Households = () => {
         latitude: parseFloat(lat) || 19.7420,
         longitude: parseFloat(lng) || 105.9230,
         policy_type: policyType,
+        fire_safety_group: fireSafetyGroup || undefined,
+        self_management_group: selfManagementGroup || undefined,
         created_at: editingHousehold ? editingHousehold.created_at : new Date().toISOString()
       };
       await db.saveHousehold(payload);
@@ -787,6 +795,20 @@ const Households = () => {
                   <Users size={16} />
                   <span>{members.length} thành viên</span>
                 </div>
+                {(h.self_management_group || h.fire_safety_group) && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px', borderTop: '1px dashed var(--border)', paddingTop: '8px' }}>
+                    {h.self_management_group && (
+                      <span style={{ fontSize: '0.72rem', backgroundColor: '#f0fdf4', color: '#166534', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bbf7d0', fontWeight: '600' }}>
+                        👥 {h.self_management_group}
+                      </span>
+                    )}
+                    {h.fire_safety_group && (
+                      <span style={{ fontSize: '0.72rem', backgroundColor: '#fef2f2', color: '#991b1b', padding: '2px 8px', borderRadius: '4px', border: '1px solid #fecaca', fontWeight: '600' }}>
+                        🔥 {h.fire_safety_group}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="card-footer">
@@ -853,6 +875,27 @@ const Households = () => {
                     step="0.000001" 
                     value={lng} 
                     onChange={(e) => setLng(e.target.value)} 
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Tổ tự quản liên kết</label>
+                  <input 
+                    type="text" 
+                    value={selfManagementGroup} 
+                    onChange={(e) => setSelfManagementGroup(e.target.value)} 
+                    placeholder="Ví dụ: Tổ tự quản số 1" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Tổ liên gia an toàn PCCC</label>
+                  <input 
+                    type="text" 
+                    value={fireSafetyGroup} 
+                    onChange={(e) => setFireSafetyGroup(e.target.value)} 
+                    placeholder="Ví dụ: Tổ liên gia số 2" 
                   />
                 </div>
               </div>
@@ -981,6 +1024,8 @@ const Households = () => {
                 <h2>Thành viên hộ: {getHeadName(viewingMembersHousehold)}</h2>
                 <p style={{fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px'}}>
                   Địa chỉ: {viewingMembersHousehold.address} | Mã sổ: {viewingMembersHousehold.household_number}
+                  {viewingMembersHousehold.self_management_group && ` | 👥 ${viewingMembersHousehold.self_management_group}`}
+                  {viewingMembersHousehold.fire_safety_group && ` | 🔥 ${viewingMembersHousehold.fire_safety_group}`}
                 </p>
               </div>
               <button className="close-btn" onClick={() => setViewingMembersHousehold(null)}><X size={24} /></button>
@@ -1014,7 +1059,7 @@ const Households = () => {
                       <td>{member.occupation || 'Tự do'}</td>
                       <td>
                         <span className={`status-tag ${member.status}`}>
-                          {member.status === 'resident' ? 'Thường trú' : member.status === 'temporary_resident' ? 'Tạm trú' : member.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất'}
+                          {member.status === 'resident' ? 'Thường trú' : member.status === 'temporary_resident' ? 'Tạm trú' : member.status === 'temporary_absent' ? 'Tạm vắng' : member.status === 'stay' ? 'Lưu trú' : 'Đã mất'}
                         </span>
                       </td>
                     </tr>
@@ -1138,6 +1183,7 @@ const Households = () => {
                     <option value="resident">Thường trú</option>
                     <option value="temporary_resident">Tạm trú</option>
                     <option value="temporary_absent">Tạm vắng</option>
+                    <option value="stay">Lưu trú (Khách vãng lai)</option>
                     <option value="deceased">Đã mất</option>
                   </select>
                 </div>
@@ -1447,6 +1493,7 @@ const Households = () => {
         .status-tag.resident { background-color: rgba(16, 185, 129, 0.1); color: var(--success); }
         .status-tag.temporary_resident { background-color: rgba(59, 130, 246, 0.1); color: var(--info); }
         .status-tag.temporary_absent { background-color: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .status-tag.stay { background-color: rgba(236, 72, 153, 0.1); color: #db2777; }
         .status-tag.deceased { background-color: #e2e8f0; color: var(--secondary); }
 
         @media (max-width: 768px) {

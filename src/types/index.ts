@@ -17,6 +17,8 @@ export interface Household {
   latitude?: number;
   longitude?: number;
   policy_type: 'none' | 'poor' | 'near_poor' | 'policy_family';
+  fire_safety_group?: string; // Tổ liên gia an toàn PCCC
+  self_management_group?: string; // Tổ tự quản
   created_at: string;
 }
 
@@ -35,7 +37,7 @@ export interface Resident {
   is_head: boolean;
   relationship_with_head: string;
   is_senior: boolean; // Tự động tính toán dựa trên năm sinh
-  status: 'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased';
+  status: 'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay';
   pob?: string; // Nơi sinh
   notes?: string; // Ghi chú
   created_at: string;

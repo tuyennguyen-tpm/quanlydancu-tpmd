@@ -47,3 +47,8 @@ CREATE POLICY "Allow admin access household_funds" ON household_funds FOR ALL TO
 
 DROP POLICY IF EXISTS "Allow public read household_funds" ON household_funds;
 CREATE POLICY "Allow public read household_funds" ON household_funds FOR SELECT TO anon USING (true);
+
+-- 4. Bổ sung các cột tổ liên gia PCCC và tổ tự quản cho bảng households
+ALTER TABLE households 
+  ADD COLUMN IF NOT EXISTS fire_safety_group TEXT,
+  ADD COLUMN IF NOT EXISTS self_management_group TEXT;

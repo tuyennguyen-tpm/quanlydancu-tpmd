@@ -134,7 +134,7 @@ const Residents = () => {
   const [temporaryAddress, setTemporaryAddress] = useState('');
   const [relationshipWithHead, setRelationshipWithHead] = useState('Thành viên');
   const [isHead, setIsHead] = useState(false);
-  const [status, setStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased'>('resident');
+  const [status, setStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay'>('resident');
   const [householdId, setHouseholdId] = useState('');
   const [pob, setPob] = useState('');
   const [notes, setNotes] = useState('');
@@ -874,6 +874,7 @@ const Residents = () => {
       case 'resident': return 'Thường trú';
       case 'temporary_resident': return 'Tạm trú';
       case 'temporary_absent': return 'Tạm vắng';
+      case 'stay': return 'Lưu trú';
       default: return 'Đã mất';
     }
   };
@@ -1005,7 +1006,7 @@ const Residents = () => {
                   {getHouseholdAddress(resident.household_id)}
                 </td>
                 <td>
-                  <span className={`status-dot ${resident.status === 'resident' ? 'green' : resident.status === 'temporary_resident' ? 'blue' : 'orange'}`}></span>
+                  <span className={`status-dot ${resident.status === 'resident' ? 'green' : resident.status === 'temporary_resident' ? 'blue' : resident.status === 'stay' ? 'pink' : 'orange'}`}></span>
                   {getStatusText(resident.status)}
                 </td>
                 <td>
@@ -1283,6 +1284,7 @@ const Residents = () => {
                     <option value="resident">Thường trú</option>
                     <option value="temporary_resident">Tạm trú</option>
                     <option value="temporary_absent">Tạm vắng (Có đăng ký)</option>
+                    <option value="stay">Lưu trú (Khách vãng lai)</option>
                     <option value="deceased">Đã qua đời</option>
                   </select>
                 </div>
@@ -1441,7 +1443,8 @@ const Residents = () => {
                 <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Trạng thái cư trú:</span> <span className="val" style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>
                   {selectedResident.status === 'resident' ? 'Thường trú' : 
                    selectedResident.status === 'temporary_resident' ? 'Tạm trú' :
-                   selectedResident.status === 'temporary_absent' ? 'Tạm vắng (Đã đăng ký)' : 'Đã mất'}
+                   selectedResident.status === 'temporary_absent' ? 'Tạm vắng (Đã đăng ký)' : 
+                   selectedResident.status === 'stay' ? 'Lưu trú (Khách vãng lai)' : 'Đã mất'}
                 </span></div>
                 {selectedResident.status === 'temporary_resident' && (
                   <div className="detail-item" style={{ backgroundColor: '#f0fdfa', padding: '8px 12px', borderRadius: '6px', border: '1px dashed #5eead4', fontSize: '0.95rem' }}>
@@ -1763,6 +1766,7 @@ const Residents = () => {
 
         .status-dot.green { background-color: var(--success); }
         .status-dot.blue { background-color: var(--info); }
+        .status-dot.pink { background-color: #ec4899; }
         .status-dot.orange { background-color: var(--warning); }
 
         .action-menu-container {
