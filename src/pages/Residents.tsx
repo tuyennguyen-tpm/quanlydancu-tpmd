@@ -29,7 +29,7 @@ const parseCSV = (text: string) => {
   if (firstLine.split(';').length > firstLine.split(',').length) delimiter = ';';
   if (firstLine.split('\t').length > firstLine.split(delimiter).length) delimiter = '\t';
   
-  const rawLines = text.split(/\r?\n/);
+  const rawLines = text.split(/\r\n|\n|\r/);
   
   for (let l = 0; l < rawLines.length; l++) {
     const line = rawLines[l];
