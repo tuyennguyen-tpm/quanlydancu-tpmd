@@ -1629,7 +1629,8 @@ const Residents = () => {
           padding: 10px 16px;
           border-radius: 8px;
           border: 1px solid var(--border);
-          max-width: 450px;
+          min-width: 400px;
+          max-width: 800px;
         }
 
         .search-box input {
@@ -1648,8 +1649,8 @@ const Residents = () => {
           padding: 10px 14px;
           border-radius: 8px;
           border: 1px solid var(--border);
-          min-width: 280px;
-          max-width: 320px;
+          min-width: 180px;
+          max-width: 220px;
         }
 
         .household-select-filter {

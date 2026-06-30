@@ -1284,7 +1284,8 @@ const Households = () => {
           align-items: center;
           gap: 12px;
           flex: 1;
-          max-width: 400px;
+          min-width: 400px;
+          max-width: 800px;
         }
         .search-box input { border: none; outline: none; width: 100%; font-size: 1rem; }
 
