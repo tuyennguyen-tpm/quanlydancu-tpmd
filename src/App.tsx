@@ -833,7 +833,7 @@ const App = () => {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <ShieldCheck size={36} color="#16f5eaff" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
+                <ShieldCheck size={36} color="#fbff00ff" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
               )}
               <div className="logo-text" style={{ gap: '2px', display: 'flex', flexDirection: 'column' }}>
                 <span className="logo-title" style={{ fontSize: '0.8rem', color: '#06f1d279', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TỔ DÂN PHỐ</span>
