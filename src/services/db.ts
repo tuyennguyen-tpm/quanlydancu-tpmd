@@ -198,7 +198,7 @@ const getTenantFilter = () => {
   return null;
 };
 
-const mapToUUID = (id: string): string => {
+export const mapToUUID = (id: string): string => {
   if (!id) return '';
   if (id.length === 36 && id.includes('-')) return id;
   

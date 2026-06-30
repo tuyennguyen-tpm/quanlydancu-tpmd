@@ -17,7 +17,7 @@ import {
   Eye,
   ShieldAlert
 } from 'lucide-react';
-import { db, generateUUID } from '../services/db';
+import { db, generateUUID, mapToUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Resident, Household } from '../types';
 
@@ -1030,12 +1030,12 @@ const Residents = () => {
             r.dob === dob
           );
 
-          const residentId = matched ? matched.id : generateUUID();
+          const residentId = mapToUUID(matched ? matched.id : generateUUID());
 
           // Xử lý tạo và nhóm hộ gia đình tự động
           let isNewHousehold = false;
           if (isHead) {
-            currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
+            currentHouseholdId = mapToUUID((matched && matched.household_id) ? matched.household_id : generateUUID());
             if (!matched || !matched.household_id) {
               householdsToSave.push({
                 id: currentHouseholdId,
