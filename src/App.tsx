@@ -143,12 +143,13 @@ const App = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const uId = session?.user?.id;
-      if (!uId) return;
       
-      const { data, error } = await supabase
-        .from('app_config')
-        .select('key, value')
-        .eq('user_id', uId);
+      let query = supabase.from('app_config').select('key, value');
+      if (uId) {
+        query = query.eq('user_id', uId);
+      }
+      
+      const { data, error } = await query;
         
       if (!error && data && data.length > 0) {
         data.forEach(item => {
