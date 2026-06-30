@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables } from './services/db';
+import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
 import Dashboard from './pages/Dashboard';
 import AIAssistant from './pages/AIAssistant';
@@ -102,6 +103,9 @@ const App = () => {
   const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
   const [targetVeSinhInput, setTargetVeSinhInput] = useState(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
   const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
+  const [latestAppVersionInput, setLatestAppVersionInput] = useState(localStorage.getItem('latest_app_version') || APP_VERSION);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [latestAppVersion, setLatestAppVersion] = useState(localStorage.getItem('latest_app_version') || APP_VERSION);
 
   const [missingTables, setMissingTables] = useState<string[]>(() => {
     try {
@@ -149,12 +153,19 @@ const App = () => {
         const newLeader = localStorage.getItem('leader_name') || 'Kim Tuyến';
         const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
         const newGroup = localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
+        const newLatestVersion = localStorage.getItem('latest_app_version') || APP_VERSION;
         
         setTdpName(newTdp);
         setWardName(newWard);
         setLeaderName(newLeader);
         setLeaderPhone(newPhone);
         setGroupId(newGroup);
+        setLatestAppVersion(newLatestVersion);
+        
+        // Check for updates
+        if (newLatestVersion !== APP_VERSION && newLatestVersion > APP_VERSION) {
+          setShowUpdateModal(true);
+        }
         
         // Dispatch events for child tabs to pick up the updated names
         window.dispatchEvent(new CustomEvent('tdp-name-changed'));
@@ -445,6 +456,7 @@ const App = () => {
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
     setGuestPinInput(localStorage.getItem('guest_access_pin') || '1234');
+    setLatestAppVersionInput(localStorage.getItem('latest_app_version') || APP_VERSION);
     setSettingsOpen(true);
   };
 
@@ -485,6 +497,11 @@ const App = () => {
     localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.trim() || '10000000');
     localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.trim() || '30000000');
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
+    
+    // Lưu phiên bản mới nhất
+    const newVersion = latestAppVersionInput.trim() || APP_VERSION;
+    localStorage.setItem('latest_app_version', newVersion);
+    setLatestAppVersion(newVersion);
 
     // Lưu mã PIN truy cập cho Bà con
     const pinToSave = guestPinInput.trim() || '1234';
@@ -514,7 +531,8 @@ const App = () => {
             { user_id: uId, key: 'group_id', value: newGroupId },
             { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '15000000' },
             { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '10000000' },
-            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '30000000' }
+            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '30000000' },
+            { user_id: uId, key: 'latest_app_version', value: newVersion }
           ];
           await supabase.from('app_config').upsert(configItems);
         }
@@ -1081,6 +1099,19 @@ const App = () => {
                     maxLength={10}
                   />
                 </div>
+                <div className="form-group">
+                  <label>Phiên bản phần mềm mới nhất (Admin)</label>
+                  <input
+                    type="text"
+                    value={latestAppVersionInput}
+                    onChange={(e) => setLatestAppVersionInput(e.target.value)}
+                    placeholder="Ví dụ: 1.0.2"
+                    maxLength={20}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
+                    * Phiên bản hiện tại của file chạy này là: <strong>{APP_VERSION}</strong>. Đổi số này cao hơn để ép người khác cập nhật!
+                  </span>
+                </div>
                 {session?.user?.id && (
                   <div className="form-group" style={{ marginTop: '4px' }}>
                     <label>Đường dẫn chia sẻ cho Bà con</label>
@@ -1366,6 +1397,35 @@ const App = () => {
                 Đóng cửa sổ
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Thông báo cập nhật phiên bản */}
+      {showUpdateModal && (
+        <div className="modal-overlay" style={{ zIndex: 99999, background: 'rgba(15, 23, 42, 0.95)' }}>
+          <div className="modal-content" style={{ background: 'white', border: '2px solid #ef4444', maxWidth: '450px', textAlign: 'center', padding: '30px' }}>
+            <div style={{ background: '#fef2f2', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <ShieldCheck size={32} color="#ef4444" />
+            </div>
+            <h2 style={{ margin: '0 0 12px 0', color: '#1e293b', fontSize: '1.4rem' }}>Đã có phiên bản mới!</h2>
+            <p style={{ margin: '0 0 24px 0', color: '#475569', fontSize: '1rem', lineHeight: '1.6' }}>
+              Phiên bản hiện tại ({APP_VERSION}) đã cũ. Hệ thống đã nâng cấp lên phiên bản <strong>{latestAppVersion}</strong> với nhiều tính năng mới và sửa lỗi.
+              <br /><br />
+              Vui lòng liên hệ với Quản trị viên (Admin) hoặc kiểm tra nhóm Zalo để nhận file cài đặt <strong>.exe</strong> mới nhất nhé!
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '1rem', background: '#ef4444', borderColor: '#dc2626' }}
+              onClick={() => {
+                // Có thể cho phép họ tiếp tục bằng cách ẩn đi, nhưng để ép buộc thì chỉ ẩn nếu họ quyết định "Đã hiểu" (nếu không chặn cứng).
+                // Ở đây mình cho phép đóng tạm để đề phòng lỗi, nhưng mỗi lần load lại đều báo.
+                setShowUpdateModal(false);
+              }}
+            >
+              Tôi đã hiểu
+            </button>
           </div>
         </div>
       )}
