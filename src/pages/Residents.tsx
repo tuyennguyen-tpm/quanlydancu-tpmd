@@ -824,7 +824,7 @@ const Residents = () => {
 
           // Xử lý tạo và nhóm hộ gia đình tự động
           if (isHead) {
-            currentHouseholdId = matched ? matched.household_id : generateUUID();
+            currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
             if (!matched || !matched.household_id) {
               await db.saveHousehold({
                 id: currentHouseholdId,
@@ -837,7 +837,7 @@ const Residents = () => {
               });
             }
           } else if (!currentHouseholdId) {
-             currentHouseholdId = matched ? (matched.household_id || generateUUID()) : generateUUID();
+             currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
              if (!matched || !matched.household_id) {
                await db.saveHousehold({
                  id: currentHouseholdId,
