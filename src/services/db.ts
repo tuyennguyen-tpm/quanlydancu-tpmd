@@ -433,8 +433,8 @@ export const db = {
         head_of_household_id: h.head_of_household_id || null
       }));
       
-      // Chia nhỏ thành các chunks (mỗi chunk 500 bản ghi) để tránh lỗi Timeout/Rate limit
-      const chunkSize = 500;
+      // Chia nhỏ thành các chunks (mỗi chunk 100 bản ghi) để tránh lỗi Timeout/Rate limit
+      const chunkSize = 100;
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         const { error } = await supabase.from('households').upsert(chunk);
@@ -569,7 +569,7 @@ export const db = {
         };
       });
       
-      const chunkSize = 500;
+      const chunkSize = 100;
       for (let i = 0; i < payload.length; i += chunkSize) {
         const chunk = payload.slice(i, i + chunkSize);
         const { error } = await supabase.from('residents').upsert(chunk);

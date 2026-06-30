@@ -1036,7 +1036,7 @@ const Residents = () => {
         loadData();
         window.dispatchEvent(new CustomEvent('db-changed'));
       } catch (err) {
-        showToast('Lỗi khi phân tích cú pháp file CSV!', 'danger');
+        showToast(`Lỗi nhập dữ liệu: ${err instanceof Error ? err.message : 'Không rõ nguyên nhân'}`, 'danger');
         console.error(err);
       }
     };
