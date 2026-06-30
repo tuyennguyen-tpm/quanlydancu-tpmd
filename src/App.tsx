@@ -81,6 +81,7 @@ const App = () => {
   const [leaderPhone, setLeaderPhone] = useState(localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982');
   const [groupId, setGroupId] = useState(localStorage.getItem('group_id') || 'NAM_SAM_SON_01');
   const [marqueeText, setMarqueeText] = useState(localStorage.getItem('marquee_text') || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.');
+  const [logoUrl, setLogoUrl] = useState(localStorage.getItem('logo_url') || '');
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -92,6 +93,7 @@ const App = () => {
   const [leaderPhoneInput, setLeaderPhoneInput] = useState(leaderPhone);
   const [groupIdInput, setGroupIdInput] = useState(groupId);
   const [marqueeTextInput, setMarqueeTextInput] = useState(marqueeText);
+  const [logoUrlInput, setLogoUrlInput] = useState(logoUrl);
 
   // Password change states
   const [newPassword, setNewPassword] = useState('');
@@ -156,6 +158,7 @@ const App = () => {
         const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
         const newGroup = localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
         const newMarquee = localStorage.getItem('marquee_text') || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.';
+        const newLogoUrl = localStorage.getItem('logo_url') || '';
         const newLatestVersion = localStorage.getItem('latest_app_version') || APP_VERSION;
         
         setTdpName(newTdp);
@@ -164,6 +167,7 @@ const App = () => {
         setLeaderPhone(newPhone);
         setGroupId(newGroup);
         setMarqueeText(newMarquee);
+        setLogoUrl(newLogoUrl);
         setLatestAppVersion(newLatestVersion);
         
         // Check for updates
@@ -455,6 +459,7 @@ const App = () => {
     setLeaderPhoneInput(leaderPhone);
     setGroupIdInput(groupId);
     setMarqueeTextInput(marqueeText);
+    setLogoUrlInput(logoUrl);
     setTargetNghieoInput(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
     setTargetDapNghiaInput(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
     setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
@@ -502,6 +507,11 @@ const App = () => {
     localStorage.setItem('marquee_text', newMarquee);
     setMarqueeText(newMarquee);
 
+    // Lưu logo
+    const newLogo = logoUrlInput.trim();
+    localStorage.setItem('logo_url', newLogo);
+    setLogoUrl(newLogo);
+
     // Lưu định mức các loại quỹ
     localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.trim() || '15000000');
     localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.trim() || '10000000');
@@ -540,6 +550,7 @@ const App = () => {
             { user_id: uId, key: 'leader_phone', value: newLeaderPhone },
             { user_id: uId, key: 'group_id', value: newGroupId },
             { user_id: uId, key: 'marquee_text', value: newMarquee },
+            { user_id: uId, key: 'logo_url', value: newLogo },
             { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '15000000' },
             { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '10000000' },
             { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '30000000' },
@@ -780,7 +791,11 @@ const App = () => {
         <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '24px 20px 16px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
             <div className="logo-container" style={{ alignItems: 'flex-start', gap: '10px' }}>
-              <ShieldCheck size={36} color="#3b82f6" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', marginTop: '2px', flexShrink: 0, borderRadius: '4px' }} />
+              ) : (
+                <ShieldCheck size={36} color="#3b82f6" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
+              )}
               <div className="logo-text" style={{ gap: '2px', display: 'flex', flexDirection: 'column' }}>
                 <span className="logo-title" style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>QL TDP</span>
                 <span className="logo-subtitle" style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 1, lineHeight: '1.2' }}>{tdpName}</span>
@@ -1057,6 +1072,18 @@ const App = () => {
                     placeholder="Nhập nội dung dòng chữ chạy ở trên cùng..."
                     maxLength={150}
                   />
+                </div>
+                <div className="form-group">
+                  <label>Đường dẫn Logo (URL hình ảnh)</label>
+                  <input
+                    type="text"
+                    value={logoUrlInput}
+                    onChange={(e) => setLogoUrlInput(e.target.value)}
+                    placeholder="Ví dụ: https://.../logo.png"
+                  />
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
+                    * Để trống nếu muốn dùng biểu tượng mặc định.
+                  </span>
                 </div>
               </div>
 
