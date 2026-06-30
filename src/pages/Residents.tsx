@@ -767,16 +767,24 @@ const Residents = () => {
         let currentHouseholdId = '';
         let currentHouseholdNumber = Date.now();
 
-        // Tự động nhận diện vị trí các cột từ dòng tiêu đề (dòng 0)
+        // 1. Phân tích để tìm dòng tiêu đề (Header Row)
         let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10;
         
-        const firstRow = rows[0] || [];
-        const isHeader = firstRow.some(cell => typeof cell === 'string' && (cell.toLowerCase().includes('họ') || cell.toLowerCase().includes('tên') || cell.toLowerCase().includes('name')));
+        let headerRowIdx = -1;
+        for (let i = 0; i < Math.min(5, rows.length); i++) {
+          const r = rows[i];
+          if (r.some(cell => typeof cell === 'string' && (cell.toLowerCase().includes('họ') || cell.toLowerCase().includes('tên') || cell.toLowerCase().includes('quan hệ') || cell.toLowerCase().includes('giới tính')))) {
+            headerRowIdx = i;
+            break;
+          }
+        }
         
-        const startIdx = isHeader ? 1 : 0;
+        let startIdx = 0;
 
-        if (isHeader) {
-          const headers = firstRow.map(h => (typeof h === 'string' ? h.toLowerCase() : ''));
+        if (headerRowIdx !== -1) {
+          // Nhận diện qua Tiêu đề
+          startIdx = headerRowIdx + 1;
+          const headers = rows[headerRowIdx].map(h => (typeof h === 'string' ? h.toLowerCase() : ''));
           const findIdx = (keywords: string[], fallback: number) => {
             const idx = headers.findIndex(h => keywords.some(kw => h.includes(kw)));
             return idx !== -1 ? idx : fallback;
@@ -793,6 +801,27 @@ const Residents = () => {
           pobIdx = findIdx(['nơi sinh', 'quê'], 8);
           statusIdx = findIdx(['trạng thái', 'cư trú', 'status'], 9);
           notesIdx = findIdx(['ghi chú', 'note'], 10);
+        } else if (rows.length > 0) {
+          // Trí tuệ nhân tạo (Heuristics) tự nhận diện dựa trên nội dung nếu KHÔNG có dòng tiêu đề
+          const firstData = rows[0].map(c => (typeof c === 'string' ? c.toLowerCase().trim() : ''));
+          
+          const findByRegex = (regex: RegExp, fallback: number) => {
+            const idx = firstData.findIndex(c => regex.test(c));
+            return idx !== -1 ? idx : fallback;
+          };
+          const findByKeywords = (keywords: string[], fallback: number) => {
+            const idx = firstData.findIndex(c => keywords.some(kw => c === kw || c.includes(kw)));
+            return idx !== -1 ? idx : fallback;
+          };
+
+          genderIdx = findByKeywords(['nam', 'nữ', 'male', 'female'], 1);
+          relIdx = findByKeywords(['chủ hộ', 'vợ', 'chồng', 'con', 'cháu', 'bố', 'mẹ', 'ông', 'bà', 'anh', 'chị', 'em'], 6);
+          dobIdx = findByRegex(/^(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{1,2}-\d{1,2})$/, 2);
+          cccdIdx = findByRegex(/^\d{9,12}$/, 4);
+          
+          const usedIndices = [genderIdx, relIdx, dobIdx, cccdIdx];
+          const possibleNameIdx = firstData.findIndex((c, idx) => c.length > 3 && !usedIndices.includes(idx) && !/^\d/.test(c));
+          if (possibleNameIdx !== -1) nameIdx = possibleNameIdx;
         }
 
         for (let i = startIdx; i < rows.length; i++) {
