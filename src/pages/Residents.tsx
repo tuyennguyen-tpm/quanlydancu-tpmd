@@ -823,31 +823,35 @@ const Residents = () => {
           const residentId = matched ? matched.id : generateUUID();
 
           // Xử lý tạo và nhóm hộ gia đình tự động
+          let isNewHousehold = false;
           if (isHead) {
             currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
             if (!matched || !matched.household_id) {
               await db.saveHousehold({
                 id: currentHouseholdId,
-                household_number: `HH${(currentHouseholdNumber++).toString().slice(-6)}`,
+                household_number: `HH${(currentHouseholdNumber).toString().slice(-6)}`,
                 address: permAddress || '',
-                head_of_household_id: residentId,
+                head_of_household_id: null, // Lưu null trước để tránh lỗi khoá ngoại
                 group_id: 'default',
                 policy_type: 'none',
                 created_at: new Date().toISOString()
               });
+              isNewHousehold = true;
+              currentHouseholdNumber++;
             }
           } else if (!currentHouseholdId) {
              currentHouseholdId = (matched && matched.household_id) ? matched.household_id : generateUUID();
              if (!matched || !matched.household_id) {
                await db.saveHousehold({
                  id: currentHouseholdId,
-                 household_number: `HH${(currentHouseholdNumber++).toString().slice(-6)}`,
+                 household_number: `HH${(currentHouseholdNumber).toString().slice(-6)}`,
                  address: permAddress || '',
                  head_of_household_id: null,
                  group_id: 'default',
                  policy_type: 'none',
                  created_at: new Date().toISOString()
                });
+               currentHouseholdNumber++;
              }
           }
 
@@ -870,6 +874,20 @@ const Residents = () => {
           };
 
           await db.saveResident(payload);
+
+          // Cập nhật lại ID chủ hộ sau khi resident đã tồn tại trong DB
+          if (isHead && isNewHousehold) {
+            await db.saveHousehold({
+              id: currentHouseholdId,
+              household_number: `HH${(currentHouseholdNumber - 1).toString().slice(-6)}`,
+              address: permAddress || '',
+              head_of_household_id: residentId, // Cập nhật ID chủ hộ
+              group_id: 'default',
+              policy_type: 'none',
+              created_at: payload.created_at
+            });
+          }
+
           if (matched) {
             updatedCount++;
           } else {
