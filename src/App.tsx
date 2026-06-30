@@ -142,11 +142,16 @@ const App = () => {
     if (!supabase) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const uId = session?.user?.id;
+      const adminUid = session?.user?.id;
+      // Dùng tham số ?t= trên URL hoặc guest_tenant_id làm targetUid nếu là khách vãng lai
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTenant = urlParams.get('t');
+      const guestUid = urlTenant || localStorage.getItem('guest_tenant_id');
+      const targetUid = adminUid || guestUid;
       
       let query = supabase.from('app_config').select('key, value');
-      if (uId) {
-        query = query.eq('user_id', uId);
+      if (targetUid) {
+        query = query.eq('user_id', targetUid);
       }
       
       const { data, error } = await query;
@@ -201,9 +206,7 @@ const App = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
-        loadSystemConfig();
-      }
+      loadSystemConfig();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
