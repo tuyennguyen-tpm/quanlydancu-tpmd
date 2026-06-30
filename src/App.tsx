@@ -80,6 +80,7 @@ const App = () => {
   const [leaderName, setLeaderName] = useState(localStorage.getItem('leader_name') || 'Kim Tuyến');
   const [leaderPhone, setLeaderPhone] = useState(localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982');
   const [groupId, setGroupId] = useState(localStorage.getItem('group_id') || 'NAM_SAM_SON_01');
+  const [marqueeText, setMarqueeText] = useState(localStorage.getItem('marquee_text') || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.');
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -90,6 +91,7 @@ const App = () => {
   const [leaderNameInput, setLeaderNameInput] = useState(leaderName);
   const [leaderPhoneInput, setLeaderPhoneInput] = useState(leaderPhone);
   const [groupIdInput, setGroupIdInput] = useState(groupId);
+  const [marqueeTextInput, setMarqueeTextInput] = useState(marqueeText);
 
   // Password change states
   const [newPassword, setNewPassword] = useState('');
@@ -153,6 +155,7 @@ const App = () => {
         const newLeader = localStorage.getItem('leader_name') || 'Kim Tuyến';
         const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
         const newGroup = localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
+        const newMarquee = localStorage.getItem('marquee_text') || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.';
         const newLatestVersion = localStorage.getItem('latest_app_version') || APP_VERSION;
         
         setTdpName(newTdp);
@@ -160,6 +163,7 @@ const App = () => {
         setLeaderName(newLeader);
         setLeaderPhone(newPhone);
         setGroupId(newGroup);
+        setMarqueeText(newMarquee);
         setLatestAppVersion(newLatestVersion);
         
         // Check for updates
@@ -450,6 +454,7 @@ const App = () => {
     setLeaderNameInput(leaderName);
     setLeaderPhoneInput(leaderPhone);
     setGroupIdInput(groupId);
+    setMarqueeTextInput(marqueeText);
     setTargetNghieoInput(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
     setTargetDapNghiaInput(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
     setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
@@ -492,6 +497,11 @@ const App = () => {
     setGroupId(newGroupId);
     window.dispatchEvent(new CustomEvent('group-id-changed'));
 
+    // Lưu dòng chữ chạy
+    const newMarquee = marqueeTextInput.trim() || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.';
+    localStorage.setItem('marquee_text', newMarquee);
+    setMarqueeText(newMarquee);
+
     // Lưu định mức các loại quỹ
     localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.trim() || '15000000');
     localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.trim() || '10000000');
@@ -529,6 +539,7 @@ const App = () => {
             { user_id: uId, key: 'leader_name', value: newLeaderName },
             { user_id: uId, key: 'leader_phone', value: newLeaderPhone },
             { user_id: uId, key: 'group_id', value: newGroupId },
+            { user_id: uId, key: 'marquee_text', value: newMarquee },
             { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '15000000' },
             { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '10000000' },
             { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '30000000' },
@@ -851,7 +862,7 @@ const App = () => {
         {/* Banner chạy chữ */}
         <div className="marquee-header">
           <div className="marquee-text">
-            Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.
+            {marqueeText}
           </div>
         </div>
         
@@ -1035,6 +1046,16 @@ const App = () => {
                     placeholder="Ví dụ: NAM_SAM_SON_01..."
                     required
                     maxLength={30}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Dòng chữ chạy (Banner)</label>
+                  <input
+                    type="text"
+                    value={marqueeTextInput}
+                    onChange={(e) => setMarqueeTextInput(e.target.value)}
+                    placeholder="Nhập nội dung dòng chữ chạy ở trên cùng..."
+                    maxLength={150}
                   />
                 </div>
               </div>
