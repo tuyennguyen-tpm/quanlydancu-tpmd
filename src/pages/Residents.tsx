@@ -1629,7 +1629,7 @@ const Residents = () => {
           padding: 10px 16px;
           border-radius: 8px;
           border: 1px solid var(--border);
-          min-width: 400px;
+          min-width: 350px;
           max-width: 500px;
         }
 
