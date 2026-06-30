@@ -926,15 +926,20 @@ const Residents = () => {
 
         if (householdsToSave.length > 0 || residentsToSave.length > 0) {
           showToast(`Đang đẩy dữ liệu lên máy chủ... (Xin đợi ít phút, không tắt trình duyệt)`, 'success');
+          
+          // Loại bỏ các bản ghi trùng lặp ID (giữ lại bản ghi cuối cùng) để tránh lỗi ON CONFLICT DO UPDATE của PostgreSQL
+          const uniqueHouseholds = Array.from(new Map(householdsToSave.map(h => [h.id, h])).values());
+          const uniqueResidents = Array.from(new Map(residentsToSave.map(r => [r.id, r])).values());
+
           // Lưu Household có head = null trước để tránh lỗi khoá ngoại
-          const householdsWithoutHead = householdsToSave.map(h => ({...h, head_of_household_id: null}));
+          const householdsWithoutHead = uniqueHouseholds.map(h => ({...h, head_of_household_id: null}));
           await (db as any).saveHouseholdsBulk(householdsWithoutHead);
           
           // Lưu Resident
-          await (db as any).saveResidentsBulk(residentsToSave);
+          await (db as any).saveResidentsBulk(uniqueResidents);
           
           // Cập nhật lại Household với head_of_household_id chuẩn xác
-          const householdsWithHead = householdsToSave.filter(h => h.head_of_household_id !== null);
+          const householdsWithHead = uniqueHouseholds.filter(h => h.head_of_household_id !== null);
           if (householdsWithHead.length > 0) {
             await (db as any).saveHouseholdsBulk(householdsWithHead);
           }
