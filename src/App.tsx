@@ -916,7 +916,7 @@ const App = () => {
         {/* Banner chạy chữ */}
         <div className="marquee-header">
           <div className="marquee-text">
-            Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.
+            Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến TDP Quảng Giao - SĐT: 0912083018 / 0899661982.
           </div>
         </div>
         
