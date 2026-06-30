@@ -81,6 +81,7 @@ const App = () => {
   const [leaderPhone, setLeaderPhone] = useState(localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982');
   const [groupId, setGroupId] = useState(localStorage.getItem('group_id') || 'NAM_SAM_SON_01');
   const [logoUrl, setLogoUrl] = useState(localStorage.getItem('logo_url') || '');
+  const [logoError, setLogoError] = useState(false);
   const [supportName, setSupportName] = useState(localStorage.getItem('support_name') || 'Kim Tuyến');
   const [supportPhone, setSupportPhone] = useState(localStorage.getItem('support_phone') || '0912 083 018 - 0899661982');
 
@@ -170,6 +171,7 @@ const App = () => {
         setLeaderPhone(newPhone);
         setGroupId(newGroup);
         setLogoUrl(newLogoUrl);
+        setLogoError(false);
         setSupportName(newSupportName);
         setSupportPhone(newSupportPhone);
         setLatestAppVersion(newLatestVersion);
@@ -519,6 +521,7 @@ const App = () => {
     const newLogo = logoUrlInput.trim();
     localStorage.setItem('logo_url', newLogo);
     setLogoUrl(newLogo);
+    setLogoError(false);
 
     // Lưu định mức các loại quỹ
     localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.trim() || '15000000');
@@ -800,8 +803,13 @@ const App = () => {
         <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '24px 20px 16px 20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
             <div className="logo-container" style={{ alignItems: 'flex-start', gap: '10px' }}>
-              {logoUrl ? (
-                <img src={logoUrl} alt="Logo" style={{ width: '40px', height: '40px', objectFit: 'contain', marginTop: '2px', flexShrink: 0, borderRadius: '4px' }} />
+              {logoUrl && !logoError ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Logo" 
+                  style={{ width: '40px', height: '40px', objectFit: 'contain', marginTop: '2px', flexShrink: 0, borderRadius: '4px' }} 
+                  onError={() => setLogoError(true)}
+                />
               ) : (
                 <ShieldCheck size={36} color="#3b82f6" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
               )}
