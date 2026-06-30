@@ -39,6 +39,18 @@ export interface Resident {
   pob?: string; // Nơi sinh
   notes?: string; // Ghi chú
   created_at: string;
+  
+  // Các trường thông tin hành chính Việt Nam mới bổ sung
+  native_place?: string;
+  ethnicity?: string;
+  religion?: string;
+  nationality?: string;
+  education_level?: string;
+  military_service?: 'in_age' | 'serving' | 'completed' | 'exempted' | 'none';
+  health_insurance_number?: string;
+  has_health_insurance?: boolean;
+  temporary_residence_expiry?: string;
+  association_membership?: string; // ngăn cách bởi dấu phẩy, ví dụ: 'nct,ccb'
 }
 
 export interface FinancialRecord {
@@ -106,5 +118,16 @@ export interface MeetingMinutesData {
   attendance: number;
   content: string;
   created_at: string;
+}
+
+export interface HouseholdFund {
+  id: string;
+  household_id: string;
+  year: number;
+  fund_name: string;
+  amount: number;
+  paid_at?: string;
+  note?: string;
+  created_at?: string;
 }
 

@@ -19,11 +19,13 @@ const STATUS_LABEL: Record<string, string> = {
   official: 'Chính thức',
   probation: 'Dự bị',
   inactive: 'Không HĐ',
+  party_213: 'Đảng viên 213'
 };
 const STATUS_COLOR: Record<string, string> = {
   official: '#22c55e',
   probation: '#f59e0b',
   inactive: '#64748b',
+  party_213: '#f43f5e'
 };
 const RATING_LABEL: Record<string, string> = {
   excellent: 'Xuất sắc',
@@ -390,7 +392,11 @@ const MembersTab: React.FC = () => {
         position: form.position || 'member',
         status: form.status || 'official',
         resident_id: form.resident_id || null,
+        is_exempt_party_activities: form.is_exempt_party_activities || false,
         notes: form.notes || '',
+        fee_category: form.fee_category,
+        salary_base: form.salary_base,
+        wage_zone: form.wage_zone,
       };
       await partyDb.savePartyMember(payload);
       showToast(editing ? 'Đã cập nhật đảng viên!' : 'Đã thêm đảng viên mới!', 'success');
@@ -581,6 +587,7 @@ const MembersTab: React.FC = () => {
     total: members.length,
     official: members.filter(m => m.status === 'official').length,
     probation: members.filter(m => m.status === 'probation').length,
+    party213: members.filter(m => m.status === 'party_213').length,
   };
 
   const badgeNominees = members
@@ -740,6 +747,7 @@ const MembersTab: React.FC = () => {
         <div className="party-stat-card"><div className="stat-num">{stats.total}</div><div className="stat-label">Tổng đảng viên</div></div>
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#22c55e' }}>{stats.official}</div><div className="stat-label">Chính thức</div></div>
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#f59e0b' }}>{stats.probation}</div><div className="stat-label">Dự bị</div></div>
+        <div className="party-stat-card"><div className="stat-num" style={{ color: '#f43f5e' }}>{stats.party213}</div><div className="stat-label">Đảng viên 213</div></div>
       </div>
 
       {/* Toolbar */}
@@ -916,7 +924,18 @@ const MembersTab: React.FC = () => {
                   <option value="official">Chính thức</option>
                   <option value="probation">Dự bị</option>
                   <option value="inactive">Không hoạt động</option>
+                  <option value="party_213">Đảng viên 213 (Nơi cư trú)</option>
                 </select>
+              </div>
+
+              <div className="party-form-group" style={{ flexDirection: 'row', gap: 8, alignItems: 'center', paddingTop: 10 }}>
+                <input 
+                  type="checkbox" 
+                  id="isExemptCheck"
+                  checked={form.is_exempt_party_activities || false} 
+                  onChange={e => setForm(f => ({ ...f, is_exempt_party_activities: e.target.checked }))} 
+                />
+                <label htmlFor="isExemptCheck" style={{ cursor: 'pointer', margin: 0 }}>Miễn sinh hoạt Đảng</label>
               </div>
 
               <div className="party-form-group">
@@ -1093,7 +1112,7 @@ const EvaluationsTab: React.FC = () => {
 
   const load = useCallback(async () => {
     const [m, e] = await Promise.all([partyDb.getPartyMembers(), partyDb.getPartyEvaluations(year)]);
-    setMembers(m);
+    setMembers(m.filter(x => x.status !== 'party_213'));
     setEvals(e);
   }, [year]);
   useEffect(() => { load(); }, [load]);
@@ -1220,6 +1239,7 @@ const MIN_WAGE: Record<number, number> = { 1: 5310000, 2: 4730000, 3: 4140000, 4
 
 // Tính mức đảng phí theo loại đảng viên
 const calcMonthlyFee = (member: PartyMember, year: number): number => {
+  if (member.is_exempt_party_activities) return 0; // Miễn sinh hoạt thì không đóng đảng phí
   const cat = member.fee_category || 'bhxh';
   const salary = member.salary_base || 0;
   const zone = member.wage_zone || 3;
@@ -1256,7 +1276,7 @@ const FeesTab: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     const [m, f] = await Promise.all([partyDb.getPartyMembers(), partyDb.getPartyFees(year)]);
-    setMembers(m.filter(x => x.status !== 'inactive'));
+    setMembers(m.filter(x => x.status !== 'inactive' && x.status !== 'party_213'));
     setFees(f);
     setLoading(false);
   }, [year]);

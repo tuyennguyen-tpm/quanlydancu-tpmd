@@ -1,6 +1,6 @@
 // v2.1 - Su dung bang app_config cho dong bo ma PIN (khong phu thuoc documents)
 import { createClient } from '@supabase/supabase-js';
-import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData } from '../types';
+import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData, HouseholdFund } from '../types';
 
 
 // Types for logs not defined in index.ts
@@ -974,6 +974,66 @@ export const db = {
     const filtered = list.filter(m => m.id !== id);
     setStorageItem('meeting_minutes', filtered);
     return true;
+  },
+
+  // --- Household Funds ---
+  getHouseholdFunds: async (): Promise<HouseholdFund[]> => {
+    if (supabase) {
+      try {
+        let query = supabase.from('household_funds').select('*');
+        const tenantId = getTenantFilter();
+        if (tenantId) {
+          query = query.eq('user_id', tenantId);
+        }
+        const { data, error } = await query;
+        if (error) handleDbError('tải danh sách đóng quỹ hộ dân', error);
+        if (!error && data) return data;
+      } catch (e) {
+        console.error('Supabase getHouseholdFunds error, falling back to local storage', e);
+      }
+    }
+    return getStorageItem<HouseholdFund[]>('household_funds', []);
+  },
+  saveHouseholdFund: async (fund: Omit<HouseholdFund, 'created_at'> & { created_at?: string }): Promise<HouseholdFund> => {
+    const fullFund: HouseholdFund = {
+      ...fund,
+      created_at: fund.created_at || new Date().toISOString()
+    };
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        const payload = { ...fullFund, user_id: uId };
+        const { data, error } = await supabase.from('household_funds').upsert(payload).select().single();
+        if (error) handleDbError('lưu biên lai đóng quỹ hộ dân', error);
+        if (!error && data) return data;
+      } catch (e) {
+        console.error('Supabase saveHouseholdFund error, saving to local storage', e);
+      }
+    }
+    const list = getStorageItem<HouseholdFund[]>('household_funds', []);
+    const index = list.findIndex(f => f.household_id === fund.household_id && f.year === fund.year && f.fund_name === fund.fund_name);
+    if (index >= 0) {
+      list[index] = fullFund;
+    } else {
+      list.push(fullFund);
+    }
+    setStorageItem('household_funds', list);
+    return fullFund;
+  },
+  deleteHouseholdFund: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('household_funds').delete().eq('id', id);
+        if (error) handleDbError('xóa biên lai đóng quỹ', error);
+        if (!error) return true;
+      } catch (e) {
+        console.error('Supabase deleteHouseholdFund error, falling back to local storage', e);
+      }
+    }
+    const list = getStorageItem<HouseholdFund[]>('household_funds', []);
+    const filtered = list.filter(f => f.id !== id);
+    setStorageItem('household_funds', filtered);
+    return true;
   }
 };
 
@@ -1227,6 +1287,29 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `CREATE POLICY "Allow public read meeting_minutes" ON meeting_minutes FOR SELECT TO anon USING (true);\n\n`;
   }
 
+  // Household Funds
+  if (isAll || missingTables.includes('household_funds')) {
+    sql += `-- ─── CẬP NHẬT BẢNG HOUSEHOLD_FUNDS ───\n`;
+    sql += `DROP TABLE IF EXISTS household_funds CASCADE;\n\n`;
+    sql += `CREATE TABLE household_funds (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    household_id UUID REFERENCES households(id) ON DELETE CASCADE,\n`;
+    sql += `    year INTEGER NOT NULL,\n`;
+    sql += `    fund_name TEXT NOT NULL,\n`;
+    sql += `    amount BIGINT NOT NULL DEFAULT 0,\n`;
+    sql += `    paid_at DATE DEFAULT CURRENT_DATE,\n`;
+    sql += `    note TEXT,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),\n`;
+    sql += `    UNIQUE(household_id, year, fund_name)\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE household_funds ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access household_funds" ON household_funds;\n`;
+    sql += `CREATE POLICY "Allow admin access household_funds" ON household_funds FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read household_funds" ON household_funds;\n`;
+    sql += `CREATE POLICY "Allow public read household_funds" ON household_funds FOR SELECT TO anon USING (true);\n\n`;
+  }
+
   return sql;
 };
 
@@ -1243,7 +1326,8 @@ export interface PartyMember {
   join_date?: string;
   probation_date?: string;
   position: 'secretary' | 'deputy_secretary' | 'member';
-  status: 'official' | 'probation' | 'inactive';
+  status: 'official' | 'probation' | 'inactive' | 'party_213';
+  is_exempt_party_activities?: boolean;
   // Thu đảng phí - Quy định 01-QĐ/TW 2026
   fee_category?: 'bhxh' | 'pension' | 'no_bhxh_under_retire' | 'no_bhxh_over_retire' | 'student';
   salary_base?: number;   // Lương làm căn cứ (đ/tháng)

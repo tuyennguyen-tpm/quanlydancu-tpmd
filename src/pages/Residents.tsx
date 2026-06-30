@@ -13,7 +13,8 @@ import {
   Baby,
   Users2,
   X,
-  Printer
+  Printer,
+  Eye
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -138,6 +139,49 @@ const Residents = () => {
   const [pob, setPob] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Các trường thông tin hành chính Việt Nam mới bổ sung
+  const [nativePlace, setNativePlace] = useState('');
+  const [ethnicity, setEthnicity] = useState('Kinh');
+  const [religion, setReligion] = useState('Không');
+  const [nationality, setNationality] = useState('Việt Nam');
+  const [educationLevel, setEducationLevel] = useState('12/12');
+  const [militaryService, setMilitaryService] = useState<'in_age' | 'serving' | 'completed' | 'exempted' | 'none'>('none');
+  const [healthInsuranceNumber, setHealthInsuranceNumber] = useState('');
+  const [hasHealthInsurance, setHasHealthInsurance] = useState(true);
+  const [temporaryResidenceExpiry, setTemporaryResidenceExpiry] = useState('');
+  const [associationMembership, setAssociationMembership] = useState('');
+
+  const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    value = value.replace(/[^\d/]/g, '');
+    
+    if (value.length === 2 && temporaryResidenceExpiry.length === 1) {
+      value = value + '/';
+    } else if (value.length === 5 && temporaryResidenceExpiry.length === 4) {
+      value = value + '/';
+    }
+    
+    if (value.length <= 10) {
+      setTemporaryResidenceExpiry(value);
+    }
+  };
+
+  const associations = associationMembership ? associationMembership.split(',') : [];
+  const hasAssociation = (code: string) => associations.includes(code);
+  const toggleAssociation = (code: string) => {
+    const current = associationMembership ? associationMembership.split(',') : [];
+    let updated;
+    if (current.includes(code)) {
+      updated = current.filter(c => c !== code);
+    } else {
+      updated = [...current, code];
+    }
+    setAssociationMembership(updated.join(','));
+  };
+
   const handleDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
     value = value.replace(/[^\d/]/g, '');
@@ -218,7 +262,7 @@ const Residents = () => {
     setCccd('');
     setPhone('');
     setOccupation('');
-    setPermanentAddress('Nam Sầm Sơn, Thanh Hóa');
+    setPermanentAddress('Quảng Giao, Sầm Sơn, Thanh Hóa');
     setTemporaryAddress('');
     setRelationshipWithHead('Con');
     setIsHead(false);
@@ -226,6 +270,18 @@ const Residents = () => {
     setHouseholdId('');
     setPob('');
     setNotes('');
+
+    // Khởi tạo các trường mới
+    setNativePlace('Quảng Giao, Sầm Sơn, Thanh Hóa');
+    setEthnicity('Kinh');
+    setReligion('Không');
+    setNationality('Việt Nam');
+    setEducationLevel('12/12');
+    setMilitaryService('none');
+    setHealthInsuranceNumber('');
+    setHasHealthInsurance(true);
+    setTemporaryResidenceExpiry('');
+    setAssociationMembership('');
     setIsFormOpen(true);
   };
 
@@ -248,6 +304,18 @@ const Residents = () => {
     setHouseholdId(r.household_id || '');
     setPob(r.pob || '');
     setNotes(r.notes || '');
+
+    // Khởi tạo trường mới từ đối tượng r
+    setNativePlace(r.native_place || '');
+    setEthnicity(r.ethnicity || 'Kinh');
+    setReligion(r.religion || 'Không');
+    setNationality(r.nationality || 'Việt Nam');
+    setEducationLevel(r.education_level || '12/12');
+    setMilitaryService(r.military_service || 'none');
+    setHealthInsuranceNumber(r.health_insurance_number || '');
+    setHasHealthInsurance(r.has_health_insurance !== false);
+    setTemporaryResidenceExpiry(r.temporary_residence_expiry ? formatToDisplayDate(r.temporary_residence_expiry) : '');
+    setAssociationMembership(r.association_membership || '');
     setIsFormOpen(true);
     setActiveMenuId(null);
   };
@@ -265,6 +333,17 @@ const Residents = () => {
     }
 
     const dbDob = formatToDbDate(dob);
+    const dbExpiry = temporaryResidenceExpiry ? formatToDbDate(temporaryResidenceExpiry) : '';
+
+    if (cccd.trim() && !/^\d{12}$/.test(cccd.trim())) {
+      showToast('Số CCCD / Định danh cá nhân phải có đúng 12 chữ số!', 'warning');
+      return;
+    }
+
+    if (status === 'temporary_resident' && temporaryResidenceExpiry && !isValidDate(temporaryResidenceExpiry)) {
+      showToast('Thời hạn tạm trú không đúng định dạng dd/mm/yyyy!', 'warning');
+      return;
+    }
 
     const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
       id: editingResident ? editingResident.id : generateUUID(),
@@ -282,6 +361,19 @@ const Residents = () => {
       status,
       pob,
       notes,
+      
+      // Các trường thông tin mới
+      native_place: nativePlace,
+      ethnicity,
+      religion,
+      nationality,
+      education_level: educationLevel,
+      military_service: militaryService,
+      health_insurance_number: healthInsuranceNumber,
+      has_health_insurance: hasHealthInsurance,
+      temporary_residence_expiry: dbExpiry || undefined,
+      association_membership: associationMembership,
+
       created_at: editingResident ? editingResident.created_at : new Date().toISOString()
     };
 
@@ -329,17 +421,24 @@ const Residents = () => {
       return;
     }
 
-    const headers = ['Họ tên', 'Giới tính', 'Ngày sinh', 'Thường trú', 'CCCD', 'SĐT', 'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Thường trú', 'Ghi chú'];
+    const headers = ['Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 'Ghi chú'];
     const rows = filteredResidents.map(r => [
       r.full_name,
       r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
       r.dob || '',
-      r.permanent_address || '',
       r.cccd || '',
       r.phone || '',
       r.relationship_with_head,
       r.occupation || '',
       r.pob || '',
+      r.native_place || '',
+      r.ethnicity || 'Kinh',
+      r.religion || 'Không',
+      r.nationality || 'Việt Nam',
+      r.education_level || '12/12',
+      r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
+      r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
+      r.temporary_residence_expiry || '',
       r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất',
       r.notes || ''
     ]);
@@ -352,7 +451,7 @@ const Residents = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const tdpName = localStorage.getItem('tdp_name') || 'nam_sam_son';
+    const tdpName = localStorage.getItem('tdp_name') || 'quang_giao';
     const filenameTdp = tdpName.toLowerCase().replace(/\s+/g, '_');
     link.setAttribute('href', url);
     link.setAttribute('download', `danh_sach_nhan_khau_${filenameTdp}_${new Date().toISOString().slice(0,10)}.csv`);
@@ -913,6 +1012,30 @@ const Residents = () => {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button 
                       className="icon-btn-sm" 
+                      onClick={() => {
+                        setSelectedResident(resident);
+                        setIsDetailOpen(true);
+                      }} 
+                      title="Xem lý lịch chi tiết"
+                      style={{ 
+                        border: '1px solid var(--border)', 
+                        background: '#f8fafc',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(15, 118, 110, 0.08)';
+                        e.currentTarget.style.borderColor = '#0f766e';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                      }}
+                    >
+                      <Eye size={14} style={{ color: '#0f766e' }} />
+                    </button>
+                    <button 
+                      className="icon-btn-sm" 
                       onClick={() => handleOpenEdit(resident)} 
                       title="Chỉnh sửa hồ sơ"
                       style={{ 
@@ -971,12 +1094,14 @@ const Residents = () => {
       {/* Add/Edit Modal */}
       {isFormOpen && (
         <div className="modal-overlay">
-          <div className="modal-content medium">
+          <div className="modal-content medium" style={{ maxWidth: '680px' }}>
             <div className="modal-header">
               <h2>{editingResident ? 'Chỉnh sửa nhân khẩu' : 'Thêm nhân khẩu mới'}</h2>
               <button className="close-btn" onClick={() => setIsFormOpen(false)}><X size={24} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="modal-form">
+            <form onSubmit={handleSubmit} className="modal-form" style={{ maxHeight: '75vh', overflowY: 'auto', paddingRight: '6px' }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '4px' }}>1. Thông tin lý lịch</h3>
+              
               <div className="form-row">
                 <div className="form-group">
                   <label>Họ và tên *</label>
@@ -1021,14 +1146,72 @@ const Residents = () => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Nơi sinh</label>
-                <input 
-                  type="text" 
-                  value={pob} 
-                  onChange={(e) => setPob(e.target.value)} 
-                  placeholder="Ví dụ: Xã Quảng Giao, Huyện Quảng Xương, Tỉnh Thanh Hóa" 
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Dân tộc</label>
+                  <input 
+                    type="text" 
+                    value={ethnicity} 
+                    onChange={(e) => setEthnicity(e.target.value)} 
+                    placeholder="Ví dụ: Kinh" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Tôn giáo</label>
+                  <input 
+                    type="text" 
+                    value={religion} 
+                    onChange={(e) => setReligion(e.target.value)} 
+                    placeholder="Ví dụ: Không, Phật giáo..." 
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Quốc tịch</label>
+                  <input 
+                    type="text" 
+                    value={nationality} 
+                    onChange={(e) => setNationality(e.target.value)} 
+                    placeholder="Ví dụ: Việt Nam" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Trình độ học vấn</label>
+                  <select value={educationLevel} onChange={(e) => setEducationLevel(e.target.value)}>
+                    <option value="12/12">12/12</option>
+                    <option value="Đại học">Đại học</option>
+                    <option value="Cao đẳng">Cao đẳng</option>
+                    <option value="Trung cấp">Trung cấp</option>
+                    <option value="Thạc sĩ">Thạc sĩ</option>
+                    <option value="Tiến sĩ">Tiến sĩ</option>
+                    <option value="Khác">Khác / Chưa đi học</option>
+                  </select>
+                </div>
+              </div>
+
+              <h3 style={{ margin: '16px 0 12px 0', fontSize: '0.95rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '4px' }}>2. Cư trú & Liên hệ</h3>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Nơi sinh</label>
+                  <input 
+                    type="text" 
+                    value={pob} 
+                    onChange={(e) => setPob(e.target.value)} 
+                    placeholder="Ví dụ: Xã Quảng Giao, Quảng Xương, Thanh Hóa" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Quê quán</label>
+                  <input 
+                    type="text" 
+                    value={nativePlace} 
+                    onChange={(e) => setNativePlace(e.target.value)} 
+                    placeholder="Ví dụ: Xã Quảng Giao, Quảng Xương, Thanh Hóa" 
+                  />
+                </div>
               </div>
 
               <div className="form-row">
@@ -1047,13 +1230,13 @@ const Residents = () => {
                     type="text" 
                     value={occupation} 
                     onChange={(e) => setOccupation(e.target.value)} 
-                    placeholder="Ví dụ: Công nhân, Kinh doanh" 
+                    placeholder="Ví dụ: Kinh doanh tự do, Hưu trí..." 
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Hộ gia đình liên kết</label>
+                <label>Hộ gia đình cư trú liên kết</label>
                 <select value={householdId} onChange={(e) => setHouseholdId(e.target.value)}>
                   <option value="">-- Chọn hộ dân cư trú --</option>
                   {households.map(h => {
@@ -1093,24 +1276,94 @@ const Residents = () => {
                 )}
               </div>
 
-              <div className="form-group">
-                <label>Trạng thái cư trú</label>
-                <select value={status} onChange={(e: any) => setStatus(e.target.value)}>
-                  <option value="resident">Thường trú</option>
-                  <option value="temporary_resident">Tạm trú</option>
-                  <option value="temporary_absent">Tạm vắng (Có đăng ký)</option>
-                  <option value="deceased">Đã qua đời</option>
-                </select>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Trạng thái cư trú</label>
+                  <select value={status} onChange={(e: any) => setStatus(e.target.value)}>
+                    <option value="resident">Thường trú</option>
+                    <option value="temporary_resident">Tạm trú</option>
+                    <option value="temporary_absent">Tạm vắng (Có đăng ký)</option>
+                    <option value="deceased">Đã qua đời</option>
+                  </select>
+                </div>
+                {status === 'temporary_resident' && (
+                  <div className="form-group">
+                    <label>Thời hạn tạm trú (dd/mm/yyyy)</label>
+                    <input 
+                      type="text" 
+                      value={temporaryResidenceExpiry} 
+                      onChange={handleExpiryChange} 
+                      placeholder="Ví dụ: 31/12/2026"
+                      maxLength={10}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
-                <label>Địa chỉ thường trú gốc (Nếu tạm trú)</label>
+                <label>Địa chỉ thường trú gốc (Nếu tạm trú / lưu trú)</label>
                 <input 
                   type="text" 
                   value={permanentAddress} 
                   onChange={(e) => setPermanentAddress(e.target.value)} 
-                  placeholder="Địa chỉ ghi trên sổ hộ khẩu" 
+                  placeholder="Địa chỉ ghi trên sổ hộ khẩu gốc" 
                 />
+              </div>
+
+              <h3 style={{ margin: '16px 0 12px 0', fontSize: '0.95rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '4px' }}>3. An sinh & Đoàn thể</h3>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Nghĩa vụ quân sự</label>
+                  <select value={militaryService} onChange={(e: any) => setMilitaryService(e.target.value)}>
+                    <option value="none">Không thuộc diện / Nữ</option>
+                    <option value="in_age">Trong độ tuổi gọi nhập ngũ (18-27)</option>
+                    <option value="serving">Đang phục vụ tại ngũ</option>
+                    <option value="completed">Đã hoàn thành nghĩa vụ quân sự</option>
+                    <option value="exempted">Tạm hoãn hoặc Miễn nghĩa vụ</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: '600' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={hasHealthInsurance} 
+                      onChange={(e) => setHasHealthInsurance(e.target.checked)} 
+                    />
+                    Đã có Bảo hiểm y tế (BHYT)
+                  </label>
+                  {hasHealthInsurance && (
+                    <input 
+                      type="text" 
+                      value={healthInsuranceNumber} 
+                      onChange={(e) => setHealthInsuranceNumber(e.target.value)} 
+                      placeholder="Mã số thẻ BHYT (nếu có)" 
+                      style={{ padding: '6px 10px', fontSize: '0.85rem' }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Thành viên Đoàn thể địa phương</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '8px 0', backgroundColor: '#f8fafc', borderRadius: '8px', paddingLeft: '12px', border: '1px solid var(--border)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                    <input type="checkbox" checked={hasAssociation('nct')} onChange={() => toggleAssociation('nct')} />
+                    Chi hội Người cao tuổi
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                    <input type="checkbox" checked={hasAssociation('ccb')} onChange={() => toggleAssociation('ccb')} />
+                    Chi hội Cựu chiến binh
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                    <input type="checkbox" checked={hasAssociation('pn')} onChange={() => toggleAssociation('pn')} />
+                    Chi hội Phụ nữ
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                    <input type="checkbox" checked={hasAssociation('dt')} onChange={() => toggleAssociation('dt')} />
+                    Chi đoàn Thanh niên
+                  </label>
+                </div>
               </div>
 
               <div className="form-group">
@@ -1119,15 +1372,132 @@ const Residents = () => {
                   value={notes} 
                   onChange={(e) => setNotes(e.target.value)} 
                   placeholder="Nhập thông tin ghi chú về nhân khẩu..." 
-                  style={{ height: '70px', resize: 'none', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
+                  style={{ height: '60px', resize: 'none', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
                 />
               </div>
 
-              <div className="form-actions">
+              <div className="form-actions" style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '16px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsFormOpen(false)}>Hủy bỏ</button>
                 <button type="submit" className="btn btn-primary">Lưu hồ sơ</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Detail View Modal */}
+      {isDetailOpen && selectedResident && (
+        <div className="modal-overlay">
+          <div className="modal-content medium" style={{ maxWidth: '680px' }}>
+            <div className="modal-header" style={{ borderBottom: '2px solid #0f766e', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="avatar-sm" style={{ width: '42px', height: '42px', fontSize: '1.2rem', backgroundColor: 'rgba(15, 118, 110, 0.1)', color: '#0f766e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                  {selectedResident.full_name.charAt(0)}
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.3rem', color: 'var(--text-main)' }}>{selectedResident.full_name}</h2>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Lý lịch trích ngang nhân khẩu</span>
+                </div>
+              </div>
+              <button className="close-btn" onClick={() => setIsDetailOpen(false)}><X size={24} /></button>
+            </div>
+            
+            <div className="detail-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px 0', maxHeight: '60vh', overflowY: 'auto' }}>
+              <div className="detail-section-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                
+                {/* Column 1 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#0f766e', borderBottom: '1px solid var(--border)', paddingBottom: '6px', fontWeight: '700' }}>Thông tin nhân thân</h3>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Tên gọi khác:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.other_name || '—'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Ngày sinh:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{formatToDisplayDate(selectedResident.dob)}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Giới tính:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.gender === 'male' ? 'Nam' : selectedResident.gender === 'female' ? 'Nữ' : 'Khác'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Dân tộc:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.ethnicity || 'Kinh'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Tôn giáo:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.religion || 'Không'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Quốc tịch:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.nationality || 'Việt Nam'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Nghề nghiệp:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.occupation || '—'}</span></div>
+                </div>
+
+                {/* Column 2 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#0f766e', borderBottom: '1px solid var(--border)', paddingBottom: '6px', fontWeight: '700' }}>Giấy tờ & Liên lạc</h3>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Số CCCD/Định danh:</span> <span className="val" style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedResident.cccd || 'Chưa cấp'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Số điện thoại:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.phone || '—'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Trình độ học vấn:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.education_level || '12/12'}</span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Nghĩa vụ quân sự:</span> <span className="val" style={{ color: 'var(--text-main)' }}>
+                    {selectedResident.military_service === 'in_age' ? 'Trong độ tuổi gọi nhập ngũ' : 
+                     selectedResident.military_service === 'serving' ? 'Đang phục vụ tại ngũ' :
+                     selectedResident.military_service === 'completed' ? 'Đã hoàn thành' :
+                     selectedResident.military_service === 'exempted' ? 'Được tạm hoãn hoặc miễn' : 'Không'}
+                  </span></div>
+                  <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Bảo hiểm y tế:</span> <span className="val" style={{ color: 'var(--text-main)' }}>
+                    {selectedResident.has_health_insurance ? `Đã có BHYT (Thẻ số: ${selectedResident.health_insurance_number || '—'})` : 'Chưa tham gia BHYT'}
+                  </span></div>
+                </div>
+              </div>
+
+              {/* Cư trú đầy đủ */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#0f766e', borderBottom: '1px solid var(--border)', paddingBottom: '6px', fontWeight: '700' }}>Thông tin Cư trú</h3>
+                <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Trạng thái cư trú:</span> <span className="val" style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>
+                  {selectedResident.status === 'resident' ? 'Thường trú' : 
+                   selectedResident.status === 'temporary_resident' ? 'Tạm trú' :
+                   selectedResident.status === 'temporary_absent' ? 'Tạm vắng (Đã đăng ký)' : 'Đã mất'}
+                </span></div>
+                {selectedResident.status === 'temporary_resident' && (
+                  <div className="detail-item" style={{ backgroundColor: '#f0fdfa', padding: '8px 12px', borderRadius: '6px', border: '1px dashed #5eead4', fontSize: '0.95rem' }}>
+                    <span className="label" style={{ color: '#0f766e', fontWeight: '600' }}>Thời hạn tạm trú đến ngày:</span> 
+                    <span className="val" style={{ color: '#0f766e', fontWeight: 'bold' }}>{selectedResident.temporary_residence_expiry ? formatToDisplayDate(selectedResident.temporary_residence_expiry) : 'Chưa cập nhật'}</span>
+                  </div>
+                )}
+                <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Hộ gia đình cư trú:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{getHouseholdAddress(selectedResident.household_id)} ({selectedResident.relationship_with_head})</span></div>
+                <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Nơi sinh:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.pob || '—'}</span></div>
+                <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Quê quán:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.native_place || '—'}</span></div>
+                <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Địa chỉ thường trú gốc:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.permanent_address || '—'}</span></div>
+              </div>
+
+              {/* Các hội đoàn thể tham gia */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '1rem', color: '#0f766e', borderBottom: '1px solid var(--border)', paddingBottom: '6px', fontWeight: '700' }}>Thành viên đoàn thể địa phương</h3>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '4px' }}>
+                  {selectedResident.association_membership ? selectedResident.association_membership.split(',').map((code) => {
+                    let label = '';
+                    if (code === 'nct') { label = 'Hội Người cao tuổi'; }
+                    else if (code === 'ccb') { label = 'Hội Cựu chiến binh'; }
+                    else if (code === 'pn') { label = 'Hội Liên hiệp Phụ nữ'; }
+                    else if (code === 'dt') { label = 'Đoàn Thanh niên'; }
+                    if (!label) return null;
+                    return (
+                      <span key={code} style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        backgroundColor: code === 'nct' ? '#dbeafe' : code === 'ccb' ? '#d1fae5' : code === 'pn' ? '#fce7f3' : '#e0f2fe',
+                        color: code === 'nct' ? '#1e40af' : code === 'ccb' ? '#065f46' : code === 'pn' ? '#9d174d' : '#0369a1'
+                      }}>
+                        {label}
+                      </span>
+                    );
+                  }) : <span style={{ fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.9rem' }}>Chưa đăng ký tham gia hội đoàn thể nào.</span>}
+                </div>
+              </div>
+
+              {/* Ghi chú */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <h3 style={{ margin: '0', fontSize: '1rem', color: '#0f766e', fontWeight: '700' }}>Ghi chú hành chính</h3>
+                <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem', color: 'var(--text-main)', minHeight: '50px', whiteSpace: 'pre-line' }}>
+                  {selectedResident.notes || 'Không có ghi chú nào.'}
+                </div>
+              </div>
+            </div>
+
+            <div className="form-actions" style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '0' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setIsDetailOpen(false)}>Đóng lại</button>
+              <button type="button" className="btn btn-primary" onClick={() => {
+                setIsDetailOpen(false);
+                handleOpenEdit(selectedResident);
+              }} style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', border: 'none', color: 'white' }}>Chỉnh sửa hồ sơ</button>
+            </div>
           </div>
         </div>
       )}

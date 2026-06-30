@@ -9,13 +9,16 @@ import {
   Calendar,
   X,
   Edit2,
-  Trash2
+  Trash2,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import type { FinancialRecord } from '../types';
+import type { FinancialRecord, Household, Resident, HouseholdFund } from '../types';
 
 const Finance = () => {
+  const currentYear = new Date().getFullYear();
   const isGuest = localStorage.getItem('guest_mode') === 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
@@ -31,10 +34,116 @@ const Finance = () => {
   const [recordedBy, setRecordedBy] = useState('Ban Quản lý');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
+  // Phân hệ Quản lý đóng quỹ mới bổ sung
+  const [subTab, setSubTab] = useState<'ledger' | 'funds'>('ledger');
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
+  const [fundYear, setFundYear] = useState<number>(new Date().getFullYear());
+
+  // Form đóng quỹ hộ dân
+  const [editingFund, setEditingFund] = useState<{ householdId: string, fundName: string } | null>(null);
+  const [fundAmountInput, setFundAmountInput] = useState<string>('');
+  const [fundNoteInput, setFundNoteInput] = useState<string>('');
+  const [fundDateInput, setFundDateInput] = useState<string>(new Date().toISOString().slice(0, 10));
+
+  const FUND_NAMES = [
+    'Quỹ Vì người nghèo',
+    'Quỹ Đền ơn đáp nghĩa',
+    'Quỹ Khuyến học',
+    'Quỹ Chăm sóc người cao tuổi',
+    'Phí vệ sinh môi trường'
+  ];
+
+  const getHouseholdHeadName = (hh: Household) => {
+    const head = residents.find(r => r.id === hh.head_of_household_id);
+    return head ? head.full_name : 'Hộ số: ' + hh.household_number;
+  };
+
+  const handleOpenFundPay = (hhId: string, fundName: string) => {
+    if (isGuest) {
+      showToast('Khách không có quyền sửa đổi dữ liệu thu quỹ!', 'warning');
+      return;
+    }
+    const existing = householdFunds.find(f => f.household_id === hhId && f.fund_name === fundName && f.year === fundYear);
+    setEditingFund({ householdId: hhId, fundName });
+    setFundAmountInput(existing ? existing.amount.toString() : '');
+    setFundNoteInput(existing ? existing.note || '' : '');
+    setFundDateInput(existing ? existing.paid_at || new Date().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+  };
+
+  const handleSaveFund = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFund) return;
+    const parsedAmount = parseInt(fundAmountInput);
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
+      showToast('Số tiền không hợp lệ!', 'warning');
+      return;
+    }
+
+    try {
+      const existing = householdFunds.find(f => f.household_id === editingFund.householdId && f.fund_name === editingFund.fundName && f.year === fundYear);
+      const targetId = existing ? existing.id : generateUUID();
+      const payload: HouseholdFund = {
+        id: targetId,
+        household_id: editingFund.householdId,
+        year: fundYear,
+        fund_name: editingFund.fundName,
+        amount: parsedAmount,
+        paid_at: fundDateInput,
+        note: fundNoteInput
+      };
+
+      await db.saveHouseholdFund(payload);
+      showToast('Ghi nhận đóng quỹ thành công!', 'success');
+      setEditingFund(null);
+      
+      // Đồng bộ sang sổ quỹ chung tự động để thay đổi trực quan số dư
+      const hh = households.find(h => h.id === editingFund.householdId);
+      const headName = hh ? getHouseholdHeadName(hh) : '';
+      const flagText = `[QUY_${targetId}]`;
+      const matchedGeneral = records.find(r => r.description.includes(flagText));
+
+      if (parsedAmount > 0) {
+        const generalRecord: FinancialRecord = {
+          id: matchedGeneral ? matchedGeneral.id : generateUUID(),
+          group_id: db.getGroupId(),
+          type: 'income',
+          amount: parsedAmount,
+          category: editingFund.fundName,
+          description: `Thu ${editingFund.fundName} - Hộ ${headName} ${flagText}`,
+          recorded_by: 'Hệ thống tự động',
+          date: fundDateInput,
+          created_at: matchedGeneral ? matchedGeneral.created_at : new Date().toISOString()
+        };
+        await db.saveFinancialRecord(generalRecord);
+      } else {
+        // Nếu số tiền bằng 0 và đã có bản ghi trong sổ quỹ chung trước đó -> Tiến hành xóa
+        if (matchedGeneral) {
+          await db.deleteFinancialRecord(matchedGeneral.id);
+        }
+        await db.deleteHouseholdFund(targetId);
+      }
+
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (err) {
+      showToast('Không thể ghi nhận đóng quỹ!', 'danger');
+    }
+  };
+
   const loadData = async () => {
     try {
       const list = await db.getFinancialRecords();
       setRecords(list);
+
+      // Tải dữ liệu hộ dân, nhân khẩu và trạng thái nộp quỹ
+      const hList = await db.getHouseholds();
+      const rList = await db.getResidents();
+      const fList = await db.getHouseholdFunds();
+      setHouseholds(hList);
+      setResidents(rList);
+      setHouseholdFunds(fList);
     } catch (e) {
       showToast('Lỗi tải dữ liệu tài chính!', 'danger');
     }
@@ -180,53 +289,20 @@ const Finance = () => {
           <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', flex: 1, minWidth: '280px' }}>
             Quản lý và công khai minh bạch tài chính của Tổ dân phố.
           </p>
-          <div className="header-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button 
-              className="btn btn-secondary" 
-              onClick={handleExportCSV}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#f0fdfa',
-                border: '1px solid #ccfbf1',
-                color: '#0f766e',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                height: 'auto',
-                minHeight: '36px',
-                fontSize: '0.85rem'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#ccfbf1';
-                e.currentTarget.style.borderColor = '#99f6e4';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = '#f0fdfa';
-                e.currentTarget.style.borderColor = '#ccfbf1';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <Download size={16} /> Sổ thu chi
-            </button>
-            {!isGuest && (
+          {subTab === 'ledger' && (
+            <div className="header-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button 
-                className="btn btn-primary" 
-                onClick={handleOpenAdd}
+                className="btn btn-secondary" 
+                onClick={handleExportCSV}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '8px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-                  boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-                  color: 'white',
-                  border: 'none',
+                  backgroundColor: '#f0fdfa',
+                  border: '1px solid #ccfbf1',
+                  color: '#0f766e',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -235,199 +311,475 @@ const Finance = () => {
                   fontSize: '0.85rem'
                 }}
                 onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#ccfbf1';
+                  e.currentTarget.style.borderColor = '#99f6e4';
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
                 }}
                 onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f0fdfa';
+                  e.currentTarget.style.borderColor = '#ccfbf1';
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
                 }}
               >
-                <Plus size={16} /> Lập phiếu mới
+                <Download size={16} /> Sổ thu chi
               </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="finance-stats">
-        <div className="finance-stat-card total">
-          <div className="stat-icon"><DollarSign size={24} /></div>
-          <div className="stat-details">
-             <span className="label">Số dư quỹ hiện tại</span>
-             <h2 className="value">{formatCurrency(balance)}</h2>
-          </div>
-        </div>
-        <div className="finance-stat-card income">
-          <div className="stat-icon"><TrendingUp size={24} /></div>
-          <div className="stat-details">
-             <span className="label">Tổng thu tích lũy</span>
-             <h2 className="value text-success">{formatCurrency(totalIncome)}</h2>
-          </div>
-        </div>
-        <div className="finance-stat-card expense">
-          <div className="stat-icon"><TrendingDown size={24} /></div>
-          <div className="stat-details">
-             <span className="label">Tổng chi tích lũy</span>
-             <h2 className="value text-danger">{formatCurrency(totalExpense)}</h2>
-          </div>
-        </div>
-      </div>
-
-      <div className="content-filters">
-        <div className="filter-tabs">
-          <button className={`tab ${activeType === 'all' ? 'active' : ''}`} onClick={() => setActiveType('all')}>Tất cả</button>
-          <button className={`tab ${activeType === 'income' ? 'active' : ''}`} onClick={() => setActiveType('income')}>Khoản thu</button>
-          <button className={`tab ${activeType === 'expense' ? 'active' : ''}`} onClick={() => setActiveType('expense')}>Khoản chi</button>
-        </div>
-        <div className="search-and-date">
-            <div className="search-mini">
-              <Search size={16} />
-              <input 
-                type="text" 
-                placeholder="Tìm nội dung, danh mục..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              {!isGuest && (
+                <button 
+                  className="btn btn-primary" 
+                  onClick={handleOpenAdd}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                    boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    height: 'auto',
+                    minHeight: '36px',
+                    fontSize: '0.85rem'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+                  }}
+                >
+                  <Plus size={16} /> Lập phiếu mới
+                </button>
+              )}
             </div>
-            <button className="date-filter"><Calendar size={16} /> Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</button>
+          )}
         </div>
       </div>
 
-      <div className="finance-table-wrapper">
-         <table className="data-table">
-            <thead>
-               <tr>
-                  <th>Ngày lập</th>
-                  <th>Nội dung</th>
-                  <th>Danh mục</th>
-                  <th>Người lập</th>
-                  <th style={{textAlign: 'right'}}>Số tiền</th>
-                  {!isGuest && <th style={{textAlign: 'right', paddingRight: '20px'}}>Hành động</th>}
-               </tr>
-            </thead>
-            <tbody>
-               {filteredRecords.map(t => (
-                  <tr key={t.id}>
-                     <td className="date-cell">{new Date(t.date).toLocaleDateString('vi-VN')}</td>
-                     <td className="title-cell">
-                        <div className={`type-indicator ${t.type}`}></div>
-                        {t.description}
-                     </td>
-                     <td><span className="category-tag">{t.category}</span></td>
-                     <td>{t.recorded_by}</td>
-                     <td className={`amount-cell ${t.type === 'income' ? 'success' : 'danger'}`}>
-                        {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
-                     </td>
-                     {!isGuest && (
-                       <td style={{textAlign: 'right', whiteSpace: 'nowrap', paddingRight: '16px'}}>
-                          <button 
-                            className="icon-btn-action edit-btn" 
-                            onClick={() => handleOpenEdit(t)}
-                            title="Chỉnh sửa phiếu"
-                            style={{marginRight: '6px'}}
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button 
-                            className="icon-btn-action delete-btn" 
-                            onClick={() => handleDelete(t.id)}
-                            title="Xóa phiếu"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                       </td>
-                     )}
-                  </tr>
-               ))}
-               {filteredRecords.length === 0 && (
-                 <tr>
-                   <td colSpan={6} style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)'}}>
-                     Không tìm thấy giao dịch nào.
-                   </td>
-                 </tr>
-               )}
-            </tbody>
-         </table>
+      {/* Điều hướng tab cấp 2 */}
+      <div className="finance-tabs-nav" style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--border)', marginBottom: '24px' }}>
+        <button 
+          className={`finance-tab-btn ${subTab === 'ledger' ? 'active' : ''}`}
+          onClick={() => setSubTab('ledger')}
+          style={{
+            padding: '10px 20px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: '700',
+            color: subTab === 'ledger' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: subTab === 'ledger' ? '3px solid var(--primary)' : '3px solid transparent',
+            transition: 'all 0.2s',
+            marginBottom: '-2px'
+          }}
+        >
+          Sổ quỹ thu chi
+        </button>
+        <button 
+          className={`finance-tab-btn ${subTab === 'funds' ? 'active' : ''}`}
+          onClick={() => setSubTab('funds')}
+          style={{
+            padding: '10px 20px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: '700',
+            color: subTab === 'funds' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: subTab === 'funds' ? '3px solid var(--primary)' : '3px solid transparent',
+            transition: 'all 0.2s',
+            marginBottom: '-2px'
+          }}
+        >
+          Quản lý thu Quỹ theo Hộ dân
+        </button>
       </div>
 
-      {/* New Voucher Modal */}
-      {isFormOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>{editingRecord ? 'Chỉnh sửa phiếu thu / chi' : 'Lập phiếu thu / chi mới'}</h2>
-              <button className="close-btn" onClick={() => setIsFormOpen(false)}><X size={24} /></button>
+      {subTab === 'ledger' ? (
+        <>
+          <div className="finance-stats">
+            <div className="finance-stat-card total">
+              <div className="stat-icon"><DollarSign size={24} /></div>
+              <div className="stat-details">
+                 <span className="label">Số dư quỹ hiện tại</span>
+                 <h2 className="value">{formatCurrency(balance)}</h2>
+              </div>
             </div>
-            <form onSubmit={handleSubmit} className="modal-form">
-              <div className="form-group">
-                <label>Loại phiếu *</label>
-                <select value={type} onChange={(e: any) => setType(e.target.value)}>
-                  <option value="income">Phiếu Thu (Cộng tiền vào quỹ)</option>
-                  <option value="expense">Phiếu Chi (Trừ tiền khỏi quỹ)</option>
-                </select>
+            <div className="finance-stat-card income">
+              <div className="stat-icon"><TrendingUp size={24} /></div>
+              <div className="stat-details">
+                 <span className="label">Tổng thu tích lũy</span>
+                 <h2 className="value text-success">{formatCurrency(totalIncome)}</h2>
               </div>
-
-              <div className="form-group">
-                <label>Số tiền (VND) *</label>
-                <input 
-                  type="number" 
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Ví dụ: 500000"
-                  required
-                />
+            </div>
+            <div className="finance-stat-card expense">
+              <div className="stat-icon"><TrendingDown size={24} /></div>
+              <div className="stat-details">
+                 <span className="label">Tổng chi tích lũy</span>
+                 <h2 className="value text-danger">{formatCurrency(totalExpense)}</h2>
               </div>
+            </div>
+          </div>
 
-              <div className="form-group">
-                <label>Danh mục quỹ *</label>
-                <input 
-                  type="text" 
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Ví dụ: Phí vệ sinh, Quỹ vận động, Thiết bị"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Nội dung chi tiết *</label>
-                <input 
-                  type="text" 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Ví dụ: Thu phí vệ sinh ngõ 45 quý 2"
-                  required
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Người lập phiếu</label>
+          <div className="content-filters">
+            <div className="filter-tabs">
+              <button className={`tab ${activeType === 'all' ? 'active' : ''}`} onClick={() => setActiveType('all')}>Tất cả</button>
+              <button className={`tab ${activeType === 'income' ? 'active' : ''}`} onClick={() => setActiveType('income')}>Khoản thu</button>
+              <button className={`tab ${activeType === 'expense' ? 'active' : ''}`} onClick={() => setActiveType('expense')}>Khoản chi</button>
+            </div>
+            <div className="search-and-date">
+                <div className="search-mini">
+                  <Search size={16} />
                   <input 
                     type="text" 
-                    value={recordedBy}
-                    onChange={(e) => setRecordedBy(e.target.value)}
-                    required
+                    placeholder="Tìm nội dung, danh mục..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Ngày ghi nhận</label>
-                  <input 
-                    type="date" 
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsFormOpen(false)}>Hủy bỏ</button>
-                <button type="submit" className="btn btn-primary">Lưu phiếu</button>
-              </div>
-            </form>
+                <button className="date-filter"><Calendar size={16} /> Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</button>
+            </div>
           </div>
+
+          <div className="finance-table-wrapper">
+             <table className="data-table">
+                <thead>
+                   <tr>
+                      <th>Ngày lập</th>
+                      <th>Nội dung</th>
+                      <th>Danh mục</th>
+                      <th>Người lập</th>
+                      <th style={{textAlign: 'right'}}>Số tiền</th>
+                      {!isGuest && <th style={{textAlign: 'right', paddingRight: '20px'}}>Hành động</th>}
+                   </tr>
+                </thead>
+                <tbody>
+                   {filteredRecords.map(t => (
+                      <tr key={t.id}>
+                         <td className="date-cell">{new Date(t.date).toLocaleDateString('vi-VN')}</td>
+                         <td className="title-cell">
+                            <div className={`type-indicator ${t.type}`}></div>
+                            {t.description}
+                         </td>
+                         <td><span className="category-tag">{t.category}</span></td>
+                         <td>{t.recorded_by}</td>
+                         <td className={`amount-cell ${t.type === 'income' ? 'success' : 'danger'}`}>
+                            {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                         </td>
+                         {!isGuest && (
+                           <td style={{textAlign: 'right', whiteSpace: 'nowrap', paddingRight: '16px'}}>
+                              <button 
+                                className="icon-btn-action edit-btn" 
+                                onClick={() => handleOpenEdit(t)}
+                                title="Chỉnh sửa phiếu"
+                                style={{marginRight: '6px'}}
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button 
+                                className="icon-btn-action delete-btn" 
+                                onClick={() => handleDelete(t.id)}
+                                title="Xóa phiếu"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                           </td>
+                         )}
+                      </tr>
+                   ))}
+                   {filteredRecords.length === 0 && (
+                     <tr>
+                       <td colSpan={6} style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)'}}>
+                         Không tìm thấy giao dịch nào.
+                       </td>
+                     </tr>
+                   )}
+                </tbody>
+             </table>
+          </div>
+
+          {/* New Voucher Modal */}
+          {isFormOpen && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h2>{editingRecord ? 'Chỉnh sửa phiếu thu / chi' : 'Lập phiếu thu / chi mới'}</h2>
+                  <button className="close-btn" onClick={() => setIsFormOpen(false)}><X size={24} /></button>
+                </div>
+                <form onSubmit={handleSubmit} className="modal-form">
+                  <div className="form-group">
+                    <label>Loại phiếu *</label>
+                    <select value={type} onChange={(e: any) => setType(e.target.value)}>
+                      <option value="income">Phiếu Thu (Cộng tiền vào quỹ)</option>
+                      <option value="expense">Phiếu Chi (Trừ tiền khỏi quỹ)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Số tiền (VND) *</label>
+                    <input 
+                      type="number" 
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="Ví dụ: 500000"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Danh mục quỹ *</label>
+                    <input 
+                      type="text" 
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      placeholder="Ví dụ: Phí vệ sinh, Quỹ vận động, Thiết bị"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Nội dung chi tiết *</label>
+                    <input 
+                      type="text" 
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Ví dụ: Thu phí vệ sinh ngõ 45 quý 2"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Người lập phiếu</label>
+                      <input 
+                        type="text" 
+                        value={recordedBy}
+                        onChange={(e) => setRecordedBy(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Ngày ghi nhận</label>
+                      <input 
+                        type="date" 
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-actions">
+                    <button type="button" className="btn btn-secondary" onClick={() => setIsFormOpen(false)}>Hủy bỏ</button>
+                    <button type="submit" className="btn btn-primary">Lưu phiếu</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="funds-matrix-view" style={{ animation: 'fadeIn 0.3s ease' }}>
+          {/* Top toolbar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Năm đóng quỹ:</label>
+              <select 
+                value={fundYear} 
+                onChange={(e) => setFundYear(parseInt(e.target.value))}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'white', fontWeight: '600', outline: 'none' }}
+              >
+                {[currentYear, currentYear - 1, currentYear - 2].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                Tổng thu quỹ địa phương {fundYear}: <strong style={{ color: 'var(--success)' }}>
+                  {formatCurrency(
+                    householdFunds
+                      .filter(f => f.year === fundYear)
+                      .reduce((sum, f) => sum + f.amount, 0)
+                  )}
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Matrix table */}
+          <div className="finance-table-wrapper" style={{ overflowX: 'auto' }}>
+            <table className="data-table" style={{ minWidth: '950px' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '250px' }}>Hộ gia đình / Chủ hộ</th>
+                  <th style={{ width: '130px', textAlign: 'right' }}>Tổng đã nộp</th>
+                  {FUND_NAMES.map((name, i) => (
+                    <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem' }}>{name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {households.map((hh) => {
+                  const headName = getHouseholdHeadName(hh);
+                  const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+                  const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+                  
+                  return (
+                    <tr key={hh.id}>
+                      <td>
+                        <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{headName}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>{hh.address}</div>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: '700', color: totalPaid > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                        {formatCurrency(totalPaid)}
+                      </td>
+                      {FUND_NAMES.map((fundName, idx) => {
+                        const paidFund = hhFunds.find(f => f.fund_name === fundName);
+                        const amountPaid = paidFund ? paidFund.amount : 0;
+                        
+                        return (
+                          <td key={idx} style={{ textAlign: 'center' }}>
+                            {amountPaid > 0 ? (
+                              <button 
+                                onClick={() => handleOpenFundPay(hh.id, fundName)}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '20px',
+                                  border: 'none',
+                                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                  color: 'var(--success)',
+                                  fontWeight: '700',
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.2)'; }}
+                                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'; }}
+                                title="Bấm để sửa đổi hoặc xóa"
+                              >
+                                {formatCurrency(amountPaid)}
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleOpenFundPay(hh.id, fundName)}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '20px',
+                                  border: '1px dashed var(--border)',
+                                  backgroundColor: '#f8fafc',
+                                  color: 'var(--text-muted)',
+                                  fontWeight: '600',
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                                onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                              >
+                                Chưa nộp
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+                {households.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                      Chưa có dữ liệu hộ gia đình nào để thu quỹ.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Matrix pay modal */}
+          {editingFund && (
+            <div className="modal-overlay">
+              <div className="modal-content" style={{ maxWidth: '420px' }}>
+                <div className="modal-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+                  <h2 style={{ fontSize: '1.15rem' }}>Ghi nhận thu Quỹ</h2>
+                  <button className="close-btn" onClick={() => setEditingFund(null)}><X size={20} /></button>
+                </div>
+                <form onSubmit={handleSaveFund} className="modal-form" style={{ paddingTop: '12px' }}>
+                  <div style={{ marginBottom: '16px', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hộ gia đình:</div>
+                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-main)', margin: '2px 0 6px' }}>
+                      {households.find(h => h.id === editingFund.householdId) ? getHouseholdHeadName(households.find(h => h.id === editingFund.householdId)!) : ''}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Khoản quỹ:</div>
+                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--primary)' }}>{editingFund.fundName} ({fundYear})</div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Số tiền đóng (VND) *</label>
+                    <input 
+                      type="number" 
+                      value={fundAmountInput}
+                      onChange={(e) => setFundAmountInput(e.target.value)}
+                      placeholder="Nhập số tiền đóng, ví dụ: 100000"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Ngày nộp *</label>
+                    <input 
+                      type="date" 
+                      value={fundDateInput}
+                      onChange={(e) => setFundDateInput(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Ghi chú</label>
+                    <input 
+                      type="text" 
+                      value={fundNoteInput}
+                      onChange={(e) => setFundNoteInput(e.target.value)}
+                      placeholder="Ví dụ: Ông A nộp trực tiếp..."
+                    />
+                  </div>
+
+                  <div className="form-actions" style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
+                    <button type="button" className="btn btn-secondary" onClick={() => setEditingFund(null)} style={{ flex: 1 }}>Hủy</button>
+                    {householdFunds.some(f => f.household_id === editingFund.householdId && f.fund_name === editingFund.fundName && f.year === fundYear) && (
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        onClick={async () => {
+                          if (window.confirm('Xóa ghi nhận đóng quỹ này? Số tiền sẽ được đưa về 0 và xóa khỏi sổ quỹ.')) {
+                            setFundAmountInput('0');
+                            setTimeout(() => {
+                              const submitBtn = document.getElementById('save-fund-submit-btn');
+                              if (submitBtn) submitBtn.click();
+                            }, 100);
+                          }
+                        }} 
+                        style={{ borderColor: 'var(--danger)', color: 'var(--danger)', background: 'none' }}
+                      >
+                        Xóa
+                      </button>
+                    )}
+                    <button type="submit" id="save-fund-submit-btn" className="btn btn-primary" style={{ flex: 1 }}>Lưu lại</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
