@@ -697,6 +697,13 @@ const Households = () => {
     const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
     
     return matchesSearch && matchesPolicy;
+  }).sort((a, b) => {
+    // Sắp xếp theo số của Số sổ hộ khẩu (vd: HH000001 -> 1)
+    const numA = parseInt(a.household_number.replace(/\D/g, '') || '0', 10);
+    const numB = parseInt(b.household_number.replace(/\D/g, '') || '0', 10);
+    if (numA !== numB) return numA - numB;
+    // Fallback nếu trùng số
+    return a.id.localeCompare(b.id);
   });
 
   const getPolicyLabel = (type: string) => {
