@@ -954,6 +954,13 @@ const App = () => {
         <section className="content-area">
           {renderContent()}
         </section>
+
+        {/* Footer chạy chữ */}
+        <div className="marquee-footer">
+          <div className="marquee-text">
+            Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.
+          </div>
+        </div>
       </main>
 
       {/* Settings Modal */}
