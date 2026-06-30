@@ -38,7 +38,8 @@ import {
   Settings,
   BrainCircuit,
   Star,
-  BookOpen
+  BookOpen,
+  Upload
 } from 'lucide-react';
 import './App.css';
 
@@ -456,6 +457,27 @@ const App = () => {
     } catch {
       setMissingTables([]);
     }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message: '❌ Kích thước ảnh quá lớn. Vui lòng chọn ảnh < 2MB', type: 'danger' }
+      }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      if (base64) {
+        setLogoUrlInput(base64);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleOpenSettings = () => {
@@ -1101,15 +1123,26 @@ const App = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Đường dẫn Logo (URL hình ảnh)</label>
-                  <input
-                    type="text"
-                    value={logoUrlInput}
-                    onChange={(e) => setLogoUrlInput(e.target.value)}
-                    placeholder="Ví dụ: https://.../logo.png"
-                  />
+                  <label>Logo (URL hình ảnh hoặc Tải lên)</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      value={logoUrlInput.length > 200 ? "Ảnh đã được tải lên từ máy tính" : logoUrlInput}
+                      onChange={(e) => setLogoUrlInput(e.target.value)}
+                      placeholder="Nhập URL hoặc tải ảnh..."
+                      style={{ flex: 1 }}
+                      disabled={logoUrlInput.length > 200}
+                    />
+                    <label className="btn btn-primary" style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+                      <Upload size={16} /> Tải ảnh
+                      <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={handleLogoUpload} style={{ display: 'none' }} />
+                    </label>
+                    {logoUrlInput && (
+                       <button type="button" className="btn btn-danger" onClick={() => setLogoUrlInput('')} style={{ padding: '8px 16px', fontSize: '0.85rem' }}>Xóa</button>
+                    )}
+                  </div>
                   <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
-                    * Để trống nếu muốn dùng biểu tượng mặc định.
+                    * Tải ảnh lên (tối đa 2MB) hoặc để trống dùng biểu tượng mặc định.
                   </span>
                 </div>
               </div>
