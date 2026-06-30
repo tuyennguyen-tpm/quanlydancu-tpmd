@@ -35,6 +35,7 @@ const Dashboard = () => {
     totalResidents: 0,
     policyHouseholds: 0,
     pendingComplaints: 0,
+    militaryEligibleCount: 0,
   });
 
   // Đọc tên Tổ dân phố từ localStorage (có thể được sửa từ phần Cấu hình)
@@ -79,11 +80,27 @@ const Dashboard = () => {
       const policyH = households.filter(h => h.policy_type && h.policy_type !== 'none').length;
       const pendingC = complaints.filter(c => c.status === 'pending').length;
 
+      // Tính số thanh niên nam 18-27 tuổi chưa nhập ngũ
+      const currentYear = new Date().getFullYear();
+      let militaryEligible = 0;
+      residents.forEach(r => {
+        if (r.gender === 'male' && r.dob) {
+          const birthYear = parseInt(r.dob.substring(0, 4));
+          const age = currentYear - birthYear;
+          if (age >= 18 && age <= 27) {
+            if (!r.military_service || r.military_service === 'none' || r.military_service === 'in_age') {
+              militaryEligible++;
+            }
+          }
+        }
+      });
+
       setStats({
         totalHouseholds: totalH,
         totalResidents: totalR,
         policyHouseholds: policyH,
         pendingComplaints: pendingC,
+        militaryEligibleCount: militaryEligible,
       });
 
       // 3. Calculate Funds
@@ -111,6 +128,18 @@ const Dashboard = () => {
 
       // 4. Aggregate Notifications
       const notifs: any[] = [];
+
+      // Thông báo NVQS
+      if (militaryEligible > 0) {
+        notifs.push({
+          id: `nvqs-alert`,
+          type: 'security',
+          text: `Có ${militaryEligible} nam thanh niên trong độ tuổi NVQS (18-27) chưa nhập ngũ.`,
+          time: new Date().toLocaleDateString('vi-VN'),
+          icon: AlertCircle,
+          status: 'pending'
+        });
+      }
 
       // Add recent complaints
       complaints.slice(0, 3).forEach(c => {

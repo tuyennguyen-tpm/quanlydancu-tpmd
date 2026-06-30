@@ -14,7 +14,8 @@ import {
   Users2,
   X,
   Printer,
-  Eye
+  Eye,
+  ShieldAlert
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -113,7 +114,7 @@ const Residents = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
@@ -484,6 +485,8 @@ const Residents = () => {
       filterSubtitle = 'Danh sách Người cao tuổi (≥80 tuổi)';
     } else if (categoryFilter === 'child') {
       filterSubtitle = 'Danh sách Trẻ em (<16 tuổi)';
+    } else if (categoryFilter === 'military') {
+      filterSubtitle = 'Danh sách Thanh niên trong độ tuổi Nghĩa vụ quân sự (18-27 tuổi)';
     }
 
     if (searchTerm.trim()) {
@@ -853,6 +856,8 @@ const Residents = () => {
       matchesCategory = age >= 80;
     } else if (categoryFilter === 'child') {
       matchesCategory = age < 16;
+    } else if (categoryFilter === 'military') {
+      matchesCategory = r.gender === 'male' && age >= 18 && age <= 27 && (!r.military_service || r.military_service === 'none' || r.military_service === 'in_age');
     }
 
     // Household filter matches
@@ -961,6 +966,12 @@ const Residents = () => {
               onClick={() => setCategoryFilter('child')}
             >
               <Baby size={16} /> Trẻ em (&lt;16)
+            </button>
+            <button 
+              className={`filter-btn ${categoryFilter === 'military' ? 'active' : ''}`}
+              onClick={() => setCategoryFilter('military')}
+            >
+              <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
             </button>
         </div>
       </div>
