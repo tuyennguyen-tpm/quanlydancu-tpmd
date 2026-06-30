@@ -23,6 +23,11 @@ import type { Resident, Household } from '../types';
 
 const parseCSV = (text: string) => {
   const lines: string[][] = [];
+  
+  // Tự động nhận diện dấu phân cách (Excel VN thường xuất dấu chấm phẩy)
+  const firstLine = text.split('\n')[0] || '';
+  const delimiter = firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
+  
   let row: string[] = [];
   let inQuotes = false;
   let entry = '';
@@ -38,7 +43,7 @@ const parseCSV = (text: string) => {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (c === ',' && !inQuotes) {
+    } else if (c === delimiter && !inQuotes) {
       row.push(entry.trim());
       entry = '';
     } else if ((c === '\r' || c === '\n') && !inQuotes) {
