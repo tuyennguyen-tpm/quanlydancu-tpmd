@@ -80,8 +80,9 @@ const App = () => {
   const [leaderName, setLeaderName] = useState(localStorage.getItem('leader_name') || 'Kim Tuyến');
   const [leaderPhone, setLeaderPhone] = useState(localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982');
   const [groupId, setGroupId] = useState(localStorage.getItem('group_id') || 'NAM_SAM_SON_01');
-  const [marqueeText, setMarqueeText] = useState(localStorage.getItem('marquee_text') || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.');
   const [logoUrl, setLogoUrl] = useState(localStorage.getItem('logo_url') || '');
+  const [supportName, setSupportName] = useState(localStorage.getItem('support_name') || 'Kim Tuyến');
+  const [supportPhone, setSupportPhone] = useState(localStorage.getItem('support_phone') || '0912 083 018 - 0899661982');
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -92,8 +93,9 @@ const App = () => {
   const [leaderNameInput, setLeaderNameInput] = useState(leaderName);
   const [leaderPhoneInput, setLeaderPhoneInput] = useState(leaderPhone);
   const [groupIdInput, setGroupIdInput] = useState(groupId);
-  const [marqueeTextInput, setMarqueeTextInput] = useState(marqueeText);
   const [logoUrlInput, setLogoUrlInput] = useState(logoUrl);
+  const [supportNameInput, setSupportNameInput] = useState(supportName);
+  const [supportPhoneInput, setSupportPhoneInput] = useState(supportPhone);
 
   // Password change states
   const [newPassword, setNewPassword] = useState('');
@@ -157,8 +159,9 @@ const App = () => {
         const newLeader = localStorage.getItem('leader_name') || 'Kim Tuyến';
         const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
         const newGroup = localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
-        const newMarquee = localStorage.getItem('marquee_text') || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.';
         const newLogoUrl = localStorage.getItem('logo_url') || '';
+        const newSupportName = localStorage.getItem('support_name') || 'Kim Tuyến';
+        const newSupportPhone = localStorage.getItem('support_phone') || '0912 083 018 - 0899661982';
         const newLatestVersion = localStorage.getItem('latest_app_version') || APP_VERSION;
         
         setTdpName(newTdp);
@@ -166,8 +169,9 @@ const App = () => {
         setLeaderName(newLeader);
         setLeaderPhone(newPhone);
         setGroupId(newGroup);
-        setMarqueeText(newMarquee);
         setLogoUrl(newLogoUrl);
+        setSupportName(newSupportName);
+        setSupportPhone(newSupportPhone);
         setLatestAppVersion(newLatestVersion);
         
         // Check for updates
@@ -458,8 +462,9 @@ const App = () => {
     setLeaderNameInput(leaderName);
     setLeaderPhoneInput(leaderPhone);
     setGroupIdInput(groupId);
-    setMarqueeTextInput(marqueeText);
     setLogoUrlInput(logoUrl);
+    setSupportNameInput(supportName);
+    setSupportPhoneInput(supportPhone);
     setTargetNghieoInput(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
     setTargetDapNghiaInput(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
     setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
@@ -502,10 +507,13 @@ const App = () => {
     setGroupId(newGroupId);
     window.dispatchEvent(new CustomEvent('group-id-changed'));
 
-    // Lưu dòng chữ chạy
-    const newMarquee = marqueeTextInput.trim() || 'Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.';
-    localStorage.setItem('marquee_text', newMarquee);
-    setMarqueeText(newMarquee);
+    // Lưu người hỗ trợ (Sidebar)
+    const newSupportName = supportNameInput.trim() || 'Kim Tuyến';
+    const newSupportPhone = supportPhoneInput.trim() || '0912 083 018 - 0899661982';
+    localStorage.setItem('support_name', newSupportName);
+    localStorage.setItem('support_phone', newSupportPhone);
+    setSupportName(newSupportName);
+    setSupportPhone(newSupportPhone);
 
     // Lưu logo
     const newLogo = logoUrlInput.trim();
@@ -549,7 +557,8 @@ const App = () => {
             { user_id: uId, key: 'leader_name', value: newLeaderName },
             { user_id: uId, key: 'leader_phone', value: newLeaderPhone },
             { user_id: uId, key: 'group_id', value: newGroupId },
-            { user_id: uId, key: 'marquee_text', value: newMarquee },
+            { user_id: uId, key: 'support_name', value: newSupportName },
+            { user_id: uId, key: 'support_phone', value: newSupportPhone },
             { user_id: uId, key: 'logo_url', value: newLogo },
             { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '15000000' },
             { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '10000000' },
@@ -819,8 +828,8 @@ const App = () => {
             boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.02)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
-              <span style={{ color: '#f8fafc', fontWeight: '700' }}>Kim Tuyến:</span>
-              <span style={{ color: '#60a5fa' }}>0912 083 018 - 0899661982</span>
+              <span style={{ color: '#f8fafc', fontWeight: '700' }}>{supportName}:</span>
+              <span style={{ color: '#60a5fa' }}>{supportPhone}</span>
             </div>
           </div>
         </div>
@@ -877,7 +886,7 @@ const App = () => {
         {/* Banner chạy chữ */}
         <div className="marquee-header">
           <div className="marquee-text">
-            {marqueeText}
+            Phần mềm được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến - 0912083018 / 0899661982 - TDP Quảng Giao.
           </div>
         </div>
         
@@ -1064,13 +1073,23 @@ const App = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Dòng chữ chạy (Banner)</label>
+                  <label>Tên người hỗ trợ (Sidebar)</label>
                   <input
                     type="text"
-                    value={marqueeTextInput}
-                    onChange={(e) => setMarqueeTextInput(e.target.value)}
-                    placeholder="Nhập nội dung dòng chữ chạy ở trên cùng..."
-                    maxLength={150}
+                    value={supportNameInput}
+                    onChange={(e) => setSupportNameInput(e.target.value)}
+                    placeholder="Ví dụ: Kim Tuyến"
+                    maxLength={50}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>SĐT người hỗ trợ (Sidebar)</label>
+                  <input
+                    type="text"
+                    value={supportPhoneInput}
+                    onChange={(e) => setSupportPhoneInput(e.target.value)}
+                    placeholder="Ví dụ: 0912 083 018 - 0899661982"
+                    maxLength={50}
                   />
                 </div>
                 <div className="form-group">
