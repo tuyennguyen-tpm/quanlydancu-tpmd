@@ -552,10 +552,14 @@ export const db = {
 
     if (supabase) {
       const uId = await getSessionUserId();
-      const payload = fullResidents.map(r => ({
-        ...r,
-        user_id: uId
-      }));
+      const payload = fullResidents.map(r => {
+        const { is_senior, ...rest } = r;
+        return {
+          ...rest,
+          user_id: uId,
+          household_id: rest.household_id || null
+        };
+      });
       
       const chunkSize = 500;
       for (let i = 0; i < payload.length; i += chunkSize) {
