@@ -1137,45 +1137,51 @@ const Residents = () => {
           if (isHead) {
             currentHouseholdId = mapToUUID((matched && matched.household_id) ? matched.household_id : generateUUID());
             const existingHh = currentHouseholds.find(h => h.id === currentHouseholdId);
-            const needsHhUpdate = matched && existingHh && csvHhNum && existingHh.household_number !== csvHhNum;
 
-            if (!matched || !matched.household_id || needsHhUpdate) {
-              householdsToSave.push({
-                id: currentHouseholdId,
-                household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
-                address: permAddress || (existingHh ? existingHh.address : ''),
-                head_of_household_id: residentId,
-                group_id: existingHh ? existingHh.group_id : 'default',
-                policy_type: existingHh ? existingHh.policy_type : 'none',
-                created_at: existingHh ? existingHh.created_at : new Date(Date.now() + i).toISOString()
-              } as Household);
-              if (!matched || !matched.household_id) {
-                isNewHousehold = true;
-                currentHouseholdNumber++;
-              }
+            const baseHh = existingHh || {
+              group_id: 'default',
+              policy_type: 'none'
+            };
+
+            householdsToSave.push({
+              ...baseHh,
+              id: currentHouseholdId,
+              household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
+              address: permAddress || (existingHh ? existingHh.address : ''),
+              head_of_household_id: residentId,
+              created_at: new Date(Date.now() + i * 1000).toISOString()
+            } as Household);
+
+            if (!matched || !matched.household_id) {
+              isNewHousehold = true;
+              currentHouseholdNumber++;
             }
           } else if (!currentHouseholdId) {
              currentHouseholdId = mapToUUID((matched && matched.household_id) ? matched.household_id : generateUUID());
              const existingHh = currentHouseholds.find(h => h.id === currentHouseholdId);
-             const needsHhUpdate = matched && existingHh && csvHhNum && existingHh.household_number !== csvHhNum;
 
-             if (!matched || !matched.household_id || needsHhUpdate) {
-               householdsToSave.push({
-                 id: currentHouseholdId,
-                 household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
-                 address: permAddress || (existingHh ? existingHh.address : ''),
-                 head_of_household_id: existingHh ? existingHh.head_of_household_id : null,
-                 group_id: existingHh ? existingHh.group_id : 'default',
-                 policy_type: existingHh ? existingHh.policy_type : 'none',
-                 created_at: existingHh ? existingHh.created_at : new Date(Date.now() + i).toISOString()
-               } as Household);
-               if (!matched || !matched.household_id) {
-                 currentHouseholdNumber++;
-               }
+             const baseHh = existingHh || {
+               group_id: 'default',
+               policy_type: 'none'
+             };
+
+             householdsToSave.push({
+               ...baseHh,
+               id: currentHouseholdId,
+               household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
+               address: permAddress || (existingHh ? existingHh.address : ''),
+               head_of_household_id: existingHh ? existingHh.head_of_household_id : null,
+               created_at: new Date(Date.now() + i * 1000).toISOString()
+             } as Household);
+
+             if (!matched || !matched.household_id) {
+               currentHouseholdNumber++;
              }
           }
 
-          const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
+          const baseResident = matched || {};
+          const payload: Resident = {
+            ...baseResident,
             id: residentId,
             household_id: currentHouseholdId,
             full_name: fullName,
@@ -1190,8 +1196,8 @@ const Residents = () => {
             status: status || (matched ? matched.status : 'resident'),
             permanent_address: permAddress || (matched ? matched.permanent_address : ''),
             notes: notes || (matched ? matched.notes : ''),
-            created_at: matched ? matched.created_at : new Date(Date.now() + i).toISOString()
-          };
+            created_at: new Date(Date.now() + i * 1000).toISOString()
+          } as Resident;
 
           residentsToSave.push(payload as Resident);
 
@@ -1286,9 +1292,11 @@ const Residents = () => {
       matchesHousehold = r.household_id === householdFilter;
     }
 
-    // Deceased filter matches (Ẩn người đã mất nếu showDeceased là false)
+    // Deceased filter matches (Bật checkbox showDeceased sẽ CHỈ hiện người đã mất)
     let matchesDeceased = true;
-    if (!showDeceased) {
+    if (showDeceased) {
+      matchesDeceased = r.status === 'deceased';
+    } else {
       matchesDeceased = r.status !== 'deceased';
     }
 
@@ -1296,7 +1304,17 @@ const Residents = () => {
   }).sort((a, b) => {
     // Nhóm theo hộ gia đình (sắp xếp cùng hộ ở cạnh nhau)
     if (a.household_id !== b.household_id) {
-      return (a.household_id || '').localeCompare(b.household_id || '');
+      const idA = a.household_id || '';
+      const idB = b.household_id || '';
+      if (idA && idB) {
+        const hhA = households.find(h => h.id === idA);
+        const hhB = households.find(h => h.id === idB);
+        if (hhA && hhB) {
+          const comp = (hhA.created_at || '').localeCompare(hhB.created_at || '');
+          if (comp !== 0) return comp;
+        }
+      }
+      return idA.localeCompare(idB);
     }
     // Trong cùng hộ: chủ hộ lên đầu
     if (a.is_head && !b.is_head) return -1;
@@ -1414,7 +1432,7 @@ const Residents = () => {
               style={{ cursor: 'pointer', width: '16px', height: '16px', margin: 0 }}
             />
             <label htmlFor="show-deceased-checkbox" style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600', cursor: 'pointer', userSelect: 'none', margin: 0 }}>
-              🕯️ Hiện người đã mất {residents.filter(r => r.status === 'deceased').length > 0 && (
+              🕯️ Chỉ hiện người đã mất {residents.filter(r => r.status === 'deceased').length > 0 && (
                 <span style={{ backgroundColor: '#ef4444', color: 'white', borderRadius: '10px', padding: '1px 7px', fontSize: '0.75rem', marginLeft: '4px' }}>
                   {residents.filter(r => r.status === 'deceased').length}
                 </span>
