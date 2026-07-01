@@ -1283,6 +1283,16 @@ const Residents = () => {
     }
 
     return matchesSearch && matchesCategory && matchesHousehold && matchesDeceased;
+  }).sort((a, b) => {
+    // Nhóm theo hộ gia đình (sắp xếp cùng hộ ở cạnh nhau)
+    if (a.household_id !== b.household_id) {
+      return (a.household_id || '').localeCompare(b.household_id || '');
+    }
+    // Trong cùng hộ: chủ hộ lên đầu
+    if (a.is_head && !b.is_head) return -1;
+    if (!a.is_head && b.is_head) return 1;
+    // Sau đó theo ngày thêm vào (created_at)
+    return (a.created_at || '').localeCompare(b.created_at || '');
   });
 
   const getHouseholdAddress = (hId: string) => {

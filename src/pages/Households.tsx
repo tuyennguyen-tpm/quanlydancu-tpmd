@@ -214,7 +214,15 @@ const Households = () => {
   }, [households, residents]);
 
   const getHouseholdMembers = (hId: string) => {
-    return residents.filter(r => r.household_id === hId);
+    return residents
+      .filter(r => r.household_id === hId)
+      .sort((a, b) => {
+        // Chủ hộ luôn lên đầu
+        if (a.is_head && !b.is_head) return -1;
+        if (!a.is_head && b.is_head) return 1;
+        // Còn lại sắp xếp theo ngày thêm (created_at)
+        return (a.created_at || '').localeCompare(b.created_at || '');
+      });
   };
 
   const getHeadName = (h: Household) => {
