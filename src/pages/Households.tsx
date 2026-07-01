@@ -528,6 +528,34 @@ const Households = () => {
     }
   };
 
+  const handleReportDeceased = async (member: Resident) => {
+    const confirm = window.confirm(`Bạn có chắc chắn muốn xác nhận nhân khẩu ${member.full_name} đã mất? Hệ thống sẽ cập nhật trạng thái của họ và bỏ vai trò chủ hộ nếu có.`);
+    if (!confirm) return;
+    try {
+      const updatedResident: Resident = {
+        ...member,
+        status: 'deceased',
+        is_head: false
+      };
+      await db.saveResident(updatedResident);
+
+      const hh = households.find(h => h.id === member.household_id);
+      if (hh && hh.head_of_household_id === member.id) {
+        await db.saveHousehold({
+          ...hh,
+          head_of_household_id: null
+        });
+      }
+
+      showToast(`Đã ghi nhận báo mất cho nhân khẩu ${member.full_name} thành công!`, 'success');
+      setViewingMembersHousehold(null);
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Lỗi khi thực hiện báo mất!', 'danger');
+    }
+  };
+
   const handlePrintHousehold = (h: Household) => {
     const members = getHouseholdMembers(h.id);
     const headName = getHeadName(h);
@@ -1302,6 +1330,16 @@ const Households = () => {
                             >
                               Tách hộ
                             </button>
+                            {member.status !== 'deceased' && (
+                              <button 
+                                className="btn btn-secondary" 
+                                style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', border: '1px solid #fee2e2', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '4px' }}
+                                onClick={() => handleReportDeceased(member)}
+                                title="Báo nhân khẩu này đã mất"
+                              >
+                                Báo mất
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}
