@@ -1016,20 +1016,27 @@ const Residents = () => {
                   return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
                 }
               }
-              if (parts[2].length === 4) {
+              if (parts[2].length === 4 || parts[2].length === 2 || parts[2].length === 3) {
                 let d = parseInt(parts[0], 10);
                 let m = parseInt(parts[1], 10);
-                const y = parseInt(parts[2], 10);
+                let y = parseInt(parts[2], 10);
                 if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
                   if (m > 12) {
                     const temp = d;
                     d = m;
                     m = temp;
                   }
+                  
+                  if (y === 60 || y === 160) y = 1960;
+                  else if (y === 0 || y === 200 || y === 2) y = 2000;
+                  else if (y < 100) {
+                    y = y >= 30 ? 1900 + y : 2000 + y;
+                  }
+                  
                   if (m >= 1 && m <= 12) {
                     const daysInMonth = new Date(y, m, 0).getDate();
                     const finalD = d > daysInMonth ? daysInMonth : d;
-                    return `${y}-${m.toString().padStart(2, '0')}-${finalD.toString().padStart(2, '0')}`;
+                    return `${y.toString().padStart(4, '0')}-${m.toString().padStart(2, '0')}-${finalD.toString().padStart(2, '0')}`;
                   }
                 }
               }
@@ -1086,12 +1093,27 @@ const Residents = () => {
             const normCsvName = cleanNameStr(fullName);
             const isNameMatch = normDbName === normCsvName;
 
-            const isDbDobEmpty = !r.dob || r.dob === '2000-01-01';
-            const isCsvDobEmpty = !rawDob;
+            const normalizeYearInDate = (dStr: string) => {
+              if (!dStr) return '';
+              const pts = dStr.split('-');
+              if (pts.length === 3) {
+                let y = parseInt(pts[0], 10);
+                if (y === 160 || y === 60) y = 1960;
+                if (y === 200 || y === 0 || y === 2) y = 2000;
+                return `${y.toString().padStart(4, '0')}-${pts[1]}-${pts[2]}`;
+              }
+              return dStr;
+            };
+
+            const cleanDbDob = normalizeYearInDate(r.dob);
+            const cleanCsvDob = normalizeYearInDate(dob);
+
+            const isDbDobEmpty = !r.dob || r.dob === '2000-01-01' || cleanDbDob === '2000-01-01';
+            const isCsvDobEmpty = !rawDob || cleanCsvDob === '2000-01-01';
 
             if (isNameMatch) {
               if (isDbDobEmpty && isCsvDobEmpty) return true;
-              return r.dob === dob;
+              return cleanDbDob === cleanCsvDob;
             }
             return false;
           });
