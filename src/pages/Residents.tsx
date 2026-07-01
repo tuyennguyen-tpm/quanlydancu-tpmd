@@ -1078,6 +1078,7 @@ const Residents = () => {
 
         let currentHouseholdId = '';
         let currentHouseholdNumber = Date.now();
+        let lastCsvHhNum = '';
 
         // 1. Phân tích để tìm dòng tiêu đề (Header Row)
         let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10, hhNumIdx = -1, deathDateIdx = -1;
@@ -1280,6 +1281,11 @@ const Residents = () => {
           const residentId = mapToUUID(matched ? matched.id : generateUUID());
           const csvHhNum = hhNumIdx !== -1 ? row[hhNumIdx]?.trim() : '';
 
+          if (csvHhNum && csvHhNum !== lastCsvHhNum) {
+            currentHouseholdId = '';
+            lastCsvHhNum = csvHhNum;
+          }
+
           // Xử lý tạo và nhóm hộ gia đình tự động
           let isNewHousehold = false;
           if (isHead) {
@@ -1459,8 +1465,9 @@ const Residents = () => {
         const hhA = households.find(h => h.id === idA);
         const hhB = households.find(h => h.id === idB);
         if (hhA && hhB) {
-          const comp = (hhA.created_at || '').localeCompare(hhB.created_at || '');
-          if (comp !== 0) return comp;
+          const timeA = new Date(hhA.created_at || 0).getTime();
+          const timeB = new Date(hhB.created_at || 0).getTime();
+          if (timeA !== timeB) return timeA - timeB;
         }
       }
       return idA.localeCompare(idB);
@@ -1469,7 +1476,9 @@ const Residents = () => {
     if (a.is_head && !b.is_head) return -1;
     if (!a.is_head && b.is_head) return 1;
     // Sau đó theo ngày thêm vào (created_at)
-    return (a.created_at || '').localeCompare(b.created_at || '');
+    const timeA = new Date(a.created_at || 0).getTime();
+    const timeB = new Date(b.created_at || 0).getTime();
+    return timeA - timeB;
   });
 
   const getHouseholdAddress = (hId: string) => {
