@@ -370,6 +370,21 @@ const Households = () => {
               if (member.id === editingHousehold.head_of_household_id || updatedRelationship.toLowerCase() === 'chủ hộ') {
                 newRel = member.gender === 'female' ? 'Bà' : 'Ông';
               }
+            } else if (prevRel === 'bố' || prevRel === 'mẹ') {
+              // Chủ hộ mới trước đây là Bố hoặc Mẹ của chủ hộ cũ (quay lại hộ cũ)
+              if (member.id === editingHousehold.head_of_household_id || updatedRelationship.toLowerCase() === 'chủ hộ') {
+                newRel = 'Con';
+              } else if (updatedRelationship.toLowerCase() === 'mẹ' && prevRel === 'bố') {
+                newRel = 'Vợ';
+              } else if (updatedRelationship.toLowerCase() === 'bố' && prevRel === 'mẹ') {
+                newRel = 'Chồng';
+              } else if (
+                updatedRelationship.toLowerCase() === 'anh' ||
+                updatedRelationship.toLowerCase() === 'chị' ||
+                updatedRelationship.toLowerCase() === 'em'
+              ) {
+                newRel = 'Con';
+              }
             }
 
             if (member.is_head || updatedRelationship !== newRel) {
