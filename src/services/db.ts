@@ -75,11 +75,7 @@ const seedFinancialRecords: FinancialRecord[] = [
   { id: 'F004', group_id: 'NAM_SAM_SON_01', type: 'expense', amount: 1000000, category: 'An sinh', description: 'Hỗ trợ tang lễ hộ khó khăn', recorded_by: 'Nguyễn Kim Tuyến', date: '2026-06-01', created_at: '2026-06-01T08:00:00Z' },
 ];
 
-const seedComplaints: Complaint[] = [
-  { id: 'C001', resident_id: 'R001', resident_name: 'Nguyễn Kim Tuyến', content: 'Đèn đường ngõ 45 bị hỏng hơn 1 tuần nay chưa thấy ai sửa.', status: 'pending', response: '', date: '2026-06-12', created_at: '2026-06-12T07:30:00Z' },
-  { id: 'C002', resident_id: 'R005', resident_name: 'Trần Thị Năm', content: 'Rác thải tập kết không đúng nơi quy định tại khu vực cổng tổ gây mùi hôi thối.', status: 'resolved', response: 'Đã cho ban vệ sinh dọn dẹp và đặt biển cấm đổ rác tại cổng tổ.', date: '2026-06-11', created_at: '2026-06-11T14:00:00Z' },
-  { id: 'C003', resident_id: 'R007', resident_name: 'Trần Văn Hải', content: 'Đợt tiêm chủng tiếp theo cần thông báo sớm cho bà con sắp xếp thời gian.', status: 'processing', response: 'Đã tiếp nhận ý kiến, sẽ soạn thông báo sớm 3 ngày trước khi tiêm.', date: '2026-06-08', created_at: '2026-06-08T09:15:00Z' },
-];
+const seedComplaints: Complaint[] = [];
 
 const seedMeetings: Meeting[] = [
   { id: 'M001', group_id: 'NAM_SAM_SON_01', title: 'Họp bàn phương án bê tông hóa ngõ 47', content: 'Thảo luận đóng góp kinh phí và nhân công của các hộ gia đình ngõ 47 để bê tông hóa đường ngõ.', date: '2026-06-15T19:30:00Z', location: 'Nhà văn hóa tổ', attendance_count: 0, created_at: '2026-06-01T10:00:00Z' },
@@ -92,21 +88,11 @@ const seedDocuments: Document[] = [
   { id: 'D003', group_id: 'NAM_SAM_SON_01', title: 'Kế hoạch tổ chức Tết thiếu nhi 1/6 cho trẻ em trong tổ', type: 'plan', file_url: '#', uploaded_at: '2026-05-20T00:00:00Z' },
 ];
 
-const seedSecurityLogs: SecurityLog[] = [
-  { id: 'S001', title: 'Phát hiện mất trộm xe đạp hộ bà Năm', description: 'Bà Năm báo mất xe đạp mini cất ở sân ngõ 45 lúc tối. Đã báo công an phường phối hợp trích xuất camera giám sát.', date: '2026-06-10', type: 'alert' },
-  { id: 'S002', title: 'Tuần tra đêm địa bàn Tổ dân phố', description: 'Tổ tự quản gồm 3 đồng chí đã tuần tra các ngõ ngách từ 21h-23h. Không phát hiện sự cố, an ninh ổn định.', date: '2026-06-12', type: 'ok' },
-];
+const seedSecurityLogs: SecurityLog[] = [];
 
-const seedEnvironmentLogs: EnvironmentLog[] = [
-  { id: 'E001', area: 'Khu vực ngõ 45', status: 'ok', last_cleaned: '2026-06-12' },
-  { id: 'E002', area: 'Khu vực nhà văn hóa', status: 'warning', last_cleaned: '2026-06-05' },
-  { id: 'E003', area: 'Khu vực ngõ 47', status: 'ok', last_cleaned: '2026-06-11' },
-];
+const seedEnvironmentLogs: EnvironmentLog[] = [];
 
-const seedPolicyActivities: PolicyActivity[] = [
-  { id: 'P-1', title: 'Phát gạo hỗ trợ cho hộ nghèo', desc: 'Cấp phát 20kg gạo/hộ tại Nhà văn hóa tổ.', targetGroup: 'poor', date: '2026-06-20' },
-  { id: 'P-2', title: 'Thăm hỏi chúc thọ người cao tuổi ốm đau', desc: 'Thăm hỏi cụ Nguyễn Văn X (85 tuổi) đang nằm viện điều trị.', targetGroup: 'seniors', date: '2026-06-15' },
-];
+const seedPolicyActivities: PolicyActivity[] = [];
 
 // Helper functions for LocalStorage
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
