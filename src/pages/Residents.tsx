@@ -1031,11 +1031,29 @@ const Residents = () => {
           const notes = notesIdx !== -1 ? row[notesIdx]?.trim() : '';
           const isHead = relWithHead.toLowerCase().includes('chủ hộ') || relWithHead.toLowerCase() === 'chủ' || relWithHead.toLowerCase() === 'bản thân';
 
-          // Đối chiếu xem nhân khẩu đã tồn tại hay chưa dựa trên Họ tên + Ngày sinh
-          const matched = currentResidents.find(r => 
-            r.full_name.toLowerCase().trim() === fullName.toLowerCase().trim() && 
-            r.dob === dob
-          );
+          // Đối chiếu xem nhân khẩu đã tồn tại hay chưa (ưu tiên CCCD, sau đó tới Họ tên + Ngày sinh)
+          const matched = currentResidents.find(r => {
+            // 1. Đối chiếu theo số CCCD (nếu cả hai đều có và không rỗng)
+            const cleanCsvCccd = cccd ? cccd.trim() : '';
+            const cleanDbCccd = r.cccd ? r.cccd.trim() : '';
+            if (cleanCsvCccd !== '' && cleanDbCccd !== '') {
+              if (cleanCsvCccd === cleanDbCccd) return true;
+            }
+
+            // 2. Đối chiếu bằng Họ tên + Ngày sinh (đã chuẩn hóa khoảng trắng)
+            const normDbName = r.full_name.toLowerCase().replace(/\s+/g, ' ').trim();
+            const normCsvName = fullName.toLowerCase().replace(/\s+/g, ' ').trim();
+            const isNameMatch = normDbName === normCsvName;
+
+            const isDbDobEmpty = !r.dob || r.dob === '2000-01-01';
+            const isCsvDobEmpty = !rawDob;
+
+            if (isNameMatch) {
+              if (isDbDobEmpty && isCsvDobEmpty) return true;
+              return r.dob === dob;
+            }
+            return false;
+          });
 
           const residentId = mapToUUID(matched ? matched.id : generateUUID());
           const csvHhNum = hhNumIdx !== -1 ? row[hhNumIdx]?.trim() : '';
