@@ -615,32 +615,51 @@ const Residents = () => {
       return;
     }
 
-    const headers = ['Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Thường trú', 'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 'Ghi chú'];
+    const headers = [
+      'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Thường trú', 
+      'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
+      'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
+      'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
+    ];
     const rows = filteredResidents.map(r => {
       const hh = households.find(h => h.id === r.household_id);
       const hhNum = hh ? hh.household_number : '';
+      
+      // Tính tuổi khi mất nếu đã mất và có ngày sinh + ngày mất
+      let ageAtDeath = '';
+      if (r.status === 'deceased' && r.dob && r.death_date) {
+        const birthYear = new Date(r.dob).getFullYear();
+        const deathYear = new Date(r.death_date).getFullYear();
+        if (birthYear > 0 && deathYear > 0) {
+          ageAtDeath = (deathYear - birthYear).toString();
+        }
+      }
+
       return [
-      hhNum ? `\t${hhNum}` : '',
-      r.full_name,
-      r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
-      r.dob ? `\t${formatToDisplayDate(r.dob)}` : '',
-      r.cccd ? `\t${r.cccd}` : '',
-      r.phone ? `\t${r.phone}` : '',
-      r.permanent_address || '',
-      r.relationship_with_head,
-      r.occupation || '',
-      r.pob || '',
-      r.native_place || '',
-      r.ethnicity || 'Kinh',
-      r.religion || 'Không',
-      r.nationality || 'Việt Nam',
-      r.education_level ? `\t${r.education_level}` : '\t12/12',
-      r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
-      r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
-      r.temporary_residence_expiry ? `\t${formatToDisplayDate(r.temporary_residence_expiry)}` : '',
-      r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất',
-      r.notes || ''
-    ]});
+        hhNum ? `\t${hhNum}` : '',
+        r.full_name,
+        r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
+        r.dob ? `\t${formatToDisplayDate(r.dob)}` : '',
+        r.cccd ? `\t${r.cccd}` : '',
+        r.phone ? `\t${r.phone}` : '',
+        r.permanent_address || '',
+        r.relationship_with_head,
+        r.occupation || '',
+        r.pob || '',
+        r.native_place || '',
+        r.ethnicity || 'Kinh',
+        r.religion || 'Không',
+        r.nationality || 'Việt Nam',
+        r.education_level ? `\t${r.education_level}` : '\t12/12',
+        r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
+        r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
+        r.temporary_residence_expiry ? `\t${formatToDisplayDate(r.temporary_residence_expiry)}` : '',
+        r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : r.status === 'stay' ? 'Lưu trú' : 'Đã mất',
+        r.status === 'deceased' && r.death_date ? `\t${formatToDisplayDate(r.death_date)}` : '',
+        ageAtDeath,
+        r.notes || ''
+      ];
+    });
 
     const csvContent = '\uFEFF' + [
       headers.join(','),
@@ -963,7 +982,7 @@ const Residents = () => {
         let currentHouseholdNumber = Date.now();
 
         // 1. Phân tích để tìm dòng tiêu đề (Header Row)
-        let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10, hhNumIdx = -1;
+        let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10, hhNumIdx = -1, deathDateIdx = -1;
         
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(5, rows.length); i++) {
@@ -996,6 +1015,7 @@ const Residents = () => {
           statusIdx = findIdx(['trạng thái', 'cư trú', 'status'], -1);
           notesIdx = findIdx(['ghi chú', 'note'], -1);
           hhNumIdx = findIdx(['sổ hộ khẩu', 'mã hộ', 'số hộ'], -1);
+          deathDateIdx = findIdx(['ngày mất', 'ngày qua đời', 'death_date', 'mất'], -1);
         } else if (rows.length > 0) {
           const firstData = rows[0].map(c => (typeof c === 'string' ? c.toLowerCase().trim() : ''));
           
@@ -1015,6 +1035,7 @@ const Residents = () => {
           phoneIdx = findByRegex(/^\d{10,11}$/, -1);
           addressIdx = -1;
           hhNumIdx = -1;
+          deathDateIdx = -1;
           
           const usedIndices = [genderIdx, relIdx, dobIdx, cccdIdx];
           const possibleNameIdx = firstData.findIndex((c, idx) => c.length > 3 && !usedIndices.includes(idx) && !/^\d/.test(c));
@@ -1100,11 +1121,14 @@ const Residents = () => {
           const relWithHead = row[relIdx]?.trim() || 'Con';
           const occupation = occIdx !== -1 ? row[occIdx]?.trim() : '';
           const pob = pobIdx !== -1 ? row[pobIdx]?.trim() : '';
+          const csvDeathDate = deathDateIdx !== -1 ? row[deathDateIdx]?.trim() : '';
+          const deathDateParsed = csvDeathDate ? parseDateString(csvDeathDate) : '';
+
           const csvStatus = statusIdx !== -1 ? row[statusIdx]?.trim().toLowerCase() : '';
           const status = csvStatus.includes('thường trú') ? 'resident' :
                          csvStatus.includes('tạm trú') ? 'temporary_resident' :
                          csvStatus.includes('tạm vắng') ? 'temporary_absent' :
-                         csvStatus.includes('mất') || csvStatus.includes('deceased') ? 'deceased' : 'resident';
+                         (csvStatus.includes('mất') || csvStatus.includes('deceased') || deathDateParsed) ? 'deceased' : 'resident';
           const notes = notesIdx !== -1 ? row[notesIdx]?.trim() : '';
           const isHead = relWithHead.toLowerCase().includes('chủ hộ') || relWithHead.toLowerCase() === 'chủ' || relWithHead.toLowerCase() === 'bản thân';
 
@@ -1222,6 +1246,7 @@ const Residents = () => {
             status: status || (matched ? matched.status : 'resident'),
             permanent_address: permAddress || (matched ? matched.permanent_address : ''),
             notes: notes || (matched ? matched.notes : ''),
+            death_date: deathDateParsed || (matched ? matched.death_date : undefined),
             created_at: new Date(Date.now() + i * 1000).toISOString()
           } as Resident;
 
