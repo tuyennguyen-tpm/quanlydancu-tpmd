@@ -128,6 +128,12 @@ const Complaints = () => {
     return matchesStatus && matchesSearch;
   });
 
+  const sortedComplaints = [...filteredComplaints].sort((a, b) => {
+    const dateA = new Date(a.created_at || a.date).getTime();
+    const dateB = new Date(b.created_at || b.date).getTime();
+    return dateB - dateA;
+  });
+
   const getStatusLabel = (s: string) => {
     switch (s) {
       case 'pending': return 'Đang chờ';
@@ -197,7 +203,7 @@ const Complaints = () => {
       </div>
 
       <div className="complaints-list">
-         {filteredComplaints.map(c => (
+         {sortedComplaints.map(c => (
             <div key={c.id} className="complaint-card">
                <div className="c-left">
                   <div className="c-user">{c.resident_name.charAt(0)}</div>

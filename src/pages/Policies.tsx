@@ -126,6 +126,12 @@ const Policies = () => {
     }
   };
 
+  const sortedActivities = [...activities].sort((a, b) => {
+    const timeA = new Date(a.date).getTime();
+    const timeB = new Date(b.date).getTime();
+    return timeB - timeA;
+  });
+
   return (
     <div className="policy-page">
       <div className="page-header" style={{ display: 'block', marginBottom: '24px' }}>
@@ -187,7 +193,7 @@ const Policies = () => {
       <div className="recent-activities">
          <h2>Chương trình hỗ trợ an sinh xã hội tháng này</h2>
          <div className="activity-list">
-            {activities.map(act => (
+            {sortedActivities.map(act => (
               <div key={act.id} className="act-item">
                  <div className="act-header-row">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>

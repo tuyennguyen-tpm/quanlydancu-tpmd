@@ -74,6 +74,12 @@ const Security = () => {
 
   const alertCount = logs.filter(l => l.type === 'alert').length;
 
+  const sortedLogs = [...logs].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    return dateB - dateA;
+  });
+
   return (
     <div className="security-page">
       <div className="page-header" style={{ display: 'block', marginBottom: '24px' }}>
@@ -137,7 +143,7 @@ const Security = () => {
       <div className="incident-list">
          <h3>Nhật ký an ninh & tuần tra gần đây</h3>
          <div className="list-wrapper">
-            {logs.map(log => (
+            {sortedLogs.map(log => (
                <div key={log.id} className="incident-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                     {log.type === 'alert' ? (

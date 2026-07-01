@@ -104,6 +104,12 @@ const Environment = () => {
     }
   };
 
+  const sortedLogs = [...logs].sort((a, b) => {
+    const dateA = new Date(a.last_cleaned).getTime();
+    const dateB = new Date(b.last_cleaned).getTime();
+    return dateB - dateA;
+  });
+
   return (
     <div className="env-page">
       <div className="page-header" style={{ display: 'block', marginBottom: '24px' }}>
@@ -167,7 +173,7 @@ const Environment = () => {
       <div className="env-status">
          <h3>{isGuest ? 'Tình hình vệ sinh các ngõ xóm' : 'Tình hình vệ sinh các ngõ xóm (Bấm nút cập nhật để đổi trạng thái)'}</h3>
          <div className="list-wrapper">
-           {logs.map(log => (
+           {sortedLogs.map(log => (
               <div key={log.id} className="status-box">
                  <div>
                    <div className="s-header">{log.area}</div>
