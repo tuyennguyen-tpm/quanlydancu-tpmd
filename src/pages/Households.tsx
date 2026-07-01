@@ -103,6 +103,9 @@ const Households = () => {
   const [newHkNumberForSplit, setNewHkNumberForSplit] = useState<string>('');
   const [newAddressForSplit, setNewAddressForSplit] = useState<string>('');
 
+  // Confirmation state for Report Deceased
+  const [deceasedConfirmMember, setDeceasedConfirmMember] = useState<Resident | null>(null);
+
   // New Head of Household details (for quick add)
   const [createNewHead, setCreateNewHead] = useState(false);
   const [newHeadName, setNewHeadName] = useState('');
@@ -528,9 +531,7 @@ const Households = () => {
     }
   };
 
-  const handleReportDeceased = async (member: Resident) => {
-    const confirm = window.confirm(`Bạn có chắc chắn muốn xác nhận nhân khẩu ${member.full_name} đã mất? Hệ thống sẽ cập nhật trạng thái của họ và bỏ vai trò chủ hộ nếu có.`);
-    if (!confirm) return;
+  const executeReportDeceased = async (member: Resident) => {
     try {
       const updatedResident: Resident = {
         ...member,
@@ -1335,7 +1336,7 @@ const Households = () => {
                               {!isDeceased && (
                                 <button 
                                   className="action-btn-sm deceased" 
-                                  onClick={() => handleReportDeceased(member)}
+                                  onClick={() => setDeceasedConfirmMember(member)}
                                   title="Báo nhân khẩu này đã mất"
                                 >
                                   Báo mất
@@ -1455,6 +1456,52 @@ const Households = () => {
                   disabled={!newHkNumberForSplit.trim() || !newAddressForSplit.trim()}
                 >
                   Xác nhận tách hộ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deceased Confirmation Modal */}
+      {deceasedConfirmMember && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal-content" style={{ maxWidth: '450px', borderRadius: '16px', border: '1px solid #bae6fd', boxShadow: '0 10px 25px -5px rgba(3, 105, 161, 0.1), 0 8px 10px -6px rgba(3, 105, 161, 0.05)' }}>
+            <div className="modal-header" style={{ backgroundColor: '#e0f2fe', borderBottom: '1px solid #bae6fd', padding: '16px 24px', borderTopLeftRadius: '15px', borderTopRightRadius: '15px' }}>
+              <h2 style={{ color: '#0369a1', margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🕯️ Xác nhận báo mất
+              </h2>
+              <button className="close-btn" style={{ color: '#0369a1' }} onClick={() => setDeceasedConfirmMember(null)}><X size={24} /></button>
+            </div>
+            
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: '#334155', lineHeight: '1.6' }}>
+                Bạn có chắc chắn muốn xác nhận nhân khẩu <strong>{deceasedConfirmMember.full_name}</strong> đã mất? 
+                <br /><br />
+                <span style={{ color: '#dc2626', fontWeight: '500' }}>Lưu ý:</span> Hệ thống sẽ tự động cập nhật trạng thái cư trú của họ thành <strong>"Đã mất"</strong> và gỡ vai trò chủ hộ nếu có.
+              </p>
+              
+              <div style={{ margin: 0, border: 'none', padding: 0, display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setDeceasedConfirmMember(null)}
+                  style={{ minHeight: '40px', padding: '0 20px', borderRadius: '8px', fontWeight: '600' }}
+                >
+                  Hủy bỏ
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    executeReportDeceased(deceasedConfirmMember);
+                    setDeceasedConfirmMember(null);
+                  }}
+                  style={{ backgroundColor: '#0284c7', borderColor: '#0284c7', color: 'white', minHeight: '40px', padding: '0 20px', borderRadius: '8px', fontWeight: '600' }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0369a1'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0284c7'}
+                >
+                  Xác nhận
                 </button>
               </div>
             </div>
