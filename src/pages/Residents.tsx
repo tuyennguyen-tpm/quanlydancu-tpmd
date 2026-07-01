@@ -1188,6 +1188,14 @@ const Residents = () => {
     return hh ? hh.address : 'Chưa định vị hộ';
   };
 
+  const getHouseholdInfo = (hId: string) => {
+    const hh = households.find(h => h.id === hId);
+    if (!hh) return 'Chưa có hộ';
+    const head = residents.find(r => r.id === hh.head_of_household_id);
+    const headName = head ? head.full_name : 'Chưa rõ chủ hộ';
+    return `Hộ: ${headName} (${hh.address})`;
+  };
+
   const getStatusText = (statusVal: string) => {
     switch (statusVal) {
       case 'resident': return 'Thường trú';
@@ -1312,7 +1320,9 @@ const Residents = () => {
                     <div className="avatar-sm">{resident.full_name.charAt(0)}</div>
                     <div>
                       <div className="name">{resident.full_name}</div>
-                      <div className="subtext">{resident.phone || 'Chưa có SĐT'}</div>
+                      <div className="subtext">
+                        {resident.phone ? `SĐT: ${resident.phone}` : 'Chưa có SĐT'} | {getHouseholdInfo(resident.household_id)}
+                      </div>
                     </div>
                   </div>
                 </td>
