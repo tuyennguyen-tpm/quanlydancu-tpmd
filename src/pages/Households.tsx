@@ -1356,12 +1356,13 @@ const Households = () => {
                         <td>
                           {member.is_head ? (
                             <span className="relation-badge head">Chủ hộ</span>
+                          ) : isDeceased ? (
+                            <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '0.85rem' }}>—</span>
                           ) : (
                             <select
                               className="relation-select"
                               value={member.relationship_with_head || 'Thành viên'}
                               onChange={(e) => handleUpdateRelationship(member, e.target.value)}
-                              disabled={isDeceased}
                               title="Thay đổi mối quan hệ với chủ hộ"
                             >
                               {RELATIONSHIP_OPTIONS.filter(o => o !== 'Chủ hộ').map(opt => (
@@ -1370,6 +1371,7 @@ const Households = () => {
                             </select>
                           )}
                         </td>
+
                         <td style={{ color: '#475569' }}>{formatToDisplayDate(member.dob)}</td>
                         <td><code style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#334155' }}>{member.cccd || '—'}</code></td>
                         <td style={{ color: '#475569' }}>{member.phone || '—'}</td>
