@@ -357,7 +357,17 @@ const Residents = () => {
       handleOpenAddRef.current();
     };
     window.addEventListener('open-add-resident-modal', handleOpenQuickAdd);
-    return () => window.removeEventListener('open-add-resident-modal', handleOpenQuickAdd);
+
+    // Tự động tải lại dữ liệu khi trang Hộ gia đình hoặc trang khác thay đổi dữ liệu
+    const handleDbChanged = () => {
+      loadData();
+    };
+    window.addEventListener('db-changed', handleDbChanged);
+
+    return () => {
+      window.removeEventListener('open-add-resident-modal', handleOpenQuickAdd);
+      window.removeEventListener('db-changed', handleDbChanged);
+    };
   }, []);
 
   useEffect(() => {
