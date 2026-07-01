@@ -1041,9 +1041,9 @@ const Residents = () => {
               if (cleanCsvCccd === cleanDbCccd) return true;
             }
 
-            // 2. Đối chiếu bằng Họ tên + Ngày sinh (đã chuẩn hóa khoảng trắng)
-            const normDbName = r.full_name.toLowerCase().replace(/\s+/g, ' ').trim();
-            const normCsvName = fullName.toLowerCase().replace(/\s+/g, ' ').trim();
+            // 2. Đối chiếu bằng Họ tên + Ngày sinh (đã chuẩn hóa khoảng trắng và Unicode NFC)
+            const normDbName = r.full_name.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+            const normCsvName = fullName.normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
             const isNameMatch = normDbName === normCsvName;
 
             const isDbDobEmpty = !r.dob || r.dob === '2000-01-01';
