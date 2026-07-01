@@ -1,0 +1,15 @@
+{
+  "short_name": "QL TDP",
+  "name": "Hệ thống Quản lý Dân cư Tổ dân phố",
+  "icons": [
+    {
+      "src": "/logo-tdp.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "theme_color": "#2563eb"
+}
