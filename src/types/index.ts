@@ -40,6 +40,7 @@ export interface Resident {
   status: 'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay';
   pob?: string; // Nơi sinh
   notes?: string; // Ghi chú
+  death_date?: string;
   created_at: string;
   
   // Các trường thông tin hành chính Việt Nam mới bổ sung

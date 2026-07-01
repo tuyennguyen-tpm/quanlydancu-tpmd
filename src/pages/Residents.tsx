@@ -272,6 +272,7 @@ const Residents = () => {
   const [hasHealthInsurance, setHasHealthInsurance] = useState(true);
   const [temporaryResidenceExpiry, setTemporaryResidenceExpiry] = useState('');
   const [associationMembership, setAssociationMembership] = useState('');
+  const [deathDate, setDeathDate] = useState('');
 
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -288,6 +289,21 @@ const Residents = () => {
     
     if (value.length <= 10) {
       setTemporaryResidenceExpiry(value);
+    }
+  };
+
+  const handleDeathDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    value = value.replace(/[^\d/]/g, '');
+    
+    if (value.length === 2 && deathDate.length === 1) {
+      value = value + '/';
+    } else if (value.length === 5 && deathDate.length === 4) {
+      value = value + '/';
+    }
+    
+    if (value.length <= 10) {
+      setDeathDate(value);
     }
   };
 
@@ -430,6 +446,7 @@ const Residents = () => {
     setHealthInsuranceNumber('');
     setHasHealthInsurance(true);
     setTemporaryResidenceExpiry('');
+    setDeathDate('');
     setAssociationMembership('');
     setIsFormOpen(true);
   };
@@ -464,6 +481,7 @@ const Residents = () => {
     setHealthInsuranceNumber(r.health_insurance_number || '');
     setHasHealthInsurance(r.has_health_insurance !== false);
     setTemporaryResidenceExpiry(r.temporary_residence_expiry ? formatToDisplayDate(r.temporary_residence_expiry) : '');
+    setDeathDate(r.death_date ? formatToDisplayDate(r.death_date) : '');
     setAssociationMembership(r.association_membership || '');
     setIsFormOpen(true);
     setActiveMenuId(null);
@@ -494,6 +512,13 @@ const Residents = () => {
       return;
     }
 
+    if (status === 'deceased' && deathDate && !isValidDate(deathDate)) {
+      showToast('Ngày mất không đúng định dạng dd/mm/yyyy!', 'warning');
+      return;
+    }
+
+    const dbDeathDate = (status === 'deceased' && deathDate) ? formatToDbDate(deathDate) : '';
+
     const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
       id: editingResident ? editingResident.id : generateUUID(),
       household_id: householdId,
@@ -521,6 +546,7 @@ const Residents = () => {
       health_insurance_number: healthInsuranceNumber,
       has_health_insurance: hasHealthInsurance,
       temporary_residence_expiry: dbExpiry || undefined,
+      death_date: dbDeathDate || undefined,
       association_membership: associationMembership,
 
       created_at: editingResident ? editingResident.created_at : new Date().toISOString()
@@ -1810,6 +1836,18 @@ const Residents = () => {
                     />
                   </div>
                 )}
+                {status === 'deceased' && (
+                  <div className="form-group">
+                    <label>Ngày mất (dd/mm/yyyy)</label>
+                    <input 
+                      type="text" 
+                      value={deathDate} 
+                      onChange={handleDeathDateChange} 
+                      placeholder="Ví dụ: 25/06/2026"
+                      maxLength={10}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -1964,6 +2002,12 @@ const Residents = () => {
                   <div className="detail-item" style={{ backgroundColor: '#f0fdfa', padding: '8px 12px', borderRadius: '6px', border: '1px dashed #5eead4', fontSize: '0.95rem' }}>
                     <span className="label" style={{ color: '#0f766e', fontWeight: '600' }}>Thời hạn tạm trú đến ngày:</span> 
                     <span className="val" style={{ color: '#0f766e', fontWeight: 'bold' }}>{selectedResident.temporary_residence_expiry ? formatToDisplayDate(selectedResident.temporary_residence_expiry) : 'Chưa cập nhật'}</span>
+                  </div>
+                )}
+                {selectedResident.status === 'deceased' && (
+                  <div className="detail-item" style={{ backgroundColor: '#fef2f2', padding: '8px 12px', borderRadius: '6px', border: '1px dashed #fca5a5', fontSize: '0.95rem' }}>
+                    <span className="label" style={{ color: '#b91c1c', fontWeight: '600' }}>Ngày qua đời:</span> 
+                    <span className="val" style={{ color: '#b91c1c', fontWeight: 'bold' }}>{selectedResident.death_date ? formatToDisplayDate(selectedResident.death_date) : 'Chưa cập nhật'}</span>
                   </div>
                 )}
                 <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Hộ gia đình cư trú:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{getHouseholdAddress(selectedResident.household_id)} ({selectedResident.relationship_with_head})</span></div>

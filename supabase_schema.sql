@@ -46,6 +46,7 @@ CREATE TABLE residents (
     status TEXT CHECK (status IN ('resident', 'temporary_absent', 'temporary_resident', 'deceased')) DEFAULT 'resident',
     pob TEXT,
     notes TEXT,
+    death_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

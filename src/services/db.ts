@@ -1298,6 +1298,7 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `    status TEXT CHECK (status IN ('resident', 'temporary_absent', 'temporary_resident', 'deceased')) DEFAULT 'resident',\n`;
     sql += `    pob TEXT,\n`;
     sql += `    notes TEXT,\n`;
+    sql += `    death_date DATE,\n`;
     sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
     sql += `);\n\n`;
     sql += `ALTER TABLE residents ENABLE ROW LEVEL SECURITY;\n\n`;
