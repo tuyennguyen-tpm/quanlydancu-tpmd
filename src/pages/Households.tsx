@@ -302,6 +302,38 @@ const Households = () => {
       };
       await db.saveHousehold(payload);
 
+      // Đồng bộ vai trò Chủ hộ trong danh sách nhân khẩu
+      if (editingHousehold && finalHeadId) {
+        const hhMembers = residents.filter(r => r.household_id === hhId);
+        for (const member of hhMembers) {
+          let needsUpdate = false;
+          let updatedIsHead = member.is_head;
+          let updatedRelationship = member.relationship_with_head;
+
+          if (member.id === finalHeadId) {
+            if (!member.is_head || member.relationship_with_head !== 'Chủ hộ') {
+              updatedIsHead = true;
+              updatedRelationship = 'Chủ hộ';
+              needsUpdate = true;
+            }
+          } else {
+            if (member.is_head || member.relationship_with_head === 'Chủ hộ') {
+              updatedIsHead = false;
+              updatedRelationship = 'Thành viên';
+              needsUpdate = true;
+            }
+          }
+
+          if (needsUpdate) {
+            await db.saveResident({
+              ...member,
+              is_head: updatedIsHead,
+              relationship_with_head: updatedRelationship
+            });
+          }
+        }
+      }
+
       // Bước 2: Tạo chủ hộ mới (nếu có), sau khi hộ đã được tạo thành công
       if (!editingHousehold && createNewHead) {
         const generatedHeadId = generateUUID();
