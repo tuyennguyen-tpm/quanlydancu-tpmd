@@ -329,6 +329,23 @@ const Residents = () => {
     }
   };
 
+  const getDbMatchSuggestions = (name: string) => {
+    const cleanName = (str: string) => {
+      return (str || '')
+        .normalize('NFC')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+    const target = cleanName(name);
+    const matches = residents.filter(r => cleanName(r.full_name) === target);
+    if (matches.length > 0) {
+      return `Có ${matches.length} người trùng tên trong hệ thống hiện tại (Có Ngày sinh là: ${matches.map(m => m.dob ? formatToDisplayDate(m.dob) : 'Trống').join(', ')})`;
+    }
+    return 'Không tìm thấy ai có tên này trong dữ liệu hiện tại trên Web!';
+  };
+
   const handleOpenAddRef = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -1982,6 +1999,9 @@ const Residents = () => {
                   {importAlertData.addedNames.map((name, idx) => (
                     <div key={idx} style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
                       {idx + 1}. <span style={{ color: '#0369a1', fontWeight: '600' }}>{name}</span>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b', paddingLeft: '16px', marginTop: '2px', fontStyle: 'italic' }}>
+                        👉 {getDbMatchSuggestions(name)}
+                      </div>
                     </div>
                   ))}
                 </div>
