@@ -557,6 +557,25 @@ const Households = () => {
     }
   };
 
+  const RELATIONSHIP_OPTIONS = [
+    'Chủ hộ', 'Vợ', 'Chồng', 'Con', 'Con dâu', 'Con rể',
+    'Bố', 'Mẹ', 'Anh', 'Chị', 'Em', 'Cháu',
+    'Ông', 'Bà', 'Nội', 'Ngoại', 'Thành viên'
+  ];
+
+  const handleUpdateRelationship = async (member: Resident, newRelationship: string) => {
+    try {
+      await db.saveResident({
+        ...member,
+        relationship_with_head: newRelationship
+      });
+      showToast(`Đã cập nhật quan hệ của ${member.full_name} thành "${newRelationship}"!`, 'success');
+      loadData();
+    } catch (e) {
+      showToast('Lỗi khi cập nhật mối quan hệ!', 'danger');
+    }
+  };
+
   const handlePrintHousehold = (h: Household) => {
     const members = getHouseholdMembers(h.id);
     const headName = getHeadName(h);
@@ -1296,9 +1315,21 @@ const Households = () => {
                           {member.full_name} {isDeceased && <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', fontWeight: 'normal', textDecoration: 'none', display: 'inline-block', marginLeft: '6px' }}>🕯️ (Đã mất)</span>}
                         </td>
                         <td>
-                          <span className={`relation-badge ${member.is_head ? 'head' : ''}`}>
-                            {member.relationship_with_head}
-                          </span>
+                          {member.is_head ? (
+                            <span className="relation-badge head">Chủ hộ</span>
+                          ) : (
+                            <select
+                              className="relation-select"
+                              value={member.relationship_with_head || 'Thành viên'}
+                              onChange={(e) => handleUpdateRelationship(member, e.target.value)}
+                              disabled={isDeceased}
+                              title="Thay đổi mối quan hệ với chủ hộ"
+                            >
+                              {RELATIONSHIP_OPTIONS.filter(o => o !== 'Chủ hộ').map(opt => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                          )}
                         </td>
                         <td style={{ color: '#475569' }}>{formatToDisplayDate(member.dob)}</td>
                         <td><code style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#334155' }}>{member.cccd || '—'}</code></td>
@@ -1980,6 +2011,40 @@ const Households = () => {
         .action-btn-sm.deceased:hover {
           background-color: #fee2e2;
           border-color: #fca5a5;
+        }
+
+        .relation-select {
+          appearance: none;
+          -webkit-appearance: none;
+          font-size: 0.8rem;
+          font-weight: 600;
+          padding: 4px 26px 4px 10px;
+          border-radius: 10px;
+          border: 1.5px solid #bae6fd;
+          background-color: #f0f9ff;
+          color: #0369a1;
+          cursor: pointer;
+          outline: none;
+          transition: all 0.2s ease;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230369a1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 7px center;
+          min-width: 90px;
+        }
+
+        .relation-select:hover {
+          border-color: #7dd3fc;
+          background-color: #e0f2fe;
+        }
+
+        .relation-select:focus {
+          border-color: #0284c7;
+          box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+
+        .relation-select:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         @media (max-width: 768px) {
