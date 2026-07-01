@@ -391,11 +391,18 @@ const App = () => {
             (r.cccd && r.cccd.includes(query)) ||
             (r.phone && r.phone.includes(query))
           ) {
+            const hh = households.find(h => h.id === r.household_id);
+            let hhInfo = '';
+            if (hh) {
+              const head = residents.find(res => res.id === hh.head_of_household_id);
+              const headName = head ? head.full_name : 'Chưa rõ chủ hộ';
+              hhInfo = ` | Hộ: ${headName} (${hh.address})`;
+            }
             results.push({
               id: r.id,
               type: 'resident',
               name: r.full_name,
-              detail: `Nhân khẩu - CCCD: ${r.cccd || 'Chưa cấp'} - SĐT: ${r.phone || 'Không có'}`
+              detail: `Nhân khẩu${hhInfo} - CCCD: ${r.cccd || 'Chưa cấp'} - SĐT: ${r.phone || 'Không có'}`
             });
           }
         });
