@@ -237,6 +237,12 @@ const Residents = () => {
   // Modals state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
+  const [importAlertData, setImportAlertData] = useState<{
+    isOpen: boolean;
+    addedCount: number;
+    updatedCount: number;
+    addedNames: string[];
+  } | null>(null);
 
   // Form fields
   const [fullName, setFullName] = useState('');
@@ -972,49 +978,58 @@ const Residents = () => {
           const csvGender = row[genderIdx]?.trim().toLowerCase() || '';
           const gender = (csvGender === 'nam' || csvGender === 'male') ? 'male' : (csvGender === 'nữ' || csvGender === 'female') ? 'female' : 'other';
           
-          let rawDob = row[dobIdx]?.trim() || '';
+           let rawDob = row[dobIdx]?.trim() || '';
           let finalDob = '';
-          
-          const isValidSQLDate = (dStr: string) => {
-             const pts = dStr.split('-');
-             if (pts.length !== 3) return false;
-             const y = parseInt(pts[0], 10), m = parseInt(pts[1], 10), d = parseInt(pts[2], 10);
-             if (isNaN(y) || isNaN(m) || isNaN(d) || m < 1 || m > 12) return false;
-             const daysInMonth = new Date(y, m, 0).getDate();
-             return d >= 1 && d <= daysInMonth;
+
+          const parseDateString = (dStr: string) => {
+            const cleanStr = dStr.trim();
+            if (!cleanStr) return '';
+            
+            if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+              return cleanStr;
+            }
+            
+            const parts = cleanStr.split(/[\/\-]/);
+            if (parts.length === 3) {
+              if (parts[0].length === 4) {
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                const d = parseInt(parts[2], 10);
+                if (!isNaN(y) && !isNaN(m) && !isNaN(d) && m >= 1 && m <= 12) {
+                  return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+                }
+              }
+              if (parts[2].length === 4) {
+                let d = parseInt(parts[0], 10);
+                let m = parseInt(parts[1], 10);
+                const y = parseInt(parts[2], 10);
+                if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+                  if (m > 12) {
+                    const temp = d;
+                    d = m;
+                    m = temp;
+                  }
+                  if (m >= 1 && m <= 12) {
+                    const daysInMonth = new Date(y, m, 0).getDate();
+                    const finalD = d > daysInMonth ? daysInMonth : d;
+                    return `${y}-${m.toString().padStart(2, '0')}-${finalD.toString().padStart(2, '0')}`;
+                  }
+                }
+              }
+            } else if (parts.length === 1 && /^\d{4}$/.test(cleanStr)) {
+              // Nếu chỉ có năm (ví dụ: 1990) -> chuyển thành 1990-01-01
+              return `${cleanStr}-01-01`;
+            }
+            
+            // Fallback cuối cùng bằng JS Date
+            const dateObj = new Date(cleanStr);
+            if (!isNaN(dateObj.getTime())) {
+              return new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+            }
+            return '';
           };
 
-          if (rawDob.includes('/')) {
-            const parts = rawDob.split('/');
-            if (parts.length === 3) {
-              if (parts[2].length === 4) {
-                let day = parseInt(parts[0], 10);
-                let month = parseInt(parts[1], 10);
-                let year = parseInt(parts[2], 10);
-                if (month > 12) {
-                  const temp = day;
-                  day = month;
-                  month = temp;
-                }
-                const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                if (isValidSQLDate(formatted)) finalDob = formatted;
-              }
-            }
-          }
-          
-          if (!finalDob) {
-            if (isValidSQLDate(rawDob)) {
-              finalDob = rawDob;
-            } else {
-              const dateObj = new Date(rawDob);
-              if (!isNaN(dateObj.getTime())) {
-                const isoDate = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                if (isValidSQLDate(isoDate)) {
-                  finalDob = isoDate;
-                }
-              }
-            }
-          }
+          finalDob = parseDateString(rawDob);
           
           const dob = finalDob || '2000-01-01';
 
@@ -1159,9 +1174,15 @@ const Residents = () => {
           }
         }
 
-        showToast(`Nhập dữ liệu hoàn tất! Đã thêm mới ${addedCount} và cập nhật ${updatedCount} nhân khẩu${skipCount > 0 ? ` (bỏ qua ${skipCount} dòng lỗi)` : ''}.`, 'success');
         if (addedCount > 0) {
-          alert(`LƯU Ý: Có ${addedCount} nhân khẩu được thêm mới vì không khớp với ai trong cơ sở dữ liệu hiện tại:\n\n${addedNames.slice(0, 10).map((name, idx) => `${idx + 1}. ${name}`).join('\n')}${addedNames.length > 10 ? '\n... và một số người khác' : ''}\n\n(Vui lòng kiểm tra lại xem họ tên/ngày sinh của họ trong file Excel có khác biệt gì so với trên Web không nhé)`);
+          setImportAlertData({
+            isOpen: true,
+            addedCount,
+            updatedCount,
+            addedNames
+          });
+        } else {
+          showToast(`Nhập dữ liệu hoàn tất! Đã cập nhật toàn bộ ${updatedCount} nhân khẩu.`, 'success');
         }
         loadData();
         window.dispatchEvent(new CustomEvent('db-changed'));
@@ -1873,6 +1894,132 @@ const Residents = () => {
           Xóa Toàn Bộ Dữ Liệu
         </button>
       </div>
+
+      {importAlertData && importAlertData.isOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.4)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            borderRadius: '16px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            width: '100%',
+            maxWidth: '500px',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+              padding: '20px',
+              borderBottom: '1px solid #bae6fd',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: '#0284c7',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                fontSize: '1.25rem'
+              }}>
+                ℹ
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0369a1', fontWeight: '700' }}>Kết quả nhập dữ liệu</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#075985' }}>
+                  Đã đối chiếu và cập nhật {importAlertData.updatedCount} nhân khẩu.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e0f2fe',
+                borderRadius: '12px',
+                padding: '16px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+              }}>
+                <p style={{ margin: '0 0 12px 0', fontSize: '0.95rem', color: '#0369a1', fontWeight: '600' }}>
+                  ⚠️ Có {importAlertData.addedCount} nhân khẩu được thêm mới:
+                </p>
+                <div style={{
+                  maxHeight: '200px',
+                  overflowY: 'auto',
+                  padding: '8px 12px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #f1f5f9',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
+                }}>
+                  {importAlertData.addedNames.map((name, idx) => (
+                    <div key={idx} style={{ fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
+                      {idx + 1}. <span style={{ color: '#0369a1', fontWeight: '600' }}>{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                fontSize: '0.85rem',
+                color: '#075985',
+                lineHeight: '1.4',
+                backgroundColor: '#e0f2fe',
+                padding: '12px',
+                borderRadius: '8px',
+                borderLeft: '4px solid #0284c7'
+              }}>
+                <strong>Lưu ý:</strong> Nếu đây là những người đã có sẵn trên Web nhưng bị tạo trùng, vui lòng kiểm tra lại xem <strong>Họ tên</strong> hoặc <strong>Ngày sinh</strong> trong file Excel của họ có bị gõ sai so với dữ liệu trên hệ thống hay không nhé!
+              </div>
+            </div>
+
+            <div style={{
+              padding: '16px 24px',
+              backgroundColor: '#f8fafc',
+              borderTop: '1px solid #bae6fd',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setImportAlertData(null)}
+                style={{
+                  backgroundColor: '#0284c7',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Xác nhận & Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .residents-container {
