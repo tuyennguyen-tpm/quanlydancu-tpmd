@@ -302,13 +302,16 @@ const Households = () => {
       };
       await db.saveHousehold(payload);
 
-      // Đồng bộ vai trò Chủ hộ trong danh sách nhân khẩu
+      // Đồng bộ vai trò Chủ hộ và tự động chuyển đổi mối quan hệ thông minh trong danh sách nhân khẩu
       if (editingHousehold && finalHeadId) {
         const hhMembers = residents.filter(r => r.household_id === hhId);
+        const newHead = hhMembers.find(r => r.id === finalHeadId);
+        const prevRel = (newHead?.relationship_with_head || 'Con').toLowerCase();
+
         for (const member of hhMembers) {
           let needsUpdate = false;
           let updatedIsHead = member.is_head;
-          let updatedRelationship = member.relationship_with_head;
+          let updatedRelationship = member.relationship_with_head || 'Thành viên';
 
           if (member.id === finalHeadId) {
             if (!member.is_head || member.relationship_with_head !== 'Chủ hộ') {
@@ -317,9 +320,61 @@ const Households = () => {
               needsUpdate = true;
             }
           } else {
-            if (member.is_head || member.relationship_with_head === 'Chủ hộ') {
+            // Tự động suy luận mối quan hệ mới cho các thành viên dựa trên chủ hộ mới
+            let newRel = updatedRelationship;
+            if (prevRel.includes('con')) {
+              // Chủ hộ mới trước đây là Con
+              if (member.id === editingHousehold.head_of_household_id || updatedRelationship.toLowerCase() === 'chủ hộ' || updatedRelationship.toLowerCase() === 'chồng') {
+                newRel = 'Bố';
+              } else if (updatedRelationship.toLowerCase() === 'vợ') {
+                newRel = 'Mẹ';
+              } else if (updatedRelationship.toLowerCase().includes('con')) {
+                // Anh chị em
+                const getYear = (dStr: string) => {
+                  if (!dStr) return 0;
+                  const pts = dStr.split('-');
+                  return pts.length === 3 ? parseInt(pts[0], 10) : 0;
+                };
+                const headY = getYear(newHead?.dob || '');
+                const memberY = getYear(member.dob || '');
+                if (headY && memberY) {
+                  if (memberY < headY) {
+                    newRel = member.gender === 'female' ? 'Chị' : 'Anh';
+                  } else {
+                    newRel = 'Em';
+                  }
+                } else {
+                  newRel = 'Anh/Chị/Em';
+                }
+              } else if (updatedRelationship.toLowerCase().includes('cháu')) {
+                newRel = 'Cháu';
+              }
+            } else if (prevRel === 'vợ') {
+              // Chủ hộ mới trước đây là Vợ
+              if (member.id === editingHousehold.head_of_household_id || updatedRelationship.toLowerCase() === 'chủ hộ') {
+                newRel = 'Chồng';
+              } else if (updatedRelationship.toLowerCase().includes('con')) {
+                newRel = 'Con';
+              } else if (updatedRelationship.toLowerCase().includes('cháu')) {
+                newRel = 'Cháu';
+              }
+            } else if (prevRel === 'chồng') {
+              // Chủ hộ mới trước đây là Chồng
+              if (member.id === editingHousehold.head_of_household_id || updatedRelationship.toLowerCase() === 'chủ hộ') {
+                newRel = 'Vợ';
+              } else if (updatedRelationship.toLowerCase().includes('con')) {
+                newRel = 'Con';
+              }
+            } else if (prevRel.includes('cháu')) {
+              // Chủ hộ mới trước đây là Cháu
+              if (member.id === editingHousehold.head_of_household_id || updatedRelationship.toLowerCase() === 'chủ hộ') {
+                newRel = member.gender === 'female' ? 'Bà' : 'Ông';
+              }
+            }
+
+            if (member.is_head || updatedRelationship !== newRel) {
               updatedIsHead = false;
-              updatedRelationship = 'Thành viên';
+              updatedRelationship = newRel;
               needsUpdate = true;
             }
           }
