@@ -74,16 +74,17 @@ const Dashboard = () => {
       const financialRecords = await db.getFinancialRecords();
       const securityLogs = await db.getSecurityLogs();
 
-      // 2. Calculate Stats
+      // 2. Calculate Stats (Loại trừ người đã mất khỏi số liệu dân số thực tế)
+      const activeResidents = residents.filter(r => r.status !== 'deceased');
       const totalH = households.length;
-      const totalR = residents.length;
+      const totalR = activeResidents.length;
       const policyH = households.filter(h => h.policy_type && h.policy_type !== 'none').length;
       const pendingC = complaints.filter(c => c.status === 'pending').length;
 
       // Tính số thanh niên nam 18-27 tuổi chưa nhập ngũ
       const currentYear = new Date().getFullYear();
       let militaryEligible = 0;
-      residents.forEach(r => {
+      activeResidents.forEach(r => {
         if (r.gender === 'male' && r.dob) {
           const birthYear = parseInt(r.dob.substring(0, 4));
           const age = currentYear - birthYear;

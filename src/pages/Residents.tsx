@@ -230,6 +230,7 @@ const Residents = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
+  const [showDeceased, setShowDeceased] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1271,7 +1272,13 @@ const Residents = () => {
       matchesHousehold = r.household_id === householdFilter;
     }
 
-    return matchesSearch && matchesCategory && matchesHousehold;
+    // Deceased filter matches (Ẩn người đã mất nếu showDeceased là false)
+    let matchesDeceased = true;
+    if (!showDeceased) {
+      matchesDeceased = r.status !== 'deceased';
+    }
+
+    return matchesSearch && matchesCategory && matchesHousehold && matchesDeceased;
   });
 
   const getHouseholdAddress = (hId: string) => {
@@ -1362,6 +1369,30 @@ const Residents = () => {
               })}
             </select>
           </div>
+
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            padding: '8px 14px', 
+            backgroundColor: '#f1f5f9', 
+            borderRadius: '12px', 
+            border: '1px solid #e2e8f0', 
+            cursor: 'pointer',
+            height: '42px',
+            boxSizing: 'border-box'
+          }}>
+            <input 
+              type="checkbox" 
+              id="show-deceased-checkbox"
+              checked={showDeceased} 
+              onChange={(e) => setShowDeceased(e.target.checked)}
+              style={{ cursor: 'pointer', width: '16px', height: '16px', margin: 0 }}
+            />
+            <label htmlFor="show-deceased-checkbox" style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600', cursor: 'pointer', userSelect: 'none', margin: 0 }}>
+              🕯️ Hiện người đã mất
+            </label>
+          </div>
           <div className="filter-btns">
               <button 
                 className={`filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
@@ -1405,110 +1436,119 @@ const Residents = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredResidents.map((resident) => (
-              <tr key={resident.id} id={`resident-row-${resident.id}`}>
-                <td>
-                  <div className="resident-name-cell">
-                    <div className="avatar-sm">{resident.full_name.charAt(0)}</div>
-                    <div>
-                      <div className="name">{resident.full_name}</div>
-                      <div className="subtext">
-                        <span>{resident.phone ? `SĐT: ${resident.phone}` : 'Chưa có SĐT'}</span>
-                        <span className="mobile-household-info"> | {getHouseholdInfo(resident.household_id)}</span>
+            {filteredResidents.map((resident) => {
+              const isDeceased = resident.status === 'deceased';
+              return (
+                <tr 
+                  key={resident.id} 
+                  id={`resident-row-${resident.id}`}
+                  style={isDeceased ? { opacity: 0.65, backgroundColor: '#f8fafc' } : {}}
+                >
+                  <td>
+                    <div className="resident-name-cell">
+                      <div className="avatar-sm" style={isDeceased ? { backgroundColor: '#cbd5e1', color: '#64748b' } : {}}>{resident.full_name.charAt(0)}</div>
+                      <div>
+                        <div className="name" style={isDeceased ? { color: '#64748b', textDecoration: 'line-through' } : {}}>
+                          {resident.full_name} {isDeceased && <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic', fontWeight: 'normal', textDecoration: 'none', display: 'inline-block', marginLeft: '6px' }}>🕯️ (Đã mất)</span>}
+                        </div>
+                        <div className="subtext">
+                          <span>{resident.phone ? `SĐT: ${resident.phone}` : 'Chưa có SĐT'}</span>
+                          <span className="mobile-household-info"> | {getHouseholdInfo(resident.household_id)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </td>
-                <td>
-                  <span>{resident.gender === 'male' ? 'Nam' : 'Nữ'}</span>
-                  <span className="age-badge">({getAge(resident.dob)} tuổi)</span>
-                </td>
-                <td>{formatToDisplayDate(resident.dob)}</td>
-                <td><code className="cccd-code">{resident.cccd || 'Chưa cấp'}</code></td>
-                <td>
-                  <span className={`relation-badge ${resident.is_head ? 'head' : ''}`}>
-                    {resident.relationship_with_head}
-                  </span>
-                </td>
-                <td style={{maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                  {getHouseholdAddress(resident.household_id)}
-                </td>
-                <td>
-                  <span className={`status-dot ${resident.status === 'resident' ? 'green' : resident.status === 'temporary_resident' ? 'blue' : resident.status === 'stay' ? 'pink' : 'orange'}`}></span>
-                  {getStatusText(resident.status)}
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      className="icon-btn-sm" 
-                      onClick={() => {
-                        setSelectedResident(resident);
-                        setIsDetailOpen(true);
-                      }} 
-                      title="Xem lý lịch chi tiết"
-                      style={{ 
-                        border: '1px solid var(--border)', 
-                        background: '#f8fafc',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(15, 118, 110, 0.08)';
-                        e.currentTarget.style.borderColor = '#0f766e';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                        e.currentTarget.style.borderColor = 'var(--border)';
-                      }}
-                    >
-                      <Eye size={14} style={{ color: '#0f766e' }} />
-                    </button>
-                    <button 
-                      className="icon-btn-sm" 
-                      onClick={() => handleOpenEdit(resident)} 
-                      title="Chỉnh sửa hồ sơ"
-                      style={{ 
-                        border: '1px solid var(--border)', 
-                        background: '#f8fafc',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
-                        e.currentTarget.style.borderColor = 'var(--primary-light)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                        e.currentTarget.style.borderColor = 'var(--border)';
-                      }}
-                    >
-                      <Edit2 size={14} style={{ color: 'var(--primary)' }} />
-                    </button>
-                    <button 
-                      className="icon-btn-sm" 
-                      onClick={() => handleDelete(resident.id)} 
-                      title="Xóa nhân khẩu"
-                      style={{ 
-                        border: '1px solid rgba(239, 68, 68, 0.2)', 
-                        background: 'rgba(239, 68, 68, 0.02)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-                        e.currentTarget.style.borderColor = 'var(--danger)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.02)';
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                      }}
-                    >
-                      <Trash2 size={14} style={{ color: 'var(--danger)' }} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td>
+                    <span>{resident.gender === 'male' ? 'Nam' : 'Nữ'}</span>
+                    <span className="age-badge">({getAge(resident.dob)} tuổi)</span>
+                  </td>
+                  <td>{formatToDisplayDate(resident.dob)}</td>
+                  <td><code className="cccd-code">{resident.cccd || 'Chưa cấp'}</code></td>
+                  <td>
+                    <span className={`relation-badge ${resident.is_head ? 'head' : ''}`}>
+                      {resident.relationship_with_head}
+                    </span>
+                  </td>
+                  <td style={{maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                    {getHouseholdAddress(resident.household_id)}
+                  </td>
+                  <td>
+                    <span className={`status-dot ${resident.status === 'resident' ? 'green' : resident.status === 'temporary_resident' ? 'blue' : resident.status === 'stay' ? 'pink' : 'orange'}`}></span>
+                    {getStatusText(resident.status)}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        className="icon-btn-sm" 
+                        onClick={() => {
+                          setSelectedResident(resident);
+                          setIsDetailOpen(true);
+                        }} 
+                        title="Xem lý lịch chi tiết"
+                        style={{ 
+                          border: '1px solid var(--border)', 
+                          background: '#f8fafc',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(15, 118, 110, 0.08)';
+                          e.currentTarget.style.borderColor = '#0f766e';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                        }}
+                      >
+                        <Eye size={14} style={{ color: '#0f766e' }} />
+                      </button>
+                      <button 
+                        className="icon-btn-sm" 
+                        onClick={() => handleOpenEdit(resident)} 
+                        title="Chỉnh sửa hồ sơ"
+                        style={{ 
+                          border: '1px solid var(--border)', 
+                          background: '#f8fafc',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
+                          e.currentTarget.style.borderColor = 'var(--primary-light)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
+                          e.currentTarget.style.borderColor = 'var(--border)';
+                        }}
+                      >
+                        <Edit2 size={14} style={{ color: 'var(--primary)' }} />
+                      </button>
+                      <button 
+                        className="icon-btn-sm" 
+                        onClick={() => handleDelete(resident.id)} 
+                        title="Xóa nhân khẩu"
+                        style={{ 
+                          border: '1px solid rgba(239, 68, 68, 0.2)', 
+                          background: 'rgba(239, 68, 68, 0.02)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+                          e.currentTarget.style.borderColor = 'var(--danger)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.02)';
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                        }}
+                      >
+                        <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {filteredResidents.length === 0 && (
               <tr>
                 <td colSpan={8} style={{textAlign: 'center', padding: '32px', color: 'var(--text-muted)'}}>
