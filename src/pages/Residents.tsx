@@ -1948,6 +1948,7 @@ const Residents = () => {
           align-items: center;
           margin-bottom: 20px;
           gap: 20px;
+          flex-wrap: wrap;
         }
 
         .search-box {
@@ -1997,6 +1998,7 @@ const Residents = () => {
         .filter-btns {
           display: flex;
           gap: 8px;
+          flex-wrap: wrap;
         }
 
         .filter-btn {
