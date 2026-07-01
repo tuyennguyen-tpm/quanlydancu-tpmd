@@ -1414,9 +1414,14 @@ const Residents = () => {
               style={{ cursor: 'pointer', width: '16px', height: '16px', margin: 0 }}
             />
             <label htmlFor="show-deceased-checkbox" style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600', cursor: 'pointer', userSelect: 'none', margin: 0 }}>
-              🕯️ Hiện người đã mất
+              🕯️ Hiện người đã mất {residents.filter(r => r.status === 'deceased').length > 0 && (
+                <span style={{ backgroundColor: '#ef4444', color: 'white', borderRadius: '10px', padding: '1px 7px', fontSize: '0.75rem', marginLeft: '4px' }}>
+                  {residents.filter(r => r.status === 'deceased').length}
+                </span>
+              )}
             </label>
           </div>
+
           <div className="filter-btns">
               <button 
                 className={`filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
