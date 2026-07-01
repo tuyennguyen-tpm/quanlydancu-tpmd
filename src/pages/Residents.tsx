@@ -574,7 +574,7 @@ const Residents = () => {
       r.ethnicity || 'Kinh',
       r.religion || 'Không',
       r.nationality || 'Việt Nam',
-      r.education_level || '12/12',
+      r.education_level ? `\t${r.education_level}` : '\t12/12',
       r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
       r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
       r.temporary_residence_expiry ? `\t${formatToDisplayDate(r.temporary_residence_expiry)}` : '',
