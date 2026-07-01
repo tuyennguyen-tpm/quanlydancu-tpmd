@@ -619,8 +619,9 @@ const Residents = () => {
     showToast('Đang khởi tạo file Excel...', 'info');
 
     const headers = [
-      'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Thường trú', 
-      'Quan hệ chủ hộ', 'Nghề nghiệp', 'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
+      'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 
+      'Quan hệ chủ hộ', 'Nghề nghiệp', 'Thường trú', 
+      'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
       'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
       'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
     ];
@@ -646,9 +647,9 @@ const Residents = () => {
         r.dob ? formatToDisplayDate(r.dob) : '',
         r.cccd || '',
         r.phone || '',
-        r.permanent_address || '',
-        r.relationship_with_head,
-        r.occupation || '',
+        r.relationship_with_head, // Quan hệ chủ hộ (sang trái)
+        r.occupation || '',       // Nghề nghiệp (sang trái)
+        r.permanent_address || '', // Thường trú
         r.pob || '',
         r.native_place || '',
         r.ethnicity || 'Kinh',
