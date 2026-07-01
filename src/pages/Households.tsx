@@ -1287,64 +1287,66 @@ const Households = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {getHouseholdMembers(viewingMembersHousehold.id).map(member => (
-                    <tr key={member.id}>
-                      <td style={{fontWeight: '600'}}>{member.full_name}</td>
-                      <td>
-                        <span className={`relation-badge ${member.is_head ? 'head' : ''}`}>
-                          {member.relationship_with_head}
-                        </span>
-                      </td>
-                      <td>{formatToDisplayDate(member.dob)}</td>
-                      <td><code>{member.cccd || 'Chưa cấp'}</code></td>
-                      <td>{member.phone || '—'}</td>
-                      <td>{member.occupation || 'Tự do'}</td>
-                      <td>
-                        <span className={`status-tag ${member.status}`}>
-                          {member.status === 'resident' ? 'Thường trú' : member.status === 'temporary_resident' ? 'Tạm trú' : member.status === 'temporary_absent' ? 'Tạm vắng' : member.status === 'stay' ? 'Lưu trú' : 'Đã mất'}
-                        </span>
-                      </td>
-                      {!isGuest && (
-                        <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', border: '1px solid var(--border)', borderRadius: '4px' }}
-                              onClick={() => {
-                                setTransferringMember(member);
-                                setTargetHouseholdIdForTransfer('');
-                              }}
-                              title="Chuyển sang hộ gia đình khác"
-                            >
-                              Chuyển hộ
-                            </button>
-                            <button 
-                              className="btn btn-secondary" 
-                              style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', border: '1px solid var(--border)', borderRadius: '4px' }}
-                              onClick={() => {
-                                setSplittingMember(member);
-                                setNewHkNumberForSplit('');
-                                setNewAddressForSplit('');
-                              }}
-                              title="Tách ra làm chủ hộ mới"
-                            >
-                              Tách hộ
-                            </button>
-                            {member.status !== 'deceased' && (
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', border: '1px solid #fee2e2', backgroundColor: '#fef2f2', color: '#dc2626', borderRadius: '4px' }}
-                                onClick={() => handleReportDeceased(member)}
-                                title="Báo nhân khẩu này đã mất"
-                              >
-                                Báo mất
-                              </button>
-                            )}
-                          </div>
+                  {getHouseholdMembers(viewingMembersHousehold.id).map(member => {
+                    const isDeceased = member.status === 'deceased';
+                    return (
+                      <tr key={member.id} style={isDeceased ? { opacity: 0.65, backgroundColor: '#f8fafc' } : {}}>
+                        <td style={{fontWeight: '600', color: isDeceased ? '#64748b' : '#0f172a', textDecoration: isDeceased ? 'line-through' : 'none'}}>
+                          {member.full_name} {isDeceased && <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', fontWeight: 'normal', textDecoration: 'none', display: 'inline-block', marginLeft: '6px' }}>🕯️ (Đã mất)</span>}
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        <td>
+                          <span className={`relation-badge ${member.is_head ? 'head' : ''}`}>
+                            {member.relationship_with_head}
+                          </span>
+                        </td>
+                        <td style={{ color: '#475569' }}>{formatToDisplayDate(member.dob)}</td>
+                        <td><code style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#334155' }}>{member.cccd || '—'}</code></td>
+                        <td style={{ color: '#475569' }}>{member.phone || '—'}</td>
+                        <td style={{ color: '#475569' }}>{member.occupation || 'Tự do'}</td>
+                        <td>
+                          <span className={`status-tag ${member.status}`}>
+                            {member.status === 'resident' ? 'Thường trú' : member.status === 'temporary_resident' ? 'Tạm trú' : member.status === 'temporary_absent' ? 'Tạm vắng' : member.status === 'stay' ? 'Lưu trú' : 'Đã mất'}
+                          </span>
+                        </td>
+                        {!isGuest && (
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button 
+                                className="action-btn-sm transfer" 
+                                onClick={() => {
+                                  setTransferringMember(member);
+                                  setTargetHouseholdIdForTransfer('');
+                                }}
+                                title="Chuyển sang hộ gia đình khác"
+                              >
+                                Chuyển hộ
+                              </button>
+                              <button 
+                                className="action-btn-sm split" 
+                                onClick={() => {
+                                  setSplittingMember(member);
+                                  setNewHkNumberForSplit('');
+                                  setNewAddressForSplit('');
+                                }}
+                                title="Tách ra làm chủ hộ mới"
+                              >
+                                Tách hộ
+                              </button>
+                              {!isDeceased && (
+                                <button 
+                                  className="action-btn-sm deceased" 
+                                  onClick={() => handleReportDeceased(member)}
+                                  title="Báo nhân khẩu này đã mất"
+                                >
+                                  Báo mất
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                   {getHouseholdMembers(viewingMembersHousehold.id).length === 0 && (
                     <tr>
                       <td colSpan={isGuest ? 7 : 8} style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)'}}>
@@ -1839,45 +1841,99 @@ const Households = () => {
           text-align: left;
           font-size: 0.9rem;
         }
-
+ 
         .modal-table th {
           background-color: #f8fafc;
-          padding: 12px;
+          padding: 14px 12px;
           font-weight: 700;
-          color: var(--text-muted);
-          border-bottom: 2px solid var(--border);
+          color: #475569;
+          border-bottom: 2px solid #e2e8f0;
+          white-space: nowrap;
         }
-
+ 
         .modal-table td {
-          padding: 12px;
+          padding: 14px 12px;
           border-bottom: 1px solid var(--border);
+          vertical-align: middle;
         }
-
+ 
         .relation-badge {
           font-size: 0.75rem;
-          padding: 2px 8px;
+          padding: 3px 10px;
           border-radius: 12px;
           background-color: #f1f5f9;
           font-weight: 600;
+          white-space: nowrap;
+          display: inline-block;
         }
-
+ 
         .relation-badge.head {
-          background-color: rgba(37, 99, 235, 0.1);
-          color: var(--primary);
+          background-color: #e0f2fe;
+          color: #0369a1;
         }
-
+ 
         .status-tag {
           font-size: 0.75rem;
-          padding: 2px 8px;
+          padding: 3px 10px;
           border-radius: 12px;
           font-weight: 600;
+          white-space: nowrap;
+          display: inline-block;
         }
-
+ 
         .status-tag.resident { background-color: rgba(16, 185, 129, 0.1); color: var(--success); }
         .status-tag.temporary_resident { background-color: rgba(59, 130, 246, 0.1); color: var(--info); }
         .status-tag.temporary_absent { background-color: rgba(245, 158, 11, 0.1); color: var(--warning); }
         .status-tag.stay { background-color: rgba(236, 72, 153, 0.1); color: #db2777; }
-        .status-tag.deceased { background-color: #e2e8f0; color: var(--secondary); }
+        .status-tag.deceased { background-color: #e2e8f0; color: #475569; }
+
+        .action-btn-sm {
+          padding: 6px 12px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 1px solid transparent;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          white-space: nowrap;
+          outline: none;
+        }
+
+        .action-btn-sm.transfer {
+          background-color: #f0f9ff;
+          color: #0369a1;
+          border-color: #bae6fd;
+        }
+
+        .action-btn-sm.transfer:hover {
+          background-color: #e0f2fe;
+          border-color: #7dd3fc;
+        }
+
+        .action-btn-sm.split {
+          background-color: #f0fdf4;
+          color: #166534;
+          border-color: #bbf7d0;
+        }
+
+        .action-btn-sm.split:hover {
+          background-color: #dcfce7;
+          border-color: #86efac;
+        }
+
+        .action-btn-sm.deceased {
+          background-color: #fef2f2;
+          color: #991b1b;
+          border-color: #fecaca;
+        }
+
+        .action-btn-sm.deceased:hover {
+          background-color: #fee2e2;
+          border-color: #fca5a5;
+        }
 
         @media (max-width: 768px) {
           .filter-bar {
