@@ -1053,15 +1053,58 @@ const Residents = () => {
     if (!file) return;
 
     const reader = new FileReader();
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    if (isXlsx) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file, 'utf-8');
+    }
+
     reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      if (!text) {
-        showToast('File không có dữ liệu hoặc lỗi đọc file!', 'danger');
-        return;
-      }
+      let rows: string[][] = [];
 
       try {
-        const rows = parseCSV(text);
+        if (isXlsx) {
+          const arrayBuffer = event.target?.result as ArrayBuffer;
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.load(arrayBuffer);
+          const worksheet = workbook.worksheets[0];
+          if (!worksheet) {
+            showToast('File Excel không có trang tính nào!', 'warning');
+            return;
+          }
+          
+          const maxCol = worksheet.columnCount;
+          worksheet.eachRow((row) => {
+            const rowValues: string[] = [];
+            for (let c = 1; c <= maxCol; c++) {
+              const cell = row.getCell(c);
+              let val = cell.value;
+              if (val && typeof val === 'object') {
+                if ('result' in val) {
+                  val = val.result;
+                } else if ('richText' in val) {
+                  val = (val.richText as any[]).map(t => t.text || '').join('');
+                } else if ('text' in val) {
+                  val = val.text;
+                } else {
+                  val = val.toString();
+                }
+              }
+              rowValues.push(val !== undefined && val !== null ? val.toString() : '');
+            }
+            rows.push(rowValues);
+          });
+        } else {
+          const text = event.target?.result as string;
+          if (!text) {
+            showToast('File không có dữ liệu hoặc lỗi đọc file!', 'danger');
+            return;
+          }
+          rows = parseCSV(text);
+        }
+
         if (rows.length <= 1) {
           showToast('File không chứa bản ghi nhân khẩu hợp lệ!', 'warning');
           return;
@@ -1523,7 +1566,7 @@ const Residents = () => {
               type="file" 
               ref={fileInputRef} 
               style={{ display: 'none' }} 
-              accept=".csv,.txt" 
+              accept=".csv,.txt,.xlsx,.xls" 
               onChange={handleImportCSV} 
             />
             <button className="btn btn-secondary btn-print-list" onClick={handlePrint}>
