@@ -1193,7 +1193,8 @@ const Residents = () => {
     if (!hh) return 'Chưa có hộ';
     const head = residents.find(r => r.id === hh.head_of_household_id);
     const headName = head ? head.full_name : 'Chưa rõ chủ hộ';
-    return `Hộ: ${headName} (${hh.address})`;
+    const shortAddress = hh.address.split(',')[0];
+    return `Chủ hộ: ${headName} (${shortAddress})`;
   };
 
   const getStatusText = (statusVal: string) => {
@@ -1321,7 +1322,8 @@ const Residents = () => {
                     <div>
                       <div className="name">{resident.full_name}</div>
                       <div className="subtext">
-                        {resident.phone ? `SĐT: ${resident.phone}` : 'Chưa có SĐT'} | {getHouseholdInfo(resident.household_id)}
+                        <span>{resident.phone ? `SĐT: ${resident.phone}` : 'Chưa có SĐT'}</span>
+                        <span className="mobile-household-info"> | {getHouseholdInfo(resident.household_id)}</span>
                       </div>
                     </div>
                   </div>
@@ -2175,11 +2177,18 @@ const Residents = () => {
         /* Modal styling is now global in App.css */
 
 
+        .mobile-household-info {
+          display: none;
+        }
+
         @media (max-width: 1024px) {
           .data-table th:nth-child(4),
           .data-table td:nth-child(4) { display: none; }
           .data-table th:nth-child(6),
           .data-table td:nth-child(6) { display: none; }
+          .mobile-household-info {
+            display: inline;
+          }
         }
 
         @media (max-width: 768px) {
