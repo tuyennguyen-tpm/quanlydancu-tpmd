@@ -894,6 +894,7 @@ const Residents = () => {
         let addedCount = 0;
         let updatedCount = 0;
         let skipCount = 0;
+        const addedNames: string[] = [];
 
         const householdsToSave: Household[] = [];
         const residentsToSave: Resident[] = [];
@@ -1133,6 +1134,7 @@ const Residents = () => {
             updatedCount++;
           } else {
             addedCount++;
+            addedNames.push(fullName);
           }
         }
 
@@ -1158,6 +1160,9 @@ const Residents = () => {
         }
 
         showToast(`Nhập dữ liệu hoàn tất! Đã thêm mới ${addedCount} và cập nhật ${updatedCount} nhân khẩu${skipCount > 0 ? ` (bỏ qua ${skipCount} dòng lỗi)` : ''}.`, 'success');
+        if (addedCount > 0) {
+          alert(`LƯU Ý: Có ${addedCount} nhân khẩu được thêm mới vì không khớp với ai trong cơ sở dữ liệu hiện tại:\n\n${addedNames.slice(0, 10).map((name, idx) => `${idx + 1}. ${name}`).join('\n')}${addedNames.length > 10 ? '\n... và một số người khác' : ''}\n\n(Vui lòng kiểm tra lại xem họ tên/ngày sinh của họ trong file Excel có khác biệt gì so với trên Web không nhé)`);
+        }
         loadData();
         window.dispatchEvent(new CustomEvent('db-changed'));
       } catch (err) {
