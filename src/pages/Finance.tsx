@@ -67,7 +67,7 @@ const Finance = () => {
     }
     const existing = householdFunds.find(f => f.household_id === hhId && f.fund_name === fundName && f.year === fundYear);
     setEditingFund({ householdId: hhId, fundName });
-    setFundAmountInput(existing ? existing.amount.toString() : '');
+    setFundAmountInput(existing ? formatInputNumber(existing.amount.toString()) : '');
     setFundNoteInput(existing ? existing.note || '' : '');
     setFundDateInput(existing ? existing.paid_at || new Date().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
   };
@@ -75,7 +75,7 @@ const Finance = () => {
   const handleSaveFund = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingFund) return;
-    const parsedAmount = parseInt(fundAmountInput);
+    const parsedAmount = parseInt(fundAmountInput.replace(/\./g, ''));
     if (isNaN(parsedAmount) || parsedAmount < 0) {
       showToast('Số tiền không hợp lệ!', 'warning');
       return;
@@ -167,7 +167,7 @@ const Finance = () => {
   const handleOpenEdit = (record: FinancialRecord) => {
     setEditingRecord(record);
     setType(record.type);
-    setAmount(record.amount.toString());
+    setAmount(formatInputNumber(record.amount.toString()));
     setCategory(record.category);
     setDescription(record.description);
     setRecordedBy(record.recorded_by);
@@ -190,7 +190,7 @@ const Finance = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const parsedAmount = parseInt(amount);
+    const parsedAmount = parseInt(amount.replace(/\./g, ''));
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       showToast('Vui lòng nhập số tiền hợp lệ!', 'warning');
       return;
@@ -278,7 +278,14 @@ const Finance = () => {
   });
 
   const formatCurrency = (amt: number) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amt);
+    if (amt === undefined || amt === null || isNaN(amt)) return '0';
+    return new Intl.NumberFormat('vi-VN').format(amt);
+  };
+
+  const formatInputNumber = (val: string) => {
+    const clean = val.replace(/\D/g, '');
+    if (!clean) return '';
+    return new Intl.NumberFormat('vi-VN').format(parseInt(clean));
   };
 
   return (
@@ -524,10 +531,10 @@ const Finance = () => {
                   <div className="form-group">
                     <label>Số tiền (VND) *</label>
                     <input 
-                      type="number" 
+                      type="text" 
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="Ví dụ: 500000"
+                      onChange={(e) => setAmount(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 500.000"
                       required
                     />
                   </div>
@@ -725,10 +732,10 @@ const Finance = () => {
                   <div className="form-group">
                     <label>Số tiền đóng (VND) *</label>
                     <input 
-                      type="number" 
+                      type="text" 
                       value={fundAmountInput}
-                      onChange={(e) => setFundAmountInput(e.target.value)}
-                      placeholder="Nhập số tiền đóng, ví dụ: 100000"
+                      onChange={(e) => setFundAmountInput(formatInputNumber(e.target.value))}
+                      placeholder="Nhập số tiền đóng, ví dụ: 100.000"
                       required
                       autoFocus
                     />
