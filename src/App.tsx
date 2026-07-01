@@ -961,7 +961,7 @@ const App = () => {
 
           <div className="header-right">
             <div className="search-bar" style={{ position: 'relative' }}>
-              <Search size={18} />
+              <Search size={24} />
               <input 
                 type="text" 
                 placeholder="Tìm kiếm hộ dân, nhân khẩu..." 
