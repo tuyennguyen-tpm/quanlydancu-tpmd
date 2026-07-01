@@ -7,7 +7,8 @@ import {
   AlertCircle,
   X,
   Plus,
-  HeartHandshake
+  HeartHandshake,
+  Trash2
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -50,6 +51,19 @@ const Policies = () => {
       setActivities(list);
     } catch (e) {
       showToast('Lỗi tải dữ liệu chính sách!', 'danger');
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa chương trình hỗ trợ này không?')) {
+      try {
+        await db.deletePolicyActivity(id);
+        showToast('Xóa chương trình thành công!', 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (e) {
+        showToast('Lỗi khi xóa chương trình!', 'danger');
+      }
     }
   };
 
@@ -176,8 +190,19 @@ const Policies = () => {
             {activities.map(act => (
               <div key={act.id} className="act-item">
                  <div className="act-header-row">
-                   <div className="act-header">{act.title}</div>
-                   <span className="target-badge">{getTargetGroupLabel(act.targetGroup)}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <div className="act-header">{act.title}</div>
+                      <span className="target-badge">{getTargetGroupLabel(act.targetGroup)}</span>
+                    </div>
+                    {!isGuest && (
+                      <button
+                        onClick={() => handleDeleteActivity(act.id)}
+                        style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                        title="Xóa chương trình"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                  </div>
                  <div className="act-desc">{act.desc}</div>
                  <div className="act-date">Ngày tạo: {new Date(act.date).toLocaleDateString('vi-VN')}</div>

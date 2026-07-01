@@ -8,7 +8,8 @@ import {
   Plus, 
   X,
   FileCheck,
-  Send
+  Send,
+  Trash2
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -104,6 +105,19 @@ const Complaints = () => {
     setReplyingComplaint(c);
     setReplyText(c.response || '');
     setReplyStatus(c.status === 'pending' ? 'resolved' : c.status);
+  };
+
+  const handleDeleteComplaint = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa phản ánh kiến nghị này khỏi hệ thống?')) {
+      try {
+        await db.deleteComplaint(id);
+        showToast('Xóa kiến nghị thành công!', 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (e) {
+        showToast('Lỗi khi xóa kiến nghị!', 'danger');
+      }
+    }
   };
 
   // Filter and Search
@@ -209,10 +223,18 @@ const Complaints = () => {
                         {c.status === 'pending' ? <Clock size={14} /> : c.status === 'resolved' ? <CheckCircle size={14} /> : <FileCheck size={14} />}
                         {getStatusLabel(c.status)}
                      </span>
-                      {!isGuest && (
-                        <button className="btn-reply" onClick={() => handleOpenReply(c)}>
-                          {c.response ? 'Sửa phản hồi' : 'Phản hồi / Xử lý'}
-                        </button>
+                       {!isGuest && (
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <button className="btn-reply" onClick={() => handleOpenReply(c)}>
+                            {c.response ? 'Sửa phản hồi' : 'Phản hồi / Xử lý'}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteComplaint(c.id)}
+                            style={{ border: 'none', background: 'none', color: 'var(--danger)', fontWeight: '700', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                          >
+                            <Trash2 size={14} /> Xóa
+                          </button>
+                        </div>
                       )}
                   </div>
                </div>

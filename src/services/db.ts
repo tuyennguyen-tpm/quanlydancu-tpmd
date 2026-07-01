@@ -744,6 +744,24 @@ export const db = {
     setStorageItem('complaints', complaints);
     return fullComplaint;
   },
+  deleteComplaint: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('complaints').delete().eq('id', id);
+        if (error) {
+          handleDbError('xóa phản ánh kiến nghị', error);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.error('Supabase deleteComplaint error, falling back to local storage', e);
+      }
+    }
+    const complaints = getStorageItem<Complaint[]>('complaints', seedComplaints);
+    const filtered = complaints.filter(c => c.id !== id);
+    setStorageItem('complaints', filtered);
+    return true;
+  },
 
   // --- Meetings ---
   getMeetings: async (): Promise<Meeting[]> => {
@@ -910,6 +928,24 @@ export const db = {
     setStorageItem('security_logs', logs);
     return log;
   },
+  deleteSecurityLog: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('security_logs').delete().eq('id', id);
+        if (error) {
+          handleDbError('xóa nhật ký an ninh', error);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.error('Supabase deleteSecurityLog error, falling back to local storage', e);
+      }
+    }
+    const logs = getStorageItem<SecurityLog[]>('security_logs', seedSecurityLogs);
+    const filtered = logs.filter(s => s.id !== id);
+    setStorageItem('security_logs', filtered);
+    return true;
+  },
 
   // --- Environment Logs ---
   getEnvironmentLogs: async (): Promise<EnvironmentLog[]> => {
@@ -950,6 +986,24 @@ export const db = {
     }
     setStorageItem('environment_logs', logs);
     return log;
+  },
+  deleteEnvironmentLog: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('environment_logs').delete().eq('id', id);
+        if (error) {
+          handleDbError('xóa nhật ký môi trường', error);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.error('Supabase deleteEnvironmentLog error, falling back to local storage', e);
+      }
+    }
+    const logs = getStorageItem<EnvironmentLog[]>('environment_logs', seedEnvironmentLogs);
+    const filtered = logs.filter(l => l.id !== id);
+    setStorageItem('environment_logs', filtered);
+    return true;
   },
 
   // --- Policy Activities ---
@@ -1017,6 +1071,24 @@ export const db = {
     }
     setStorageItem('policy_activities', acts);
     return act;
+  },
+  deletePolicyActivity: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('policy_activities').delete().eq('id', id);
+        if (error) {
+          handleDbError('xóa chương trình chính sách', error);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.error('Supabase deletePolicyActivity error, falling back to local storage', e);
+      }
+    }
+    const acts = getStorageItem<PolicyActivity[]>('policy_activities', seedPolicyActivities);
+    const filtered = acts.filter(a => a.id !== id);
+    setStorageItem('policy_activities', filtered);
+    return true;
   },
   getGroupId: (): string => {
     return localStorage.getItem('group_id') || 'NAM_SAM_SON_01';

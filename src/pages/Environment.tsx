@@ -22,6 +22,19 @@ const Environment = () => {
     }
   };
 
+  const handleDeleteEnvironmentLog = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa lịch dọn dẹp và theo dõi của khu vực này không?')) {
+      try {
+        await db.deleteEnvironmentLog(id);
+        showToast('Xóa khu vực thành công!', 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (e) {
+        showToast('Lỗi khi xóa lịch dọn dẹp!', 'danger');
+      }
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -166,11 +179,21 @@ const Environment = () => {
                     <span className={`s-badge ${log.status}`}>
                        {getStatusLabel(log.status)}
                     </span>
-                    {!isGuest && (
-                      <button className="icon-btn-sm" onClick={() => handleToggleStatus(log)} title="Đổi trạng thái">
-                        <RefreshCw size={14} />
-                      </button>
-                    )}
+                     {!isGuest && (
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <button className="icon-btn-sm" onClick={() => handleToggleStatus(log)} title="Đổi trạng thái">
+                          <RefreshCw size={14} />
+                        </button>
+                        <button 
+                          className="icon-btn-sm" 
+                          onClick={() => handleDeleteEnvironmentLog(log.id)} 
+                          title="Xóa khu vực"
+                          style={{ color: 'var(--danger)', backgroundColor: '#fef2f2', borderColor: '#fca5a5' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                     )}
                  </div>
               </div>
            ))}

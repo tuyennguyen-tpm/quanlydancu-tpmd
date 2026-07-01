@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, AlertTriangle, Eye, ShieldAlert, X } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, Eye, ShieldAlert, X, Trash2 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import type { SecurityLog } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -20,6 +20,19 @@ const Security = () => {
       setLogs(list);
     } catch (e) {
       showToast('Lỗi tải nhật ký an ninh!', 'danger');
+    }
+  };
+
+  const handleDeleteSecurityLog = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa nhật ký an ninh này không?')) {
+      try {
+        await db.deleteSecurityLog(id);
+        showToast('Xóa nhật ký an ninh thành công!', 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (e) {
+        showToast('Lỗi khi xóa nhật ký!', 'danger');
+      }
     }
   };
 
@@ -124,19 +137,30 @@ const Security = () => {
       <div className="incident-list">
          <h3>Nhật ký an ninh & tuần tra gần đây</h3>
          <div className="list-wrapper">
-           {logs.map(log => (
-              <div key={log.id} className="incident-item">
-                 {log.type === 'alert' ? (
-                   <ShieldAlert size={20} className="icon-red" />
-                 ) : (
-                   <ShieldCheck size={20} className="icon-green" />
-                 )}
-                 <div className="det">
-                    <div className="t">{log.title}</div>
-                    <div className="d">{new Date(log.date).toLocaleDateString('vi-VN')} - {log.description}</div>
-                 </div>
-              </div>
-           ))}
+            {logs.map(log => (
+               <div key={log.id} className="incident-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                    {log.type === 'alert' ? (
+                      <ShieldAlert size={20} className="icon-red" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    ) : (
+                      <ShieldCheck size={20} className="icon-green" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    )}
+                    <div className="det">
+                       <div className="t">{log.title}</div>
+                       <div className="d">{new Date(log.date).toLocaleDateString('vi-VN')} - {log.description}</div>
+                    </div>
+                  </div>
+                  {!isGuest && (
+                    <button 
+                      onClick={() => handleDeleteSecurityLog(log.id)}
+                      style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '6px', flexShrink: 0 }}
+                      title="Xóa nhật ký"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+               </div>
+            ))}
            {logs.length === 0 && (
              <div style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)'}}>
                Chưa ghi nhận sự kiện an ninh nào.
