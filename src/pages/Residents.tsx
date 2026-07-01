@@ -20,6 +20,7 @@ import {
 import { db, generateUUID, mapToUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Resident, Household } from '../types';
+import ExcelJS from 'exceljs';
 
 const parseCSV = (text: string) => {
   const lines: string[][] = [];
@@ -609,11 +610,13 @@ const Residents = () => {
   };
 
   // Export to Excel/CSV Functionality
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (filteredResidents.length === 0) {
       showToast('Không có dữ liệu để xuất!', 'warning');
       return;
     }
+
+    showToast('Đang khởi tạo file Excel...', 'info');
 
     const headers = [
       'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Thường trú', 
@@ -621,6 +624,7 @@ const Residents = () => {
       'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
       'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
     ];
+
     const rows = filteredResidents.map(r => {
       const hh = households.find(h => h.id === r.household_id);
       const hhNum = hh ? hh.household_number : '';
@@ -636,12 +640,12 @@ const Residents = () => {
       }
 
       return [
-        hhNum ? `\t${hhNum}` : '',
+        hhNum || '',
         r.full_name,
         r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
-        r.dob ? `\t${formatToDisplayDate(r.dob)}` : '',
-        r.cccd ? `\t${r.cccd}` : '',
-        r.phone ? `\t${r.phone}` : '',
+        r.dob ? formatToDisplayDate(r.dob) : '',
+        r.cccd || '',
+        r.phone || '',
         r.permanent_address || '',
         r.relationship_with_head,
         r.occupation || '',
@@ -650,33 +654,127 @@ const Residents = () => {
         r.ethnicity || 'Kinh',
         r.religion || 'Không',
         r.nationality || 'Việt Nam',
-        r.education_level ? `\t${r.education_level}` : '\t12/12',
+        r.education_level || '12/12',
         r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
         r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
-        r.temporary_residence_expiry ? `\t${formatToDisplayDate(r.temporary_residence_expiry)}` : '',
+        r.temporary_residence_expiry ? formatToDisplayDate(r.temporary_residence_expiry) : '',
         r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : r.status === 'stay' ? 'Lưu trú' : 'Đã mất',
-        r.status === 'deceased' && r.death_date ? `\t${formatToDisplayDate(r.death_date)}` : '',
+        r.status === 'deceased' && r.death_date ? formatToDisplayDate(r.death_date) : '',
         ageAtDeath,
         r.notes || ''
       ];
     });
 
-    const csvContent = '\uFEFF' + [
-      headers.join(','),
-      ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Danh sách nhân khẩu');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const tdpName = localStorage.getItem('tdp_name') || 'quang_giao';
-    const filenameTdp = tdpName.toLowerCase().replace(/\s+/g, '_');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `danh_sach_nhan_khau_${filenameTdp}_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Xuất báo cáo thành công!', 'success');
+      // Tạo cấu trúc cột
+      worksheet.columns = headers.map(h => ({ header: h, key: h }));
+
+      // Thêm các dòng dữ liệu và thiết lập kiểu dáng
+      rows.forEach((row, rowIndex) => {
+        const addedRow = worksheet.addRow(row);
+        const resident = filteredResidents[rowIndex];
+
+        // Nếu là chủ hộ, tô màu nền xanh lá nhạt và chữ xanh đậm
+        if (resident.is_head) {
+          addedRow.eachCell(cell => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFE6F4EA' } // Xanh lá nhạt #E6F4EA
+            };
+            cell.font = {
+              bold: true,
+              color: { argb: 'FF137333' }, // Xanh lá đậm #137333
+              name: 'Segoe UI',
+              size: 11
+            };
+          });
+        } else {
+          addedRow.eachCell(cell => {
+            cell.font = {
+              name: 'Segoe UI',
+              size: 11
+            };
+          });
+        }
+      });
+
+      // Căn chỉnh tiêu đề dòng đầu tiên
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = 26;
+      headerRow.eachCell(cell => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF0F766E' } // Màu Teal tối #0F766E
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' }, // Chữ trắng
+          name: 'Segoe UI',
+          size: 11
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+          wrapText: true
+        };
+      });
+
+      // Áp dụng đường viền lưới cho toàn bộ các ô và tự động co giãn độ rộng cột
+      worksheet.eachRow((row, rowNumber) => {
+        row.eachCell(cell => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+          if (rowNumber > 1) {
+            cell.alignment = {
+              vertical: 'middle',
+              horizontal: 'left'
+            };
+          }
+        });
+      });
+
+      // Tự co giãn độ rộng cột
+      worksheet.columns.forEach(column => {
+        let maxLen = 0;
+        column.values?.forEach(v => {
+          const valStr = v ? v.toString() : '';
+          if (valStr.length > maxLen) {
+            maxLen = valStr.length;
+          }
+        });
+        column.width = Math.min(Math.max(maxLen + 4, 12), 40); // Giới hạn tối thiểu 12 và tối đa 40 ký tự
+      });
+
+      // Tạo Buffer và tải xuống
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      
+      const tdpName = localStorage.getItem('tdp_name') || 'quang_giao';
+      const filenameTdp = tdpName.toLowerCase().replace(/\s+/g, '_');
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `danh_sach_nhan_khau_${filenameTdp}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToast('Xuất báo cáo Excel thành công!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi khi xuất file Excel!', 'danger');
+    }
   };
 
   // Print function
