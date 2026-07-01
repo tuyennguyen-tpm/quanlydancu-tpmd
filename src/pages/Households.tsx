@@ -105,6 +105,8 @@ const Households = () => {
 
   // Confirmation state for Report Deceased
   const [deceasedConfirmMember, setDeceasedConfirmMember] = useState<Resident | null>(null);
+  // Suggested replacement head after a head is reported deceased
+  const [suggestedNewHead, setSuggestedNewHead] = useState<{ household: Household; candidate: Resident } | null>(null);
 
   // New Head of Household details (for quick add)
   const [createNewHead, setCreateNewHead] = useState(false);
@@ -542,10 +544,39 @@ const Households = () => {
 
       const hh = households.find(h => h.id === member.household_id);
       if (hh && hh.head_of_household_id === member.id) {
+        // Xóa chủ hộ cũ
         await db.saveHousehold({
           ...hh,
           head_of_household_id: null
         });
+
+        // Tìm người thay thế phù hợp nhất: ưu tiên Vợ/Chồng > Con lớn tuổi nhất
+        const otherMembers = residents.filter(
+          r => r.household_id === member.household_id && r.id !== member.id && r.status !== 'deceased'
+        );
+        const cleanR = (s: string) => (s || '').normalize('NFC').toLowerCase().trim();
+        const spouseRels = ['vợ', 'chồng'];
+        const childRels = ['con', 'con dâu', 'con rể'];
+        
+        let candidate: Resident | undefined =
+          otherMembers.find(m => spouseRels.includes(cleanR(m.relationship_with_head || '')));
+
+        if (!candidate) {
+          // Tìm con lớn tuổi nhất
+          const children = otherMembers.filter(m => childRels.some(c => cleanR(m.relationship_with_head || '').includes(c)));
+          if (children.length > 0) {
+            candidate = children.sort((a, b) => (a.dob || '') < (b.dob || '') ? -1 : 1)[0];
+          }
+        }
+
+        if (!candidate && otherMembers.length > 0) {
+          candidate = otherMembers[0];
+        }
+
+        if (candidate) {
+          // Hiển thị modal gợi ý chọn chủ hộ mới
+          setSuggestedNewHead({ household: { ...hh, head_of_household_id: null }, candidate });
+        }
       }
 
       showToast(`Đã ghi nhận báo mất cho nhân khẩu ${member.full_name} thành công!`, 'success');
@@ -1540,7 +1571,61 @@ const Households = () => {
         </div>
       )}
 
-      {/* Add Member Modal */}
+      {/* Suggested New Head Modal */}
+      {suggestedNewHead && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal-content" style={{ maxWidth: '450px', borderRadius: '16px', border: '1px solid #bbf7d0', boxShadow: '0 10px 25px -5px rgba(22, 101, 52, 0.1)' }}>
+            <div className="modal-header" style={{ backgroundColor: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '16px 24px', borderTopLeftRadius: '15px', borderTopRightRadius: '15px' }}>
+              <h2 style={{ color: '#166534', margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                🏠 Chọn chủ hộ mới
+              </h2>
+              <button className="close-btn" style={{ color: '#166534' }} onClick={() => setSuggestedNewHead(null)}><X size={22} /></button>
+            </div>
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: '#374151', lineHeight: '1.6' }}>
+                Chủ hộ vừa được khai tử. Hệ thống gợi ý đặt <strong>{suggestedNewHead.candidate.full_name}</strong> ({suggestedNewHead.candidate.relationship_with_head}) làm <strong>Chủ hộ mới</strong> của hộ này.
+              </p>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', fontStyle: 'italic' }}>
+                Bạn có thể xác nhận ngay hoặc bỏ qua và tự chỉ định chủ hộ sau qua chức năng Sửa hộ gia đình.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => setSuggestedNewHead(null)}
+                  style={{ minHeight: '40px', padding: '0 20px', borderRadius: '8px', fontWeight: '600' }}
+                >
+                  Bỏ qua
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  style={{ backgroundColor: '#16a34a', borderColor: '#16a34a', color: 'white', minHeight: '40px', padding: '0 20px', borderRadius: '8px', fontWeight: '600' }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#166534'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
+                  onClick={async () => {
+                    try {
+                      const { household, candidate } = suggestedNewHead;
+                      await db.saveHousehold({ ...household, head_of_household_id: candidate.id });
+                      await db.saveResident({ ...candidate, is_head: true, relationship_with_head: 'Chủ hộ' });
+                      showToast(`Đã đặt ${candidate.full_name} làm Chủ hộ mới!`, 'success');
+                      setSuggestedNewHead(null);
+                      loadData();
+                      window.dispatchEvent(new CustomEvent('db-changed'));
+                    } catch {
+                      showToast('Lỗi khi cập nhật chủ hộ mới!', 'danger');
+                    }
+                  }}
+                >
+                  Xác nhận đặt làm Chủ hộ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {isAddMemberOpen && targetHouseholdForMember && (
         <div className="modal-overlay">
           <div className="modal-content">

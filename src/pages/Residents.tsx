@@ -1255,7 +1255,7 @@ const Residents = () => {
     const query = searchTerm.toLowerCase();
     const matchesSearch = name.includes(query) || cccdCode.includes(query) || phoneNum.includes(query);
 
-    // Category filter matches
+    // Category filter matches (bỏ qua với người đã mất khi showDeceased = true)
     const age = getAge(r.dob);
     let matchesCategory = true;
     if (categoryFilter === 'senior') {
@@ -1264,6 +1264,10 @@ const Residents = () => {
       matchesCategory = age < 16;
     } else if (categoryFilter === 'military') {
       matchesCategory = r.gender === 'male' && age >= 18 && age <= 27 && (!r.military_service || r.military_service === 'none' || r.military_service === 'in_age');
+    }
+    // Nếu người đã mất và đang bật "Hiện người đã mất" thì không bị ảnh hưởng bởi categoryFilter
+    if (showDeceased && r.status === 'deceased') {
+      matchesCategory = true;
     }
 
     // Household filter matches
