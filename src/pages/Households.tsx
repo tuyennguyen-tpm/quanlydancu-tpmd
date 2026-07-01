@@ -92,6 +92,17 @@ const Households = () => {
   const [mPob, setMPob] = useState('');
   const [mNotes, setMNotes] = useState('');
 
+  // Guest Mode checking
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
+
+  // State for Transfer / Split Household
+  const [transferringMember, setTransferringMember] = useState<Resident | null>(null);
+  const [targetHouseholdIdForTransfer, setTargetHouseholdIdForTransfer] = useState<string>('');
+
+  const [splittingMember, setSplittingMember] = useState<Resident | null>(null);
+  const [newHkNumberForSplit, setNewHkNumberForSplit] = useState<string>('');
+  const [newAddressForSplit, setNewAddressForSplit] = useState<string>('');
+
   // New Head of Household details (for quick add)
   const [createNewHead, setCreateNewHead] = useState(false);
   const [newHeadName, setNewHeadName] = useState('');
@@ -322,6 +333,86 @@ const Households = () => {
       window.dispatchEvent(new CustomEvent('db-changed'));
     } catch (e) {
       showToast('Lỗi khi lưu dữ liệu!', 'danger');
+    }
+  };
+
+  const handleTransferHousehold = async () => {
+    if (!transferringMember || !targetHouseholdIdForTransfer) return;
+    try {
+      const oldHh = households.find(h => h.id === transferringMember.household_id);
+      
+      const updatedResident: Resident = {
+        ...transferringMember,
+        household_id: targetHouseholdIdForTransfer,
+        is_head: false,
+        relationship_with_head: 'Thành viên'
+      };
+      await db.saveResident(updatedResident);
+      
+      if (oldHh && oldHh.head_of_household_id === transferringMember.id) {
+        await db.saveHousehold({
+          ...oldHh,
+          head_of_household_id: null
+        });
+      }
+
+      showToast(`Đã chuyển nhân khẩu ${transferringMember.full_name} sang hộ gia đình mới!`, 'success');
+      setTransferringMember(null);
+      setTargetHouseholdIdForTransfer('');
+      setViewingMembersHousehold(null);
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Lỗi khi chuyển hộ gia đình!', 'danger');
+    }
+  };
+
+  const handleSplitHousehold = async () => {
+    if (!splittingMember || !newHkNumberForSplit.trim() || !newAddressForSplit.trim()) {
+      showToast('Vui lòng điền đầy đủ số sổ và địa chỉ hộ mới!', 'warning');
+      return;
+    }
+    try {
+      const newHhId = generateUUID();
+      const oldHh = households.find(h => h.id === splittingMember.household_id);
+      
+      const newHh: Household = {
+        id: newHhId,
+        household_number: newHkNumberForSplit.trim(),
+        address: newAddressForSplit.trim(),
+        head_of_household_id: splittingMember.id,
+        group_id: db.getGroupId(),
+        latitude: 19.7420,
+        longitude: 105.9230,
+        policy_type: 'none',
+        created_at: new Date().toISOString()
+      };
+      await db.saveHousehold(newHh);
+      
+      const updatedResident: Resident = {
+        ...splittingMember,
+        household_id: newHhId,
+        is_head: true,
+        relationship_with_head: 'Chủ hộ'
+      };
+      await db.saveResident(updatedResident);
+      
+      if (oldHh && oldHh.head_of_household_id === splittingMember.id) {
+        await db.saveHousehold({
+          ...oldHh,
+          head_of_household_id: null
+        });
+      }
+
+      showToast(`Đã tách hộ mới thành công cho ${splittingMember.full_name}!`, 'success');
+      setSplittingMember(null);
+      setNewHkNumberForSplit('');
+      setNewAddressForSplit('');
+      setViewingMembersHousehold(null);
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Lỗi khi tách hộ khẩu mới!', 'danger');
     }
   };
 
@@ -1052,6 +1143,7 @@ const Households = () => {
                     <th>Số điện thoại</th>
                     <th>Nghề nghiệp</th>
                     <th>Trạng thái</th>
+                    {!isGuest && <th>Biến động hộ</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1072,17 +1164,147 @@ const Households = () => {
                           {member.status === 'resident' ? 'Thường trú' : member.status === 'temporary_resident' ? 'Tạm trú' : member.status === 'temporary_absent' ? 'Tạm vắng' : member.status === 'stay' ? 'Lưu trú' : 'Đã mất'}
                         </span>
                       </td>
+                      {!isGuest && (
+                        <td>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', border: '1px solid var(--border)', borderRadius: '4px' }}
+                              onClick={() => {
+                                setTransferringMember(member);
+                                setTargetHouseholdIdForTransfer('');
+                              }}
+                              title="Chuyển sang hộ gia đình khác"
+                            >
+                              Chuyển hộ
+                            </button>
+                            <button 
+                              className="btn btn-secondary" 
+                              style={{ padding: '4px 8px', fontSize: '0.75rem', minHeight: 'auto', border: '1px solid var(--border)', borderRadius: '4px' }}
+                              onClick={() => {
+                                setSplittingMember(member);
+                                setNewHkNumberForSplit('');
+                                setNewAddressForSplit('');
+                              }}
+                              title="Tách ra làm chủ hộ mới"
+                            >
+                              Tách hộ
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {getHouseholdMembers(viewingMembersHousehold.id).length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)'}}>
+                      <td colSpan={isGuest ? 7 : 8} style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)'}}>
                         Hộ gia đình này hiện chưa khai báo nhân khẩu. Vui lòng thêm nhân khẩu ở tab "Quản lý Nhân khẩu".
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Member Modal */}
+      {transferringMember && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <div className="modal-header">
+              <h2>Chuyển hộ khẩu</h2>
+              <button className="close-btn" onClick={() => setTransferringMember(null)}><X size={24} /></button>
+            </div>
+            <div className="modal-form" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                Chuyển nhân khẩu <strong>{transferringMember.full_name}</strong> sang hộ gia đình khác trong tổ dân phố:
+              </p>
+              
+              <div className="form-group">
+                <label>Chọn hộ gia đình chuyển đến *</label>
+                <select 
+                  value={targetHouseholdIdForTransfer} 
+                  onChange={(e) => setTargetHouseholdIdForTransfer(e.target.value)}
+                  required
+                >
+                  <option value="">-- Chọn hộ gia đình --</option>
+                  {households
+                    .filter(h => h.id !== transferringMember.household_id)
+                    .map(h => {
+                      const head = residents.find(r => r.id === h.head_of_household_id);
+                      return (
+                        <option key={h.id} value={h.id}>
+                          Sổ: {h.household_number} - {h.address} (Chủ hộ: {head ? head.full_name : 'Chưa rõ'})
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+
+              <div className="form-actions" style={{ marginTop: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setTransferringMember(null)}>Hủy</button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={handleTransferHousehold}
+                  disabled={!targetHouseholdIdForTransfer}
+                >
+                  Xác nhận chuyển
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Split Member Modal */}
+      {splittingMember && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '450px' }}>
+            <div className="modal-header">
+              <h2>Tách hộ khẩu mới</h2>
+              <button className="close-btn" onClick={() => setSplittingMember(null)}><X size={24} /></button>
+            </div>
+            <div className="modal-form" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                Tách nhân khẩu <strong>{splittingMember.full_name}</strong> ra làm chủ hộ cho một hộ gia đình mới:
+              </p>
+              
+              <div className="form-group">
+                <label>Số sổ hộ khẩu mới *</label>
+                <input 
+                  type="text" 
+                  value={newHkNumberForSplit} 
+                  onChange={(e) => setNewHkNumberForSplit(e.target.value)}
+                  placeholder="Ví dụ: HK-9988"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Địa chỉ nhà mới *</label>
+                <input 
+                  type="text" 
+                  value={newAddressForSplit} 
+                  onChange={(e) => setNewAddressForSplit(e.target.value)}
+                  placeholder="Ví dụ: Số 12, Ngõ 3 TDP Quảng Giao"
+                  required
+                />
+              </div>
+
+              <div className="form-actions" style={{ marginTop: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setSplittingMember(null)}>Hủy</button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={handleSplitHousehold}
+                  disabled={!newHkNumberForSplit.trim() || !newAddressForSplit.trim()}
+                >
+                  Xác nhận tách hộ
+                </button>
+              </div>
             </div>
           </div>
         </div>
