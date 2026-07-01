@@ -2022,11 +2022,12 @@ const Residents = () => {
           background: white;
           border-radius: var(--radius-lg);
           border: 1px solid var(--border);
-          overflow: hidden;
+          overflow-x: auto;
         }
 
         .data-table {
           width: 100%;
+          min-width: 850px;
           border-collapse: collapse;
           text-align: left;
         }
