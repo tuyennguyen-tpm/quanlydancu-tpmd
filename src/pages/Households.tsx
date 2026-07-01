@@ -1001,12 +1001,15 @@ const Households = () => {
 
               {(!createNewHead || editingHousehold) && (
                 <div className="form-group">
-                  <label>Chủ hộ (Chọn từ nhân khẩu có sẵn)</label>
+                  <label>Chủ hộ (Chọn từ nhân khẩu có sẵn trong hộ)</label>
                   <select value={headId} onChange={(e) => setHeadId(e.target.value)}>
                     <option value="">-- Chưa chọn / Chưa lập nhân khẩu --</option>
-                    {residents.map(r => (
+                    {(editingHousehold 
+                      ? residents.filter(r => r.household_id === editingHousehold.id) 
+                      : residents
+                    ).map(r => (
                       <option key={r.id} value={r.id}>
-                        {r.full_name} ({r.cccd || 'Không có CCCD'})
+                        {r.full_name} ({r.relationship_with_head || 'Thành viên'})
                       </option>
                     ))}
                   </select>
