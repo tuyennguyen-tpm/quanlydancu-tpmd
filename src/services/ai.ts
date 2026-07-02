@@ -1,5 +1,5 @@
 // src/services/ai.ts
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 // Ensure the API key is provided via VITE_GEMINI_API_KEY environment variable.
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -7,10 +7,7 @@ if (!apiKey) {
   console.warn("VITE_GEMINI_API_KEY is not set. Gemini API calls will fail.");
 }
 
-const genAI = new GoogleGenerativeAI(apiKey ?? "");
-const model = genAI.getGenerativeModel({
-  model: "gemini-pro",
-});
+const ai = new GoogleGenAI({ apiKey: apiKey ?? "" });
 
 /**
  * Send a prompt to Gemini and return the generated text.
@@ -18,10 +15,9 @@ const model = genAI.getGenerativeModel({
  * @returns Generated response string
  */
 export async function askGemini(prompt: string): Promise<string> {
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
+  const response = await ai.models.generateContent({
+    model: "gemini-2.0-flash",
+    contents: prompt,
   });
-  const response = result.response?.text();
-  return response ?? "";
+  return response.text ?? "";
 }
