@@ -92,7 +92,7 @@ const App = () => {
       const tdpName = rawTdp === 'Quảng Giao' || rawTdp === 'TDP Quảng Giao' || rawTdp === 'Tiến Quảng Giao' ? 'Kim Tuyến' : rawTdp;
       let reply = '';
       if (q.includes('xin chào') || q.includes('hello') || q.includes('chào')) {
-        reply = `Xin chào! Tôi là Trợ lý AI của Tổ dân phố ${tdpName}. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
+        reply = `Xin chào! Tôi là Trợ lý AI của: ${tdpName}. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
       } else if (q.includes('biên bản') || q.includes('họp')) {
         reply = `Để soạn biên bản họp, vui lòng vào tab ➤ Trợ lý AI trên menu và nhập yêu cầu chi tiết.\n\nHoặc nhắn tôi nội dung cụ thể: "Soạn biên bản họp tổ dân phố tháng 7" để tôi tạo ngay!`;
       } else if (q.includes('báo cáo')) {
@@ -1978,7 +1978,7 @@ const App = () => {
                     color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.5'
                   }}>
                     <Bot size={32} color="#bfdbfe" style={{ marginBottom: '8px' }} />
-                    <div>Xin chào! Tôi là Trợ lý AI của TDP.</div>
+                    <div>Xin chào! Tôi là Trợ lý AI của: {tdpName}.</div>
                     <div>Hãy hỏi tôi về văn bản hành chính, báo cáo, biên bản...</div>
                   </div>
                 )}
