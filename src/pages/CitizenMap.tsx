@@ -32,7 +32,7 @@ const ChangeView = ({ center, zoom }: { center: [number, number]; zoom: number }
 // Child component to capture click events on the map
 const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
   useMapEvents({
-    click(e) {
+    click(e: L.LeafletMouseEvent) {
       onMapClick(e.latlng.lat, e.latlng.lng);
     }
   });

@@ -10,8 +10,6 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey ?? "");
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
-  temperature: 0.7,
-  maxOutputTokens: 500,
 });
 
 /**
@@ -20,7 +18,10 @@ const model = genAI.getGenerativeModel({
  * @returns Generated response string
  */
 export async function askGemini(prompt: string): Promise<string> {
-  const result = await model.generateContent(prompt);
-  const response = await result.response?.text();
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
+  });
+  const response = result.response?.text();
   return response ?? "";
 }
