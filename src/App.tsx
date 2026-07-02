@@ -74,16 +74,70 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'to_truong');
 
+  useEffect(() => {
+    // Seed current role as verified on mount so no prompt on load
+    const initRole = localStorage.getItem('current_role') || 'to_truong';
+    localStorage.setItem(`role_verified_${initRole}`, 'true');
+
+    const syncRolePins = async () => {
+      try {
+        const pToTruong = await (db as any).getRolePin('to_truong');
+        const pBiThu = await (db as any).getRolePin('bi_thu');
+        const pMatTran = await (db as any).getRolePin('mat_tran');
+        localStorage.setItem('role_pin_to_truong', pToTruong);
+        localStorage.setItem('role_pin_bi_thu', pBiThu);
+        localStorage.setItem('role_pin_mat_tran', pMatTran);
+      } catch (e) {
+        console.error('Failed to sync role PINs on mount', e);
+      }
+    };
+    syncRolePins();
+  }, []);
+
   const handleRoleChange = (role: string) => {
-    localStorage.setItem('current_role', role);
-    setUserRole(role);
-    window.dispatchEvent(new CustomEvent('role-changed', { detail: role }));
-    
     const roleLabels: Record<string, string> = {
       to_truong: 'Tổ trưởng dân phố',
       bi_thu: 'Bí thư Chi bộ',
       mat_tran: 'Trưởng ban Mặt trận'
     };
+
+    // Check if device already verified this role
+    const isVerified = localStorage.getItem(`role_verified_${role}`) === 'true';
+    if (!isVerified) {
+      const defaultPins: Record<string, string> = {
+        to_truong: '0000',
+        bi_thu: '1111',
+        mat_tran: '2222'
+      };
+      const correctPin = localStorage.getItem(`role_pin_${role}`) || defaultPins[role];
+      const enteredPin = window.prompt(`Nhập mã PIN xác nhận để chuyển sang vai trò "${roleLabels[role]}":\n(Mã PIN mặc định là: ${defaultPins[role]})`);
+      
+      if (enteredPin === null) {
+        // Clicked Cancel, reset select element back to active role
+        const selectElement = document.querySelector('.role-switcher-container select') as HTMLSelectElement;
+        if (selectElement) selectElement.value = userRole;
+        return;
+      }
+      
+      if (enteredPin !== correctPin) {
+        // Reset dropdown selection visually
+        const selectElement = document.querySelector('.role-switcher-container select') as HTMLSelectElement;
+        if (selectElement) selectElement.value = userRole;
+        
+        const ev = new CustomEvent('show-toast', { 
+          detail: { message: '❌ Mã PIN xác nhận vai trò không chính xác!', type: 'danger' } 
+        });
+        window.dispatchEvent(ev);
+        return;
+      }
+      
+      // Mark as verified on this device
+      localStorage.setItem(`role_verified_${role}`, 'true');
+    }
+
+    localStorage.setItem('current_role', role);
+    setUserRole(role);
+    window.dispatchEvent(new CustomEvent('role-changed', { detail: role }));
     
     // Auto redirect if active tab is restricted in new role
     if (role === 'mat_tran' && ['party-cell', 'meetings-party'].includes(activeTab)) {
@@ -113,6 +167,9 @@ const App = () => {
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [sbUrl, setSbUrl] = useState(localStorage.getItem('supabase_url') || '');
+  const [rolePinToTruongInput, setRolePinToTruongInput] = useState('0000');
+  const [rolePinBiThuInput, setRolePinBiThuInput] = useState('1111');
+  const [rolePinMatTranInput, setRolePinMatTranInput] = useState('2222');
   const [sbKey, setSbKey] = useState(localStorage.getItem('supabase_anon_key') || '');
   const [tdpNameInput, setTdpNameInput] = useState(tdpName);
   const [wardNameInput, setWardNameInput] = useState(wardName);
@@ -530,6 +587,9 @@ const App = () => {
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
     setGuestPinInput(localStorage.getItem('guest_access_pin') || '1234');
+    setRolePinToTruongInput(localStorage.getItem('role_pin_to_truong') || '0000');
+    setRolePinBiThuInput(localStorage.getItem('role_pin_bi_thu') || '1111');
+    setRolePinMatTranInput(localStorage.getItem('role_pin_mat_tran') || '2222');
     setLatestAppVersionInput(localStorage.getItem('latest_app_version') || APP_VERSION);
     setSettingsOpen(true);
   };
@@ -593,10 +653,22 @@ const App = () => {
 
     // Lưu mã PIN truy cập cho Bà con
     const pinToSave = guestPinInput.trim() || '1234';
+    const pinToTruongToSave = rolePinToTruongInput.trim() || '0000';
+    const pinBiThuToSave = rolePinBiThuInput.trim() || '1111';
+    const pinMatTranToSave = rolePinMatTranInput.trim() || '2222';
     try {
       await db.saveGuestPin(pinToSave);
+      await (db as any).saveRolePin('to_truong', pinToTruongToSave);
+      await (db as any).saveRolePin('bi_thu', pinBiThuToSave);
+      await (db as any).saveRolePin('mat_tran', pinMatTranToSave);
+
+      // Mark as verified on this device since we configured it
+      localStorage.setItem('role_verified_to_truong', 'true');
+      localStorage.setItem('role_verified_bi_thu', 'true');
+      localStorage.setItem('role_verified_mat_tran', 'true');
+
       window.dispatchEvent(new CustomEvent('show-toast', {
-        detail: { message: `✅ Mã PIN "${pinToSave}" đã đồng bộ lên Database!`, type: 'success' }
+        detail: { message: `✅ Cấu hình và mã PIN phân quyền đã đồng bộ lên Database!`, type: 'success' }
       }));
     } catch (err: any) {
       window.dispatchEvent(new CustomEvent('show-toast', {
@@ -1285,6 +1357,38 @@ const App = () => {
                     placeholder="Mặc định: 1234"
                     maxLength={10}
                   />
+                </div>
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginTop: '4px' }}>
+                  <div className="form-group">
+                    <label>PIN vai trò Tổ trưởng</label>
+                    <input
+                      type="text"
+                      value={rolePinToTruongInput}
+                      onChange={(e) => setRolePinToTruongInput(e.target.value)}
+                      placeholder="Mặc định: 0000"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>PIN vai trò Bí thư</label>
+                    <input
+                      type="text"
+                      value={rolePinBiThuInput}
+                      onChange={(e) => setRolePinBiThuInput(e.target.value)}
+                      placeholder="Mặc định: 1111"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>PIN vai trò Mặt trận</label>
+                    <input
+                      type="text"
+                      value={rolePinMatTranInput}
+                      onChange={(e) => setRolePinMatTranInput(e.target.value)}
+                      placeholder="Mặc định: 2222"
+                      maxLength={10}
+                    />
+                  </div>
                 </div>
                 <div className="form-group">
                   <label>Phiên bản phần mềm mới nhất (Admin)</label>

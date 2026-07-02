@@ -1130,6 +1130,44 @@ export const db = {
     }
     console.log('saveGuestPin: da luu PIN thanh cong vao app_config:', pin);
   },
+  getRolePin: async (role: string, tenantId?: string): Promise<string> => {
+    const tId = tenantId || localStorage.getItem('guest_tenant_id') || localStorage.getItem('tenant_id');
+    const defaultPins: Record<string, string> = { to_truong: '0000', bi_thu: '1111', mat_tran: '2222' };
+    if (!tId) {
+      return localStorage.getItem(`role_pin_${role}`) || defaultPins[role];
+    }
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('key', `role_pin_${role}`)
+          .eq('user_id', tId);
+        if (!error && data && data.length > 0) {
+          return data[0].value;
+        }
+      } catch (e) {
+        console.error(`getRolePin ${role} error`, e);
+      }
+    }
+    return localStorage.getItem(`role_pin_${role}`) || defaultPins[role];
+  },
+  saveRolePin: async (role: string, pin: string): Promise<void> => {
+    localStorage.setItem(`role_pin_${role}`, pin);
+    if (!supabase) {
+      console.warn(`saveRolePin ${role}: supabase la null`);
+      return;
+    }
+    try {
+      const uId = await getSessionUserId();
+      const { error } = await supabase
+        .from('app_config')
+        .upsert({ user_id: uId, key: `role_pin_${role}`, value: pin, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    } catch (e) {
+      console.error(`saveRolePin ${role} error`, e);
+    }
+  },
 
   // --- Meeting Minutes ---
   getMeetingMinutes: async (): Promise<MeetingMinutesData[]> => {
