@@ -10,7 +10,7 @@ function createWindow() {
       contextIsolation: true,
     },
     icon: path.join(__dirname, 'dist', 'favicon.ico'),
-    title: 'Quản lý Dân cư & Chi bộ Đảng - Kim Tuyến',
+    title: 'Quản lý Dân cư & Chi bộ Đảng - TDP Quảng Giao',
   });
 
   // Load built index.html

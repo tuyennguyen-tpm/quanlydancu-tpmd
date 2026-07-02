@@ -88,11 +88,10 @@ const App = () => {
     setTimeout(async () => {
       // Re-use same AI logic from AIAssistant
       const q = text.toLowerCase();
-      const rawTdp = localStorage.getItem('tdp_name') || 'Kim Tuyến';
-      const tdpName = rawTdp === 'Quảng Giao' || rawTdp === 'TDP Quảng Giao' || rawTdp === 'Tiến Quảng Giao' ? 'Kim Tuyến' : rawTdp;
+      const tdpName = localStorage.getItem('tdp_name') || 'Tổ dân phố';
       let reply = '';
       if (q.includes('xin chào') || q.includes('hello') || q.includes('chào')) {
-        reply = `Xin chào! Tôi là Trợ lý AI của: ${tdpName}. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
+        reply = `Xin chào! Tôi là Trợ lý AI của: Kim Tuyến. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
       } else if (q.includes('biên bản') || q.includes('họp')) {
         reply = `Để soạn biên bản họp, vui lòng vào tab ➤ Trợ lý AI trên menu và nhập yêu cầu chi tiết.\n\nHoặc nhắn tôi nội dung cụ thể: "Soạn biên bản họp tổ dân phố tháng 7" để tôi tạo ngay!`;
       } else if (q.includes('báo cáo')) {
@@ -199,12 +198,7 @@ const App = () => {
 
   // Tên Tổ dân phố (có thể sửa)
   const [tdpName, setTdpName] = useState(() => {
-    const stored = localStorage.getItem('tdp_name');
-    if (stored === 'Quảng Giao' || stored === 'TDP Quảng Giao' || stored === 'Tiến Quảng Giao') {
-      localStorage.setItem('tdp_name', 'Kim Tuyến');
-      return 'Kim Tuyến';
-    }
-    return stored || 'Kim Tuyến';
+    return localStorage.getItem('tdp_name') || 'Tiến Quảng Giao';
   });
   const [wardName, setWardName] = useState(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn');
   const [leaderName, setLeaderName] = useState(localStorage.getItem('leader_name') || 'Kim Tuyến');

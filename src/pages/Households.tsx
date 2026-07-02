@@ -1531,7 +1531,7 @@ const Households = () => {
                   type="text" 
                   value={newAddressForSplit} 
                   onChange={(e) => setNewAddressForSplit(e.target.value)}
-                  placeholder="Ví dụ: Số 12, Ngõ 3 TDP Kim Tuyến"
+                  placeholder="Ví dụ: Số 12, Ngõ 3 TDP Quảng Giao"
                   required
                 />
               </div>
