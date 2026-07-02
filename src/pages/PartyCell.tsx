@@ -681,7 +681,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             <tr>
               <td style="width: 45%; text-align: center; line-height: 1.3;">
                 <strong>ĐẢNG BỘ PHƯỜNG QUẢNG GIAO</strong><br>
-                <strong style="text-decoration: underline;">CHI BỘ TDP QUẢNG GIAO</strong>
+                <strong style="text-decoration: underline;">CHI BỘ TDP KIM TUYẾN</strong>
               </td>
               <td style="width: 55%; text-align: center; line-height: 1.3;">
                 <strong>ĐẢNG CỘNG SẢN VIỆT NAM</strong><br>
@@ -692,7 +692,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
           <div class="title">
             <h2>DANH SÁCH ĐẢNG VIÊN</h2>
-            <p>Chi bộ Tổ dân phố Quảng Giao - Năm ${currentYear}</p>
+            <p>Chi bộ Tổ dân phố Kim Tuyến - Năm ${currentYear}</p>
           </div>
 
           <table class="main-table">

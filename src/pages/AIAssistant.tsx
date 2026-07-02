@@ -86,7 +86,7 @@ const AIAssistant = () => {
 
       return `UBND PHƯỜNG ${wardName.toUpperCase().replace('PHƯỜNG ', '')}         CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
 TỔ DÂN PHỐ ${tdpName.toUpperCase()}                           Độc lập – Tự do – Hạnh phúc
-Số: 01 /KH-TDPQG                           ---------------------------
+Số: 01 /KH-TDPKT                           ---------------------------
 
 BÁO CÁO KẾ HOẠCH VẬN ĐỘNG CÁC KHOẢN ĐÓNG GÓP TỰ
 NGUYỆN NĂM 2026

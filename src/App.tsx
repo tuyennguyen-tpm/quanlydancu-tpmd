@@ -88,7 +88,7 @@ const App = () => {
     setTimeout(async () => {
       // Re-use same AI logic from AIAssistant
       const q = text.toLowerCase();
-      const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+      const tdpName = localStorage.getItem('tdp_name') || 'Kim Tuyến';
       let reply = '';
       if (q.includes('xin chào') || q.includes('hello') || q.includes('chào')) {
         reply = `Xin chào! Tôi là Trợ lý AI của Tổ dân phố ${tdpName}. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
@@ -1109,7 +1109,7 @@ const App = () => {
         {/* Banner chạy chữ */}
         <div className="marquee-header">
           <div className="marquee-text">
-            Ứng dụng được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến TDP Quảng Giao - SĐT: 0912083018 / 0899661982.
+            Ứng dụng được thiết kế và bảo trì bởi: Nguyễn Kim Tuyến (TDP Kim Tuyến) - SĐT: 0912083018 / 0899661982.
           </div>
         </div>
         
@@ -1850,10 +1850,9 @@ const App = () => {
                   transition: 'all 0.2s ease', padding: 0, overflow: 'hidden'
                 }}
               >
-                {/* Official Zalo logo SVG */}
                 <svg viewBox="0 0 48 48" width="38" height="38" xmlns="http://www.w3.org/2000/svg">
                   <rect width="48" height="48" rx="12" fill={zaloOpen ? '#0068ff' : '#fff'}/>
-                  <text x="7" y="31" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="22" fill={zaloOpen ? '#fff' : '#0068ff'} letterSpacing="-1">Zalo</text>
+                  <text x="6" y="29" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="16" fill={zaloOpen ? '#fff' : '#0068ff'} letterSpacing="-0.5">Zalo</text>
                   <path d="M8 36 Q14 44 22 40" stroke={zaloOpen ? '#fff' : '#0068ff'} strokeWidth="3" fill="none" strokeLinecap="round"/>
                 </svg>
               </button>
@@ -1954,7 +1953,7 @@ const App = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1e40af' }}>Trợ lý AI</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>TDP {localStorage.getItem('tdp_name') || 'Quảng Giao'}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{localStorage.getItem('tdp_name') || 'Kim Tuyến'}</div>
                 </div>
                 <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}><X size={18} /></button>
               </div>
