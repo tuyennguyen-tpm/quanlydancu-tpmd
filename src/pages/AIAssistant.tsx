@@ -71,6 +71,159 @@ const AIAssistant = () => {
       return new Intl.NumberFormat('vi-VN').format(amt) + ' đồng';
     };
 
+    // Check for voluntary contribution detailed templates first
+    const isPlanVoluntary = query.includes('kế hoạch vận động') || (query.includes('kế hoạch') && (query.includes('vận động') || query.includes('đóng góp') || query.includes('tự nguyện')));
+    const isMeetingVoluntary = (query.includes('hội nghị nhân dân') || query.includes('nội dung họp')) && (query.includes('đóng góp') || query.includes('vận động') || query.includes('tự nguyện'));
+
+    if (isPlanVoluntary) {
+      const numHouseholds = households.length > 0 ? households.length : 1500;
+      const totalAmountEstimate = numHouseholds * 200000;
+      const totalAmountText = new Intl.NumberFormat('vi-VN').format(totalAmountEstimate) + ' đồng';
+      const day = new Date().getDate().toString().padStart(2, '0');
+      const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
+      const year = new Date().getFullYear();
+      const leaderName = localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến';
+
+      return `UBND PHƯỜNG ${wardName.toUpperCase().replace('PHƯỜNG ', '')}         CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+TỔ DÂN PHỐ ${tdpName.toUpperCase()}                           Độc lập – Tự do – Hạnh phúc
+Số: 01 /KH-TDPQG                           ---------------------------
+
+BÁO CÁO KẾ HOẠCH VẬN ĐỘNG CÁC KHOẢN ĐÓNG GÓP TỰ
+NGUYỆN NĂM 2026
+Về việc vận động các khoản đóng góp tự nguyện phục vụ hoạt động cộng đồng năm 2026.
+
+Kính gửi: UBND phường ${wardName.replace('Phường ', '')}
+
+Căn cứ nhu cầu thực tế của cộng đồng dân cư ${tdpDisplay}; nhằm đảm bảo nguồn kinh phí phục vụ các hoạt động xã hội, văn hóa, khuyến học, an sinh và các hoạt động cộng đồng khác trên địa bàn, ${tdpDisplay} xây dựng kế hoạch vận động các khoản đóng góp tự nguyện năm 2026 như sau:
+
+I. MỤC ĐÍCH, YÊU CẦU
+1. Huy động nguồn lực xã hội hóa để phục vụ các hoạt động chung của cộng đồng dân cư.
+2. Việc vận động được thực hiện trên tinh thần tự nguyện, công khai, minh bạch, dân chủ và đúng quy định của pháp luật.
+3. Các khoản thu, chi được công khai trước Nhân dân và báo cáo theo quy định.
+
+II. NỘI DUNG VẬN ĐỘNG
+1. Quỹ khuyến học
+• Khen thưởng học sinh đạt thành tích xuất sắc trong học tập.
+• Hỗ trợ học sinh có hoàn cảnh khó khăn vươn lên trong học tập.
+• Tổ chức các hoạt động khuyến học, khuyến tài tại khu dân cư.
+2. Quỹ an sinh xã hội
+• Thăm hỏi, hỗ trợ các hộ gia đình có hoàn cảnh khó khăn.
+• Hỗ trợ các trường hợp ốm đau, bệnh tật, thiên tai, rủi ro đột xuất.
+• Thực hiện các hoạt động nhân đạo, từ thiện trên địa bàn.
+3. Quỹ văn hóa - thể thao
+• Tổ chức các hoạt động văn hóa, văn nghệ, thể dục thể thao hè năm 2026.
+• Tổ chức các chương trình giao lưu, sinh hoạt cộng đồng.
+• Hỗ trợ các hoạt động nhân dịp lễ, tết và các ngày kỷ niệm.
+4. Kinh phí xã hội hóa điện, nước, internet và bảo vệ Nhà văn hóa TDP
+• Thanh toán chi phí điện, nước sinh hoạt tại Nhà văn hóa.
+• Duy trì đường truyền internet phục vụ hội họp, tuyên truyền và chuyển đổi số.
+• Hỗ trợ công tác quản lý, bảo vệ, giữ gìn cơ sở vật chất Nhà văn hóa.
+5. Quỹ chăm sóc cảnh quan, môi trường
+• Trồng và chăm sóc cây xanh, hoa trên các tuyến đường.
+• Tổ chức các hoạt động vệ sinh môi trường.
+• Chỉnh trang cảnh quan, xây dựng khu dân cư sáng - xanh - sạch - đẹp.
+6. Quỹ sinh hoạt đám hiếu
+• Hỗ trợ các hoạt động chung của cộng đồng trong việc tổ chức tang lễ theo quy ước, hương ước của khu dân cư.
+• Góp phần phát huy tinh thần đoàn kết, tương trợ lẫn nhau trong Nhân dân.
+
+III. HÌNH THỨC VẬN ĐỘNG
+• Tổ chức họp Nhân dân để lấy ý kiến thống nhất.
+• Mức đóng góp cụ thể sẽ được Nhân dân thảo luận, biểu quyết và thống nhất tại hội nghị.
+• Khuyến khích các tổ chức, doanh nghiệp, cá nhân trên địa bàn tham gia ủng hộ trên tinh thần tự nguyện.
+
+IV. TỔ CHỨC THỰC HIỆN
+1. Sau khi được UBND phường thống nhất chủ trương, Tổ dân phố tổ chức hội nghị Nhân dân để triển khai thực hiện.
+2. Thành lập bộ phận quản lý quỹ, theo dõi thu - chi theo đúng quy định.
+3. Định kỳ công khai kết quả thu - chi trước Nhân dân.
+4. Thực hiện chế độ báo cáo với UBND phường theo quy định.
+
+${tdpDisplay} kính đề nghị UBND phường ${wardName.replace('Phường ', '')} xem xét, cho ý kiến và thống nhất chủ trương để Tổ dân phố tổ chức họp Nhân dân triển khai thực hiện.
+Xin trân trọng cảm ơn!
+
+                                                           ${tdpName}, ngày ${day} tháng ${month} năm ${year}
+                                                          TRƯỞNG TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+                                                          
+                                                          
+                                                          
+                                                          ${leaderName}`;
+    }
+
+    if (isMeetingVoluntary) {
+      const numHouseholds = households.length > 0 ? households.length : 1500;
+      const totalAmountEstimate = numHouseholds * 200000;
+      const totalAmountText = new Intl.NumberFormat('vi-VN').format(totalAmountEstimate) + ' đồng';
+
+      return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+---
+TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+
+NỘI DUNG HỘI NGHỊ NHÂN DÂN
+Về việc vận động các khoản đóng góp tự nguyện phục vụ hoạt động cộng đồng năm 2026.
+
+Kính thưa toàn thể Nhân dân ${tdpDisplay}!
+
+Nhằm tạo nguồn kinh phí phục vụ các hoạt động chung của cộng đồng dân cư, góp phần xây dựng ${tdpDisplay} ngày càng văn minh, đoàn kết và phát triển, Tổ dân phố đề xuất hội nghị Nhân dân xem xét, thảo luận và thống nhất việc vận động các khoản đóng góp tự nguyện năm 2026 như sau:
+
+1. Quỹ khuyến học
+Mục đích:
+• Khen thưởng học sinh đạt thành tích xuất sắc trong học tập.
+• Động viên các em học sinh chăm ngoan, học giỏi.
+• Hỗ trợ học sinh có hoàn cảnh khó khăn vươn lên trong học tập.
+
+2. Quỹ an sinh xã hội
+Mục đích:
+• Thăm hỏi các hộ gia đình có hoàn cảnh khó khăn.
+• Hỗ trợ các trường hợp ốm đau, bệnh tật, rủi ro đột xuất.
+• Thực hiện các hoạt động nhân đạo, tương thân tương ái trong cộng đồng.
+
+3. Quỹ văn hóa - thể thao
+Mục đích:
+• Tổ chức các hoạt động văn hóa, văn nghệ, thể dục thể thao hè năm 2026.
+• Tổ chức các hoạt động giao lưu, sinh hoạt cộng đồng.
+• Nâng cao đời sống tinh thần cho Nhân dân.
+
+4. Kinh phí xã hội hóa điện, nước, internet và bảo vệ Nhà văn hóa TDP
+Mục đích:
+• Chi trả tiền điện, nước phục vụ các hoạt động tại Nhà văn hóa.
+• Duy trì đường truyền internet phục vụ công tác chuyển đổi số và hội họp.
+• Hỗ trợ công tác quản lý, bảo vệ và giữ gìn cơ sở vật chất Nhà văn hóa.
+
+5. Quỹ chăm sóc cảnh quan, môi trường
+Mục đích:
+• Trồng và chăm sóc cây xanh, hoa trên các tuyến đường.
+• Tổ chức các đợt vệ sinh môi trường.
+• Chỉnh trang cảnh quan khu dân cư sáng - xanh - sạch - đẹp.
+
+6. Quỹ sinh hoạt đám hiếu
+Mục đích:
+• Hỗ trợ các hoạt động chung khi gia đình trong tổ dân phố có việc hiếu.
+• Thể hiện tinh thần đoàn kết, tương trợ giữa các hộ dân.
+• Duy trì và phát huy các giá trị văn hóa, tình làng nghĩa xóm.
+
+* Đề xuất mức đóng góp:
+Hội nghị thảo luận và thống nhất mức đóng góp phù hợp đối với từng quỹ trên cơ sở tự nguyện, công khai, dân chủ và đúng quy định hiện hành.
+
+Gợi ý mức thu tham khảo để Hội nghị thảo luận:
+- Quỹ khuyến học: 50.000 đồng/hộ/năm
+- Quỹ an sinh xã hội: 20.000 đồng/hộ/năm
+- Quỹ văn hóa - thể thao: 30.000 đồng/hộ/năm
+- Điện, nước, internet, bảo vệ NVH: 50.000 đồng/hộ/năm
+- Quỹ môi trường: 20.000 đồng/hộ/năm
+- Quỹ đám hiếu: 30.000 đồng/hộ/năm
+=> TỔNG CỘNG: 200.000 đồng/hộ/năm.
+
+Với quy mô khoảng ${numHouseholds} hộ dân, nếu toàn thể Nhân dân thống nhất mức 200.000 đồng/hộ/năm thì tổng nguồn quỹ dự kiến là khoảng ${totalAmountText} (dự kiến ${new Intl.NumberFormat('vi-VN').format(totalAmountEstimate)} đồng/năm), đủ để duy trì nhiều hoạt động cộng đồng của ${tdpDisplay}.
+
+Công khai, minh bạch:
+• Mọi khoản thu, chi đều được ghi chép, quản lý đầy đủ.
+• Định kỳ công khai trước Nhân dân.
+• Sử dụng đúng mục đích, đúng nội dung đã được Nhân dân thống nhất.
+
+Kính đề nghị toàn thể Nhân dân tham gia thảo luận, đóng góp ý kiến và biểu quyết để thống nhất thực hiện.
+Xin trân trọng cảm ơn!`;
+    }
+
     let title = 'THÔNG BÁO';
     let content = '';
 
@@ -443,6 +596,8 @@ TỔ TRƯỞNG DÂN PHỐ
   const currentWardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
 
   const templates = [
+    { title: 'Kế hoạch vận động quỹ', prompt: 'Lập báo cáo kế hoạch vận động các khoản đóng góp tự nguyện năm 2026 gửi UBND phường.' },
+    { title: 'Nội dung họp vận động', prompt: 'Soạn nội dung hội nghị nhân dân thảo luận mức đóng góp tự nguyện năm 2026.' },
     { title: 'Thông báo họp dân', prompt: 'Viết thông báo họp dân về việc tổng vệ sinh môi trường ngõ xóm vào sáng Chủ Nhật tuần này.' },
     { title: 'Biên bản họp tổ', prompt: 'Viết biên bản cuộc họp tổ dân phố thảo luận dự án bê tông hóa ngõ 47 tối thứ Hai vừa rồi.' },
     { title: 'Báo cáo tháng TDP', prompt: `Soạn báo cáo tình hình hoạt động tháng của Tổ dân phố ${currentTdpName} để gửi lên UBND Phường.` },
@@ -450,7 +605,7 @@ TỔ TRƯỞNG DÂN PHỐ
     { title: 'Nghị quyết Chi bộ', prompt: `Soạn Nghị quyết cuộc họp Chi bộ Tổ dân phố ${currentTdpName} tháng này lãnh đạo công tác an ninh trật tự.` },
     { title: 'Báo cáo công tác Chi bộ', prompt: `Viết báo cáo đánh giá hoạt động định kỳ của Chi bộ Tổ dân phố ${currentTdpName} gửi Đảng ủy phường.` },
     { title: 'Báo cáo Đại đoàn kết', prompt: `Soạn báo cáo kết quả tổ chức Ngày hội Đại đoàn kết toàn dân tộc của Ban công tác Mặt trận.` },
-    { title: 'Báo cáo quỹ Mặt trận', prompt: `Viết báo cáo tổng kết kết quả vận động ủng hộ Quỹ Vì người nghèo của Ban công tác Mặt trận.` },
+    { title: 'Báo cáo quỹ Mặt trận', prompt: `Viết báo cáo tổng kết kết động vận động ủng hộ Quỹ Vì người nghèo của Ban công tác Mặt trận.` },
   ];
 
   return (

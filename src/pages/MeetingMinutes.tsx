@@ -84,22 +84,20 @@ const MeetingMinutes = () => {
     }
 
     // Default general
-    return `1. Khai mạc cuộc họp:
-- Ông/Bà: ${activeChairman} tuyên bố lý do cuộc họp: ${meetingTitle || 'Họp định kỳ triển khai công tác TDP'}.
-- Giới thiệu thành phần tham dự và thông qua chương trình làm việc.
-
-2. Nội dung các báo cáo:
-- Triển khai nội dung trọng tâm: ${rawContent || 'Đánh giá công tác tháng qua và bàn thảo kế hoạch thực hiện nhiệm vụ mới.'}
+    return `1. Trình bày báo cáo, nội dung triển khai của Ban cán sự Tổ dân phố:
+- Triển khai nội dung trọng tâm: ${rawContent || 'Đánh giá công tác thời gian qua và bàn thảo kế hoạch thực hiện nhiệm vụ mới.'}
 - Phổ biến các văn bản chỉ đạo cấp trên đến toàn thể bà con nhân dân.
 
-3. Phần thảo luận đóng góp ý kiến:
-- Ý kiến 1: Nhất trí với báo cáo và đề nghị tăng cường tuần tra an ninh trật tự.
-- Ý kiến 2: Cần dọn dẹp vệ sinh môi trường ngõ xóm thường xuyên hơn.
-- Ý kiến 3: Đề xuất đóng góp tự nguyện tu sửa nhà văn hóa TDP.
+2. Ý kiến thảo luận và đóng góp của bà con Nhân dân:
+- Ý kiến 1 (Ông/Bà đại diện hộ dân): Nhất trí với các nội dung báo cáo và kế hoạch đề ra. Đề nghị ban tự quản đôn đốc tiến độ thực hiện.
+- Ý kiến 2 (Ông/Bà đại diện hộ dân): Đóng góp bổ sung ý kiến thực tế về công tác an ninh trật tự và dọn dẹp vệ sinh môi trường các tuyến đường tự quản.
+- Ban cán sự Tổ dân phố đã tiếp thu các ý kiến đóng góp và giải trình thỏa đáng các thắc mắc của bà con.
 
-4. Biểu quyết và thông qua quyết nghị:
-- 100% đại biểu tham dự nhất trí biểu quyết thông qua các nội dung đã thảo luận.
-- Giao Ban tự quản Tổ dân phố đôn đốc và giám sát thực hiện.`;
+3. Biểu quyết và quyết định thống nhất của Hội nghị:
+Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia hội nghị đối với nội dung triển khai:
+- Tỷ lệ biểu quyết đồng ý: 100% đại biểu tham dự cuộc họp nhất trí thông qua.
+- Ý kiến không đồng ý: Không có.
+- Ý kiến khác: Không có.`;
   };
 
   // Pre-fill fields when selecting a meeting
