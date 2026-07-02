@@ -5,7 +5,17 @@ import type { EnvironmentLog } from '../services/db';
 import { showToast } from '../utils/toast';
 
 const Environment = () => {
-  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole === 'demo';
+
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'demo');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
   const [logs, setLogs] = useState<EnvironmentLog[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
 

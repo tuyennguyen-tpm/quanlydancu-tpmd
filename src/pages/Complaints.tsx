@@ -16,7 +16,17 @@ import { showToast } from '../utils/toast';
 import type { Complaint } from '../types';
 
 const Complaints = () => {
-  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole === 'demo';
+
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'demo');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'resolved'>('all');

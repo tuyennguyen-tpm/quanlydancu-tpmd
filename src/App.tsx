@@ -116,20 +116,21 @@ const App = () => {
 
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'mat_tran');
+  const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'demo');
 
   useEffect(() => {
     // Check if the current role is verified on this device
-    const initRole = localStorage.getItem('current_role') || 'mat_tran';
+    const initRole = localStorage.getItem('current_role') || 'demo';
     const isVerified = localStorage.getItem(`role_verified_${initRole}`) === 'true';
     
-    if (!isVerified && initRole !== 'mat_tran') {
-      // If it is a privileged role but not verified, force it to 'mat_tran' (read-only, safe role)
-      localStorage.setItem('current_role', 'mat_tran');
-      setUserRole('mat_tran');
+    // demo and mat_tran don't need PIN verification
+    if (!isVerified && initRole !== 'mat_tran' && initRole !== 'demo') {
+      // If it is a privileged role but not verified, fall back to 'demo' (read-only, safe)
+      localStorage.setItem('current_role', 'demo');
+      setUserRole('demo');
       // Sync child pages immediately after mount
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('role-changed', { detail: 'mat_tran' }));
+        window.dispatchEvent(new CustomEvent('role-changed', { detail: 'demo' }));
       }, 0);
     }
 
@@ -154,11 +155,18 @@ const App = () => {
 
   const handleRoleChange = (role: string) => {
     const roleLabels: Record<string, string> = {
+      demo: 'Xem Demo (Chỉ đọc)',
       admin: 'Quản trị hệ thống',
       to_truong: 'Tổ trưởng dân phố',
       bi_thu: 'Bí thư Chi bộ',
       mat_tran: 'Trưởng ban Mặt trận'
     };
+
+    // Demo mode does not require PIN
+    if (role === 'demo') {
+      executeRoleChange(role);
+      return;
+    }
 
     // Check if device already verified this role
     const isVerified = localStorage.getItem(`role_verified_${role}`) === 'true';
@@ -172,6 +180,7 @@ const App = () => {
 
   const executeRoleChange = (role: string) => {
     const roleLabels: Record<string, string> = {
+      demo: 'Xem Demo (Chỉ đọc)',
       admin: 'Quản trị hệ thống',
       to_truong: 'Tổ trưởng dân phố',
       bi_thu: 'Bí thư Chi bộ',
@@ -183,12 +192,15 @@ const App = () => {
     window.dispatchEvent(new CustomEvent('role-changed', { detail: role }));
     
     // Auto redirect if active tab is restricted in new role
-    if (role === 'mat_tran' && ['party-cell', 'meetings-party'].includes(activeTab)) {
+    if ((role === 'mat_tran' || role === 'demo') && ['party-cell', 'meetings-party'].includes(activeTab)) {
       setActiveTab('dashboard');
     }
     
+    const toastMsg = role === 'demo'
+      ? `👁️ Chế độ Xem Demo – chỉ đọc, không thể chỉnh sửa dữ liệu.`
+      : `✅ Đã chuyển sang vai trò: ${roleLabels[role]}`;
     const ev = new CustomEvent('show-toast', { 
-      detail: { message: `Đã chuyển sang vai trò: ${roleLabels[role]}`, type: 'success' } 
+      detail: { message: toastMsg, type: role === 'demo' ? 'info' : 'success' } 
     });
     window.dispatchEvent(ev);
   };
@@ -289,8 +301,7 @@ const App = () => {
         });
         
         // Update states from synchronized local storage values
-        const rawTdp = localStorage.getItem('tdp_name') || 'Kim Tuyến';
-        const newTdp = rawTdp === 'Quảng Giao' || rawTdp === 'TDP Quảng Giao' || rawTdp === 'Tiến Quảng Giao' ? 'Kim Tuyến' : rawTdp;
+        const newTdp = localStorage.getItem('tdp_name') || 'Tiến Quảng Giao';
         const newWard = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
         const newLeader = localStorage.getItem('leader_name') || 'Kim Tuyến';
         const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
@@ -645,7 +656,7 @@ const App = () => {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     // Lưu tên TDP
-    const newName = tdpNameInput.trim() || 'Kim Tuyến';
+    const newName = tdpNameInput.trim() || 'Tiến Quảng Giao';
     localStorage.setItem('tdp_name', newName);
     setTdpName(newName);
     // Thông báo cho các trang khác (Dashboard...) cập nhật tên ngay lập tức
@@ -1069,6 +1080,7 @@ const App = () => {
                   fontFamily: 'inherit'
                 }}
               >
+                <option value="demo">👁️ Xem Demo (Chỉ đọc)</option>
                 <option value="admin">Quản trị hệ thống (Admin)</option>
                 <option value="to_truong">Tổ trưởng dân phố</option>
                 <option value="bi_thu">Bí thư Chi bộ</option>
@@ -1097,7 +1109,7 @@ const App = () => {
                 {session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Tổ trưởng'}
               </span>
               <span className="user-role" title={session?.user?.email || 'Ngoại tuyến'} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
-                {isGuestMode ? 'Xem công khai' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : 'Trưởng ban Mặt trận'}
+                {isGuestMode ? 'Xem công khai' : userRole === 'demo' ? '👁️ Xem Demo' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : 'Trưởng ban Mặt trận'}
               </span>
             </div>
           </div>
