@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables } from './services/db';
+import { askGemini } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
 import Dashboard from './pages/Dashboard';
@@ -86,24 +87,13 @@ const App = () => {
     setMiniChatInput('');
     setMiniChatLoading(true);
     setTimeout(async () => {
-      // Re-use same AI logic from AIAssistant
-      const q = text.toLowerCase();
-      const tdpName = localStorage.getItem('tdp_name') || 'Tổ dân phố';
-      let reply = '';
-      if (q.includes('xin chào') || q.includes('hello') || q.includes('chào')) {
-        reply = `Xin chào! Tôi là Trợ lý AI của: Kim Tuyến. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
-      } else if (q.includes('biên bản') || q.includes('họp')) {
-        reply = `Để soạn biên bản họp, vui lòng vào tab ➤ Trợ lý AI trên menu và nhập yêu cầu chi tiết.\n\nHoặc nhắn tôi nội dung cụ thể: "Soạn biên bản họp tổ dân phố tháng 7" để tôi tạo ngay!`;
-      } else if (q.includes('báo cáo')) {
-        reply = `Tôi có thể soạn báo cáo tháng cho Tổ dân phố.\n\nVui lòng vào ➤ Trợ lý AI để soạn đầy đủ với số liệu thực tế từ hệ thống, hoặc mô tả nội dung cần báo cáo.`;
-      } else if (q.includes('số hộ') || q.includes('dân số') || q.includes('nhân khẩu')) {
-        reply = `Thông tin dân số của Tổ dân phố được quản lý trong module Hộ gia đình & Nhân khẩu.\n\nVui lòng vào tab "Hộ gia đình" hoặc "Nhân khẩu" để xem số liệu chi tiết.`;
-      } else if (q.includes('đảng phí') || q.includes('đảng viên')) {
-        reply = `Thông tin đảng phí và đảng viên được quản lý trong tab Chi bộ Đảng.\n\nTheo Quy định 01-QĐ/TW 2026:\n• Có BHXH: đóng 1% lương\n• Lương hưu: 0,5%\n• Học sinh: 5.000đ/tháng`;
-      } else {
-        reply = `Cảm ơn bạn đã nhắn!\n\nTôi là Trợ lý AI chuyên hỗ trợ soạn thảo văn bản hành chính cho Tổ dân phố.\n\nBạn có thể yêu cầu tôi:\n• "Soạn biên bản họp tháng 7"\n• "Viết báo cáo tháng"\n• "Soạn thông báo vận động quỹ"\n\nHoặc vào tab Trợ lý AI để soạn đầy đủ hơn! 📝`;
+      try {
+        const reply = await askGemini(text);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
+      } catch (err) {
+        console.error(err);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: 'Đã xảy ra lỗi khi gọi Trợ lý AI. Vui lòng thử lại.' }]);
       }
-      setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
       setMiniChatLoading(false);
       // Auto scroll
       setTimeout(() => {
