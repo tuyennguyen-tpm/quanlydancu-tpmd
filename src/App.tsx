@@ -1969,7 +1969,7 @@ const App = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1e40af' }}>Trợ lý AI</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{tdpName || 'Kim Tuyến'}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Kim Tuyến</div>
                 </div>
                 <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}><X size={18} /></button>
               </div>
