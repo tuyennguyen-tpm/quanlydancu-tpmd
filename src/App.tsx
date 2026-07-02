@@ -88,7 +88,8 @@ const App = () => {
     setTimeout(async () => {
       // Re-use same AI logic from AIAssistant
       const q = text.toLowerCase();
-      const tdpName = localStorage.getItem('tdp_name') || 'Kim Tuyến';
+      const rawTdp = localStorage.getItem('tdp_name') || 'Kim Tuyến';
+      const tdpName = rawTdp === 'Quảng Giao' || rawTdp === 'TDP Quảng Giao' || rawTdp === 'Tiến Quảng Giao' ? 'Kim Tuyến' : rawTdp;
       let reply = '';
       if (q.includes('xin chào') || q.includes('hello') || q.includes('chào')) {
         reply = `Xin chào! Tôi là Trợ lý AI của Tổ dân phố ${tdpName}. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
@@ -197,7 +198,14 @@ const App = () => {
   const [pendingCount, setPendingCount] = useState(0);
 
   // Tên Tổ dân phố (có thể sửa)
-  const [tdpName, setTdpName] = useState(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn');
+  const [tdpName, setTdpName] = useState(() => {
+    const stored = localStorage.getItem('tdp_name');
+    if (stored === 'Quảng Giao' || stored === 'TDP Quảng Giao' || stored === 'Tiến Quảng Giao') {
+      localStorage.setItem('tdp_name', 'Kim Tuyến');
+      return 'Kim Tuyến';
+    }
+    return stored || 'Kim Tuyến';
+  });
   const [wardName, setWardName] = useState(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn');
   const [leaderName, setLeaderName] = useState(localStorage.getItem('leader_name') || 'Kim Tuyến');
   const [leaderPhone, setLeaderPhone] = useState(localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982');
@@ -287,7 +295,8 @@ const App = () => {
         });
         
         // Update states from synchronized local storage values
-        const newTdp = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
+        const rawTdp = localStorage.getItem('tdp_name') || 'Kim Tuyến';
+        const newTdp = rawTdp === 'Quảng Giao' || rawTdp === 'TDP Quảng Giao' || rawTdp === 'Tiến Quảng Giao' ? 'Kim Tuyến' : rawTdp;
         const newWard = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
         const newLeader = localStorage.getItem('leader_name') || 'Kim Tuyến';
         const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
@@ -642,7 +651,7 @@ const App = () => {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     // Lưu tên TDP
-    const newName = tdpNameInput.trim() || 'Nam Sầm Sơn';
+    const newName = tdpNameInput.trim() || 'Kim Tuyến';
     localStorage.setItem('tdp_name', newName);
     setTdpName(newName);
     // Thông báo cho các trang khác (Dashboard...) cập nhật tên ngay lập tức
@@ -1953,7 +1962,7 @@ const App = () => {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1e40af' }}>Trợ lý AI</div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{localStorage.getItem('tdp_name') || 'Kim Tuyến'}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{tdpName || 'Kim Tuyến'}</div>
                 </div>
                 <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}><X size={18} /></button>
               </div>
