@@ -51,13 +51,13 @@ const currentYear = new Date().getFullYear();
 // ─── Component chính ─────────────────────────────────────────
 const PartyCell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'members' | 'meetings' | 'evaluations' | 'fees'>('members');
-  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'bi_thu' && currentRole !== 'admin');
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      setCurrentRole(customEvent.detail || 'to_truong');
+      setCurrentRole(customEvent.detail || 'mat_tran');
     };
     window.addEventListener('role-changed', handleRoleChange);
     return () => window.removeEventListener('role-changed', handleRoleChange);

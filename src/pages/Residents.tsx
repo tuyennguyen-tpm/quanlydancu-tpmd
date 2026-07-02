@@ -234,13 +234,13 @@ const Residents = () => {
   const [showDeceased, setShowDeceased] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      setCurrentRole(customEvent.detail || 'to_truong');
+      setCurrentRole(customEvent.detail || 'mat_tran');
     };
     window.addEventListener('role-changed', handleRoleChange);
     return () => window.removeEventListener('role-changed', handleRoleChange);

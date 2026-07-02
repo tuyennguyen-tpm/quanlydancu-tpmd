@@ -93,12 +93,12 @@ const Households = () => {
   const [mNotes, setMNotes] = useState('');
 
   // Guest Mode checking
-  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      setCurrentRole(customEvent.detail || 'to_truong');
+      setCurrentRole(customEvent.detail || 'mat_tran');
     };
     window.addEventListener('role-changed', handleRoleChange);
     return () => window.removeEventListener('role-changed', handleRoleChange);
