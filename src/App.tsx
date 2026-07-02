@@ -72,12 +72,14 @@ const App = () => {
   
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'to_truong');
+  const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'mat_tran');
 
   useEffect(() => {
-    // Seed current role as verified on mount so no prompt on load
-    const initRole = localStorage.getItem('current_role') || 'to_truong';
-    localStorage.setItem(`role_verified_${initRole}`, 'true');
+    // Seed current role as verified on mount if it is 'mat_tran' (default safe role)
+    const initRole = localStorage.getItem('current_role') || 'mat_tran';
+    if (initRole === 'mat_tran') {
+      localStorage.setItem('role_verified_mat_tran', 'true');
+    }
 
     const syncRolePins = async () => {
       try {
@@ -1144,7 +1146,7 @@ const App = () => {
               )}
             </div>
 
-            {!isGuestMode && (
+            {userRole === 'to_truong' && !isGuestMode && (
               <button className="icon-btn" onClick={handleOpenSettings} title="Cấu hình hệ thống">
                 <Settings size={20} />
               </button>
@@ -1815,10 +1817,6 @@ const RolePinModal = ({
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', lineHeight: '1.5' }}>
             Nhập mã PIN để chuyển sang vai trò <strong>{roleLabel}</strong>:
-            <br />
-            <span style={{ color: '#0369a1', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '4px', display: 'block' }}>
-              (Mã PIN mặc định là: {defaultPins[role]})
-            </span>
           </p>
 
           <input
