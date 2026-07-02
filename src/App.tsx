@@ -1825,60 +1825,70 @@ const App = () => {
 
       {/* ═══ FLOATING BUTTONS: Zalo + AI Chat (always visible) ═══ */}
       <>
-          {/* Floating Button Group */}
+          {/* Floating Button Group — ngang hàng, Zalo trái / AI phải */}
           <div style={{
             position: 'fixed',
-            bottom: '24px',
-            right: '24px',
+            bottom: '20px',
+            right: '20px',
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
             gap: '10px',
-            zIndex: 1200
+            zIndex: 1200,
+            alignItems: 'flex-end'
           }}>
-            {/* AI Chat Button */}
-            <button
-              onClick={() => { setAiChatOpen(v => !v); setZaloOpen(false); }}
-              title="Chat với Trợ lý AI"
-              style={{
-                width: '50px', height: '50px', borderRadius: '14px',
-                background: aiChatOpen ? '#2563eb' : '#eff6ff',
-                border: '2px solid #bfdbfe',
-                color: aiChatOpen ? '#fff' : '#2563eb',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(37,99,235,0.18)',
-                transition: 'all 0.2s ease',
-                flexShrink: 0
-              }}
-            >
-              <Bot size={24} />
-            </button>
-
             {/* Zalo Button */}
-            <button
-              onClick={() => { setZaloOpen(v => !v); setAiChatOpen(false); }}
-              title="Tham gia nhóm Zalo hỗ trợ"
-              style={{
-                width: '50px', height: '50px', borderRadius: '14px',
-                background: zaloOpen ? '#0068ff' : '#e8f1ff',
-                border: '2px solid #b3d1ff',
-                color: zaloOpen ? '#fff' : '#0068ff',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(0,104,255,0.18)',
-                transition: 'all 0.2s ease',
-                flexShrink: 0
-              }}
-            >
-              <span style={{ fontWeight: '800', fontSize: '1rem', letterSpacing: '-0.5px' }}>Z</span>
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <button
+                onClick={() => { setZaloOpen(v => !v); setAiChatOpen(false); }}
+                title="Nhóm Zalo hỗ trợ"
+                style={{
+                  width: '52px', height: '52px', borderRadius: '16px',
+                  background: zaloOpen ? '#0068ff' : '#fff',
+                  border: `2px solid ${zaloOpen ? '#0068ff' : '#dbeafe'}`,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: zaloOpen ? '0 6px 18px rgba(0,104,255,0.35)' : '0 4px 14px rgba(0,104,255,0.18)',
+                  transition: 'all 0.2s ease', padding: 0, overflow: 'hidden'
+                }}
+              >
+                {/* Official Zalo logo SVG */}
+                <svg viewBox="0 0 48 48" width="38" height="38" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="48" height="48" rx="12" fill={zaloOpen ? '#0068ff' : '#fff'}/>
+                  <text x="7" y="31" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="22" fill={zaloOpen ? '#fff' : '#0068ff'} letterSpacing="-1">Zalo</text>
+                  <path d="M8 36 Q14 44 22 40" stroke={zaloOpen ? '#fff' : '#0068ff'} strokeWidth="3" fill="none" strokeLinecap="round"/>
+                </svg>
+              </button>
+              <span style={{ fontSize: '0.65rem', fontWeight: '600', color: '#64748b', letterSpacing: '0.2px' }}>Zalo</span>
+            </div>
+
+            {/* AI Chat Button */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <button
+                onClick={() => { setAiChatOpen(v => !v); setZaloOpen(false); }}
+                title="Chat với Trợ lý AI"
+                style={{
+                  width: '52px', height: '52px', borderRadius: '16px',
+                  background: aiChatOpen ? '#2563eb' : '#fff',
+                  border: `2px solid ${aiChatOpen ? '#2563eb' : '#bfdbfe'}`,
+                  color: aiChatOpen ? '#fff' : '#2563eb',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: aiChatOpen ? '0 6px 18px rgba(37,99,235,0.35)' : '0 4px 14px rgba(37,99,235,0.18)',
+                  transition: 'all 0.2s ease', flexShrink: 0
+                }}
+              >
+                <Bot size={26} />
+              </button>
+              <span style={{ fontSize: '0.65rem', fontWeight: '600', color: '#64748b', letterSpacing: '0.2px' }}>Trợ lý AI</span>
+            </div>
           </div>
 
-          {/* Zalo Popup */}
+
+          {/* Zalo Popup — hiển thị phía trên nút Zalo */}
           {zaloOpen && (
             <div style={{
-              position: 'fixed', bottom: '90px', right: '24px', zIndex: 1300,
-              background: '#fff', border: '2px solid #bfdbfe',
+              position: 'fixed', bottom: '92px', right: '70px', zIndex: 1300,
+              background: '#fff', border: '2px solid #dbeafe',
               borderRadius: '16px', padding: '20px',
-              boxShadow: '0 8px 32px rgba(37,99,235,0.14)',
+              boxShadow: '0 8px 32px rgba(0,104,255,0.14)',
               width: '260px',
               animation: 'fadeIn 0.2s ease-out'
             }}>
@@ -1919,10 +1929,10 @@ const App = () => {
             </div>
           )}
 
-          {/* AI Chat Widget */}
+          {/* AI Chat Widget — hiển thị phía trên nút Bot */}
           {aiChatOpen && (
             <div style={{
-              position: 'fixed', bottom: '90px', right: '24px', zIndex: 1300,
+              position: 'fixed', bottom: '92px', right: '20px', zIndex: 1300,
               background: '#fff', border: '2px solid #bfdbfe',
               borderRadius: '16px',
               boxShadow: '0 8px 32px rgba(37,99,235,0.14)',
