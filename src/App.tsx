@@ -1359,6 +1359,7 @@ const App = () => {
                     maxLength={10}
                   />
                 </div>
+              {userRole === 'admin' && (
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', marginTop: '4px' }}>
                   <div className="form-group">
                     <label>PIN Admin</label>
@@ -1401,6 +1402,7 @@ const App = () => {
                     />
                   </div>
                 </div>
+              )}
                 <div className="form-group">
                   <label>Phiên bản phần mềm mới nhất (Admin)</label>
                   <input
