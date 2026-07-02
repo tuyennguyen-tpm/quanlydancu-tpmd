@@ -75,10 +75,14 @@ const App = () => {
   const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'mat_tran');
 
   useEffect(() => {
-    // Seed current role as verified on mount if it is 'mat_tran' (default safe role)
+    // Check if the current role is verified on this device
     const initRole = localStorage.getItem('current_role') || 'mat_tran';
-    if (initRole === 'mat_tran') {
-      localStorage.setItem('role_verified_mat_tran', 'true');
+    const isVerified = localStorage.getItem(`role_verified_${initRole}`) === 'true';
+    
+    if (!isVerified && initRole !== 'mat_tran') {
+      // If it is a privileged role but not verified, force it to 'mat_tran' (read-only, safe role)
+      localStorage.setItem('current_role', 'mat_tran');
+      setUserRole('mat_tran');
     }
 
     const syncRolePins = async () => {
