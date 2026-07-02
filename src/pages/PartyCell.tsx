@@ -51,6 +51,17 @@ const currentYear = new Date().getFullYear();
 // ─── Component chính ─────────────────────────────────────────
 const PartyCell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'members' | 'meetings' | 'evaluations' | 'fees'>('members');
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'bi_thu';
+
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'to_truong');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
 
   const tabs = [
     { id: 'members', label: 'Danh sách Đảng viên', icon: Users },
@@ -92,10 +103,10 @@ const PartyCell: React.FC = () => {
 
       {/* Content */}
       <div className="party-content">
-        {activeTab === 'members' && <MembersTab />}
-        {activeTab === 'meetings' && <MeetingsTab />}
-        {activeTab === 'evaluations' && <EvaluationsTab />}
-        {activeTab === 'fees' && <FeesTab />}
+        {activeTab === 'members' && <MembersTab isGuest={isGuest} />}
+        {activeTab === 'meetings' && <MeetingsTab isGuest={isGuest} />}
+        {activeTab === 'evaluations' && <EvaluationsTab isGuest={isGuest} />}
+        {activeTab === 'fees' && <FeesTab isGuest={isGuest} />}
       </div>
 
       <style>{`
@@ -333,7 +344,7 @@ const PartyCell: React.FC = () => {
 // ═══════════════════════════════════════════════════════════
 // TAB 1: DANH SÁCH ĐẢNG VIÊN
 // ═══════════════════════════════════════════════════════════
-const MembersTab: React.FC = () => {
+const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [members, setMembers] = useState<PartyMember[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
@@ -373,6 +384,7 @@ const MembersTab: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh sửa chi bộ!', 'warning'); return; }
     if (!form.full_name?.trim()) { showToast('Vui lòng nhập họ tên đảng viên!', 'warning'); return; }
     if (form.status === 'official' && !form.join_date) {
       showToast('Đảng viên chính thức bắt buộc phải nhập Ngày vào Đảng (chính thức)!', 'warning');
@@ -408,6 +420,7 @@ const MembersTab: React.FC = () => {
   };
 
   const handleDelete = async (m: PartyMember) => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh sửa chi bộ!', 'warning'); return; }
     if (!confirm(`Xóa đảng viên "${m.full_name}"?`)) return;
     await partyDb.deletePartyMember(m.id);
     showToast('Đã xóa đảng viên!', 'success');
@@ -507,6 +520,10 @@ const MembersTab: React.FC = () => {
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isGuest) {
+      showToast('Bạn không có quyền nhập dữ liệu!', 'warning');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -758,12 +775,16 @@ const MembersTab: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', borderColor: '#15803d', boxShadow: '0 4px 10px rgba(22,163,74,0.2)' }} onClick={handleExportExcel}>📤 Xuất Excel</button>
-          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)', borderColor: '#0f766e', boxShadow: '0 4px 10px rgba(13,148,136,0.2)' }} onClick={() => fileInputRef.current?.click()}>📥 Nhập Excel</button>
+          {!isGuest && (
+            <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)', borderColor: '#0f766e', boxShadow: '0 4px 10px rgba(13,148,136,0.2)' }} onClick={() => fileInputRef.current?.click()}>📥 Nhập Excel</button>
+          )}
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', borderColor: '#374151', boxShadow: '0 4px 10px rgba(75,85,99,0.2)' }} onClick={handleExportTemplate} title="Tải file Excel mẫu để nhập dữ liệu">📄 Tải mẫu</button>
           <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv" onChange={handleImportExcel} />
           
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
-          <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+          {!isGuest && (
+            <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+          )}
         </div>
       </div>
 
@@ -834,10 +855,12 @@ const MembersTab: React.FC = () => {
                   </td>
                   <td style={{ color: '#cbd5e1', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.notes || '—'}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button className="party-btn-icon" onClick={() => openEdit(m)} title="Sửa"><Pencil size={15} /></button>
-                      <button className="party-btn-icon delete" onClick={() => handleDelete(m)} title="Xóa"><Trash2 size={15} /></button>
-                    </div>
+                    {!isGuest && (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="party-btn-icon" onClick={() => openEdit(m)} title="Sửa"><Pencil size={15} /></button>
+                        <button className="party-btn-icon delete" onClick={() => handleDelete(m)} title="Xóa"><Trash2 size={15} /></button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -959,7 +982,7 @@ const MembersTab: React.FC = () => {
 // ═══════════════════════════════════════════════════════════
 // TAB 2: SINH HOẠT CHI BỘ
 // ═══════════════════════════════════════════════════════════
-const MeetingsTab: React.FC = () => {
+const MeetingsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [meetings, setMeetings] = useState<PartyMeeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -981,6 +1004,7 @@ const MeetingsTab: React.FC = () => {
   const openEdit = (m: PartyMeeting) => { setEditing(m); setForm(m); setShowModal(true); };
 
   const handleSave = async () => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh sửa chi bộ!', 'warning'); return; }
     if (!form.title?.trim()) { showToast('Vui lòng nhập tiêu đề!', 'warning'); return; }
     try {
       await partyDb.savePartyMeeting({
@@ -1000,6 +1024,7 @@ const MeetingsTab: React.FC = () => {
   };
 
   const handleDelete = async (m: PartyMeeting) => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh sửa chi bộ!', 'warning'); return; }
     if (!confirm(`Xóa buổi sinh hoạt "${m.title}"?`)) return;
     await partyDb.deletePartyMeeting(m.id);
     showToast('Đã xóa!', 'success');
@@ -1015,7 +1040,9 @@ const MeetingsTab: React.FC = () => {
             Tổng cộng <strong style={{ color: '#f87171' }}>{meetings.length}</strong> buổi sinh hoạt
           </span>
         </div>
-        <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Ghi buổi sinh hoạt</button>
+        {!isGuest && (
+          <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Ghi buổi sinh hoạt</button>
+        )}
       </div>
 
       {loading ? <div className="no-data">Đang tải...</div> : meetings.length === 0 ? (
@@ -1040,8 +1067,12 @@ const MeetingsTab: React.FC = () => {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                  <button className="party-btn-icon" onClick={() => openEdit(m)} title="Sửa"><Pencil size={15} /></button>
-                  <button className="party-btn-icon delete" onClick={() => handleDelete(m)} title="Xóa"><Trash2 size={15} /></button>
+                  {!isGuest && (
+                    <>
+                      <button className="party-btn-icon" onClick={() => openEdit(m)} title="Sửa"><Pencil size={15} /></button>
+                      <button className="party-btn-icon delete" onClick={() => handleDelete(m)} title="Xóa"><Trash2 size={15} /></button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -1104,7 +1135,7 @@ const MeetingsTab: React.FC = () => {
 // ═══════════════════════════════════════════════════════════
 // TAB 3: ĐÁNH GIÁ HÀNG NĂM
 // ═══════════════════════════════════════════════════════════
-const EvaluationsTab: React.FC = () => {
+const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [members, setMembers] = useState<PartyMember[]>([]);
   const [evals, setEvals] = useState<PartyEvaluation[]>([]);
   const [year, setYear] = useState(currentYear);
@@ -1120,6 +1151,7 @@ const EvaluationsTab: React.FC = () => {
   const getEval = (memberId: string) => evals.find(e => e.member_id === memberId);
 
   const handleRate = async (member: PartyMember, rating: PartyEvaluation['rating']) => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh xếp loại chi bộ!', 'warning'); return; }
     setSaving(member.id);
     const existing = getEval(member.id);
     try {
@@ -1203,7 +1235,7 @@ const EvaluationsTab: React.FC = () => {
                       <td key={r}>
                         <button
                           onClick={() => handleRate(m, r)}
-                          disabled={isSaving}
+                          disabled={isSaving || isGuest}
                           style={{
                             width: 32, height: 32, borderRadius: '50%', cursor: isSaving ? 'wait' : 'pointer',
                             background: ev?.rating === r ? RATING_COLOR[r] : '#334155',
@@ -1264,7 +1296,7 @@ const FEE_CATEGORY_LABEL: Record<string, string> = {
 
 const fmtMoney = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 
-const FeesTab: React.FC = () => {
+const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [members, setMembers] = useState<PartyMember[]>([]);
   const [fees, setFees] = useState<PartyFee[]>([]);
   const [year, setYear] = useState(currentYear);
@@ -1289,6 +1321,7 @@ const FeesTab: React.FC = () => {
     Array.from({ length: 12 }, (_, i) => i + 1).filter(m => !isPaid(memberId, m)).length;
 
   const toggleFee = async (member: PartyMember, month: number) => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh sửa chi bộ!', 'warning'); return; }
     const key = `${member.id}-${month}`;
     if (toggling === key) return;
     setToggling(key);
@@ -1316,6 +1349,7 @@ const FeesTab: React.FC = () => {
   };
 
   const handleSaveFeeConfig = async () => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh sửa chi bộ!', 'warning'); return; }
     if (!editingMember) return;
     try {
       await partyDb.savePartyMember({ ...editingMember, ...feeForm });
@@ -1424,7 +1458,7 @@ const FeesTab: React.FC = () => {
                         <td key={month}>
                           <button className={`fee-cell-btn ${paid ? 'paid' : 'unpaid'}`}
                             onClick={() => toggleFee(member, month)}
-                            disabled={toggling === key}
+                            disabled={toggling === key || isGuest}
                             title={paid ? `T${month}: Đã nộp ${fmtMoney(monthlyFee)}` : `T${month}: Chưa nộp — click để xác nhận`}
                           >
                             {paid ? <CheckCircle size={13} /> : <XCircle size={13} />}
@@ -1439,10 +1473,12 @@ const FeesTab: React.FC = () => {
                       <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: 2, fontWeight: 600 }}>{fmtMoney(totalPaidAmt)}</div>
                     </td>
                     <td>
-                      <button className="party-btn-icon" title="Cài mức phí cho đảng viên này"
-                        onClick={() => { setEditingMember(member); setFeeForm({ fee_category: member.fee_category || 'bhxh', salary_base: member.salary_base || 0, wage_zone: member.wage_zone || 3 }); }}>
-                        <Pencil size={13} />
-                      </button>
+                      {!isGuest && (
+                        <button className="party-btn-icon" title="Cài mức phí cho đảng viên này"
+                          onClick={() => { setEditingMember(member); setFeeForm({ fee_category: member.fee_category || 'bhxh', salary_base: member.salary_base || 0, wage_zone: member.wage_zone || 3 }); }}>
+                          <Pencil size={13} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

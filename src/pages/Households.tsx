@@ -93,7 +93,18 @@ const Households = () => {
   const [mNotes, setMNotes] = useState('');
 
   // Guest Mode checking
-  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'to_truong');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
+
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'to_truong';
 
   // State for Transfer / Split Household
   const [transferringMember, setTransferringMember] = useState<Resident | null>(null);
@@ -1013,9 +1024,11 @@ const Households = () => {
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.95rem' }}>
             Danh sách các hộ gia đình đang sinh sống tại Tổ dân phố {tdpName}.
           </p>
-          <button className="btn btn-primary" onClick={handleOpenAdd} style={{ flexShrink: 0 }}>
-            <Plus size={18} /> Thêm hộ mới
-          </button>
+          {!isGuest && (
+            <button className="btn btn-primary" onClick={handleOpenAdd} style={{ flexShrink: 0 }}>
+              <Plus size={18} /> Thêm hộ mới
+            </button>
+          )}
         </div>
       </div>
 
@@ -1058,27 +1071,31 @@ const Households = () => {
                       <Printer size={14} />
                       <span>In sổ</span>
                     </button>
-                    <button 
-                      className="quick-action-btn add-member-btn" 
-                      onClick={() => handleOpenAddMember(h)}
-                      title="Thêm thành viên"
-                    >
-                      <UserPlus size={14} />
-                      <span>Thêm thành viên</span>
-                    </button>
+                    {!isGuest && (
+                      <button 
+                        className="quick-action-btn add-member-btn" 
+                        onClick={() => handleOpenAddMember(h)}
+                        title="Thêm thành viên"
+                      >
+                        <UserPlus size={14} />
+                        <span>Thêm thành viên</span>
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="card-menu-container">
-                  <button className="icon-btn-sm" onClick={() => setActiveMenuId(activeMenuId === h.id ? null : h.id)}>
-                    <MoreVertical size={16} />
-                  </button>
-                  {activeMenuId === h.id && (
-                    <div className="dropdown-menu">
-                      <button onClick={() => handleOpenEdit(h)}><Edit2 size={14} /> Chỉnh sửa</button>
-                      <button className="delete-opt" onClick={() => handleDelete(h.id)}><Trash2 size={14} /> Xóa hộ</button>
-                    </div>
-                  )}
-                </div>
+                {!isGuest && (
+                  <div className="card-menu-container">
+                    <button className="icon-btn-sm" onClick={() => setActiveMenuId(activeMenuId === h.id ? null : h.id)}>
+                      <MoreVertical size={16} />
+                    </button>
+                    {activeMenuId === h.id && (
+                      <div className="dropdown-menu">
+                        <button onClick={() => handleOpenEdit(h)}><Edit2 size={14} /> Chỉnh sửa</button>
+                        <button className="delete-opt" onClick={() => handleDelete(h.id)}><Trash2 size={14} /> Xóa hộ</button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="card-body">

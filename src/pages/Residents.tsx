@@ -234,6 +234,18 @@ const Residents = () => {
   const [showDeceased, setShowDeceased] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'to_truong';
+  
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'to_truong');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modals state
@@ -490,6 +502,10 @@ const Residents = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      showToast('Tài khoản của bạn không có quyền chỉnh sửa nhân khẩu!', 'warning');
+      return;
+    }
     if (!fullName.trim() || !dob) {
       showToast('Vui lòng điền họ tên và ngày sinh!', 'warning');
       return;
@@ -577,6 +593,10 @@ const Residents = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (isGuest) {
+      showToast('Tài khoản của bạn không có quyền xóa nhân khẩu!', 'warning');
+      return;
+    }
     if (window.confirm('Bạn có chắc chắn muốn xóa nhân khẩu này khỏi hệ thống?')) {
       try {
         await db.deleteResident(id);
@@ -591,6 +611,10 @@ const Residents = () => {
   };
 
   const handleDeleteAll = async () => {
+    if (isGuest) {
+      showToast('Tài khoản của bạn không có quyền xóa toàn bộ dữ liệu!', 'warning');
+      return;
+    }
     if (window.confirm('CẢNH BÁO NGUY HIỂM: Bạn có chắc chắn muốn XÓA SẠCH TOÀN BỘ dữ liệu nhân khẩu và hộ gia đình khỏi hệ thống không? Hành động này KHÔNG THỂ PHỤC HỒI!')) {
       const confirmText = window.prompt('Vui lòng gõ chữ XOA (viết hoa, không dấu) vào ô bên dưới để xác nhận xóa toàn bộ dữ liệu:');
       if (confirmText === 'XOA') {
@@ -1049,6 +1073,10 @@ const Residents = () => {
   };
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isGuest) {
+      showToast('Tài khoản của bạn không có quyền nhập dữ liệu!', 'warning');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1558,10 +1586,12 @@ const Residents = () => {
         </div>
         <div className="header-actions">
           <div className="vertical-actions-group">
-            <button className="btn btn-secondary btn-import-excel" onClick={() => fileInputRef.current?.click()}>
-              <FileUp size={16} />
-              Nhập Excel/CSV
-            </button>
+            {!isGuest && (
+              <button className="btn btn-secondary btn-import-excel" onClick={() => fileInputRef.current?.click()}>
+                <FileUp size={16} />
+                Nhập Excel/CSV
+              </button>
+            )}
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -1578,10 +1608,12 @@ const Residents = () => {
             <FileDown size={16} />
             Xuất Excel/CSV
           </button>
-          <button className="btn btn-primary" onClick={handleOpenAdd}>
-            <UserPlus size={16} />
-            Thêm nhân khẩu
-          </button>
+          {!isGuest && (
+            <button className="btn btn-primary" onClick={handleOpenAdd}>
+              <UserPlus size={16} />
+              Thêm nhân khẩu
+            </button>
+          )}
         </div>
       </div>
 
@@ -1751,48 +1783,52 @@ const Residents = () => {
                       >
                         <Eye size={14} style={{ color: '#0f766e' }} />
                       </button>
-                      <button 
-                        className="icon-btn-sm" 
-                        onClick={() => handleOpenEdit(resident)} 
-                        title="Chỉnh sửa hồ sơ"
-                        style={{ 
-                          border: '1px solid var(--border)', 
-                          background: '#f8fafc',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
-                          e.currentTarget.style.borderColor = 'var(--primary-light)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f8fafc';
-                          e.currentTarget.style.borderColor = 'var(--border)';
-                        }}
-                      >
-                        <Edit2 size={14} style={{ color: 'var(--primary)' }} />
-                      </button>
-                      <button 
-                        className="icon-btn-sm" 
-                        onClick={() => handleDelete(resident.id)} 
-                        title="Xóa nhân khẩu"
-                        style={{ 
-                          border: '1px solid rgba(239, 68, 68, 0.2)', 
-                          background: 'rgba(239, 68, 68, 0.02)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
-                          e.currentTarget.style.borderColor = 'var(--danger)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.02)';
-                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
-                        }}
-                      >
-                        <Trash2 size={14} style={{ color: 'var(--danger)' }} />
-                      </button>
+                      {!isGuest && (
+                        <>
+                          <button 
+                            className="icon-btn-sm" 
+                            onClick={() => handleOpenEdit(resident)} 
+                            title="Chỉnh sửa hồ sơ"
+                            style={{ 
+                              border: '1px solid var(--border)', 
+                              background: '#f8fafc',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)';
+                              e.currentTarget.style.borderColor = 'var(--primary-light)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = '#f8fafc';
+                              e.currentTarget.style.borderColor = 'var(--border)';
+                            }}
+                          >
+                            <Edit2 size={14} style={{ color: 'var(--primary)' }} />
+                          </button>
+                          <button 
+                            className="icon-btn-sm" 
+                            onClick={() => handleDelete(resident.id)} 
+                            title="Xóa nhân khẩu"
+                            style={{ 
+                              border: '1px solid rgba(239, 68, 68, 0.2)', 
+                              background: 'rgba(239, 68, 68, 0.02)',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';
+                              e.currentTarget.style.borderColor = 'var(--danger)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.02)';
+                              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)';
+                            }}
+                          >
+                            <Trash2 size={14} style={{ color: 'var(--danger)' }} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -2231,23 +2267,27 @@ const Residents = () => {
 
             <div className="form-actions" style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '0' }}>
               <button type="button" className="btn btn-secondary" onClick={() => setIsDetailOpen(false)}>Đóng lại</button>
-              <button type="button" className="btn btn-primary" onClick={() => {
-                setIsDetailOpen(false);
-                handleOpenEdit(selectedResident);
-              }} style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', border: 'none', color: 'white' }}>Chỉnh sửa hồ sơ</button>
+              {!isGuest && (
+                <button type="button" className="btn btn-primary" onClick={() => {
+                  setIsDetailOpen(false);
+                  handleOpenEdit(selectedResident);
+                }} style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 100%)', border: 'none', color: 'white' }}>Chỉnh sửa hồ sơ</button>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* Danger Zone: Xoá toàn bộ */}
-      <div style={{ marginTop: '40px', padding: '20px', borderTop: '1px dashed #ef4444', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-        <p style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: '600', margin: 0 }}>Vùng Nguy Hiểm: Dọn dẹp rác hệ thống</p>
-        <button className="btn btn-danger" onClick={handleDeleteAll} style={{ backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', padding: '6px 16px', fontSize: '0.85rem' }}>
-          <Trash2 size={14} />
-          Xóa Toàn Bộ Dữ Liệu
-        </button>
-      </div>
+      {!isGuest && (
+        <div style={{ marginTop: '40px', padding: '20px', borderTop: '1px dashed #ef4444', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <p style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: '600', margin: 0 }}>Vùng Nguy Hiểm: Dọn dẹp rác hệ thống</p>
+          <button className="btn btn-danger" onClick={handleDeleteAll} style={{ backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', padding: '6px 16px', fontSize: '0.85rem' }}>
+            <Trash2 size={14} />
+            Xóa Toàn Bộ Dữ Liệu
+          </button>
+        </div>
+      )}
 
       {importAlertData && importAlertData.isOpen && (
         <div style={{

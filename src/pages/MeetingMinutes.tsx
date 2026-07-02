@@ -5,7 +5,17 @@ import { showToast } from '../utils/toast';
 import type { Meeting, MeetingMinutesData } from '../types';
 
 const MeetingMinutes = () => {
-  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'to_truong';
+  
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'to_truong');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState('');
   const [savedMinutes, setSavedMinutes] = useState<MeetingMinutesData[]>([]);

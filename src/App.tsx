@@ -72,6 +72,30 @@ const App = () => {
   
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'to_truong');
+
+  const handleRoleChange = (role: string) => {
+    localStorage.setItem('current_role', role);
+    setUserRole(role);
+    window.dispatchEvent(new CustomEvent('role-changed', { detail: role }));
+    
+    const roleLabels: Record<string, string> = {
+      to_truong: 'Tổ trưởng dân phố',
+      bi_thu: 'Bí thư Chi bộ',
+      mat_tran: 'Trưởng ban Mặt trận'
+    };
+    
+    // Auto redirect if active tab is restricted in new role
+    if (role === 'mat_tran' && ['party-cell', 'meetings-party'].includes(activeTab)) {
+      setActiveTab('dashboard');
+    }
+    
+    const ev = new CustomEvent('show-toast', { 
+      detail: { message: `Đã chuyển sang vai trò: ${roleLabels[role]}`, type: 'success' } 
+    });
+    window.dispatchEvent(ev);
+  };
+
   const [toast, setToast] = useState<{message: string, type: 'success' | 'danger' | 'warning' | 'info'} | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -790,6 +814,10 @@ const App = () => {
       // Ẩn các mục nhạy cảm với chế độ khách
       return !['households', 'residents', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant'].includes(item.id);
     }
+    if (userRole === 'mat_tran') {
+      // Ẩn chi bộ đối với Mặt trận
+      return !['party-cell', 'meetings-party'].includes(item.id);
+    }
     return true;
   });
 
@@ -891,8 +919,41 @@ const App = () => {
           ))}
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="user-profile">
+        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {/* Role Switcher */}
+          {!isGuestMode && (
+            <div className="role-switcher-container" style={{
+              padding: '0 0 10px 0',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              marginBottom: '4px',
+              width: '100%'
+            }}>
+              <label style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px', letterSpacing: '0.5px' }}>Vai trò thao tác:</label>
+              <select 
+                value={userRole} 
+                onChange={(e) => handleRoleChange(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#f8fafc',
+                  borderRadius: '6px',
+                  padding: '6px 8px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <option value="to_truong">Tổ trưởng dân phố</option>
+                <option value="bi_thu">Bí thư Chi bộ</option>
+                <option value="mat_tran">Trưởng ban Mặt trận</option>
+              </select>
+            </div>
+          )}
+
+          <div className="user-profile" style={{ width: '100%' }}>
             {session?.user?.user_metadata?.avatar_url ? (
               <img 
                 src={session.user.user_metadata.avatar_url} 
@@ -912,7 +973,7 @@ const App = () => {
                 {session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Tổ trưởng'}
               </span>
               <span className="user-role" title={session?.user?.email || 'Ngoại tuyến'} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
-                {isOfflineMode ? 'Chế độ Ngoại tuyến' : 'Tài khoản Google'}
+                {isGuestMode ? 'Xem công khai' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : 'Trưởng ban Mặt trận'}
               </span>
             </div>
           </div>

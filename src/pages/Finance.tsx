@@ -19,7 +19,17 @@ import type { FinancialRecord, Household, Resident, HouseholdFund } from '../typ
 
 const Finance = () => {
   const currentYear = new Date().getFullYear();
-  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'to_truong';
+  
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'to_truong');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
