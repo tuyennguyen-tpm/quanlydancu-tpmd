@@ -96,13 +96,13 @@ const App = () => {
       } else if (q.includes('biên bản') || q.includes('họp')) {
         reply = `Để soạn biên bản họp, vui lòng vào tab ➤ Trợ lý AI trên menu và nhập yêu cầu chi tiết.\n\nHoặc nhắn tôi nội dung cụ thể: "Soạn biên bản họp tổ dân phố tháng 7" để tôi tạo ngay!`;
       } else if (q.includes('báo cáo')) {
-        reply = `Tôi có thể soạn báo cáo tháng cho TDP ${tdpName}.\n\nVui lòng vào ➤ Trợ lý AI để soạn đầy đủ với số liệu thực tế từ hệ thống, hoặc mô tả nội dung cần báo cáo.`;
+        reply = `Tôi có thể soạn báo cáo tháng cho Tổ dân phố.\n\nVui lòng vào ➤ Trợ lý AI để soạn đầy đủ với số liệu thực tế từ hệ thống, hoặc mô tả nội dung cần báo cáo.`;
       } else if (q.includes('số hộ') || q.includes('dân số') || q.includes('nhân khẩu')) {
-        reply = `Thông tin dân số của TDP ${tdpName} được quản lý trong module Hộ gia đình & Nhân khẩu.\n\nVui lòng vào tab "Hộ gia đình" hoặc "Nhân khẩu" để xem số liệu chi tiết.`;
+        reply = `Thông tin dân số của Tổ dân phố được quản lý trong module Hộ gia đình & Nhân khẩu.\n\nVui lòng vào tab "Hộ gia đình" hoặc "Nhân khẩu" để xem số liệu chi tiết.`;
       } else if (q.includes('đảng phí') || q.includes('đảng viên')) {
         reply = `Thông tin đảng phí và đảng viên được quản lý trong tab Chi bộ Đảng.\n\nTheo Quy định 01-QĐ/TW 2026:\n• Có BHXH: đóng 1% lương\n• Lương hưu: 0,5%\n• Học sinh: 5.000đ/tháng`;
       } else {
-        reply = `Cảm ơn bạn đã nhắn!\n\nTôi là Trợ lý AI chuyên hỗ trợ soạn thảo văn bản hành chính cho TDP ${tdpName}.\n\nBạn có thể yêu cầu tôi:\n• "Soạn biên bản họp tháng 7"\n• "Viết báo cáo tháng"\n• "Soạn thông báo vận động quỹ"\n\nHoặc vào tab Trợ lý AI để soạn đầy đủ hơn! 📝`;
+        reply = `Cảm ơn bạn đã nhắn!\n\nTôi là Trợ lý AI chuyên hỗ trợ soạn thảo văn bản hành chính cho Tổ dân phố.\n\nBạn có thể yêu cầu tôi:\n• "Soạn biên bản họp tháng 7"\n• "Viết báo cáo tháng"\n• "Soạn thông báo vận động quỹ"\n\nHoặc vào tab Trợ lý AI để soạn đầy đủ hơn! 📝`;
       }
       setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
       setMiniChatLoading(false);

@@ -39,9 +39,11 @@ const Dashboard = () => {
   });
 
   // Đọc tên Tổ dân phố từ localStorage (có thể được sửa từ phần Cấu hình)
-  const [tdpName, setTdpName] = useState(
-    localStorage.getItem('tdp_name') || 'Nam Sầm Sơn'
-  );
+  const [tdpName, setTdpName] = useState(() => {
+    const stored = localStorage.getItem('tdp_name');
+    if (stored === 'Quảng Giao' || stored === 'TDP Quảng Giao' || stored === 'Tiến Quảng Giao') return 'Kim Tuyến';
+    return stored || 'Kim Tuyến';
+  });
 
   // Lắng nghe khi người dùng lưu tên mới từ Settings (không cần reload trang)
   useEffect(() => {
@@ -335,6 +337,7 @@ const Dashboard = () => {
 
         .welcome-section p {
           color: var(--text-muted);
+          font-size: 0.95rem;
         }
 
         .action-btns {
