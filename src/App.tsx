@@ -87,22 +87,13 @@ const App = () => {
     setMiniChatInput('');
     setMiniChatLoading(true);
     setTimeout(async () => {
-      let reply = '';
-      const lower = text.toLowerCase();
-      if (lower.includes('xin chào') || lower.includes('chào') || lower.includes('hello') || lower.includes('hi')) {
-        reply = `Xin chào! Tôi là Trợ lý AI của: Kim Tuyến. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
-      } else if (lower.includes('biên bản') || lower.includes('họp')) {
-        reply = `Để soạn biên bản họp, vui lòng vào tab ➤ Trợ lý AI trên menu và nhập yêu cầu chi tiết.\n\nHoặc nhắn tôi nội dung cụ thể: "Soạn biên bản họp tổ dân phố tháng 7" để tôi tạo ngay!`;
-      } else if (lower.includes('báo cáo') || lower.includes('tháng')) {
-        reply = `Tôi có thể soạn báo cáo tháng cho Tổ dân phố.\n\nVui lòng vào ➤ Trợ lý AI để soạn đầy đủ với số liệu thực tế từ hệ thống, hoặc mô tả nội dung cần báo cáo.`;
-      } else if (lower.includes('dân số') || lower.includes('hộ khẩu') || lower.includes('nhân khẩu') || lower.includes('hộ dân')) {
-        reply = `Thông tin dân số của Tổ dân phố được quản lý trong module Hộ gia đình & Nhân khẩu.\n\nVui lòng vào tab "Hộ gia đình" hoặc "Nhân khẩu" để xem số liệu chi tiết.`;
-      } else if (lower.includes('đảng') || lower.includes('đảng phí') || lower.includes('đảng viên')) {
-        reply = `Thông tin đảng phí và đảng viên được quản lý trong tab Chi bộ Đảng.\n\nTheo Quy định 01-QĐ/TW 2026:\n• Có BHXH: đóng 1% lương\n• Lương hưu: 0,5%\n• Học sinh: 5.000đ/tháng`;
-      } else {
-        reply = `Cảm ơn bạn đã nhắn!\n\nTôi là Trợ lý AI chuyên hỗ trợ soạn thảo văn bản hành chính cho Tổ dân phố.\n\nBạn có thể yêu cầu tôi:\n• "Soạn biên bản họp tháng 7"\n• "Viết báo cáo tháng"\n• "Soạn thông báo vận động quỹ"\n\nHoặc vào tab Trợ lý AI để soạn đầy đủ hơn! 📝`;
+      try {
+        const reply = await askGemini(text);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
+      } catch (err) {
+        console.error(err);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: 'Đã xảy ra lỗi khi gọi Trợ lý AI. Vui lòng thử lại sau.' }]);
       }
-      setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
       setMiniChatLoading(false);
       setTimeout(() => {
         const el = document.getElementById('ai-chat-messages');
