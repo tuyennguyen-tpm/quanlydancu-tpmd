@@ -83,6 +83,10 @@ const App = () => {
       // If it is a privileged role but not verified, force it to 'mat_tran' (read-only, safe role)
       localStorage.setItem('current_role', 'mat_tran');
       setUserRole('mat_tran');
+      // Sync child pages immediately after mount
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('role-changed', { detail: 'mat_tran' }));
+      }, 0);
     }
 
     const syncRolePins = async () => {
