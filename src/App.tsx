@@ -91,8 +91,9 @@ const App = () => {
         const reply = await askGemini(text);
         setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
       } catch (err) {
-        console.error(err);
-        setMiniChatMessages(prev => [...prev, { role: 'ai', content: 'Đã xảy ra lỗi khi gọi Trợ lý AI. Vui lòng thử lại sau.' }]);
+        console.error('[Gemini Error]', err);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: `⚠️ Lỗi: ${errMsg.slice(0, 200)}` }]);
       }
       setMiniChatLoading(false);
       setTimeout(() => {
