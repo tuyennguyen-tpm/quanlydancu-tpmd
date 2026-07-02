@@ -1892,7 +1892,6 @@ const App = () => {
                 <Bot size={26} />
               </button>
               <span style={{ fontSize: '0.65rem', fontWeight: '600', color: '#64748b', letterSpacing: '0.2px' }}>Trợ lý AI</span>
-              <span style={{ fontSize: '0.6rem', fontWeight: '600', color: '#2563eb', letterSpacing: '0.2px' }}>Kim Tuyến</span>
             </div>
           </div>
 
