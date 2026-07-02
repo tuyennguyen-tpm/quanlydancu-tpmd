@@ -39,7 +39,10 @@ import {
   BrainCircuit,
   Star,
   BookOpen,
-  Upload
+  Upload,
+  MessageCircle,
+  Send,
+  Bot
 } from 'lucide-react';
 import './App.css';
 
@@ -69,7 +72,48 @@ const App = () => {
   const [isOfflineMode, setOfflineMode] = useState<boolean>(localStorage.getItem('offline_mode') === 'true');
   const [isGuestMode, setGuestMode] = useState<boolean>(localStorage.getItem('guest_mode') === 'true');
 
-  
+  // Floating widgets state
+  const [zaloOpen, setZaloOpen] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [miniChatMessages, setMiniChatMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([]);
+  const [miniChatInput, setMiniChatInput] = useState('');
+  const [miniChatLoading, setMiniChatLoading] = useState(false);
+
+  const handleMiniChatSend = () => {
+    const text = miniChatInput.trim();
+    if (!text || miniChatLoading) return;
+    setMiniChatMessages(prev => [...prev, { role: 'user', content: text }]);
+    setMiniChatInput('');
+    setMiniChatLoading(true);
+    setTimeout(async () => {
+      // Re-use same AI logic from AIAssistant
+      const q = text.toLowerCase();
+      const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+      let reply = '';
+      if (q.includes('xin chào') || q.includes('hello') || q.includes('chào')) {
+        reply = `Xin chào! Tôi là Trợ lý AI của Tổ dân phố ${tdpName}. 😊\n\nTôi có thể giúp bạn soạn thảo:\n• Biên bản họp tổ dân phố\n• Báo cáo tháng\n• Thông báo, kế hoạch vận động\n• Tờ trình, công văn hành chính\n\nBạn cần soạn văn bản gì?`;
+      } else if (q.includes('biên bản') || q.includes('họp')) {
+        reply = `Để soạn biên bản họp, vui lòng vào tab ➤ Trợ lý AI trên menu và nhập yêu cầu chi tiết.\n\nHoặc nhắn tôi nội dung cụ thể: "Soạn biên bản họp tổ dân phố tháng 7" để tôi tạo ngay!`;
+      } else if (q.includes('báo cáo')) {
+        reply = `Tôi có thể soạn báo cáo tháng cho TDP ${tdpName}.\n\nVui lòng vào ➤ Trợ lý AI để soạn đầy đủ với số liệu thực tế từ hệ thống, hoặc mô tả nội dung cần báo cáo.`;
+      } else if (q.includes('số hộ') || q.includes('dân số') || q.includes('nhân khẩu')) {
+        reply = `Thông tin dân số của TDP ${tdpName} được quản lý trong module Hộ gia đình & Nhân khẩu.\n\nVui lòng vào tab "Hộ gia đình" hoặc "Nhân khẩu" để xem số liệu chi tiết.`;
+      } else if (q.includes('đảng phí') || q.includes('đảng viên')) {
+        reply = `Thông tin đảng phí và đảng viên được quản lý trong tab Chi bộ Đảng.\n\nTheo Quy định 01-QĐ/TW 2026:\n• Có BHXH: đóng 1% lương\n• Lương hưu: 0,5%\n• Học sinh: 5.000đ/tháng`;
+      } else {
+        reply = `Cảm ơn bạn đã nhắn!\n\nTôi là Trợ lý AI chuyên hỗ trợ soạn thảo văn bản hành chính cho TDP ${tdpName}.\n\nBạn có thể yêu cầu tôi:\n• "Soạn biên bản họp tháng 7"\n• "Viết báo cáo tháng"\n• "Soạn thông báo vận động quỹ"\n\nHoặc vào tab Trợ lý AI để soạn đầy đủ hơn! 📝`;
+      }
+      setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
+      setMiniChatLoading(false);
+      // Auto scroll
+      setTimeout(() => {
+        const el = document.getElementById('ai-chat-messages');
+        if (el) el.scrollTop = el.scrollHeight;
+      }, 50);
+    }, 800);
+  };
+
+
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'mat_tran');
@@ -1778,6 +1822,219 @@ const App = () => {
           }}
         />
       )}
+
+      {/* ═══ FLOATING BUTTONS: Zalo + AI Chat (always visible) ═══ */}
+      <>
+          {/* Floating Button Group */}
+          <div style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            zIndex: 1200
+          }}>
+            {/* AI Chat Button */}
+            <button
+              onClick={() => { setAiChatOpen(v => !v); setZaloOpen(false); }}
+              title="Chat với Trợ lý AI"
+              style={{
+                width: '50px', height: '50px', borderRadius: '14px',
+                background: aiChatOpen ? '#2563eb' : '#eff6ff',
+                border: '2px solid #bfdbfe',
+                color: aiChatOpen ? '#fff' : '#2563eb',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(37,99,235,0.18)',
+                transition: 'all 0.2s ease',
+                flexShrink: 0
+              }}
+            >
+              <Bot size={24} />
+            </button>
+
+            {/* Zalo Button */}
+            <button
+              onClick={() => { setZaloOpen(v => !v); setAiChatOpen(false); }}
+              title="Tham gia nhóm Zalo hỗ trợ"
+              style={{
+                width: '50px', height: '50px', borderRadius: '14px',
+                background: zaloOpen ? '#0068ff' : '#e8f1ff',
+                border: '2px solid #b3d1ff',
+                color: zaloOpen ? '#fff' : '#0068ff',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(0,104,255,0.18)',
+                transition: 'all 0.2s ease',
+                flexShrink: 0
+              }}
+            >
+              <span style={{ fontWeight: '800', fontSize: '1rem', letterSpacing: '-0.5px' }}>Z</span>
+            </button>
+          </div>
+
+          {/* Zalo Popup */}
+          {zaloOpen && (
+            <div style={{
+              position: 'fixed', bottom: '90px', right: '24px', zIndex: 1300,
+              background: '#fff', border: '2px solid #bfdbfe',
+              borderRadius: '16px', padding: '20px',
+              boxShadow: '0 8px 32px rgba(37,99,235,0.14)',
+              width: '260px',
+              animation: 'fadeIn 0.2s ease-out'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#1e40af' }}>Nhóm Zalo Hỗ trợ</span>
+                <button onClick={() => setZaloOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}><X size={18} /></button>
+              </div>
+              <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '10px' }}>Trang Hỗ Trợ Ứng Dụng · Nhóm Zalo</div>
+                {/* Zalo QR — dùng iframe Zalo */}
+                <div style={{
+                  width: '180px', height: '180px', margin: '0 auto', borderRadius: '10px',
+                  overflow: 'hidden', border: '1.5px solid #e2e8f0',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#f8fafc'
+                }}>
+                  <img
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://zalo.me/g/llmncb888&color=000000&bgcolor=ffffff&margin=10"
+                    alt="Zalo QR"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '8px' }}>Quét mã QR bằng Zalo để tham gia</div>
+              </div>
+              <a
+                href="https://zalo.me/g/llmncb888"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  background: '#0068ff', color: '#fff', borderRadius: '10px',
+                  padding: '9px 0', fontWeight: '700', fontSize: '0.88rem',
+                  textDecoration: 'none', width: '100%', transition: 'opacity 0.15s'
+                }}
+              >
+                Tham gia nhóm Zalo
+              </a>
+            </div>
+          )}
+
+          {/* AI Chat Widget */}
+          {aiChatOpen && (
+            <div style={{
+              position: 'fixed', bottom: '90px', right: '24px', zIndex: 1300,
+              background: '#fff', border: '2px solid #bfdbfe',
+              borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(37,99,235,0.14)',
+              width: '320px', height: '460px',
+              display: 'flex', flexDirection: 'column',
+              animation: 'fadeIn 0.2s ease-out',
+              overflow: 'hidden'
+            }}>
+              {/* Header */}
+              <div style={{
+                background: '#eff6ff', borderBottom: '1.5px solid #bfdbfe',
+                padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px'
+              }}>
+                <div style={{
+                  width: '32px', height: '32px', background: '#2563eb', borderRadius: '8px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <Bot size={18} color="#fff" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#1e40af' }}>Trợ lý AI</div>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b' }}>TDP {localStorage.getItem('tdp_name') || 'Quảng Giao'}</div>
+                </div>
+                <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '2px' }}><X size={18} /></button>
+              </div>
+
+              {/* Messages */}
+              <div id="ai-chat-messages" style={{
+                flex: 1, overflowY: 'auto', padding: '14px 14px 8px 14px',
+                display: 'flex', flexDirection: 'column', gap: '10px'
+              }}>
+                {miniChatMessages.length === 0 && (
+                  <div style={{
+                    textAlign: 'center', padding: '24px 16px',
+                    color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.5'
+                  }}>
+                    <Bot size={32} color="#bfdbfe" style={{ marginBottom: '8px' }} />
+                    <div>Xin chào! Tôi là Trợ lý AI của TDP.</div>
+                    <div>Hãy hỏi tôi về văn bản hành chính, báo cáo, biên bản...</div>
+                  </div>
+                )}
+                {miniChatMessages.map((msg, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex',
+                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                  }}>
+                    <div style={{
+                      maxWidth: '85%',
+                      background: msg.role === 'user' ? '#2563eb' : '#f1f5f9',
+                      color: msg.role === 'user' ? '#fff' : '#1e293b',
+                      borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                      padding: '8px 12px',
+                      fontSize: '0.83rem',
+                      lineHeight: '1.45',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word'
+                    }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {miniChatLoading && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                    <div style={{
+                      background: '#f1f5f9', borderRadius: '12px 12px 12px 2px',
+                      padding: '10px 14px', display: 'flex', gap: '4px', alignItems: 'center'
+                    }}>
+                      <span style={{ width: '6px', height: '6px', background: '#94a3b8', borderRadius: '50%', animation: 'bounce 1s infinite' }}></span>
+                      <span style={{ width: '6px', height: '6px', background: '#94a3b8', borderRadius: '50%', animation: 'bounce 1s 0.2s infinite' }}></span>
+                      <span style={{ width: '6px', height: '6px', background: '#94a3b8', borderRadius: '50%', animation: 'bounce 1s 0.4s infinite' }}></span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input */}
+              <div style={{
+                borderTop: '1.5px solid #e2e8f0', padding: '10px 12px',
+                display: 'flex', gap: '8px', alignItems: 'flex-end', background: '#fff'
+              }}>
+                <textarea
+                  value={miniChatInput}
+                  onChange={(e) => setMiniChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleMiniChatSend(); } }}
+                  placeholder="Nhập yêu cầu... (Enter để gửi)"
+                  rows={2}
+                  style={{
+                    flex: 1, border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                    padding: '8px 10px', fontSize: '0.83rem', resize: 'none',
+                    outline: 'none', fontFamily: 'inherit', lineHeight: '1.4'
+                  }}
+                />
+                <button
+                  onClick={handleMiniChatSend}
+                  disabled={!miniChatInput.trim() || miniChatLoading}
+                  style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: miniChatInput.trim() && !miniChatLoading ? '#2563eb' : '#e2e8f0',
+                    border: 'none', cursor: miniChatInput.trim() ? 'pointer' : 'default',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, transition: 'background 0.2s'
+                  }}
+                >
+                  <Send size={16} color={miniChatInput.trim() && !miniChatLoading ? '#fff' : '#94a3b8'} />
+                </button>
+              </div>
+            </div>
+          )}
+          <style>{`
+            @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+          `}</style>
+        </>
     </div>
   );
 };
