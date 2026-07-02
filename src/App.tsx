@@ -87,9 +87,11 @@ const App = () => {
 
     const syncRolePins = async () => {
       try {
+        const pAdmin = await (db as any).getRolePin('admin');
         const pToTruong = await (db as any).getRolePin('to_truong');
         const pBiThu = await (db as any).getRolePin('bi_thu');
         const pMatTran = await (db as any).getRolePin('mat_tran');
+        localStorage.setItem('role_pin_admin', pAdmin);
         localStorage.setItem('role_pin_to_truong', pToTruong);
         localStorage.setItem('role_pin_bi_thu', pBiThu);
         localStorage.setItem('role_pin_mat_tran', pMatTran);
@@ -104,6 +106,7 @@ const App = () => {
 
   const handleRoleChange = (role: string) => {
     const roleLabels: Record<string, string> = {
+      admin: 'Quản trị hệ thống',
       to_truong: 'Tổ trưởng dân phố',
       bi_thu: 'Bí thư Chi bộ',
       mat_tran: 'Trưởng ban Mặt trận'
@@ -121,6 +124,7 @@ const App = () => {
 
   const executeRoleChange = (role: string) => {
     const roleLabels: Record<string, string> = {
+      admin: 'Quản trị hệ thống',
       to_truong: 'Tổ trưởng dân phố',
       bi_thu: 'Bí thư Chi bộ',
       mat_tran: 'Trưởng ban Mặt trận'
@@ -158,6 +162,7 @@ const App = () => {
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [sbUrl, setSbUrl] = useState(localStorage.getItem('supabase_url') || '');
+  const [rolePinAdminInput, setRolePinAdminInput] = useState('9999');
   const [rolePinToTruongInput, setRolePinToTruongInput] = useState('0000');
   const [rolePinBiThuInput, setRolePinBiThuInput] = useState('1111');
   const [rolePinMatTranInput, setRolePinMatTranInput] = useState('2222');
@@ -578,6 +583,7 @@ const App = () => {
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
     setGuestPinInput(localStorage.getItem('guest_access_pin') || '1234');
+    setRolePinAdminInput(localStorage.getItem('role_pin_admin') || '9999');
     setRolePinToTruongInput(localStorage.getItem('role_pin_to_truong') || '0000');
     setRolePinBiThuInput(localStorage.getItem('role_pin_bi_thu') || '1111');
     setRolePinMatTranInput(localStorage.getItem('role_pin_mat_tran') || '2222');
@@ -644,16 +650,19 @@ const App = () => {
 
     // Lưu mã PIN truy cập cho Bà con
     const pinToSave = guestPinInput.trim() || '1234';
+    const pinAdminToSave = rolePinAdminInput.trim() || '9999';
     const pinToTruongToSave = rolePinToTruongInput.trim() || '0000';
     const pinBiThuToSave = rolePinBiThuInput.trim() || '1111';
     const pinMatTranToSave = rolePinMatTranInput.trim() || '2222';
     try {
       await db.saveGuestPin(pinToSave);
+      await (db as any).saveRolePin('admin', pinAdminToSave);
       await (db as any).saveRolePin('to_truong', pinToTruongToSave);
       await (db as any).saveRolePin('bi_thu', pinBiThuToSave);
       await (db as any).saveRolePin('mat_tran', pinMatTranToSave);
 
       // Mark as verified on this device since we configured it
+      localStorage.setItem('role_verified_admin', 'true');
       localStorage.setItem('role_verified_to_truong', 'true');
       localStorage.setItem('role_verified_bi_thu', 'true');
       localStorage.setItem('role_verified_mat_tran', 'true');
@@ -1009,6 +1018,7 @@ const App = () => {
                   fontFamily: 'inherit'
                 }}
               >
+                <option value="admin">Quản trị hệ thống (Admin)</option>
                 <option value="to_truong">Tổ trưởng dân phố</option>
                 <option value="bi_thu">Bí thư Chi bộ</option>
                 <option value="mat_tran">Trưởng ban Mặt trận</option>
@@ -1036,7 +1046,7 @@ const App = () => {
                 {session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Tổ trưởng'}
               </span>
               <span className="user-role" title={session?.user?.email || 'Ngoại tuyến'} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
-                {isGuestMode ? 'Xem công khai' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : 'Trưởng ban Mặt trận'}
+                {isGuestMode ? 'Xem công khai' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : 'Trưởng ban Mặt trận'}
               </span>
             </div>
           </div>
@@ -1150,7 +1160,7 @@ const App = () => {
               )}
             </div>
 
-            {userRole === 'to_truong' && !isGuestMode && (
+            {(userRole === 'to_truong' || userRole === 'admin') && !isGuestMode && (
               <button className="icon-btn" onClick={handleOpenSettings} title="Cấu hình hệ thống">
                 <Settings size={20} />
               </button>
@@ -1349,9 +1359,19 @@ const App = () => {
                     maxLength={10}
                   />
                 </div>
-                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginTop: '4px' }}>
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', marginTop: '4px' }}>
                   <div className="form-group">
-                    <label>PIN vai trò Tổ trưởng</label>
+                    <label>PIN Admin</label>
+                    <input
+                      type="text"
+                      value={rolePinAdminInput}
+                      onChange={(e) => setRolePinAdminInput(e.target.value)}
+                      placeholder="Mặc định: 9999"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>PIN Tổ trưởng</label>
                     <input
                       type="text"
                       value={rolePinToTruongInput}
@@ -1361,7 +1381,7 @@ const App = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>PIN vai trò Bí thư</label>
+                    <label>PIN Bí thư</label>
                     <input
                       type="text"
                       value={rolePinBiThuInput}
@@ -1371,7 +1391,7 @@ const App = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label>PIN vai trò Mặt trận</label>
+                    <label>PIN Mặt trận</label>
                     <input
                       type="text"
                       value={rolePinMatTranInput}
@@ -1719,6 +1739,7 @@ const App = () => {
           role={pinPrompt.role}
           onConfirm={(pin) => {
             const defaultPins: Record<string, string> = {
+              admin: '9999',
               to_truong: '0000',
               bi_thu: '1111',
               mat_tran: '2222'
@@ -1771,6 +1792,7 @@ const RolePinModal = ({
 }) => {
   const [pin, setPin] = useState('');
   const defaultPins: Record<string, string> = {
+    admin: '9999',
     to_truong: '0000',
     bi_thu: '1111',
     mat_tran: '2222'

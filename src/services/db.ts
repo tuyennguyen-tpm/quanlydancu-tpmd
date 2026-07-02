@@ -1132,7 +1132,7 @@ export const db = {
   },
   getRolePin: async (role: string, tenantId?: string): Promise<string> => {
     const tId = tenantId || localStorage.getItem('guest_tenant_id') || localStorage.getItem('tenant_id');
-    const defaultPins: Record<string, string> = { to_truong: '0000', bi_thu: '1111', mat_tran: '2222' };
+    const defaultPins: Record<string, string> = { admin: '9999', to_truong: '0000', bi_thu: '1111', mat_tran: '2222' };
     if (!tId) {
       return localStorage.getItem(`role_pin_${role}`) || defaultPins[role];
     }

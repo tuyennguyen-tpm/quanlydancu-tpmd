@@ -52,7 +52,7 @@ const currentYear = new Date().getFullYear();
 const PartyCell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'members' | 'meetings' | 'evaluations' | 'fees'>('members');
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'bi_thu';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'bi_thu' && currentRole !== 'admin');
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

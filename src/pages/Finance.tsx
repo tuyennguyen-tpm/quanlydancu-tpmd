@@ -20,7 +20,7 @@ import type { FinancialRecord, Household, Resident, HouseholdFund } from '../typ
 const Finance = () => {
   const currentYear = new Date().getFullYear();
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'to_truong';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

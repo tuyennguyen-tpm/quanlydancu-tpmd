@@ -104,7 +104,7 @@ const Households = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
 
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'to_truong';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
 
   // State for Transfer / Split Household
   const [transferringMember, setTransferringMember] = useState<Resident | null>(null);

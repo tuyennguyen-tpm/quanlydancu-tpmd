@@ -235,7 +235,7 @@ const Residents = () => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'to_truong');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole !== 'to_truong';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
