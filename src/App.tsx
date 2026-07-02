@@ -94,6 +94,8 @@ const App = () => {
     syncRolePins();
   }, []);
 
+  const [pinPrompt, setPinPrompt] = useState<{ role: string; label: string } | null>(null);
+
   const handleRoleChange = (role: string) => {
     const roleLabels: Record<string, string> = {
       to_truong: 'Tổ trưởng dân phố',
@@ -104,37 +106,20 @@ const App = () => {
     // Check if device already verified this role
     const isVerified = localStorage.getItem(`role_verified_${role}`) === 'true';
     if (!isVerified) {
-      const defaultPins: Record<string, string> = {
-        to_truong: '0000',
-        bi_thu: '1111',
-        mat_tran: '2222'
-      };
-      const correctPin = localStorage.getItem(`role_pin_${role}`) || defaultPins[role];
-      const enteredPin = window.prompt(`Nhập mã PIN xác nhận để chuyển sang vai trò "${roleLabels[role]}":\n(Mã PIN mặc định là: ${defaultPins[role]})`);
-      
-      if (enteredPin === null) {
-        // Clicked Cancel, reset select element back to active role
-        const selectElement = document.querySelector('.role-switcher-container select') as HTMLSelectElement;
-        if (selectElement) selectElement.value = userRole;
-        return;
-      }
-      
-      if (enteredPin !== correctPin) {
-        // Reset dropdown selection visually
-        const selectElement = document.querySelector('.role-switcher-container select') as HTMLSelectElement;
-        if (selectElement) selectElement.value = userRole;
-        
-        const ev = new CustomEvent('show-toast', { 
-          detail: { message: '❌ Mã PIN xác nhận vai trò không chính xác!', type: 'danger' } 
-        });
-        window.dispatchEvent(ev);
-        return;
-      }
-      
-      // Mark as verified on this device
-      localStorage.setItem(`role_verified_${role}`, 'true');
+      setPinPrompt({ role, label: roleLabels[role] });
+      return;
     }
 
+    executeRoleChange(role);
+  };
+
+  const executeRoleChange = (role: string) => {
+    const roleLabels: Record<string, string> = {
+      to_truong: 'Tổ trưởng dân phố',
+      bi_thu: 'Bí thư Chi bộ',
+      mat_tran: 'Trưởng ban Mặt trận'
+    };
+    
     localStorage.setItem('current_role', role);
     setUserRole(role);
     window.dispatchEvent(new CustomEvent('role-changed', { detail: role }));
@@ -1720,6 +1705,201 @@ const App = () => {
           </div>
         </div>
       )}
+
+      {/* Custom Role PIN Prompt Modal - 2D Light Blue */}
+      {pinPrompt && (
+        <RolePinModal
+          roleLabel={pinPrompt.label}
+          role={pinPrompt.role}
+          onConfirm={(pin) => {
+            const defaultPins: Record<string, string> = {
+              to_truong: '0000',
+              bi_thu: '1111',
+              mat_tran: '2222'
+            };
+            const correctPin = localStorage.getItem(`role_pin_${pinPrompt.role}`) || defaultPins[pinPrompt.role];
+            
+            if (pin !== correctPin) {
+              // Reset dropdown selection visually
+              const selectElement = document.querySelector('.role-switcher-container select') as HTMLSelectElement;
+              if (selectElement) selectElement.value = userRole;
+              
+              const ev = new CustomEvent('show-toast', { 
+                detail: { message: '❌ Mã PIN xác nhận vai trò không chính xác!', type: 'danger' } 
+              });
+              window.dispatchEvent(ev);
+              setPinPrompt(null);
+              return;
+            }
+            
+            // Mark as verified on this device
+            localStorage.setItem(`role_verified_${pinPrompt.role}`, 'true');
+            executeRoleChange(pinPrompt.role);
+            setPinPrompt(null);
+          }}
+          onCancel={() => {
+            // Reset dropdown selection visually
+            const selectElement = document.querySelector('.role-switcher-container select') as HTMLSelectElement;
+            if (selectElement) selectElement.value = userRole;
+            setPinPrompt(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// HỢP THOẠI XÁC THỰC MÃ PIN VAI TRÒ (2D Light Blue Theme)
+// ═══════════════════════════════════════════════════════════
+const RolePinModal = ({ 
+  roleLabel, 
+  role,
+  onConfirm, 
+  onCancel 
+}: { 
+  roleLabel: string; 
+  role: string;
+  onConfirm: (pin: string) => void; 
+  onCancel: () => void; 
+}) => {
+  const [pin, setPin] = useState('');
+  const defaultPins: Record<string, string> = {
+    to_truong: '0000',
+    bi_thu: '1111',
+    mat_tran: '2222'
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onConfirm(pin);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.4)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 99999,
+      padding: '20px'
+    }}>
+      <div style={{
+        background: '#f0f9ff', // Light blue background
+        border: '1.5px solid #bae6fd',
+        borderRadius: '16px',
+        boxShadow: '0 20px 25px -5px rgba(3, 105, 161, 0.12), 0 10px 10px -5px rgba(3, 105, 161, 0.06)',
+        width: '100%',
+        maxWidth: '400px',
+        overflow: 'hidden',
+        animation: 'modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+      }}>
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+          padding: '18px 20px',
+          borderBottom: '1px solid #bae6fd',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <span style={{ fontSize: '1.4rem' }}>🔑</span>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0369a1', fontWeight: '800' }}>Xác thực vai trò</h3>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', lineHeight: '1.5' }}>
+            Nhập mã PIN để chuyển sang vai trò <strong>{roleLabel}</strong>:
+            <br />
+            <span style={{ color: '#0369a1', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '4px', display: 'block' }}>
+              (Mã PIN mặc định là: {defaultPins[role]})
+            </span>
+          </p>
+
+          <input
+            type="password"
+            autoFocus
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Nhập mã PIN..."
+            maxLength={10}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1.5px solid #bae6fd',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              outline: 'none',
+              textAlign: 'center',
+              letterSpacing: '4px',
+              fontWeight: 'bold',
+              color: '#0369a1',
+              backgroundColor: 'white',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '12px 20px 18px',
+          backgroundColor: '#f8fafc',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '10px'
+        }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              backgroundColor: 'white',
+              color: '#475569',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+          >
+            Hủy bỏ
+          </button>
+          <button
+            onClick={() => onConfirm(pin)}
+            style={{
+              padding: '8px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: '#0284c7',
+              color: 'white',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.3)'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0369a1'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0284c7'}
+          >
+            Xác nhận
+          </button>
+        </div>
+      </div>
+      <style>{`
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 };
