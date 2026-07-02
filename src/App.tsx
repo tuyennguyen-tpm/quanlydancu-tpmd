@@ -1982,7 +1982,7 @@ const App = () => {
                     color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.5'
                   }}>
                     <Bot size={32} color="#bfdbfe" style={{ marginBottom: '8px' }} />
-                    <div>Xin chào! Tôi là Trợ lý AI của: {tdpName}.</div>
+                    <div>Xin chào! Tôi là Trợ lý AI của: Kim Tuyến.</div>
                     <div>Hãy hỏi tôi về văn bản hành chính, báo cáo, biên bản...</div>
                   </div>
                 )}
