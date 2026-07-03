@@ -988,15 +988,28 @@ const Households = () => {
   };
 
   // Filter & Search Logic
+  // Trả về tên thành viên khớp với từ khóa (không phải chủ hộ), dùng để hiển thị badge
+  const getMatchedMemberName = (hId: string, query: string): string | null => {
+    if (!query.trim()) return null;
+    const q = query.toLowerCase();
+    const members = residents.filter(r => r.household_id === hId && !r.is_head);
+    const matched = members.find(r => r.full_name.toLowerCase().includes(q));
+    return matched ? matched.full_name : null;
+  };
+
   const filteredHouseholds = households.filter(h => {
     const headName = getHeadName(h).toLowerCase();
     const addr = h.address.toLowerCase();
     const num = h.household_number.toLowerCase();
     const query = searchTerm.toLowerCase();
-    const matchesSearch = headName.includes(query) || addr.includes(query) || num.includes(query);
-    
+
+    // Tìm theo chủ hộ, địa chỉ, số sổ HOẶC bất kỳ thành viên nào trong hộ
+    const matchesByHead = headName.includes(query) || addr.includes(query) || num.includes(query);
+    const matchesByMember = !!getMatchedMemberName(h.id, searchTerm);
+    const matchesSearch = matchesByHead || matchesByMember;
+
     const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
-    
+
     return matchesSearch && matchesPolicy;
   }).sort((a, b) => {
     // Sắp xếp theo số của Số sổ hộ khẩu (vd: HH000001 -> 1)
@@ -1037,7 +1050,7 @@ const Households = () => {
           <Search size={20} />
           <input 
             type="text" 
-            placeholder="Tìm theo chủ hộ, số nhà, số sổ..." 
+            placeholder="Tìm theo chủ hộ, thành viên, số nhà, số sổ..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -1055,6 +1068,7 @@ const Households = () => {
         {filteredHouseholds.map(h => {
           const members = getHouseholdMembers(h.id);
           const headName = getHeadName(h);
+          const matchedMember = getMatchedMemberName(h.id, searchTerm);
           return (
             <div key={h.id} id={`household-card-${h.id}`} className="household-card">
               <div className="card-top" style={{ flexWrap: 'wrap', gap: '8px' }}>
@@ -1109,6 +1123,24 @@ const Households = () => {
                   <Users size={16} />
                   <span>{members.length} thành viên</span>
                 </div>
+                {matchedMember && searchTerm.trim() && (
+                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      border: '1px solid #bfdbfe',
+                      fontWeight: '600',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      🔍 Tìm thấy qua: {matchedMember}
+                    </span>
+                  </div>
+                )}
                 {(h.self_management_group || h.fire_safety_group) && (
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px', borderTop: '1px dashed var(--border)', paddingTop: '8px' }}>
                     {h.self_management_group && (
