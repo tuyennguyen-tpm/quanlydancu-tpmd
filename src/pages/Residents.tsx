@@ -1750,8 +1750,26 @@ const Residents = () => {
                       {resident.relationship_with_head}
                     </span>
                   </td>
-                  <td style={{maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
-                    {getHouseholdAddress(resident.household_id)}
+                  <td style={{maxWidth: '200px'}}>
+                    {(() => {
+                      const hh = households.find(h => h.id === resident.household_id);
+                      if (!hh) return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Chưa có hộ</span>;
+                      const headRes = residents.find(r => r.id === hh.head_of_household_id);
+                      const headName = headRes ? headRes.full_name : 'Chưa rõ chủ hộ';
+                      return (
+                        <div style={{ lineHeight: '1.4' }}>
+                          <div style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🏠 {headName}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {hh.address}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#6366f1', fontWeight: '500', marginTop: '1px' }}>
+                            Sổ: {hh.household_number}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td>
                     <span className={`status-dot ${resident.status === 'resident' ? 'green' : resident.status === 'temporary_resident' ? 'blue' : resident.status === 'stay' ? 'pink' : 'orange'}`}></span>
