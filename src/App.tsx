@@ -100,7 +100,7 @@ const App = () => {
         const el = document.getElementById('ai-chat-messages');
         if (el) el.scrollTop = el.scrollHeight;
       }, 50);
-    }, 800);
+    }, 50);
   };
 
 
