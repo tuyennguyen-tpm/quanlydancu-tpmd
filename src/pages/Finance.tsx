@@ -347,6 +347,18 @@ const Finance = () => {
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       });
 
+      // Áp dụng đường viền lưới cho toàn bộ các ô
+      worksheet.eachRow((row) => {
+        row.eachCell(cell => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+        });
+      });
+
       // Tự động căn rộng cột
       worksheet.columns.forEach(column => {
         let maxLength = 0;
