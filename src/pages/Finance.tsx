@@ -16,6 +16,7 @@ import {
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { FinancialRecord, Household, Resident, HouseholdFund } from '../types';
+import ExcelJS from 'exceljs';
 
 const Finance = () => {
   const currentYear = new Date().getFullYear();
@@ -237,36 +238,152 @@ const Finance = () => {
     }
   };
 
-  const handleExportCSV = () => {
+  const formatToDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+    return dateStr;
+  };
+
+  const handleExportExcel = async () => {
     if (filteredRecords.length === 0) {
       showToast('Không có dữ liệu để xuất!', 'warning');
       return;
     }
 
+    showToast('Đang khởi tạo file Excel...', 'info');
+
     const headers = ['Ngày lập', 'Loại phiếu', 'Nội dung', 'Danh mục', 'Người lập', 'Số tiền (VND)'];
     const rows = filteredRecords.map(r => [
-      r.date,
+      formatToDisplayDate(r.date),
       r.type === 'income' ? 'Thu' : 'Chi',
       r.description,
       r.category,
       r.recorded_by,
-      (r.type === 'income' ? '+' : '-') + r.amount
+      r.amount
     ]);
 
-    const csvContent = '\uFEFF' + [
-      headers.join(','),
-      ...rows.map(row => row.map(val => `"${val.toString().replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Sổ thu chi');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `so_thu_chi_nam_sam_son_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Xuất báo cáo Sổ thu chi thành công!', 'success');
+      // Tạo cấu trúc cột
+      worksheet.columns = headers.map(h => ({ header: h, key: h }));
+
+      // Thêm các dòng dữ liệu và thiết lập kiểu dáng
+      rows.forEach((row, rowIndex) => {
+        const addedRow = worksheet.addRow(row);
+        const record = filteredRecords[rowIndex];
+
+        addedRow.eachCell((cell, colIndex) => {
+          cell.font = {
+            name: 'Segoe UI',
+            size: 11
+          };
+
+          // Định dạng số tiền (cột 6)
+          if (colIndex === 6) {
+            cell.numFmt = '#,##0';
+            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          }
+
+          // Căn giữa cột Ngày lập và Loại phiếu
+          if (colIndex === 1 || colIndex === 2) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+
+          // Tô màu nền tùy loại phiếu thu / chi
+          if (record.type === 'income') {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFE6F4EA' } // Xanh lá nhạt #E6F4EA
+            };
+            if (colIndex === 6 || colIndex === 2) {
+              cell.font = {
+                bold: true,
+                color: { argb: 'FF137333' }, // Xanh lá đậm #137333
+                name: 'Segoe UI',
+                size: 11
+              };
+            }
+          } else {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFCE8E6' } // Đỏ nhạt #FCE8E6
+            };
+            if (colIndex === 6 || colIndex === 2) {
+              cell.font = {
+                bold: true,
+                color: { argb: 'FFC5221F' }, // Đỏ đậm #C5221F
+                name: 'Segoe UI',
+                size: 11
+              };
+            }
+          }
+        });
+      });
+
+      // Căn chỉnh tiêu đề dòng đầu tiên
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = 26;
+      headerRow.eachCell(cell => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF0F766E' } // Màu Teal tối #0F766E
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' }, // Chữ trắng
+          name: 'Segoe UI',
+          size: 11
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+
+      // Tự động căn rộng cột
+      worksheet.columns.forEach(column => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, cell => {
+          let strVal = '';
+          if (cell.value !== null && cell.value !== undefined) {
+            if (typeof cell.value === 'number') {
+              strVal = new Intl.NumberFormat('vi-VN').format(cell.value);
+            } else {
+              strVal = cell.value.toString();
+            }
+          }
+          const columnLength = strVal.length;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+        column.width = Math.max(maxLength + 4, 12);
+      });
+
+      // Ghi workbook ra file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const filenameTdp = (localStorage.getItem('tdp_name') || 'nam_sam_son').toLowerCase().replace(/\s+/g, '_');
+      link.setAttribute('download', `so_thu_chi_${filenameTdp}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Xuất báo cáo Sổ thu chi thành công!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi khi xuất file Excel!', 'danger');
+    }
   };
 
   // Calculations
@@ -311,7 +428,7 @@ const Finance = () => {
             <div className="header-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <button 
                 className="btn btn-secondary" 
-                onClick={handleExportCSV}
+                onClick={handleExportExcel}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '8px',
