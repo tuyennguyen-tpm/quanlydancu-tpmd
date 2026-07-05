@@ -347,15 +347,70 @@ const Finance = () => {
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       });
 
-      // Áp dụng đường viền lưới cho toàn bộ các ô
-      worksheet.eachRow((row) => {
-        row.eachCell(cell => {
-          cell.border = {
-            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+      // Tính toán tổng số liệu của danh sách đang xuất
+      const totalIncome = filteredRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
+      const totalExpense = filteredRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
+      const balance = totalIncome - totalExpense;
+
+      // Thêm dòng trống làm khoảng giãn cách
+      worksheet.addRow([]);
+
+      // Thêm dòng Tổng Thu
+      const rowIncome = worksheet.addRow(['', '', '', '', 'Tổng Thu (VND):', totalIncome]);
+      rowIncome.eachCell((cell, colIndex) => {
+        if (colIndex >= 5) {
+          cell.font = { bold: true, name: 'Segoe UI', size: 11, color: { argb: 'FF137333' } };
+          if (colIndex === 6) {
+            cell.numFmt = '#,##0';
+          }
+        }
+      });
+
+      // Thêm dòng Tổng Chi
+      const rowExpense = worksheet.addRow(['', '', '', '', 'Tổng Chi (VND):', totalExpense]);
+      rowExpense.eachCell((cell, colIndex) => {
+        if (colIndex >= 5) {
+          cell.font = { bold: true, name: 'Segoe UI', size: 11, color: { argb: 'FFC5221F' } };
+          if (colIndex === 6) {
+            cell.numFmt = '#,##0';
+          }
+        }
+      });
+
+      // Thêm dòng Còn Dư (Tồn Quỹ)
+      const rowBalance = worksheet.addRow(['', '', '', '', 'Còn dư (Tồn quỹ):', balance]);
+      rowBalance.eachCell((cell, colIndex) => {
+        if (colIndex >= 5) {
+          cell.font = { 
+            bold: true, 
+            name: 'Segoe UI', 
+            size: 11, 
+            color: { argb: balance >= 0 ? 'FF137333' : 'FFC5221F' } 
           };
+          if (colIndex === 6) {
+            cell.numFmt = '#,##0';
+          }
+          // Tô màu nền xám rất nhẹ làm nổi bật
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF8FAFC' }
+          };
+        }
+      });
+
+      // Áp dụng đường viền lưới cho toàn bộ các ô (tránh kẻ viền ô trống bên trái dòng tổng hợp)
+      worksheet.eachRow((row) => {
+        row.eachCell((cell, colIndex) => {
+          const isSummaryRow = row.number > rows.length + 1;
+          if (!isSummaryRow || colIndex >= 5) {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+            };
+          }
         });
       });
 
