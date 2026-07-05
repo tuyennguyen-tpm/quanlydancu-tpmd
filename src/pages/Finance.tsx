@@ -266,7 +266,7 @@ const Finance = () => {
     const rows = filteredRecords.map(r => [
       formatToDisplayDate(r.date),
       r.type === 'income' ? 'Thu' : 'Chi',
-      r.description,
+      cleanDescription(r.description),
       r.category,
       r.recorded_by,
       r.amount
@@ -482,6 +482,11 @@ const Finance = () => {
     return new Intl.NumberFormat('vi-VN').format(amt);
   };
 
+  const cleanDescription = (desc: string) => {
+    if (!desc) return '';
+    return desc.replace(/\[QUY_[^\]]+\]/g, '').trim();
+  };
+
   const formatInputNumber = (val: string) => {
     const clean = val.replace(/\D/g, '');
     if (!clean) return '';
@@ -680,7 +685,7 @@ const Finance = () => {
                          <td className="date-cell">{new Date(t.date).toLocaleDateString('vi-VN')}</td>
                          <td className="title-cell">
                             <div className={`type-indicator ${t.type}`}></div>
-                            {t.description}
+                            {cleanDescription(t.description)}
                          </td>
                          <td><span className="category-tag">{t.category}</span></td>
                          <td>{t.recorded_by}</td>
