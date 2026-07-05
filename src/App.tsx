@@ -246,6 +246,24 @@ const App = () => {
   const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(
     formatInputNumber(localStorage.getItem('target_den_on_dap_nghia') || '70000')
   );
+  const [targetKhuyenHocInput, setTargetKhuyenHocInput] = useState(
+    formatInputNumber(localStorage.getItem('target_khuyen_hoc') || '50000')
+  );
+  const [targetAnSinhInput, setTargetAnSinhInput] = useState(
+    formatInputNumber(localStorage.getItem('target_an_sinh_xa_hoi') || '50000')
+  );
+  const [targetVanHoaInput, setTargetVanHoaInput] = useState(
+    formatInputNumber(localStorage.getItem('target_van_hoa_the_thao') || '50000')
+  );
+  const [targetDienNuocInput, setTargetDienNuocInput] = useState(
+    formatInputNumber(localStorage.getItem('target_dien_nuoc_nha_van_hoa') || '50000')
+  );
+  const [targetDamHieuInput, setTargetDamHieuInput] = useState(
+    formatInputNumber(localStorage.getItem('target_dam_hieu') || '50000')
+  );
+  const [targetCaoTuoiInput, setTargetCaoTuoiInput] = useState(
+    formatInputNumber(localStorage.getItem('target_cham_soc_nguoi_cao_tuoi') || '50000')
+  );
   const [targetVeSinhInput, setTargetVeSinhInput] = useState(
     formatInputNumber(localStorage.getItem('target_ve_sinh_moi_truong') || '200000')
   );
@@ -643,6 +661,12 @@ const App = () => {
     setSupportPhoneInput(supportPhone);
     setTargetNghieoInput(formatInputNumber(localStorage.getItem('target_vi_nguoi_ngheo') || '100000'));
     setTargetDapNghiaInput(formatInputNumber(localStorage.getItem('target_den_on_dap_nghia') || '70000'));
+    setTargetKhuyenHocInput(formatInputNumber(localStorage.getItem('target_khuyen_hoc') || '50000'));
+    setTargetAnSinhInput(formatInputNumber(localStorage.getItem('target_an_sinh_xa_hoi') || '50000'));
+    setTargetVanHoaInput(formatInputNumber(localStorage.getItem('target_van_hoa_the_thao') || '50000'));
+    setTargetDienNuocInput(formatInputNumber(localStorage.getItem('target_dien_nuoc_nha_van_hoa') || '50000'));
+    setTargetDamHieuInput(formatInputNumber(localStorage.getItem('target_dam_hieu') || '50000'));
+    setTargetCaoTuoiInput(formatInputNumber(localStorage.getItem('target_cham_soc_nguoi_cao_tuoi') || '50000'));
     setTargetVeSinhInput(formatInputNumber(localStorage.getItem('target_ve_sinh_moi_truong') || '200000'));
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
@@ -704,6 +728,12 @@ const App = () => {
     // Lưu định mức các loại quỹ
     localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.replace(/\./g, '').trim() || '100000');
     localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.replace(/\./g, '').trim() || '70000');
+    localStorage.setItem('target_khuyen_hoc', targetKhuyenHocInput.replace(/\./g, '').trim() || '50000');
+    localStorage.setItem('target_an_sinh_xa_hoi', targetAnSinhInput.replace(/\./g, '').trim() || '50000');
+    localStorage.setItem('target_van_hoa_the_thao', targetVanHoaInput.replace(/\./g, '').trim() || '50000');
+    localStorage.setItem('target_dien_nuoc_nha_van_hoa', targetDienNuocInput.replace(/\./g, '').trim() || '50000');
+    localStorage.setItem('target_dam_hieu', targetDamHieuInput.replace(/\./g, '').trim() || '50000');
+    localStorage.setItem('target_cham_soc_nguoi_cao_tuoi', targetCaoTuoiInput.replace(/\./g, '').trim() || '50000');
     localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.replace(/\./g, '').trim() || '200000');
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
     
@@ -758,6 +788,12 @@ const App = () => {
             { user_id: uId, key: 'logo_url', value: newLogo },
             { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.replace(/\./g, '').trim() || '100000' },
             { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.replace(/\./g, '').trim() || '70000' },
+            { user_id: uId, key: 'target_khuyen_hoc', value: targetKhuyenHocInput.replace(/\./g, '').trim() || '50000' },
+            { user_id: uId, key: 'target_an_sinh_xa_hoi', value: targetAnSinhInput.replace(/\./g, '').trim() || '50000' },
+            { user_id: uId, key: 'target_van_hoa_the_thao', value: targetVanHoaInput.replace(/\./g, '').trim() || '50000' },
+            { user_id: uId, key: 'target_dien_nuoc_nha_van_hoa', value: targetDienNuocInput.replace(/\./g, '').trim() || '50000' },
+            { user_id: uId, key: 'target_dam_hieu', value: targetDamHieuInput.replace(/\./g, '').trim() || '50000' },
+            { user_id: uId, key: 'target_cham_soc_nguoi_cao_tuoi', value: targetCaoTuoiInput.replace(/\./g, '').trim() || '50000' },
             { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.replace(/\./g, '').trim() || '200000' },
             { user_id: uId, key: 'latest_app_version', value: newVersion }
           ];
@@ -1368,35 +1404,91 @@ const App = () => {
                 gap: '12px',
                 marginTop: '12px'
               }}>
-                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px' }}>
                   🎯 Mức chỉ tiêu thu nộp TRÊN MỖI HỘ (VNĐ/Hộ)
                 </div>
-                <div className="form-group">
-                  <label>Mức nộp Quỹ Vì người nghèo (1 hộ)</label>
-                  <input
-                    type="text"
-                    value={targetNghieoInput}
-                    onChange={(e) => setTargetNghieoInput(formatInputNumber(e.target.value))}
-                    placeholder="Ví dụ: 100.000"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Mức nộp Quỹ Đền ơn đáp nghĩa (1 hộ)</label>
-                  <input
-                    type="text"
-                    value={targetDapNghiaInput}
-                    onChange={(e) => setTargetDapNghiaInput(formatInputNumber(e.target.value))}
-                    placeholder="Ví dụ: 70.000"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Mức nộp Phí vệ sinh môi trường (1 hộ)</label>
-                  <input
-                    type="text"
-                    value={targetVeSinhInput}
-                    onChange={(e) => setTargetVeSinhInput(formatInputNumber(e.target.value))}
-                    placeholder="Ví dụ: 200.000"
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px 16px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Quỹ Vì người nghèo</label>
+                    <input
+                      type="text"
+                      value={targetNghieoInput}
+                      onChange={(e) => setTargetNghieoInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 100.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Quỹ Đền ơn đáp nghĩa</label>
+                    <input
+                      type="text"
+                      value={targetDapNghiaInput}
+                      onChange={(e) => setTargetDapNghiaInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 70.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Quỹ Khuyến học</label>
+                    <input
+                      type="text"
+                      value={targetKhuyenHocInput}
+                      onChange={(e) => setTargetKhuyenHocInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 50.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Quỹ an sinh xã hội</label>
+                    <input
+                      type="text"
+                      value={targetAnSinhInput}
+                      onChange={(e) => setTargetAnSinhInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 50.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Quỹ văn hóa - thể thao</label>
+                    <input
+                      type="text"
+                      value={targetVanHoaInput}
+                      onChange={(e) => setTargetVanHoaInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 50.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Điện, nước, internet, bảo vệ Nhà VH</label>
+                    <input
+                      type="text"
+                      value={targetDienNuocInput}
+                      onChange={(e) => setTargetDienNuocInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 50.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Quỹ sinh hoạt đám hiếu</label>
+                    <input
+                      type="text"
+                      value={targetDamHieuInput}
+                      onChange={(e) => setTargetDamHieuInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 50.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Quỹ Chăm sóc người cao tuổi</label>
+                    <input
+                      type="text"
+                      value={targetCaoTuoiInput}
+                      onChange={(e) => setTargetCaoTuoiInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 50.000"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Phí vệ sinh môi trường</label>
+                    <input
+                      type="text"
+                      value={targetVeSinhInput}
+                      onChange={(e) => setTargetVeSinhInput(formatInputNumber(e.target.value))}
+                      placeholder="Ví dụ: 200.000"
+                    />
+                  </div>
                 </div>
               </div>
 
