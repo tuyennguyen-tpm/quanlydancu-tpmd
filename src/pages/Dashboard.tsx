@@ -59,7 +59,7 @@ const Dashboard = () => {
 
   const [funds, setFunds] = useState({
     viNguoiNgheo: { collected: 0, target: parseInt(localStorage.getItem('target_vi_nguoi_ngheo') || '100000') },
-    denOnDapNghia: { collected: 9200000, target: parseInt(localStorage.getItem('target_den_on_dap_nghia') || '70000') },
+    denOnDapNghia: { collected: 0, target: parseInt(localStorage.getItem('target_den_on_dap_nghia') || '70000') },
     veSinhMoiTruong: { collected: 0, target: parseInt(localStorage.getItem('target_ve_sinh_moi_truong') || '200000') },
   });
 
@@ -68,12 +68,13 @@ const Dashboard = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       // 1. Load basic entities
-      const [households, residents, complaints, financialRecords, securityLogs] = await Promise.all([
+      const [households, residents, complaints, financialRecords, securityLogs, hhFunds] = await Promise.all([
         db.getHouseholds(),
         db.getResidents(),
         db.getComplaints(),
         db.getFinancialRecords(),
-        db.getSecurityLogs()
+        db.getSecurityLogs(),
+        db.getHouseholdFunds()
       ]);
 
       // 2. Calculate Stats (Loại trừ người đã mất khỏi số liệu dân số thực tế)
@@ -124,6 +125,22 @@ const Dashboard = () => {
         }
       });
 
+      // Cộng thêm số liệu thực tế thu được từ bảng đóng quỹ của các hộ dân trong năm hiện tại
+      const curYear = new Date().getFullYear();
+      if (hhFunds && Array.isArray(hhFunds)) {
+        hhFunds.forEach(f => {
+          if (f.year === curYear) {
+            if (f.fund_name === 'Quỹ Vì người nghèo') {
+              ngheoCollected += f.amount;
+            } else if (f.fund_name === 'Phí vệ sinh môi trường') {
+              veSinhCollected += f.amount;
+            } else if (f.fund_name === 'Quỹ Đền ơn đáp nghĩa') {
+              dapNghiaCollected += f.amount;
+            }
+          }
+        });
+      }
+
       // Lấy chỉ tiêu đóng góp trên mỗi hộ gia đình
       const targetNghieoPerHousehold = parseInt(localStorage.getItem('target_vi_nguoi_ngheo') || '100000');
       const targetDapNghiaPerHousehold = parseInt(localStorage.getItem('target_den_on_dap_nghia') || '70000');
@@ -136,9 +153,9 @@ const Dashboard = () => {
       const targetVeSinh = targetVeSinhPerHousehold * multiplier;
 
       setFunds({
-        viNguoiNgheo: { collected: ngheoCollected || 12500000, target: targetNghieo },
-        denOnDapNghia: { collected: dapNghiaCollected || 9200000, target: targetDapNghia },
-        veSinhMoiTruong: { collected: veSinhCollected || 21000000, target: targetVeSinh },
+        viNguoiNgheo: { collected: ngheoCollected, target: targetNghieo },
+        denOnDapNghia: { collected: dapNghiaCollected, target: targetDapNghia },
+        veSinhMoiTruong: { collected: veSinhCollected, target: targetVeSinh },
       });
 
       // 4. Aggregate Notifications
