@@ -64,6 +64,8 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }: NavItemProps) =>
     <span>{label}</span>
     {badge !== undefined && badge > 0 && <span className="badge">{badge}</span>}
   </button>
+);
+
 const formatInputNumber = (val: string) => {
   const clean = val.replace(/\D/g, '');
   if (!clean) return '';
