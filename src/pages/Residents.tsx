@@ -233,6 +233,12 @@ const Residents = () => {
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
   const [showDeceased, setShowDeceased] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, householdFilter, showDeceased]);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
@@ -1557,6 +1563,9 @@ const Residents = () => {
     return timeA - timeB;
   });
 
+  const totalPages = Math.ceil(filteredResidents.length / pageSize) || 1;
+  const paginatedResidents = filteredResidents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const getHouseholdAddress = (hId: string) => {
     const hh = households.find(h => h.id === hId);
     return hh ? hh.address : 'Chưa định vị hộ';
@@ -1721,7 +1730,7 @@ const Residents = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredResidents.map((resident) => {
+            {paginatedResidents.map((resident) => {
               const isDeceased = resident.status === 'deceased';
               return (
                 <tr 
@@ -1866,6 +1875,34 @@ const Residents = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {filteredResidents.length > 0 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            Hiển thị <strong>{Math.min(filteredResidents.length, (currentPage - 1) * pageSize + 1)}-{Math.min(filteredResidents.length, currentPage * pageSize)}</strong> trong số <strong>{filteredResidents.length}</strong> nhân khẩu
+          </div>
+          <div className="pagination-buttons">
+            <button 
+              className="pagination-btn" 
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              ◄ Trang trước
+            </button>
+            <span className="pagination-page-indicator">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button 
+              className="pagination-btn" 
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Trang sau ►
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit Modal */}
       {isFormOpen && (
