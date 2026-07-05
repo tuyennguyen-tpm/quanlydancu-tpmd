@@ -1511,10 +1511,13 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               {(feeForm.fee_category === 'bhxh' || feeForm.fee_category === 'pension') && (
                 <div className="party-form-group">
                   <label>{feeForm.fee_category === 'bhxh' ? 'Mức lương đóng BHXH (đ/tháng)' : 'Mức lương hưu (đ/tháng)'}</label>
-                  <input type="number" step={100000}
-                    value={feeForm.salary_base || ''}
-                    onChange={e => setFeeForm(f => ({ ...f, salary_base: parseInt(e.target.value) || 0 }))}
-                    placeholder="VD: 6000000" />
+                  <input type="text"
+                    value={feeForm.salary_base ? new Intl.NumberFormat('vi-VN').format(feeForm.salary_base) : ''}
+                    onChange={e => {
+                      const clean = e.target.value.replace(/\D/g, '');
+                      setFeeForm(f => ({ ...f, salary_base: parseInt(clean) || 0 }));
+                    }}
+                    placeholder="VD: 6.000.000" />
                   <span style={{ fontSize: '0.72rem', color: '#60a5fa', marginTop: 2 }}>
                     → Đảng phí tính được: <strong>{fmtMoney(calcMonthlyFee({ ...editingMember, ...feeForm, salary_base: feeForm.salary_base || 0 } as PartyMember, year))}/tháng</strong>
                   </span>

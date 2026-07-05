@@ -64,9 +64,11 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge }: NavItemProps) =>
     <span>{label}</span>
     {badge !== undefined && badge > 0 && <span className="badge">{badge}</span>}
   </button>
-);
-
-
+const formatInputNumber = (val: string) => {
+  const clean = val.replace(/\D/g, '');
+  if (!clean) return '';
+  return new Intl.NumberFormat('vi-VN').format(parseInt(clean));
+};
 
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -236,9 +238,15 @@ const App = () => {
 
 
   // Targets states for TDP Funds
-  const [targetNghieoInput, setTargetNghieoInput] = useState(localStorage.getItem('target_vi_nguoi_ngheo') || '100000');
-  const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(localStorage.getItem('target_den_on_dap_nghia') || '70000');
-  const [targetVeSinhInput, setTargetVeSinhInput] = useState(localStorage.getItem('target_ve_sinh_moi_truong') || '200000');
+  const [targetNghieoInput, setTargetNghieoInput] = useState(
+    formatInputNumber(localStorage.getItem('target_vi_nguoi_ngheo') || '100000')
+  );
+  const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(
+    formatInputNumber(localStorage.getItem('target_den_on_dap_nghia') || '70000')
+  );
+  const [targetVeSinhInput, setTargetVeSinhInput] = useState(
+    formatInputNumber(localStorage.getItem('target_ve_sinh_moi_truong') || '200000')
+  );
   const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
   const [latestAppVersionInput, setLatestAppVersionInput] = useState(localStorage.getItem('latest_app_version') || APP_VERSION);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -631,9 +639,9 @@ const App = () => {
     setLogoUrlInput(logoUrl);
     setSupportNameInput(supportName);
     setSupportPhoneInput(supportPhone);
-    setTargetNghieoInput(localStorage.getItem('target_vi_nguoi_ngheo') || '100000');
-    setTargetDapNghiaInput(localStorage.getItem('target_den_on_dap_nghia') || '70000');
-    setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '200000');
+    setTargetNghieoInput(formatInputNumber(localStorage.getItem('target_vi_nguoi_ngheo') || '100000'));
+    setTargetDapNghiaInput(formatInputNumber(localStorage.getItem('target_den_on_dap_nghia') || '70000'));
+    setTargetVeSinhInput(formatInputNumber(localStorage.getItem('target_ve_sinh_moi_truong') || '200000'));
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
     setGuestPinInput(localStorage.getItem('guest_access_pin') || '1234');
@@ -692,9 +700,9 @@ const App = () => {
     setLogoError(false);
 
     // Lưu định mức các loại quỹ
-    localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.trim() || '100000');
-    localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.trim() || '70000');
-    localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.trim() || '200000');
+    localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.replace(/\./g, '').trim() || '100000');
+    localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.replace(/\./g, '').trim() || '70000');
+    localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.replace(/\./g, '').trim() || '200000');
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
     
     // Lưu phiên bản mới nhất
@@ -746,9 +754,9 @@ const App = () => {
             { user_id: uId, key: 'support_name', value: newSupportName },
             { user_id: uId, key: 'support_phone', value: newSupportPhone },
             { user_id: uId, key: 'logo_url', value: newLogo },
-            { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '100000' },
-            { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '70000' },
-            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '200000' },
+            { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.replace(/\./g, '').trim() || '100000' },
+            { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.replace(/\./g, '').trim() || '70000' },
+            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.replace(/\./g, '').trim() || '200000' },
             { user_id: uId, key: 'latest_app_version', value: newVersion }
           ];
           await supabase.from('app_config').upsert(configItems);
@@ -1364,28 +1372,28 @@ const App = () => {
                 <div className="form-group">
                   <label>Mức nộp Quỹ Vì người nghèo (1 hộ)</label>
                   <input
-                    type="number"
+                    type="text"
                     value={targetNghieoInput}
-                    onChange={(e) => setTargetNghieoInput(e.target.value)}
-                    placeholder="Ví dụ: 100000"
+                    onChange={(e) => setTargetNghieoInput(formatInputNumber(e.target.value))}
+                    placeholder="Ví dụ: 100.000"
                   />
                 </div>
                 <div className="form-group">
                   <label>Mức nộp Quỹ Đền ơn đáp nghĩa (1 hộ)</label>
                   <input
-                    type="number"
+                    type="text"
                     value={targetDapNghiaInput}
-                    onChange={(e) => setTargetDapNghiaInput(e.target.value)}
-                    placeholder="Ví dụ: 70000"
+                    onChange={(e) => setTargetDapNghiaInput(formatInputNumber(e.target.value))}
+                    placeholder="Ví dụ: 70.000"
                   />
                 </div>
                 <div className="form-group">
                   <label>Mức nộp Phí vệ sinh môi trường (1 hộ)</label>
                   <input
-                    type="number"
+                    type="text"
                     value={targetVeSinhInput}
-                    onChange={(e) => setTargetVeSinhInput(e.target.value)}
-                    placeholder="Ví dụ: 200000"
+                    onChange={(e) => setTargetVeSinhInput(formatInputNumber(e.target.value))}
+                    placeholder="Ví dụ: 200.000"
                   />
                 </div>
               </div>
