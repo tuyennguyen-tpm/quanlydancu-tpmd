@@ -165,7 +165,7 @@ const Dashboard = () => {
 
       // Sum from general ledger
       financialRecords.forEach(r => {
-        if (r.type === 'income') {
+        if (r.type === 'income' && !r.description.includes('[QUY_')) {
           const desc = r.description.toLowerCase();
           const cat = r.category.toLowerCase();
           
