@@ -63,6 +63,10 @@ const Finance = () => {
     'Quỹ Vì người nghèo',
     'Quỹ Đền ơn đáp nghĩa',
     'Quỹ Khuyến học',
+    'Quỹ an sinh xã hội',
+    'Quỹ văn hóa - thể thao',
+    'Điện, nước, internet, bảo vệ Nhà văn hóa',
+    'Quỹ sinh hoạt đám hiếu',
     'Quỹ Chăm sóc người cao tuổi',
     'Phí vệ sinh môi trường'
   ];
@@ -818,7 +822,7 @@ const Finance = () => {
 
           {/* Matrix table */}
           <div className="finance-table-wrapper" style={{ overflowX: 'auto' }}>
-            <table className="data-table" style={{ minWidth: '950px' }}>
+            <table className="data-table" style={{ minWidth: '1300px' }}>
               <thead>
                 <tr>
                   <th style={{ width: '250px' }}>Hộ gia đình / Chủ hộ</th>
@@ -897,7 +901,7 @@ const Finance = () => {
                 })}
                 {households.length === 0 && (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                    <td colSpan={2 + FUND_NAMES.length} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                       Chưa có dữ liệu hộ gia đình nào để thu quỹ.
                     </td>
                   </tr>
