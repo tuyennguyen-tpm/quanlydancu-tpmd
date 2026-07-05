@@ -154,6 +154,7 @@ const Dashboard = () => {
         return parseInt(clean) || parseInt(def);
       };
 
+      const multiplier = Math.max(1, totalH);
       const resultsMap: Record<string, { collected: number, target: number }> = {};
       FUND_NAMES.forEach(name => {
         resultsMap[name] = {
