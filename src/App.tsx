@@ -236,9 +236,9 @@ const App = () => {
 
 
   // Targets states for TDP Funds
-  const [targetNghieoInput, setTargetNghieoInput] = useState(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
-  const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
-  const [targetVeSinhInput, setTargetVeSinhInput] = useState(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
+  const [targetNghieoInput, setTargetNghieoInput] = useState(localStorage.getItem('target_vi_nguoi_ngheo') || '100000');
+  const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(localStorage.getItem('target_den_on_dap_nghia') || '70000');
+  const [targetVeSinhInput, setTargetVeSinhInput] = useState(localStorage.getItem('target_ve_sinh_moi_truong') || '200000');
   const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
   const [latestAppVersionInput, setLatestAppVersionInput] = useState(localStorage.getItem('latest_app_version') || APP_VERSION);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -631,9 +631,9 @@ const App = () => {
     setLogoUrlInput(logoUrl);
     setSupportNameInput(supportName);
     setSupportPhoneInput(supportPhone);
-    setTargetNghieoInput(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
-    setTargetDapNghiaInput(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
-    setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
+    setTargetNghieoInput(localStorage.getItem('target_vi_nguoi_ngheo') || '100000');
+    setTargetDapNghiaInput(localStorage.getItem('target_den_on_dap_nghia') || '70000');
+    setTargetVeSinhInput(localStorage.getItem('target_ve_sinh_moi_truong') || '200000');
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
     setGuestPinInput(localStorage.getItem('guest_access_pin') || '1234');
@@ -692,9 +692,9 @@ const App = () => {
     setLogoError(false);
 
     // Lưu định mức các loại quỹ
-    localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.trim() || '15000000');
-    localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.trim() || '10000000');
-    localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.trim() || '30000000');
+    localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.trim() || '100000');
+    localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.trim() || '70000');
+    localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.trim() || '200000');
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
     
     // Lưu phiên bản mới nhất
@@ -746,9 +746,9 @@ const App = () => {
             { user_id: uId, key: 'support_name', value: newSupportName },
             { user_id: uId, key: 'support_phone', value: newSupportPhone },
             { user_id: uId, key: 'logo_url', value: newLogo },
-            { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '15000000' },
-            { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '10000000' },
-            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '30000000' },
+            { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.trim() || '100000' },
+            { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.trim() || '70000' },
+            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.trim() || '200000' },
             { user_id: uId, key: 'latest_app_version', value: newVersion }
           ];
           await supabase.from('app_config').upsert(configItems);
@@ -1359,33 +1359,33 @@ const App = () => {
                 marginTop: '12px'
               }}>
                 <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                  🎯 Chỉ tiêu thu nộp quỹ Tổ dân phố (VNĐ)
+                  🎯 Mức chỉ tiêu thu nộp TRÊN MỖI HỘ (VNĐ/Hộ)
                 </div>
                 <div className="form-group">
-                  <label>Chỉ tiêu Quỹ Vì người nghèo</label>
+                  <label>Mức nộp Quỹ Vì người nghèo (1 hộ)</label>
                   <input
                     type="number"
                     value={targetNghieoInput}
                     onChange={(e) => setTargetNghieoInput(e.target.value)}
-                    placeholder="Ví dụ: 15000000"
+                    placeholder="Ví dụ: 100000"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Chỉ tiêu Quỹ Đền ơn đáp nghĩa</label>
+                  <label>Mức nộp Quỹ Đền ơn đáp nghĩa (1 hộ)</label>
                   <input
                     type="number"
                     value={targetDapNghiaInput}
                     onChange={(e) => setTargetDapNghiaInput(e.target.value)}
-                    placeholder="Ví dụ: 10000000"
+                    placeholder="Ví dụ: 70000"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Chỉ tiêu Phí vệ sinh môi trường</label>
+                  <label>Mức nộp Phí vệ sinh môi trường (1 hộ)</label>
                   <input
                     type="number"
                     value={targetVeSinhInput}
                     onChange={(e) => setTargetVeSinhInput(e.target.value)}
-                    placeholder="Ví dụ: 30000000"
+                    placeholder="Ví dụ: 200000"
                   />
                 </div>
               </div>

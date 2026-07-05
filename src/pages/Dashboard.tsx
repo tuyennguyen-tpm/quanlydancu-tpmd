@@ -58,9 +58,9 @@ const Dashboard = () => {
   }, []);
 
   const [funds, setFunds] = useState({
-    viNguoiNgheo: { collected: 0, target: parseInt(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000') },
-    denOnDapNghia: { collected: 9200000, target: parseInt(localStorage.getItem('target_den_on_dap_nghia') || '10000000') },
-    veSinhMoiTruong: { collected: 0, target: parseInt(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000') },
+    viNguoiNgheo: { collected: 0, target: parseInt(localStorage.getItem('target_vi_nguoi_ngheo') || '100000') },
+    denOnDapNghia: { collected: 9200000, target: parseInt(localStorage.getItem('target_den_on_dap_nghia') || '70000') },
+    veSinhMoiTruong: { collected: 0, target: parseInt(localStorage.getItem('target_ve_sinh_moi_truong') || '200000') },
   });
 
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -109,23 +109,35 @@ const Dashboard = () => {
       // 3. Calculate Funds
       let ngheoCollected = 0;
       let veSinhCollected = 0;
+      let dapNghiaCollected = 0;
       financialRecords.forEach(r => {
         if (r.type === 'income') {
-          if (r.description.toLowerCase().includes('nghèo')) {
+          const desc = r.description.toLowerCase();
+          const cat = r.category.toLowerCase();
+          if (desc.includes('nghèo') || cat.includes('nghèo')) {
             ngheoCollected += r.amount;
-          } else if (r.description.toLowerCase().includes('vệ sinh') || r.category.toLowerCase().includes('vệ sinh')) {
+          } else if (desc.includes('vệ sinh') || cat.includes('vệ sinh')) {
             veSinhCollected += r.amount;
+          } else if (desc.includes('nghĩa') || desc.includes('đền ơn') || cat.includes('nghĩa') || cat.includes('đền ơn')) {
+            dapNghiaCollected += r.amount;
           }
         }
       });
 
-      const targetNghieo = parseInt(localStorage.getItem('target_vi_nguoi_ngheo') || '15000000');
-      const targetDapNghia = parseInt(localStorage.getItem('target_den_on_dap_nghia') || '10000000');
-      const targetVeSinh = parseInt(localStorage.getItem('target_ve_sinh_moi_truong') || '30000000');
+      // Lấy chỉ tiêu đóng góp trên mỗi hộ gia đình
+      const targetNghieoPerHousehold = parseInt(localStorage.getItem('target_vi_nguoi_ngheo') || '100000');
+      const targetDapNghiaPerHousehold = parseInt(localStorage.getItem('target_den_on_dap_nghia') || '70000');
+      const targetVeSinhPerHousehold = parseInt(localStorage.getItem('target_ve_sinh_moi_truong') || '200000');
+
+      // Tự động tính tổng chỉ tiêu bằng cách lấy mức đóng góp nhân với tổng số hộ gia đình
+      const multiplier = Math.max(1, totalH);
+      const targetNghieo = targetNghieoPerHousehold * multiplier;
+      const targetDapNghia = targetDapNghiaPerHousehold * multiplier;
+      const targetVeSinh = targetVeSinhPerHousehold * multiplier;
 
       setFunds({
         viNguoiNgheo: { collected: ngheoCollected || 12500000, target: targetNghieo },
-        denOnDapNghia: { collected: 9200000, target: targetDapNghia },
+        denOnDapNghia: { collected: dapNghiaCollected || 9200000, target: targetDapNghia },
         veSinhMoiTruong: { collected: veSinhCollected || 21000000, target: targetVeSinh },
       });
 
