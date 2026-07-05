@@ -858,11 +858,11 @@ const Residents = () => {
           <td style="font-weight: bold;">${r.full_name}</td>
           <td style="text-align: center;">${r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác'}</td>
           <td style="text-align: center;">${formattedDob}</td>
+          <td style="text-align: center;">${r.relationship_with_head}</td>
           <td style="text-align: center;">${r.cccd || ''}</td>
           <td style="text-align: center;">${r.phone || ''}</td>
           <td>${r.pob || ''}</td>
           <td>${r.permanent_address || ''}</td>
-          <td style="text-align: center;">${r.relationship_with_head}</td>
           <td style="text-align: center;">${statusText}</td>
           <td>${r.notes || ''}</td>
         </tr>
@@ -1027,11 +1027,11 @@ const Residents = () => {
               <th style="width: 14%;">Họ và tên</th>
               <th style="width: 5%;">Giới tính</th>
               <th style="width: 8%;">Ngày sinh</th>
+              <th style="width: 8%;">Quan hệ với chủ hộ</th>
               <th style="width: 9%;">Số CCCD</th>
               <th style="width: 8%;">Số điện thoại</th>
               <th style="width: 13%;">Nơi sinh</th>
               <th style="width: 15%;">Thường trú</th>
-              <th style="width: 8%;">Quan hệ với chủ hộ</th>
               <th style="width: 8%;">Trạng thái</th>
               <th style="width: 9%;">Ghi chú</th>
             </tr>

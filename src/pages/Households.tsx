@@ -658,10 +658,10 @@ const Households = () => {
           <td style="font-weight: bold;">${r.full_name}</td>
           <td style="text-align: center;">${r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác'}</td>
           <td style="text-align: center;">${formattedDob}</td>
+          <td style="text-align: center;">${r.relationship_with_head}</td>
           <td style="text-align: center;">${r.cccd || ''}</td>
           <td style="text-align: center;">${r.phone || ''}</td>
           <td>${r.occupation || ''}</td>
-          <td style="text-align: center;">${r.relationship_with_head}</td>
           <td style="text-align: center;">${statusText}</td>
           <td>${r.notes || ''}</td>
         </tr>
@@ -862,10 +862,10 @@ const Households = () => {
               <th style="width: 20%;">Họ và tên</th>
               <th style="width: 8%;">Giới tính</th>
               <th style="width: 12%;">Ngày sinh</th>
+              <th style="width: 10%;">Quan hệ chủ hộ</th>
               <th style="width: 12%;">Số CCCD</th>
               <th style="width: 12%;">Số điện thoại</th>
               <th style="width: 12%;">Nghề nghiệp</th>
-              <th style="width: 10%;">Quan hệ chủ hộ</th>
               <th style="width: 10%;">Trạng thái</th>
               <th>Ghi chú</th>
             </tr>
