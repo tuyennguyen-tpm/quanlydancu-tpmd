@@ -350,16 +350,16 @@ const Finance = () => {
       // Tự động căn rộng cột
       worksheet.columns.forEach(column => {
         let maxLength = 0;
-        column.eachCell({ includeEmpty: true }, cell => {
-          let strVal = '';
-          if (cell.value !== null && cell.value !== undefined) {
-            if (typeof cell.value === 'number') {
-              strVal = new Intl.NumberFormat('vi-VN').format(cell.value);
+        column.values?.forEach(v => {
+          let valStr = '';
+          if (v !== null && v !== undefined) {
+            if (typeof v === 'number') {
+              valStr = new Intl.NumberFormat('vi-VN').format(v);
             } else {
-              strVal = cell.value.toString();
+              valStr = v.toString();
             }
           }
-          const columnLength = strVal.length;
+          const columnLength = valStr.length;
           if (columnLength > maxLength) {
             maxLength = columnLength;
           }
