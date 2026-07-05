@@ -509,8 +509,10 @@ const App = () => {
       }
       try {
         const query = globalQuery.toLowerCase();
-        const residents = await db.getResidents();
-        const households = await db.getHouseholds();
+        const [residents, households] = await Promise.all([
+          db.getResidents(),
+          db.getHouseholds()
+        ]);
 
         const results: any[] = [];
 

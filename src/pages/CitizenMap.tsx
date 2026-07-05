@@ -56,8 +56,10 @@ const CitizenMap = () => {
 
   const loadData = async () => {
     try {
-      const hList = await db.getHouseholds();
-      const rList = await db.getResidents();
+      const [hList, rList] = await Promise.all([
+        db.getHouseholds(),
+        db.getResidents()
+      ]);
       setHouseholds(hList);
       setResidents(rList);
     } catch (e) {

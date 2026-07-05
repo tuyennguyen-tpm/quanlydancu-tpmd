@@ -68,11 +68,13 @@ const Dashboard = () => {
   useEffect(() => {
     const loadDashboardData = async () => {
       // 1. Load basic entities
-      const households = await db.getHouseholds();
-      const residents = await db.getResidents();
-      const complaints = await db.getComplaints();
-      const financialRecords = await db.getFinancialRecords();
-      const securityLogs = await db.getSecurityLogs();
+      const [households, residents, complaints, financialRecords, securityLogs] = await Promise.all([
+        db.getHouseholds(),
+        db.getResidents(),
+        db.getComplaints(),
+        db.getFinancialRecords(),
+        db.getSecurityLogs()
+      ]);
 
       // 2. Calculate Stats (Loại trừ người đã mất khỏi số liệu dân số thực tế)
       const activeResidents = residents.filter(r => r.status !== 'deceased');

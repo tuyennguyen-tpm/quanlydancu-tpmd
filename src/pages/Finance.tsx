@@ -145,13 +145,13 @@ const Finance = () => {
 
   const loadData = async () => {
     try {
-      const list = await db.getFinancialRecords();
+      const [list, hList, rList, fList] = await Promise.all([
+        db.getFinancialRecords(),
+        db.getHouseholds(),
+        db.getResidents(),
+        db.getHouseholdFunds()
+      ]);
       setRecords(list);
-
-      // Tải dữ liệu hộ dân, nhân khẩu và trạng thái nộp quỹ
-      const hList = await db.getHouseholds();
-      const rList = await db.getResidents();
-      const fList = await db.getHouseholdFunds();
       setHouseholds(hList);
       setResidents(rList);
       setHouseholdFunds(fList);

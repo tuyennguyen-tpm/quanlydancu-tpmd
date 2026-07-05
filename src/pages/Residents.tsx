@@ -350,8 +350,10 @@ const Residents = () => {
 
   const loadData = async () => {
     try {
-      const rList = await db.getResidents();
-      const hList = await db.getHouseholds();
+      const [rList, hList] = await Promise.all([
+        db.getResidents(),
+        db.getHouseholds()
+      ]);
       setResidents(rList);
       setHouseholds(hList);
     } catch (e) {
@@ -1138,8 +1140,10 @@ const Residents = () => {
           return;
         }
 
-        const currentResidents = await db.getResidents();
-        const currentHouseholds = await db.getHouseholds();
+        const [currentResidents, currentHouseholds] = await Promise.all([
+          db.getResidents(),
+          db.getHouseholds()
+        ]);
         let addedCount = 0;
         let updatedCount = 0;
         let skipCount = 0;

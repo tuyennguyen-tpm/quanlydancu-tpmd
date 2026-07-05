@@ -51,13 +51,13 @@ const Policies = () => {
 
   const loadData = async () => {
     try {
-      const rList = await db.getResidents();
-      const hList = await db.getHouseholds();
+      const [rList, hList, list] = await Promise.all([
+        db.getResidents(),
+        db.getHouseholds(),
+        db.getActivityPrograms()
+      ]);
       setResidents(rList);
       setHouseholds(hList);
-
-      // Load activities program from database
-      const list = await db.getActivityPrograms();
       setActivities(list);
     } catch (e) {
       showToast('Lỗi tải dữ liệu chính sách!', 'danger');

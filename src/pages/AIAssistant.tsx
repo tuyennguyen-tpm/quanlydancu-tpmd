@@ -50,11 +50,13 @@ const AIAssistant = () => {
       : `Ông ${leaderName}`;
     
     // Fetch live statistics to inject into documents (making it super professional!)
-    const households = await db.getHouseholds();
-    const residents = await db.getResidents();
-    const complaints = await db.getComplaints();
-    const records = await db.getFinancialRecords();
-    const partyMembers = await partyDb.getPartyMembers();
+    const [households, residents, complaints, records, partyMembers] = await Promise.all([
+      db.getHouseholds(),
+      db.getResidents(),
+      db.getComplaints(),
+      db.getFinancialRecords(),
+      partyDb.getPartyMembers()
+    ]);
 
     let docType: 'general' | 'party' | 'front' = 'general';
     if (query.includes('chi bộ') || query.includes('sinh hoạt chi bộ') || query.includes('đảng viên') || query.includes('nghị quyết')) {
