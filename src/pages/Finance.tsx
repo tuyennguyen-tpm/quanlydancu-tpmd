@@ -1176,7 +1176,6 @@ const Finance = () => {
           font-size: 0.85rem;
           font-weight: 700;
           color: var(--text-muted);
-          text-transform: uppercase;
           border-bottom: 1px solid var(--border);
         }
 
