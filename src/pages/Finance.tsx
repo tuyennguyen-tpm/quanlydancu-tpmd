@@ -52,6 +52,7 @@ const Finance = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
   const [fundYear, setFundYear] = useState<number>(new Date().getFullYear());
+  const [fundSearchTerm, setFundSearchTerm] = useState('');
 
   // Form đóng quỹ hộ dân
   const [editingFund, setEditingFund] = useState<{ householdId: string, fundName: string } | null>(null);
@@ -487,6 +488,14 @@ const Finance = () => {
     return new Intl.NumberFormat('vi-VN').format(parseInt(clean));
   };
 
+  const filteredHouseholdsForFunds = households.filter(hh => {
+    const headName = getHouseholdHeadName(hh).toLowerCase();
+    const address = (hh.address || '').toLowerCase();
+    const householdNumber = (hh.household_number || '').toLowerCase();
+    const search = fundSearchTerm.toLowerCase();
+    return headName.includes(search) || address.includes(search) || householdNumber.includes(search);
+  });
+
   return (
     <div className="finance-container">
       <div className="page-header" style={{ display: 'block', marginBottom: '24px' }}>
@@ -794,17 +803,57 @@ const Finance = () => {
         <div className="funds-matrix-view" style={{ animation: 'fadeIn 0.3s ease' }}>
           {/* Top toolbar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Năm đóng quỹ:</label>
-              <select 
-                value={fundYear} 
-                onChange={(e) => setFundYear(parseInt(e.target.value))}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'white', fontWeight: '600', outline: 'none' }}
-              >
-                {[currentYear, currentYear - 1, currentYear - 2].map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Năm đóng quỹ:</label>
+                <select 
+                  value={fundYear} 
+                  onChange={(e) => setFundYear(parseInt(e.target.value))}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'white', fontWeight: '600', outline: 'none' }}
+                >
+                  {[currentYear, currentYear - 1, currentYear - 2].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '300px', margin: 0 }}>
+                <div className="input-with-icon" style={{ flex: 1, position: 'relative' }}>
+                  <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Tìm theo tên chủ hộ, địa chỉ..."
+                    value={fundSearchTerm}
+                    onChange={(e) => setFundSearchTerm(e.target.value)}
+                    style={{
+                      padding: '8px 12px 8px 38px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      outline: 'none',
+                      width: '100%',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                  {fundSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setFundSearchTerm('')}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '55%',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)'
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -821,19 +870,19 @@ const Finance = () => {
           </div>
 
           {/* Matrix table */}
-          <div className="finance-table-wrapper" style={{ overflowX: 'auto' }}>
-            <table className="data-table" style={{ minWidth: '1300px' }}>
+          <div className="finance-table-wrapper" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <table className="data-table" style={{ minWidth: '1300px', borderCollapse: 'collapse', margin: 0 }}>
               <thead>
-                <tr>
-                  <th style={{ width: '250px' }}>Hộ gia đình / Chủ hộ</th>
-                  <th style={{ width: '130px', textAlign: 'right' }}>Tổng đã nộp</th>
+                <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc' }}>
+                  <th style={{ width: '250px', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>Hộ gia đình / Chủ hộ</th>
+                  <th style={{ width: '130px', textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>Tổng đã nộp</th>
                   {FUND_NAMES.map((name, i) => (
-                    <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem' }}>{name}</th>
+                    <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>{name}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {households.map((hh) => {
+                {filteredHouseholdsForFunds.map((hh) => {
                   const headName = getHouseholdHeadName(hh);
                   const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
                   const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
@@ -899,10 +948,10 @@ const Finance = () => {
                     </tr>
                   );
                 })}
-                {households.length === 0 && (
+                {filteredHouseholdsForFunds.length === 0 && (
                   <tr>
                     <td colSpan={2 + FUND_NAMES.length} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                      Chưa có dữ liệu hộ gia đình nào để thu quỹ.
+                      {households.length === 0 ? 'Chưa có dữ liệu hộ gia đình nào để thu quỹ.' : 'Không tìm thấy hộ gia đình nào khớp với từ khóa tìm kiếm.'}
                     </td>
                   </tr>
                 )}
