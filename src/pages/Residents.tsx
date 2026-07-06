@@ -1866,17 +1866,19 @@ const Residents = () => {
               accept=".csv,.txt,.xlsx,.xls" 
               onChange={handleImportCSV} 
             />
-            <button className="btn btn-secondary btn-print-list" onClick={handlePrint}>
-              <Printer size={16} />
-              In danh sách
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button className="btn btn-secondary btn-print-list" onClick={handlePrint}>
+                <Printer size={16} />
+                In danh sách
+              </button>
+              {categoryFilter === 'longevity' && (
+                <button className="btn btn-secondary btn-export-excel" style={{ borderColor: '#eab308', color: '#854d0e', background: '#fef9c3' }} onClick={handleExportLongevityExcel}>
+                  <FileDown size={16} style={{ color: '#ca8a04' }} />
+                  Xuất Excel Mừng Thọ
+                </button>
+              )}
+            </div>
           </div>
-          {categoryFilter === 'longevity' && (
-            <button className="btn btn-secondary btn-export-excel" style={{ borderColor: '#eab308', color: '#854d0e', background: '#fef9c3' }} onClick={handleExportLongevityExcel}>
-              <FileDown size={16} style={{ color: '#ca8a04' }} />
-              Xuất Excel Mừng Thọ
-            </button>
-          )}
           <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
             <FileDown size={16} />
             Xuất Excel/CSV
@@ -1949,7 +1951,7 @@ const Residents = () => {
 
           <div className="filter-btns">
             <select 
-              className={`filter-btn ${categoryFilter === 'all' || groupFilter !== 'all' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-all ${categoryFilter === 'all' || groupFilter !== 'all' ? 'active' : ''}`}
               value={groupFilter}
               onChange={(e) => {
                 setGroupFilter(e.target.value);
@@ -1975,25 +1977,25 @@ const Residents = () => {
               <option value="Tổ 9">👥 Tổ 9</option>
             </select>
             <button 
-              className={`filter-btn ${categoryFilter === 'senior' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
               onClick={() => setCategoryFilter('senior')}
             >
               <UserCheck size={16} /> Người cao tuổi (≥80)
             </button>
             <button 
-              className={`filter-btn ${categoryFilter === 'child' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
               onClick={() => setCategoryFilter('child')}
             >
               <Baby size={16} /> Trẻ em (&lt;16)
             </button>
             <button 
-              className={`filter-btn ${categoryFilter === 'military' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-military ${categoryFilter === 'military' ? 'active' : ''}`}
               onClick={() => setCategoryFilter('military')}
             >
               <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
             </button>
             <button 
-              className={`filter-btn ${categoryFilter === 'longevity' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-longevity ${categoryFilter === 'longevity' ? 'active' : ''}`}
               onClick={() => setCategoryFilter('longevity')}
             >
               🎉 Mừng thọ (70-150)
