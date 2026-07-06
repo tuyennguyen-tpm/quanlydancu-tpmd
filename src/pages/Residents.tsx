@@ -22,6 +22,22 @@ import { showToast } from '../utils/toast';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
 
+const MILESTONE_AGES = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150];
+
+const getLongevityAge = (dobStr: string, targetYear: number) => {
+  if (!dobStr) return -1;
+  const parts = dobStr.split(/[-/]/);
+  // Đối với định dạng YYYY-MM-DD, phần tử đầu tiên là năm. 
+  // Đối với định dạng DD/MM/YYYY, phần tử cuối cùng là năm.
+  let yearStr = parts[0];
+  if (parts.length === 3 && parts[2].length === 4) {
+    yearStr = parts[2];
+  }
+  const birthYear = parseInt(yearStr, 10);
+  if (isNaN(birthYear) || birthYear <= 0) return -1;
+  return targetYear - birthYear;
+};
+
 const parseCSV = (text: string) => {
   const lines: string[][] = [];
   
@@ -229,17 +245,18 @@ const Residents = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military' | 'longevity'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
   const [showDeceased, setShowDeceased] = useState(false);
   const [groupFilter, setGroupFilter] = useState<string>('all');
+  const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter]);
+  }, [searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
@@ -809,6 +826,137 @@ const Residents = () => {
     } catch (err) {
       console.error(err);
       showToast('Lỗi khi xuất file Excel!', 'danger');
+    }
+  };
+
+  const handleExportLongevityExcel = async () => {
+    // Lọc danh sách các cụ mừng thọ theo năm đã chọn
+    const longevityResidents = filteredResidents.filter(r => {
+      const age = getLongevityAge(r.dob, longevityYear);
+      return MILESTONE_AGES.includes(age) && r.status !== 'deceased';
+    });
+
+    if (longevityResidents.length === 0) {
+      showToast('Không có dữ liệu người cao tuổi mừng thọ để xuất!', 'warning');
+      return;
+    }
+
+    showToast('Đang khởi tạo file Excel mừng thọ...', 'info');
+
+    const headers = [
+      'STT', 'Họ tên', 'Ngày sinh', 'Tuổi mừng thọ', 'Cụm/Tổ', 'Địa chỉ', 'CCCD / Định danh', 'SĐT', 'Ghi chú'
+    ];
+
+    const rows = longevityResidents.map((r, idx) => {
+      const hh = households.find(h => h.id === r.household_id);
+      const age = getLongevityAge(r.dob, longevityYear);
+      return [
+        idx + 1,
+        r.full_name,
+        r.dob ? formatToDisplayDate(r.dob) : '',
+        `${age} tuổi`,
+        hh?.self_management_group || '',
+        hh?.address || '',
+        r.cccd || '',
+        r.phone || '',
+        r.notes || ''
+      ];
+    });
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet(`Mừng thọ năm ${longevityYear}`);
+
+      // Tiêu đề lớn của bảng
+      worksheet.mergeCells('A1:I1');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = `DANH SÁCH CÁC CỤ MỪNG THỌ NĂM ${longevityYear}`;
+      titleCell.font = { bold: true, name: 'Segoe UI', size: 16, color: { argb: 'FF1E3A8A' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(1).height = 40;
+
+      // Hàng tiêu đề bảng (hàng 3)
+      const headerRowNumber = 3;
+      worksheet.getRow(2).height = 15;
+      
+      const headerRow = worksheet.getRow(headerRowNumber);
+      headerRow.height = 28;
+      
+      headers.forEach((h, i) => {
+        const cell = headerRow.getCell(i + 1);
+        cell.value = h;
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1E3A8A' }
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' },
+          name: 'Segoe UI',
+          size: 11
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center'
+        };
+      });
+
+      // Thêm dữ liệu
+      rows.forEach((row) => {
+        const addedRow = worksheet.addRow(row);
+        addedRow.height = 24;
+        addedRow.eachCell((cell, colNumber) => {
+          cell.font = { name: 'Segoe UI', size: 11 };
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: colNumber === 1 || colNumber === 3 || colNumber === 4 || colNumber === 5 ? 'center' : 'left'
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+        });
+      });
+
+      // Tự co giãn độ rộng cột
+      worksheet.columns.forEach((column, colIdx) => {
+        if (colIdx === 0) {
+          column.width = 6;
+        } else {
+          let maxLen = 0;
+          column.values?.forEach(v => {
+            const valStr = v ? v.toString() : '';
+            if (valStr.length > maxLen) {
+              maxLen = valStr.length;
+            }
+          });
+          column.width = Math.min(Math.max(maxLen + 4, 12), 40);
+        }
+      });
+
+      // Tạo Buffer và tải xuống
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      
+      const tdpName = localStorage.getItem('tdp_name') || 'quang_giao';
+      const filenameTdp = tdpName.toLowerCase().replace(/\s+/g, '_');
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `danh_sach_mung_tho_${longevityYear}_${filenameTdp}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToast('Xuất báo cáo mừng thọ thành công!', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi khi xuất file Excel mừng thọ!', 'danger');
     }
   };
 
@@ -1511,8 +1659,17 @@ const Residents = () => {
     const name = r.full_name.toLowerCase();
     const cccdCode = (r.cccd || '').toLowerCase();
     const phoneNum = (r.phone || '').toLowerCase();
-    const query = searchTerm.toLowerCase();
-    const matchesSearch = name.includes(query) || cccdCode.includes(query) || phoneNum.includes(query);
+    const query = searchTerm.toLowerCase().trim();
+    
+    let matchesSearch = false;
+    // Kiểm tra gõ tắt tìm kiếm mừng thọ dạng "70-150"
+    const isLongevityShortcut = /^70\s*-\s*150$/.test(query);
+    if (isLongevityShortcut) {
+      const longevityAge = getLongevityAge(r.dob, longevityYear);
+      matchesSearch = MILESTONE_AGES.includes(longevityAge);
+    } else {
+      matchesSearch = name.includes(query) || cccdCode.includes(query) || phoneNum.includes(query);
+    }
 
     // Category filter matches (bỏ qua với người đã mất khi showDeceased = true)
     const age = getAge(r.dob);
@@ -1523,6 +1680,9 @@ const Residents = () => {
       matchesCategory = age < 16;
     } else if (categoryFilter === 'military') {
       matchesCategory = r.gender === 'male' && age >= 18 && age <= 27 && (!r.military_service || r.military_service === 'none' || r.military_service === 'in_age');
+    } else if (categoryFilter === 'longevity') {
+      const longevityAge = getLongevityAge(r.dob, longevityYear);
+      matchesCategory = MILESTONE_AGES.includes(longevityAge);
     }
     // Nếu người đã mất và đang bật "Hiện người đã mất" thì không bị ảnh hưởng bởi categoryFilter
     if (showDeceased && r.status === 'deceased') {
@@ -1670,10 +1830,17 @@ const Residents = () => {
               In danh sách
             </button>
           </div>
-          <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
-            <FileDown size={16} />
-            Xuất Excel/CSV
-          </button>
+          {categoryFilter === 'longevity' ? (
+            <button className="btn btn-secondary btn-export-excel" style={{ borderColor: '#eab308', color: '#854d0e', background: '#fef9c3' }} onClick={handleExportLongevityExcel}>
+              <FileDown size={16} style={{ color: '#ca8a04' }} />
+              Xuất Excel Mừng Thọ
+            </button>
+          ) : (
+            <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
+              <FileDown size={16} />
+              Xuất Excel/CSV
+            </button>
+          )}
           {!isGuest && (
             <button className="btn btn-primary" onClick={handleOpenAdd}>
               <UserPlus size={16} />
@@ -1742,18 +1909,17 @@ const Residents = () => {
 
           <div className="filter-btns">
             <select 
-              className={`filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
+              className={`filter-btn ${categoryFilter === 'all' || groupFilter !== 'all' ? 'active' : ''}`}
               value={groupFilter}
               onChange={(e) => {
                 setGroupFilter(e.target.value);
-                setCategoryFilter('all');
               }}
               style={{
                 paddingRight: '28px',
                 appearance: 'none',
                 WebkitAppearance: 'none',
                 MozAppearance: 'none',
-                background: `url("data:image/svg+xml;utf8,<svg fill='${categoryFilter === 'all' ? '%232563eb' : '%2364748b'}' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 8px center`,
+                background: `url("data:image/svg+xml;utf8,<svg fill='${categoryFilter === 'all' || groupFilter !== 'all' ? '%232563eb' : '%2364748b'}' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 8px center`,
                 backgroundSize: '16px',
                 cursor: 'pointer',
                 outline: 'none',
@@ -1770,22 +1936,45 @@ const Residents = () => {
             </select>
             <button 
               className={`filter-btn ${categoryFilter === 'senior' ? 'active' : ''}`}
-              onClick={() => { setCategoryFilter('senior'); setGroupFilter('all'); }}
+              onClick={() => setCategoryFilter('senior')}
             >
               <UserCheck size={16} /> Người cao tuổi (≥80)
             </button>
             <button 
               className={`filter-btn ${categoryFilter === 'child' ? 'active' : ''}`}
-              onClick={() => { setCategoryFilter('child'); setGroupFilter('all'); }}
+              onClick={() => setCategoryFilter('child')}
             >
               <Baby size={16} /> Trẻ em (&lt;16)
             </button>
             <button 
               className={`filter-btn ${categoryFilter === 'military' ? 'active' : ''}`}
-              onClick={() => { setCategoryFilter('military'); setGroupFilter('all'); }}
+              onClick={() => setCategoryFilter('military')}
             >
               <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
             </button>
+            <button 
+              className={`filter-btn ${categoryFilter === 'longevity' ? 'active' : ''}`}
+              onClick={() => setCategoryFilter('longevity')}
+            >
+              🎉 Mừng thọ (70-150)
+            </button>
+
+            {categoryFilter === 'longevity' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-dark)' }}>Năm mừng thọ:</span>
+                <select
+                  value={longevityYear}
+                  onChange={(e) => setLongevityYear(parseInt(e.target.value))}
+                  className="filter-btn"
+                  style={{ padding: '6px 12px', minWidth: '80px', height: '38px' }}
+                >
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const y = new Date().getFullYear() - 1 + i;
+                    return <option key={y} value={y}>{y}</option>;
+                  })}
+                </select>
+              </div>
+            )}
           </div>
       </div>
 
@@ -1828,7 +2017,12 @@ const Residents = () => {
                   </td>
                   <td>
                     <span>{resident.gender === 'male' ? 'Nam' : 'Nữ'}</span>
-                    <span className="age-badge">({getAge(resident.dob)} tuổi)</span>
+                    <span className="age-badge">
+                      ({categoryFilter === 'longevity' 
+                        ? `${getLongevityAge(resident.dob, longevityYear)} tuổi mừng thọ` 
+                        : `${getAge(resident.dob)} tuổi`
+                      })
+                    </span>
                   </td>
                   <td>{formatToDisplayDate(resident.dob)}</td>
                   <td><code className="cccd-code">{resident.cccd || 'Chưa cấp'}</code></td>
