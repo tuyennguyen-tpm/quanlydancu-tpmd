@@ -3000,36 +3000,16 @@ const Residents = () => {
           transform: translateY(0);
         }
 
-        /* Default category states */
-        .filter-btn-all {
-          background-color: #eff6ff;
-          color: #1d4ed8;
-          border-color: #bfdbfe;
-        }
-        .filter-btn-group {
-          background-color: #f0f9ff;
-          color: #0369a1;
-          border-color: #bae6fd;
-        }
-        .filter-btn-senior {
-          background-color: #f0fdf4;
-          color: #16a34a;
-          border-color: #bbf7d0;
-        }
-        .filter-btn-child {
-          background-color: #faf5ff;
-          color: #7e22ce;
-          border-color: #e9d5ff;
-        }
-        .filter-btn-military {
-          background-color: #fff1f2;
-          color: #be123c;
-          border-color: #fecdd3;
-        }
+        /* Default category states - uniform light sky blue */
+        .filter-btn-all,
+        .filter-btn-group,
+        .filter-btn-senior,
+        .filter-btn-child,
+        .filter-btn-military,
         .filter-btn-longevity {
-          background-color: #fef9c3;
-          color: #854d0e;
-          border-color: #fef08a;
+          background-color: #eff6ff !important;
+          color: #0369a1 !important;
+          border-color: #bae6fd !important;
         }
 
         /* Active category states */

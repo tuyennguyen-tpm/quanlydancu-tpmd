@@ -1956,14 +1956,65 @@ const Households = () => {
           border-radius: 8px;
           font-size: 0.9rem;
           font-weight: 600;
-          color: var(--text-muted);
-          background-color: white;
-          border: 1px solid var(--border);
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
         }
-        .tab-mini.active {
-          background-color: var(--primary);
-          color: white;
-          border-color: var(--primary);
+        .tab-mini:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+        
+        .tab-mini:nth-of-type(1) {
+          background-color: #eff6ff;
+          color: #1d4ed8;
+          border: 1px solid #bfdbfe;
+        }
+        .tab-mini:nth-of-type(1).active {
+          background-color: #2563eb !important;
+          color: white !important;
+          border-color: #2563eb !important;
+          box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4) !important;
+          transform: translateY(0);
+        }
+
+        .tab-mini:nth-of-type(2) {
+          background-color: #fff1f2;
+          color: #e11d48;
+          border: 1px solid #fecdd3;
+        }
+        .tab-mini:nth-of-type(2).active {
+          background-color: #ef4444 !important;
+          color: white !important;
+          border-color: #ef4444 !important;
+          box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4) !important;
+          transform: translateY(0);
+        }
+
+        .tab-mini:nth-of-type(3) {
+          background-color: #fffbeb;
+          color: #d97706;
+          border: 1px solid #fde68a;
+        }
+        .tab-mini:nth-of-type(3).active {
+          background-color: #d97706 !important;
+          color: white !important;
+          border-color: #d97706 !important;
+          box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4) !important;
+          transform: translateY(0);
+        }
+
+        .tab-mini:nth-of-type(4) {
+          background-color: #faf5ff;
+          color: #7e22ce;
+          border: 1px solid #e9d5ff;
+        }
+        .tab-mini:nth-of-type(4).active {
+          background-color: #6366f1 !important;
+          color: white !important;
+          border-color: #6366f1 !important;
+          box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+          transform: translateY(0);
         }
 
         .household-grid {
