@@ -2827,7 +2827,7 @@ const Residents = () => {
           align-items: flex-start;
         }
 
-        .header-actions .btn {
+         .header-actions .btn {
           padding: 8px 14px !important;
           font-size: 0.85rem !important;
           height: auto !important;
@@ -2836,8 +2836,14 @@ const Residents = () => {
           align-items: center !important;
           gap: 6px !important;
           border-radius: 6px !important;
-          transition: all 0.2s ease !important;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
           font-weight: 600 !important;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04) !important;
+        }
+        
+        .header-actions .btn:hover {
+          transform: translateY(-2px) !important;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
         }
 
         .vertical-actions-group {
@@ -2934,12 +2940,19 @@ const Residents = () => {
           display: flex;
           align-items: center;
           gap: 8px;
-          background-color: #f8fafc;
+          background-color: #ffffff;
           padding: 10px 14px;
           border-radius: 8px;
           border: 1px solid var(--border);
           min-width: 180px;
           max-width: 220px;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .filter-dropdown-box:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
         }
 
         .household-select-filter {
@@ -2969,56 +2982,64 @@ const Residents = () => {
           font-weight: 600;
           color: var(--text-muted);
           background-color: #ffffff;
-          border: 1.5px solid #cbd5e1;
+          border: 1px solid #e2e8f0;
           cursor: pointer;
-          transition: all 0.2s ease;
-          box-shadow: none !important;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
         }
 
         .filter-btn:hover {
-          background-color: #f1f5f9;
+          background-color: #ffffff;
           color: var(--text-dark);
           border-color: #cbd5e1;
+          transform: translateY(-2px);
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
         .filter-btn.active {
-          box-shadow: none !important;
+          transform: translateY(0);
         }
 
         .filter-btn-all.active {
           background-color: #eff6ff !important;
           color: #1d4ed8 !important;
           border-color: #3b82f6 !important;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
         }
 
         .filter-btn-group.active {
           background-color: #f0f9ff !important;
           color: #0369a1 !important;
           border-color: #0ea5e9 !important;
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25) !important;
         }
 
         .filter-btn-senior.active {
           background-color: #f0fdf4 !important;
           color: #15803d !important;
           border-color: #22c55e !important;
+          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25) !important;
         }
 
         .filter-btn-child.active {
           background-color: #faf5ff !important;
           color: #7e22ce !important;
           border-color: #a855f7 !important;
+          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25) !important;
         }
 
         .filter-btn-military.active {
           background-color: #fff1f2 !important;
           color: #be123c !important;
           border-color: #f43f5e !important;
+          box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25) !important;
         }
 
         .filter-btn-longevity.active {
           background-color: #fef9c3 !important;
           color: #854d0e !important;
           border-color: #eab308 !important;
+          box-shadow: 0 4px 12px rgba(234, 179, 8, 0.25) !important;
         }
 
         .table-container {

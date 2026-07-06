@@ -196,16 +196,32 @@ const CitizenMap = () => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              background: policyFilter === item.key ? 'white' : 'transparent',
-              border: policyFilter === item.key ? '2.5px solid ' + item.color : '1.5px solid #e2e8f0',
+              background: 'white',
+              border: policyFilter === item.key ? '2px solid ' + item.color : '1px solid #e2e8f0',
               borderRadius: '20px',
               padding: '6px 14px',
               fontSize: '0.82rem',
               fontWeight: '700',
               color: policyFilter === item.key ? '#0f172a' : '#64748b',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              boxShadow: policyFilter === item.key ? '0 2px 6px rgba(0,0,0,0.05)' : 'none'
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: policyFilter === item.key 
+                ? `0 4px 12px ${item.color}40` 
+                : '0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04)'
+            }}
+            onMouseOver={(e) => {
+              if (policyFilter !== item.key) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (policyFilter !== item.key) {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04)';
+                e.currentTarget.style.borderColor = '#e2e8f0';
+              }
             }}
           >
             <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: item.color }}></span>
