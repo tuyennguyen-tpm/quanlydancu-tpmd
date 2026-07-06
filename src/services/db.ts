@@ -1283,6 +1283,54 @@ export const db = {
     const filtered = list.filter(f => f.id !== id);
     setStorageItem('household_funds', filtered);
     return true;
+  },
+  getFundList: (): { name: string; target: number }[] => {
+    const stored = localStorage.getItem('fund_list');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error('Failed to parse fund_list, fallback to default', e);
+      }
+    }
+
+    const getOldTarget = (key: string, def: number): number => {
+      const val = localStorage.getItem(key);
+      if (!val) return def;
+      const cleaned = val.replace(/\D/g, '');
+      return parseInt(cleaned) || def;
+    };
+
+    return [
+      { name: 'Quỹ Vì người nghèo', target: getOldTarget('target_vi_nguoi_ngheo', 100000) },
+      { name: 'Quỹ Đền ơn đáp nghĩa', target: getOldTarget('target_den_on_dap_nghia', 70000) },
+      { name: 'Quỹ Khuyến học', target: getOldTarget('target_khuyen_hoc', 50000) },
+      { name: 'Quỹ an sinh xã hội', target: getOldTarget('target_an_sinh_xa_hoi', 50000) },
+      { name: 'Quỹ văn hóa - thể thao', target: getOldTarget('target_van_hoa_the_thao', 50000) },
+      { name: 'Điện, nước, internet, bảo vệ Nhà văn hóa', target: getOldTarget('target_dien_nuoc_nha_van_hoa', 50000) },
+      { name: 'Quỹ sinh hoạt đám hiếu', target: getOldTarget('target_dam_hieu', 50000) },
+      { name: 'Quỹ Chăm sóc người cao tuổi', target: getOldTarget('target_cham_soc_nguoi_cao_tuoi', 50000) },
+      { name: 'Phí vệ sinh môi trường', target: getOldTarget('target_ve_sinh_moi_truong', 200000) }
+    ];
+  },
+  saveFundList: async (funds: { name: string; target: number }[]): Promise<void> => {
+    const valueStr = JSON.stringify(funds);
+    localStorage.setItem('fund_list', valueStr);
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        if (uId) {
+          await supabase.from('app_config').upsert({
+            user_id: uId,
+            key: 'fund_list',
+            value: valueStr,
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.error('Failed to sync fund_list to Supabase:', err);
+      }
+    }
   }
 };
 

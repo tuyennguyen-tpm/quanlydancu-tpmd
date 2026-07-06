@@ -43,7 +43,9 @@ import {
   Upload,
   MessageCircle,
   Send,
-  Bot
+  Bot,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import './App.css';
 
@@ -239,34 +241,8 @@ const App = () => {
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
 
-  // Targets states for TDP Funds
-  const [targetNghieoInput, setTargetNghieoInput] = useState(
-    formatInputNumber(localStorage.getItem('target_vi_nguoi_ngheo') || '100000')
-  );
-  const [targetDapNghiaInput, setTargetDapNghiaInput] = useState(
-    formatInputNumber(localStorage.getItem('target_den_on_dap_nghia') || '70000')
-  );
-  const [targetKhuyenHocInput, setTargetKhuyenHocInput] = useState(
-    formatInputNumber(localStorage.getItem('target_khuyen_hoc') || '50000')
-  );
-  const [targetAnSinhInput, setTargetAnSinhInput] = useState(
-    formatInputNumber(localStorage.getItem('target_an_sinh_xa_hoi') || '50000')
-  );
-  const [targetVanHoaInput, setTargetVanHoaInput] = useState(
-    formatInputNumber(localStorage.getItem('target_van_hoa_the_thao') || '50000')
-  );
-  const [targetDienNuocInput, setTargetDienNuocInput] = useState(
-    formatInputNumber(localStorage.getItem('target_dien_nuoc_nha_van_hoa') || '50000')
-  );
-  const [targetDamHieuInput, setTargetDamHieuInput] = useState(
-    formatInputNumber(localStorage.getItem('target_dam_hieu') || '50000')
-  );
-  const [targetCaoTuoiInput, setTargetCaoTuoiInput] = useState(
-    formatInputNumber(localStorage.getItem('target_cham_soc_nguoi_cao_tuoi') || '50000')
-  );
-  const [targetVeSinhInput, setTargetVeSinhInput] = useState(
-    formatInputNumber(localStorage.getItem('target_ve_sinh_moi_truong') || '200000')
-  );
+  // Targets states for TDP Funds (Dynamic)
+  const [fundsConfig, setFundsConfig] = useState<{ name: string; target: string }[]>([]);
   const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
   const [latestAppVersionInput, setLatestAppVersionInput] = useState(localStorage.getItem('latest_app_version') || APP_VERSION);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -650,6 +626,24 @@ const App = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleAddFundConfig = () => {
+    setFundsConfig([...fundsConfig, { name: '', target: '0' }]);
+  };
+
+  const handleRemoveFundConfig = (index: number) => {
+    setFundsConfig(fundsConfig.filter((_, i) => i !== index));
+  };
+
+  const handleFundConfigChange = (index: number, field: 'name' | 'target', value: string) => {
+    const updated = [...fundsConfig];
+    if (field === 'target') {
+      updated[index][field] = formatInputNumber(value);
+    } else {
+      updated[index][field] = value;
+    }
+    setFundsConfig(updated);
+  };
+
   const handleOpenSettings = () => {
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
@@ -659,15 +653,11 @@ const App = () => {
     setLogoUrlInput(logoUrl);
     setSupportNameInput(supportName);
     setSupportPhoneInput(supportPhone);
-    setTargetNghieoInput(formatInputNumber(localStorage.getItem('target_vi_nguoi_ngheo') || '100000'));
-    setTargetDapNghiaInput(formatInputNumber(localStorage.getItem('target_den_on_dap_nghia') || '70000'));
-    setTargetKhuyenHocInput(formatInputNumber(localStorage.getItem('target_khuyen_hoc') || '50000'));
-    setTargetAnSinhInput(formatInputNumber(localStorage.getItem('target_an_sinh_xa_hoi') || '50000'));
-    setTargetVanHoaInput(formatInputNumber(localStorage.getItem('target_van_hoa_the_thao') || '50000'));
-    setTargetDienNuocInput(formatInputNumber(localStorage.getItem('target_dien_nuoc_nha_van_hoa') || '50000'));
-    setTargetDamHieuInput(formatInputNumber(localStorage.getItem('target_dam_hieu') || '50000'));
-    setTargetCaoTuoiInput(formatInputNumber(localStorage.getItem('target_cham_soc_nguoi_cao_tuoi') || '50000'));
-    setTargetVeSinhInput(formatInputNumber(localStorage.getItem('target_ve_sinh_moi_truong') || '200000'));
+    const currentFunds = db.getFundList();
+    setFundsConfig(currentFunds.map(f => ({
+      name: f.name,
+      target: formatInputNumber(f.target.toString())
+    })));
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
     setGuestPinInput(localStorage.getItem('guest_access_pin') || '1234');
@@ -725,16 +715,19 @@ const App = () => {
     setLogoUrl(newLogo);
     setLogoError(false);
 
-    // Lưu định mức các loại quỹ
-    localStorage.setItem('target_vi_nguoi_ngheo', targetNghieoInput.replace(/\./g, '').trim() || '100000');
-    localStorage.setItem('target_den_on_dap_nghia', targetDapNghiaInput.replace(/\./g, '').trim() || '70000');
-    localStorage.setItem('target_khuyen_hoc', targetKhuyenHocInput.replace(/\./g, '').trim() || '50000');
-    localStorage.setItem('target_an_sinh_xa_hoi', targetAnSinhInput.replace(/\./g, '').trim() || '50000');
-    localStorage.setItem('target_van_hoa_the_thao', targetVanHoaInput.replace(/\./g, '').trim() || '50000');
-    localStorage.setItem('target_dien_nuoc_nha_van_hoa', targetDienNuocInput.replace(/\./g, '').trim() || '50000');
-    localStorage.setItem('target_dam_hieu', targetDamHieuInput.replace(/\./g, '').trim() || '50000');
-    localStorage.setItem('target_cham_soc_nguoi_cao_tuoi', targetCaoTuoiInput.replace(/\./g, '').trim() || '50000');
-    localStorage.setItem('target_ve_sinh_moi_truong', targetVeSinhInput.replace(/\./g, '').trim() || '200000');
+    // Kiểm tra tính hợp lệ của các loại quỹ
+    const hasEmptyName = fundsConfig.some(f => !f.name.trim());
+    if (hasEmptyName) {
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { message: `Tên các loại quỹ không được bỏ trống!`, type: 'warning' } 
+      }));
+      return;
+    }
+    const mappedFunds = fundsConfig.map(f => ({
+      name: f.name.trim(),
+      target: parseInt(f.target.replace(/\./g, '')) || 0
+    }));
+    await db.saveFundList(mappedFunds);
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
     
     // Lưu phiên bản mới nhất
@@ -786,15 +779,7 @@ const App = () => {
             { user_id: uId, key: 'support_name', value: newSupportName },
             { user_id: uId, key: 'support_phone', value: newSupportPhone },
             { user_id: uId, key: 'logo_url', value: newLogo },
-            { user_id: uId, key: 'target_vi_nguoi_ngheo', value: targetNghieoInput.replace(/\./g, '').trim() || '100000' },
-            { user_id: uId, key: 'target_den_on_dap_nghia', value: targetDapNghiaInput.replace(/\./g, '').trim() || '70000' },
-            { user_id: uId, key: 'target_khuyen_hoc', value: targetKhuyenHocInput.replace(/\./g, '').trim() || '50000' },
-            { user_id: uId, key: 'target_an_sinh_xa_hoi', value: targetAnSinhInput.replace(/\./g, '').trim() || '50000' },
-            { user_id: uId, key: 'target_van_hoa_the_thao', value: targetVanHoaInput.replace(/\./g, '').trim() || '50000' },
-            { user_id: uId, key: 'target_dien_nuoc_nha_van_hoa', value: targetDienNuocInput.replace(/\./g, '').trim() || '50000' },
-            { user_id: uId, key: 'target_dam_hieu', value: targetDamHieuInput.replace(/\./g, '').trim() || '50000' },
-            { user_id: uId, key: 'target_cham_soc_nguoi_cao_tuoi', value: targetCaoTuoiInput.replace(/\./g, '').trim() || '50000' },
-            { user_id: uId, key: 'target_ve_sinh_moi_truong', value: targetVeSinhInput.replace(/\./g, '').trim() || '200000' },
+            { user_id: uId, key: 'fund_list', value: JSON.stringify(mappedFunds) },
             { user_id: uId, key: 'latest_app_version', value: newVersion }
           ];
           await supabase.from('app_config').upsert(configItems);
@@ -1393,7 +1378,7 @@ const App = () => {
                 </div>
               </div>
 
-              {/* ─── Phần 1b: Chỉ tiêu thu nộp các loại quỹ ─── */}
+              {/* ─── Phần 1b: Chỉ tiêu thu nộp các loại quỹ (Động) ─── */}
               <div style={{
                 background: 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02))',
                 border: '1.5px solid rgba(16,185,129,0.18)',
@@ -1404,91 +1389,66 @@ const App = () => {
                 gap: '12px',
                 marginTop: '12px'
               }}>
-                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px' }}>
-                  🎯 Mức chỉ tiêu thu nộp TRÊN MỖI HỘ (VNĐ/Hộ)
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                    🎯 Danh mục Quỹ & Chỉ tiêu thu nộp (VNĐ/Hộ)
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddFundConfig}
+                    className="btn btn-success"
+                    style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', height: 'fit-content' }}
+                  >
+                    <Plus size={14} /> Thêm Quỹ
+                  </button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px 16px' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Quỹ Vì người nghèo</label>
-                    <input
-                      type="text"
-                      value={targetNghieoInput}
-                      onChange={(e) => setTargetNghieoInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 100.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Quỹ Đền ơn đáp nghĩa</label>
-                    <input
-                      type="text"
-                      value={targetDapNghiaInput}
-                      onChange={(e) => setTargetDapNghiaInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 70.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Quỹ Khuyến học</label>
-                    <input
-                      type="text"
-                      value={targetKhuyenHocInput}
-                      onChange={(e) => setTargetKhuyenHocInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 50.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Quỹ an sinh xã hội</label>
-                    <input
-                      type="text"
-                      value={targetAnSinhInput}
-                      onChange={(e) => setTargetAnSinhInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 50.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Quỹ văn hóa - thể thao</label>
-                    <input
-                      type="text"
-                      value={targetVanHoaInput}
-                      onChange={(e) => setTargetVanHoaInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 50.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Điện, nước, internet, bảo vệ Nhà VH</label>
-                    <input
-                      type="text"
-                      value={targetDienNuocInput}
-                      onChange={(e) => setTargetDienNuocInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 50.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Quỹ sinh hoạt đám hiếu</label>
-                    <input
-                      type="text"
-                      value={targetDamHieuInput}
-                      onChange={(e) => setTargetDamHieuInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 50.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Quỹ Chăm sóc người cao tuổi</label>
-                    <input
-                      type="text"
-                      value={targetCaoTuoiInput}
-                      onChange={(e) => setTargetCaoTuoiInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 50.000"
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Phí vệ sinh môi trường</label>
-                    <input
-                      type="text"
-                      value={targetVeSinhInput}
-                      onChange={(e) => setTargetVeSinhInput(formatInputNumber(e.target.value))}
-                      placeholder="Ví dụ: 200.000"
-                    />
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {fundsConfig.map((fund, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Tên quỹ (Ví dụ: Quỹ Khuyến học)"
+                        value={fund.name}
+                        onChange={(e) => handleFundConfigChange(idx, 'name', e.target.value)}
+                        style={{ flex: 3, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                        required
+                      />
+                      <input
+                        type="text"
+                        placeholder="Chỉ tiêu (VND/Hộ)"
+                        value={fund.target}
+                        onChange={(e) => handleFundConfigChange(idx, 'target', e.target.value)}
+                        style={{ flex: 1.5, minWidth: '110px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'right', fontSize: '0.9rem' }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFundConfig(idx)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        title="Xóa loại quỹ này"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {fundsConfig.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                      Chưa cấu hình loại quỹ nào. Hãy bấm "Thêm Quỹ" để tạo mới.
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -60,17 +60,19 @@ const Finance = () => {
   const [fundNoteInput, setFundNoteInput] = useState<string>('');
   const [fundDateInput, setFundDateInput] = useState<string>(new Date().toISOString().slice(0, 10));
 
-  const FUND_NAMES = [
-    'Quỹ Vì người nghèo',
-    'Quỹ Đền ơn đáp nghĩa',
-    'Quỹ Khuyến học',
-    'Quỹ an sinh xã hội',
-    'Quỹ văn hóa - thể thao',
-    'Điện, nước, internet, bảo vệ Nhà văn hóa',
-    'Quỹ sinh hoạt đám hiếu',
-    'Quỹ Chăm sóc người cao tuổi',
-    'Phí vệ sinh môi trường'
-  ];
+  const [fundNames, setFundNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadFunds = () => {
+      const list = db.getFundList();
+      setFundNames(list.map(f => f.name));
+    };
+    loadFunds();
+    window.addEventListener('fund-targets-changed', loadFunds);
+    return () => {
+      window.removeEventListener('fund-targets-changed', loadFunds);
+    };
+  }, []);
 
   const getHouseholdHeadName = (hh: Household) => {
     const head = residents.find(r => r.id === hh.head_of_household_id);
@@ -470,6 +472,10 @@ const Finance = () => {
   const balance = totalIncome - totalExpense;
 
   const filteredRecords = records.filter(r => {
+    // Ẩn các bản ghi tự động đồng bộ từ việc đóng quỹ của các hộ dân
+    if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
+      return false;
+    }
     const matchesType = activeType === 'all' || r.type === activeType;
     const matchesSearch = r.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           r.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -881,7 +887,7 @@ const Finance = () => {
                 <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc' }}>
                   <th style={{ width: '250px', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>Hộ gia đình / Chủ hộ</th>
                   <th style={{ width: '130px', textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>Tổng đã nộp</th>
-                  {FUND_NAMES.map((name, i) => (
+                  {fundNames.map((name, i) => (
                     <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>{name}</th>
                   ))}
                 </tr>
@@ -901,7 +907,7 @@ const Finance = () => {
                       <td style={{ textAlign: 'right', fontWeight: '700', color: totalPaid > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
                         {formatCurrency(totalPaid)}
                       </td>
-                      {FUND_NAMES.map((fundName, idx) => {
+                      {fundNames.map((fundName, idx) => {
                         const paidFund = hhFunds.find(f => f.fund_name === fundName);
                         const amountPaid = paidFund ? paidFund.amount : 0;
                         
@@ -955,7 +961,7 @@ const Finance = () => {
                 })}
                 {filteredHouseholdsForFunds.length === 0 && (
                   <tr>
-                    <td colSpan={2 + FUND_NAMES.length} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                    <td colSpan={2 + fundNames.length} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                       {households.length === 0 ? 'Chưa có dữ liệu hộ gia đình nào để thu quỹ.' : 'Không tìm thấy hộ gia đình nào khớp với từ khóa tìm kiếm.'}
                     </td>
                   </tr>

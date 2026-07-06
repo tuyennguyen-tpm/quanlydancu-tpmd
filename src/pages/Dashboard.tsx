@@ -12,17 +12,7 @@ import {
 } from 'lucide-react';
 import { db } from '../services/db';
 
-const FUND_NAMES = [
-  'Quỹ Vì người nghèo',
-  'Quỹ Đền ơn đáp nghĩa',
-  'Quỹ Khuyến học',
-  'Quỹ an sinh xã hội',
-  'Quỹ văn hóa - thể thao',
-  'Điện, nước, internet, bảo vệ Nhà văn hóa',
-  'Quỹ sinh hoạt đám hiếu',
-  'Quỹ Chăm sóc người cao tuổi',
-  'Phí vệ sinh môi trường'
-];
+
 
 const StatCard = ({ title, value, subtext, icon: Icon, color, trend }: any) => (
   <div className="stat-card">
@@ -70,6 +60,7 @@ const Dashboard = () => {
   }, []);
 
   const [funds, setFunds] = useState<Record<string, { collected: number, target: number }>>({});
+  const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);
 
   const [notifications, setNotifications] = useState<any[]>([]);
 
@@ -115,51 +106,17 @@ const Dashboard = () => {
         militaryEligibleCount: militaryEligible,
       });
 
-      // 3. Calculate Funds
-      const getFundConfigKey = (name: string) => {
-        switch (name) {
-          case 'Quỹ Vì người nghèo': return 'target_vi_nguoi_ngheo';
-          case 'Quỹ Đền ơn đáp nghĩa': return 'target_den_on_dap_nghia';
-          case 'Quỹ Khuyến học': return 'target_khuyen_hoc';
-          case 'Quỹ an sinh xã hội': return 'target_an_sinh_xa_hoi';
-          case 'Quỹ văn hóa - thể thao': return 'target_van_hoa_the_thao';
-          case 'Điện, nước, internet, bảo vệ Nhà văn hóa': return 'target_dien_nuoc_nha_van_hoa';
-          case 'Quỹ sinh hoạt đám hiếu': return 'target_dam_hieu';
-          case 'Quỹ Chăm sóc người cao tuổi': return 'target_cham_soc_nguoi_cao_tuoi';
-          case 'Phí vệ sinh môi trường': return 'target_ve_sinh_moi_truong';
-          default: return 'target_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-        }
-      };
-
-      const getFundDefaultTarget = (name: string) => {
-        switch (name) {
-          case 'Quỹ Vì người nghèo': return '100000';
-          case 'Quỹ Đền ơn đáp nghĩa': return '70000';
-          case 'Quỹ Khuyến học': return '50000';
-          case 'Quỹ an sinh xã hội': return '50000';
-          case 'Quỹ văn hóa - thể thao': return '50000';
-          case 'Điện, nước, internet, bảo vệ Nhà văn hóa': return '50000';
-          case 'Quỹ sinh hoạt đám hiếu': return '50000';
-          case 'Quỹ Chăm sóc người cao tuổi': return '50000';
-          case 'Phí vệ sinh môi trường': return '200000';
-          default: return '50000';
-        }
-      };
-
-      const getFundTargetAmount = (name: string) => {
-        const key = getFundConfigKey(name);
-        const def = getFundDefaultTarget(name);
-        const stored = localStorage.getItem(key) || def;
-        const clean = stored.replace(/\D/g, '');
-        return parseInt(clean) || parseInt(def);
-      };
+      // 3. Calculate Funds (Dynamic)
+      const activeFundsList = db.getFundList();
+      setActiveFunds(activeFundsList);
 
       const multiplier = Math.max(1, totalH);
       const resultsMap: Record<string, { collected: number, target: number }> = {};
-      FUND_NAMES.forEach(name => {
-        resultsMap[name] = {
+      
+      activeFundsList.forEach(f => {
+        resultsMap[f.name] = {
           collected: 0,
-          target: getFundTargetAmount(name) * multiplier
+          target: f.target * multiplier
         };
       });
 
@@ -169,24 +126,46 @@ const Dashboard = () => {
           const desc = r.description.toLowerCase();
           const cat = r.category.toLowerCase();
           
-          if (desc.includes('nghèo') || cat.includes('nghèo')) {
+          let matched = false;
+          // Shorthand checks for default funds to ensure backward compatibility
+          if (resultsMap['Quỹ Vì người nghèo'] && (desc.includes('nghèo') || cat.includes('nghèo'))) {
             resultsMap['Quỹ Vì người nghèo'].collected += r.amount;
-          } else if (desc.includes('vệ sinh') || cat.includes('vệ sinh')) {
+            matched = true;
+          } else if (resultsMap['Phí vệ sinh môi trường'] && (desc.includes('vệ sinh') || cat.includes('vệ sinh'))) {
             resultsMap['Phí vệ sinh môi trường'].collected += r.amount;
-          } else if (desc.includes('nghĩa') || desc.includes('đền ơn') || cat.includes('nghĩa') || cat.includes('đền ơn')) {
+            matched = true;
+          } else if (resultsMap['Quỹ Đền ơn đáp nghĩa'] && (desc.includes('nghĩa') || desc.includes('đền ơn') || cat.includes('nghĩa') || cat.includes('đền ơn'))) {
             resultsMap['Quỹ Đền ơn đáp nghĩa'].collected += r.amount;
-          } else if (desc.includes('khuyến học') || cat.includes('khuyến học')) {
+            matched = true;
+          } else if (resultsMap['Quỹ Khuyến học'] && (desc.includes('khuyến học') || cat.includes('khuyến học'))) {
             resultsMap['Quỹ Khuyến học'].collected += r.amount;
-          } else if (desc.includes('an sinh') || cat.includes('an sinh')) {
+            matched = true;
+          } else if (resultsMap['Quỹ an sinh xã hội'] && (desc.includes('an sinh') || cat.includes('an sinh'))) {
             resultsMap['Quỹ an sinh xã hội'].collected += r.amount;
-          } else if (desc.includes('văn hóa') || cat.includes('văn hóa') || desc.includes('thể thao') || cat.includes('thể thao')) {
+            matched = true;
+          } else if (resultsMap['Quỹ văn hóa - thể thao'] && (desc.includes('văn hóa') || cat.includes('văn hóa') || desc.includes('thể thao') || cat.includes('thể thao'))) {
             resultsMap['Quỹ văn hóa - thể thao'].collected += r.amount;
-          } else if (desc.includes('điện') || desc.includes('nước') || desc.includes('nhà văn hóa')) {
+            matched = true;
+          } else if (resultsMap['Điện, nước, internet, bảo vệ Nhà văn hóa'] && (desc.includes('điện') || desc.includes('nước') || desc.includes('nhà văn hóa'))) {
             resultsMap['Điện, nước, internet, bảo vệ Nhà văn hóa'].collected += r.amount;
-          } else if (desc.includes('hiếu') || desc.includes('hỷ')) {
+            matched = true;
+          } else if (resultsMap['Quỹ sinh hoạt đám hiếu'] && (desc.includes('hiếu') || desc.includes('hỷ'))) {
             resultsMap['Quỹ sinh hoạt đám hiếu'].collected += r.amount;
-          } else if (desc.includes('cao tuổi') || cat.includes('cao tuổi')) {
+            matched = true;
+          } else if (resultsMap['Quỹ Chăm sóc người cao tuổi'] && (desc.includes('cao tuổi') || cat.includes('cao tuổi'))) {
             resultsMap['Quỹ Chăm sóc người cao tuổi'].collected += r.amount;
+            matched = true;
+          }
+          
+          if (!matched) {
+            // General substring match for any other custom funds
+            for (const f of activeFundsList) {
+              const fNameLower = f.name.toLowerCase();
+              if (desc.includes(fNameLower) || cat.includes(fNameLower)) {
+                resultsMap[f.name].collected += r.amount;
+                break;
+              }
+            }
           }
         }
       });
@@ -329,17 +308,18 @@ const Dashboard = () => {
           </div>
           <div className="chart-placeholder">
              <div className="progress-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px 24px' }}>
-                {FUND_NAMES.map((name, i) => {
-                  const data = funds[name] || { collected: 0, target: 100000 };
+                {activeFunds.map((fund, i) => {
+                  const multiplier = Math.max(1, stats.totalHouseholds);
+                  const data = funds[fund.name] || { collected: 0, target: fund.target * multiplier };
                   const percent = data.target > 0 ? Math.round((data.collected / data.target) * 100) : 0;
                   return (
                     <div key={i} className="progress-item" style={{ marginBottom: 0 }}>
                       <div className="progress-info">
-                        <span style={{ fontWeight: '600', fontSize: '0.88rem' }}>{name}</span>
+                        <span style={{ fontWeight: '600', fontSize: '0.88rem' }}>{fund.name}</span>
                         <span style={{ fontSize: '0.85rem' }}>{percent}% ({formatVND(data.collected)} / {formatVND(data.target)})</span>
                       </div>
                       <div className="progress-bar-bg">
-                        <div className="progress-bar-fill" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: name.includes('vệ sinh') ? 'var(--warning)' : undefined }}></div>
+                        <div className="progress-bar-fill" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: fund.name.includes('vệ sinh') ? 'var(--warning)' : undefined }}></div>
                       </div>
                     </div>
                   );
