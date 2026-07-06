@@ -3000,46 +3000,79 @@ const Residents = () => {
           transform: translateY(0);
         }
 
+        /* Default category states */
+        .filter-btn-all {
+          background-color: #eff6ff;
+          color: #1d4ed8;
+          border-color: #bfdbfe;
+        }
+        .filter-btn-group {
+          background-color: #f0f9ff;
+          color: #0369a1;
+          border-color: #bae6fd;
+        }
+        .filter-btn-senior {
+          background-color: #f0fdf4;
+          color: #16a34a;
+          border-color: #bbf7d0;
+        }
+        .filter-btn-child {
+          background-color: #faf5ff;
+          color: #7e22ce;
+          border-color: #e9d5ff;
+        }
+        .filter-btn-military {
+          background-color: #fff1f2;
+          color: #be123c;
+          border-color: #fecdd3;
+        }
+        .filter-btn-longevity {
+          background-color: #fef9c3;
+          color: #854d0e;
+          border-color: #fef08a;
+        }
+
+        /* Active category states */
         .filter-btn-all.active {
-          background-color: #eff6ff !important;
-          color: #1d4ed8 !important;
-          border-color: #3b82f6 !important;
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+          background-color: #2563eb !important;
+          color: #ffffff !important;
+          border-color: #2563eb !important;
+          box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4) !important;
         }
 
         .filter-btn-group.active {
-          background-color: #f0f9ff !important;
-          color: #0369a1 !important;
-          border-color: #0ea5e9 !important;
-          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25) !important;
+          background-color: #0284c7 !important;
+          color: #ffffff !important;
+          border-color: #0284c7 !important;
+          box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4) !important;
         }
 
         .filter-btn-senior.active {
-          background-color: #f0fdf4 !important;
-          color: #15803d !important;
-          border-color: #22c55e !important;
-          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25) !important;
+          background-color: #16a34a !important;
+          color: #ffffff !important;
+          border-color: #16a34a !important;
+          box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4) !important;
         }
 
         .filter-btn-child.active {
-          background-color: #faf5ff !important;
-          color: #7e22ce !important;
-          border-color: #a855f7 !important;
-          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25) !important;
+          background-color: #7e22ce !important;
+          color: #ffffff !important;
+          border-color: #7e22ce !important;
+          box-shadow: 0 6px 20px rgba(126, 34, 206, 0.4) !important;
         }
 
         .filter-btn-military.active {
-          background-color: #fff1f2 !important;
-          color: #be123c !important;
-          border-color: #f43f5e !important;
-          box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25) !important;
+          background-color: #e11d48 !important;
+          color: #ffffff !important;
+          border-color: #e11d48 !important;
+          box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4) !important;
         }
 
         .filter-btn-longevity.active {
-          background-color: #fef9c3 !important;
-          color: #854d0e !important;
-          border-color: #eab308 !important;
-          box-shadow: 0 4px 12px rgba(234, 179, 8, 0.25) !important;
+          background-color: #ca8a04 !important;
+          color: #ffffff !important;
+          border-color: #ca8a04 !important;
+          box-shadow: 0 6px 20px rgba(202, 138, 4, 0.4) !important;
         }
 
         .table-container {
