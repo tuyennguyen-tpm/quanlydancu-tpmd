@@ -43,8 +43,18 @@ const RATING_COLOR: Record<string, string> = {
 
 const fmtDate = (d?: string) => {
   if (!d) return '—';
+  if (d.includes('-')) {
+    const parts = d.split('-');
+    if (parts.length === 3) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+  }
   const dt = new Date(d);
-  return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('vi-VN');
+  if (isNaN(dt.getTime())) return d;
+  const day = dt.getDate().toString().padStart(2, '0');
+  const month = (dt.getMonth() + 1).toString().padStart(2, '0');
+  const year = dt.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const currentYear = new Date().getFullYear();
