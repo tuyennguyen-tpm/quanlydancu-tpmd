@@ -971,6 +971,8 @@ const Residents = () => {
     const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     const leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
     
+    const isLongevity = categoryFilter === 'longevity';
+
     // Determine the subtitle based on filters
     let filterSubtitle = 'Tất cả nhân khẩu';
     if (householdFilter !== 'all') {
@@ -985,6 +987,12 @@ const Residents = () => {
       filterSubtitle = 'Danh sách Trẻ em (<16 tuổi)';
     } else if (categoryFilter === 'military') {
       filterSubtitle = 'Danh sách Thanh niên trong độ tuổi Nghĩa vụ quân sự (18-27 tuổi)';
+    } else if (isLongevity) {
+      filterSubtitle = `Danh sách mừng thọ mốc tuổi tròn/lẻ năm ${longevityYear}`;
+    }
+
+    if (groupFilter !== 'all') {
+      filterSubtitle += ` | Cụm/Tổ: ${groupFilter}`;
     }
 
     if (searchTerm.trim()) {
@@ -999,24 +1007,43 @@ const Residents = () => {
 
     const rowsHtml = filteredResidents.map((r, index) => {
       const formattedDob = r.dob ? formatToDisplayDate(r.dob) : '';
-      const statusText = r.status === 'resident' ? 'Thường trú' :
-                         r.status === 'temporary_resident' ? 'Tạm trú' :
-                         r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất';
-      return `
-        <tr>
-          <td style="text-align: center;">${index + 1}</td>
-          <td style="font-weight: bold;">${r.full_name}</td>
-          <td style="text-align: center;">${r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác'}</td>
-          <td style="text-align: center;">${formattedDob}</td>
-          <td style="text-align: center;">${r.relationship_with_head}</td>
-          <td style="text-align: center;">${r.cccd || ''}</td>
-          <td style="text-align: center;">${r.phone || ''}</td>
-          <td>${r.pob || ''}</td>
-          <td>${r.permanent_address || ''}</td>
-          <td style="text-align: center;">${statusText}</td>
-          <td>${r.notes || ''}</td>
-        </tr>
-      `;
+      
+      if (isLongevity) {
+        const hh = households.find(h => h.id === r.household_id);
+        const longevityAge = getLongevityAge(r.dob, longevityYear);
+        return `
+          <tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="font-weight: bold;">${r.full_name}</td>
+            <td style="text-align: center;">${formattedDob}</td>
+            <td style="text-align: center; font-weight: bold; color: #1e3a8a;">${longevityAge} tuổi</td>
+            <td style="text-align: center;">${hh?.self_management_group || '—'}</td>
+            <td>${hh?.address || '—'}</td>
+            <td style="text-align: center;">${r.cccd || ''}</td>
+            <td style="text-align: center;">${r.phone || ''}</td>
+            <td>${r.notes || ''}</td>
+          </tr>
+        `;
+      } else {
+        const statusText = r.status === 'resident' ? 'Thường trú' :
+                           r.status === 'temporary_resident' ? 'Tạm trú' :
+                           r.status === 'temporary_absent' ? 'Tạm vắng' : 'Đã mất';
+        return `
+          <tr>
+            <td style="text-align: center;">${index + 1}</td>
+            <td style="font-weight: bold;">${r.full_name}</td>
+            <td style="text-align: center;">${r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác'}</td>
+            <td style="text-align: center;">${formattedDob}</td>
+            <td style="text-align: center;">${r.relationship_with_head}</td>
+            <td style="text-align: center;">${r.cccd || ''}</td>
+            <td style="text-align: center;">${r.phone || ''}</td>
+            <td>${r.pob || ''}</td>
+            <td>${r.permanent_address || ''}</td>
+            <td style="text-align: center;">${statusText}</td>
+            <td>${r.notes || ''}</td>
+          </tr>
+        `;
+      }
     }).join('');
 
     const htmlContent = `
@@ -1166,25 +1193,39 @@ const Residents = () => {
         </table>
 
         <div class="doc-title-container">
-          <h1 class="doc-title">DANH SÁCH NHÂN KHẨU</h1>
+          <h1 class="doc-title">${isLongevity ? `DANH SÁCH NGƯỜI CAO TUỔI MỪNG THỌ NĂM ${longevityYear}` : 'DANH SÁCH NHÂN KHẨU'}</h1>
           <p class="doc-subtitle">(${filterSubtitle})</p>
         </div>
 
         <table class="data-table">
           <thead>
-            <tr>
-              <th style="width: 3%;">STT</th>
-              <th style="width: 14%;">Họ và tên</th>
-              <th style="width: 5%;">Giới tính</th>
-              <th style="width: 8%;">Ngày sinh</th>
-              <th style="width: 8%;">Quan hệ với chủ hộ</th>
-              <th style="width: 9%;">Số CCCD</th>
-              <th style="width: 8%;">Số điện thoại</th>
-              <th style="width: 13%;">Nơi sinh</th>
-              <th style="width: 15%;">Thường trú</th>
-              <th style="width: 8%;">Trạng thái</th>
-              <th style="width: 9%;">Ghi chú</th>
-            </tr>
+            ${isLongevity ? `
+              <tr>
+                <th style="width: 3%;">STT</th>
+                <th style="width: 18%;">Họ và tên</th>
+                <th style="width: 10%;">Ngày sinh</th>
+                <th style="width: 10%;">Tuổi mừng thọ</th>
+                <th style="width: 10%;">Cụm/Tổ</th>
+                <th style="width: 20%;">Địa chỉ thường trú</th>
+                <th style="width: 10%;">Số CCCD</th>
+                <th style="width: 10%;">Số điện thoại</th>
+                <th style="width: 9%;">Ghi chú</th>
+              </tr>
+            ` : `
+              <tr>
+                <th style="width: 3%;">STT</th>
+                <th style="width: 14%;">Họ và tên</th>
+                <th style="width: 5%;">Giới tính</th>
+                <th style="width: 8%;">Ngày sinh</th>
+                <th style="width: 8%;">Quan hệ với chủ hộ</th>
+                <th style="width: 9%;">Số CCCD</th>
+                <th style="width: 8%;">Số điện thoại</th>
+                <th style="width: 13%;">Nơi sinh</th>
+                <th style="width: 15%;">Thường trú</th>
+                <th style="width: 8%;">Trạng thái</th>
+                <th style="width: 9%;">Ghi chú</th>
+              </tr>
+            `}
           </thead>
           <tbody>
             ${rowsHtml}
