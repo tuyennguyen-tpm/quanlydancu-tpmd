@@ -2633,17 +2633,26 @@ const Residents = () => {
           gap: 6px;
           padding: 8px 16px;
           border-radius: 8px;
-          font-size: 0.9rem;
+          font-size: 0.88rem;
           font-weight: 600;
           color: var(--text-muted);
-          background-color: white;
-          border: 1px solid var(--border);
+          background-color: #f8fafc;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+          background-color: #f1f5f9;
+          color: var(--text-dark);
+          border-color: #cbd5e1;
         }
 
         .filter-btn.active {
-          background-color: var(--primary);
-          color: white;
-          border-color: var(--primary);
+          background-color: #eff6ff;
+          color: var(--primary);
+          border-color: #3b82f6;
+          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.05);
         }
 
         .table-container {
