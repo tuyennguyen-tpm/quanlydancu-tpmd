@@ -180,7 +180,7 @@ const App = () => {
 
   const executeRoleChange = (role: string) => {
     const roleLabels: Record<string, string> = {
-      demo: 'Xem Demo (Chỉ đọc)',
+      demo: ' Trang chủ',
       admin: 'Quản trị hệ thống',
       to_truong: 'Tổ trưởng dân phố',
       bi_thu: 'Bí thư Chi bộ',
