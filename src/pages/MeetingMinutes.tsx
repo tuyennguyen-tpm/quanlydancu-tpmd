@@ -36,8 +36,8 @@ const MeetingMinutes = () => {
   const [content, setContent] = useState('');
   const [isFullscreenEdit, setIsFullscreenEdit] = useState(false);
 
-  const [orgLevel1, setOrgLevel1] = useState('');
-  const [orgLevel2, setOrgLevel2] = useState('');
+  const [orgLevel1, setOrgLevel1] = useState(`ỦY BAN NHÂN DÂN ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
+  const [orgLevel2, setOrgLevel2] = useState(`TỔ DÂN PHỐ ${(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn').toUpperCase()}`);
   const [nationLevel1, setNationLevel1] = useState('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
   const [nationLevel2, setNationLevel2] = useState('Độc lập - Tự do - Hạnh phúc');
   const [docTitle, setDocTitle] = useState('BIÊN BẢN CUỘC HỌP');
@@ -67,15 +67,15 @@ const MeetingMinutes = () => {
     if (match) {
       try {
         const meta = JSON.parse(match[1]);
-        if (meta.orgLevel1) setOrgLevel1(meta.orgLevel1);
-        if (meta.orgLevel2) setOrgLevel2(meta.orgLevel2);
-        if (meta.nationLevel1) setNationLevel1(meta.nationLevel1);
-        if (meta.nationLevel2) setNationLevel2(meta.nationLevel2);
-        if (meta.docTitle) setDocTitle(meta.docTitle);
-        if (meta.secretaryTitle) setSecretaryTitle(meta.secretaryTitle);
-        if (meta.chairmanTitle) setChairmanTitle(meta.chairmanTitle);
-        if (meta.docNumber) setDocNumber(meta.docNumber);
-        if (meta.endTime) setEndTime(meta.endTime);
+        setOrgLevel1(meta.orgLevel1 || `ỦY BAN NHÂN DÂN ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
+        setOrgLevel2(meta.orgLevel2 || `TỔ DÂN PHỐ ${(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn').toUpperCase()}`);
+        setNationLevel1(meta.nationLevel1 || 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+        setNationLevel2(meta.nationLevel2 || 'Độc lập - Tự do - Hạnh phúc');
+        setDocTitle(meta.docTitle || 'BIÊN BẢN CUỘC HỌP');
+        setSecretaryTitle(meta.secretaryTitle || 'THƯ KÝ CUỘC HỌP');
+        setChairmanTitle(meta.chairmanTitle || 'CHỦ TRÌ CUỘC HỌP');
+        setDocNumber(meta.docNumber || '.....');
+        setEndTime(meta.endTime || '...... giờ');
         return fullContent.replace(regex, '');
       } catch (e) {
         console.error('Lỗi parse metadata:', e);
