@@ -867,7 +867,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       worksheet.mergeCells('A2:J2');
       const subCell = worksheet.getCell('A2');
-      subCell.value = 'Lưu ý: Không thay đổi tiêu đề cột. Ngày nhập dạng YYYY-MM-DD (VD: 1995-10-24). Nhập đúng các trạng thái/chức vụ mẫu.';
+      subCell.value = 'Lưu ý: Không thay đổi tiêu đề cột. Ngày nhập dạng DD/MM/YYYY (VD: 24/10/1995). Nhập đúng các trạng thái/chức vụ mẫu.';
       subCell.font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FFE11D48' } };
       subCell.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(2).height = 20;
@@ -876,7 +876,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       worksheet.getRow(3).height = 8;
 
       const headers = [
-        "Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)",
+        "Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (DD/MM/YYYY)", "Ngày chính thức (DD/MM/YYYY)",
         "Trạng thái (Chính thức/Dự bị/Miễn sinh hoạt)", "Loại đảng phí", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"
       ];
 
@@ -900,8 +900,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       });
 
       const samples = [
-        ["Nguyễn Văn A", "DV-0001", "Bí thư", "2020-05-19", "2021-05-19", "Chính thức", "Có BHXH bắt buộc", 6500000, 3, "Chủ trì họp chi bộ"],
-        ["Trần Thị B", "DV-0002", "Đảng viên", "2025-10-01", "", "Dự bị", "Học sinh, sinh viên", 0, 3, "Đảng viên dự bị"]
+        ["Nguyễn Văn A", "DV-0001", "Bí thư", "19/05/2020", "19/05/2021", "Chính thức", "Có BHXH bắt buộc", 6500000, 3, "Chủ trì họp chi bộ"],
+        ["Trần Thị B", "DV-0002", "Đảng viên", "01/10/2025", "", "Dự bị", "Học sinh, sinh viên", 0, 3, "Đảng viên dự bị"]
       ];
 
       samples.forEach(row => {
@@ -962,6 +962,34 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     }
     result.push(current.trim());
     return result;
+  };
+
+  const parseInputDate = (dStr?: string) => {
+    if (!dStr) return undefined;
+    const clean = dStr.trim();
+    if (!clean) return undefined;
+
+    // If it's already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+      return clean;
+    }
+
+    // If it's DD/MM/YYYY
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(clean)) {
+      const parts = clean.split('/');
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+
+    // Fallback to standard JS parsing
+    const d = new Date(clean);
+    if (isNaN(d.getTime())) return clean;
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    return `${year}-${month}-${day}`;
   };
 
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1043,8 +1071,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           const fullName = columns[0];
           const partyCode = columns[1] || '';
           const pos = getPositionFromLabel(columns[2] || 'Đảng viên') as any;
-          const probationD = columns[3] || null;
-          const joinD = columns[4] || null;
+          const probationD = parseInputDate(columns[3]) || null;
+          const joinD = parseInputDate(columns[4]) || null;
           const stat = getStatusFromLabel(columns[5] || 'Chính thức') as any;
           const feeCat = getFeeCatFromLabel(columns[6] || 'Có BHXH bắt buộc') as any;
           const salary = parseInt(columns[7]) || 0;
