@@ -2959,10 +2959,37 @@ const Residents = () => {
         }
 
         .filter-btn.active {
-          background-color: #eff6ff;
-          color: var(--primary);
-          border-color: #3b82f6;
-          box-shadow: 0 1px 3px rgba(37, 99, 235, 0.05);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-btn-all.active {
+          background-color: #eff6ff !important;
+          color: #1d4ed8 !important;
+          border-color: #3b82f6 !important;
+        }
+
+        .filter-btn-senior.active {
+          background-color: #f0fdf4 !important;
+          color: #15803d !important;
+          border-color: #22c55e !important;
+        }
+
+        .filter-btn-child.active {
+          background-color: #faf5ff !important;
+          color: #7e22ce !important;
+          border-color: #a855f7 !important;
+        }
+
+        .filter-btn-military.active {
+          background-color: #fff1f2 !important;
+          color: #be123c !important;
+          border-color: #f43f5e !important;
+        }
+
+        .filter-btn-longevity.active {
+          background-color: #fef9c3 !important;
+          color: #854d0e !important;
+          border-color: #eab308 !important;
         }
 
         .table-container {
