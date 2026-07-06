@@ -208,7 +208,7 @@ const App = () => {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'danger' | 'warning' | 'info'} | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // Tên Tổ dân phố (có thể sửa)
+  // Tên  (có thể sửa)
   const [tdpName, setTdpName] = useState(() => {
     return localStorage.getItem('tdp_name') || 'Quảng Giao';
   });
@@ -907,7 +907,7 @@ const App = () => {
       setShowOnboarding(false);
       
       const ev = new CustomEvent('show-toast', { 
-        detail: { message: `🎉 Chào mừng! Thiết lập Tổ dân phố ${tdpNameVal} và mật khẩu Quản trị thành công!`, type: 'success' } 
+        detail: { message: `🎉 Chào mừng! Thiết lập  ${tdpNameVal} và mật khẩu Quản trị thành công!`, type: 'success' } 
       });
       window.dispatchEvent(ev);
     } catch (e: any) {
@@ -1155,7 +1155,7 @@ const App = () => {
                 <ShieldCheck size={36} color="rgba(251, 255, 0, 1)" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
               )}
               <div className="logo-text" style={{ gap: '2px', display: 'flex', flexDirection: 'column' }}>
-                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TỔ DÂN PHỐ</span>
+                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thôn/Tổ Dân Phố</span>
                 <span className="logo-subtitle" style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 1, lineHeight: '1.2' }}>{tdpName}</span>
                 <span className="logo-ward" style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{wardName}</span>
               </div>
@@ -1406,7 +1406,7 @@ const App = () => {
                   🏘️ Thông tin địa bàn
                 </div>
                 <div className="form-group">
-                  <label>Tên Tổ dân phố / Khu dân cư</label>
+                  <label>Tên  / Khu dân cư</label>
                   <input
                     type="text"
                     value={tdpNameInput}
@@ -1426,7 +1426,7 @@ const App = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>Họ và tên Tổ trưởng Tổ dân phố</label>
+                  <label>Họ và tên Tổ trưởng </label>
                   <input
                     type="text"
                     value={leaderNameInput}
@@ -2419,7 +2419,7 @@ const OnboardingModal = ({
   const handleNext = () => {
     if (step === 1 && !tdpInput.trim()) {
       const ev = new CustomEvent('show-toast', { 
-        detail: { message: '⚠️ Vui lòng nhập tên Tổ dân phố của bạn!', type: 'warning' } 
+        detail: { message: '⚠️ Vui lòng nhập tên  của bạn!', type: 'warning' } 
       });
       window.dispatchEvent(ev);
       return;
@@ -2483,18 +2483,18 @@ const OnboardingModal = ({
               <div style={{ fontSize: '3rem', textAlign: 'center' }}>👋</div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: '800', textAlign: 'center', color: '#0f172a', margin: 0 }}>Chào mừng bạn!</h2>
               <p style={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'center', margin: '0 0 10px 0', lineHeight: '1.5' }}>
-                Hệ thống Quản lý Dân cư TDP đã khởi tạo không gian làm việc riêng cho bạn. Hãy đặt tên Tổ dân phố của bạn để bắt đầu.
+                Hệ thống Quản lý Dân cư TDP đã khởi tạo không gian làm việc riêng cho bạn. Hãy đặt tên  của bạn để bắt đầu.
               </p>
               
               <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontWeight: '700', fontSize: '0.85rem', color: '#334155' }}>
-                  Tên Tổ dân phố của bạn <span style={{ color: '#ef4444' }}>*</span>
+                  Tên  của bạn <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <Home size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                   <input
                     type="text"
-                    placeholder="Ví dụ: Tổ dân phố 7 Phường Sầm Sơn"
+                    placeholder="Ví dụ:  7 Phường Sầm Sơn"
                     value={tdpInput}
                     onChange={(e) => setTdpInput(e.target.value)}
                     style={{ padding: '12px 12px 12px 38px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
@@ -2548,7 +2548,7 @@ const OnboardingModal = ({
 
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                  <span style={{ color: '#64748b' }}>Tổ dân phố:</span>
+                  <span style={{ color: '#64748b' }}>:</span>
                   <strong style={{ color: '#0f172a' }}>{tdpInput}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
