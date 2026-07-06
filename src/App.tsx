@@ -745,7 +745,7 @@ const App = () => {
     const newName = tdpNameInput.trim() || 'Tiến Quảng Giao';
     localStorage.setItem('tdp_name', newName);
     setTdpName(newName);
-    // g báo cho các trang khác (Dashboard...) cập nhật tên ngay lập tức
+    // Thông báo cho các trang khác (Dashboard...) cập nhật tên ngay lập tức
     window.dispatchEvent(new CustomEvent('tdp-name-changed'));
     
     // Lưu tên Phường
@@ -1411,7 +1411,7 @@ const App = () => {
             </div>
             <form onSubmit={handleSaveSettings} className="modal-form">
 
-              {/* ─── Phần 1: g tin Tổ dân phố ─── */}
+              {/* ─── Phần 1: Thông tin Tổ dân phố ─── */}
               <div style={{
                 background: 'linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02))',
                 border: '1.5px solid rgba(37,99,235,0.18)',
@@ -1422,15 +1422,15 @@ const App = () => {
                 gap: '12px'
               }}>
                 <div style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                  🏘️ g tin địa bàn
+                  🏘️ Thông tin địa bàn
                 </div>
                 <div className="form-group">
-                  <label>Tên  / Khu dân cư</label>
+                  <label>Tên Thôn / Tổ dân phố / Khu dân cư</label>
                   <input
                     type="text"
                     value={tdpNameInput}
                     onChange={(e) => setTdpNameInput(e.target.value)}
-                    placeholder="Ví dụ: Nam Sầm Sơn,  7..."
+                    placeholder="Ví dụ: Nam Sầm Sơn, Thôn 7..."
                     maxLength={50}
                   />
                 </div>
@@ -1964,7 +1964,7 @@ const App = () => {
         </div>
       )}
 
-      {/* Modal g báo cập nhật phiên bản */}
+      {/* Modal Thông báo cập nhật phiên bản */}
       {showUpdateModal && (
         <div className="modal-overlay" style={{ zIndex: 99999, background: 'rgba(15, 23, 42, 0.95)' }}>
           <div className="modal-content" style={{ background: 'white', border: '2px solid #ef4444', maxWidth: '450px', textAlign: 'center', padding: '30px' }}>
@@ -2562,12 +2562,12 @@ const OnboardingModal = ({
               </div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: '800', textAlign: 'center', color: '#0f172a', margin: 0 }}>Đã sẵn sàng!</h2>
               <p style={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'center', margin: '0 0 10px 0', lineHeight: '1.5' }}>
-                g tin thiết lập ban đầu của bạn:
+                Thông tin thiết lập ban đầu của bạn:
               </p>
 
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                  <span style={{ color: '#64748b' }}>:</span>
+                  <span style={{ color: '#64748b' }}>Tên địa bàn:</span>
                   <strong style={{ color: '#0f172a' }}>{tdpInput}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>

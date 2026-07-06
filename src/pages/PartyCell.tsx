@@ -114,228 +114,463 @@ const PartyCell: React.FC = () => {
           display: flex;
           flex-direction: column;
           gap: 0;
-          animation: fadeIn 0.3s ease;
+          animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
         .party-header {
-          background: linear-gradient(135deg, #310813 0%, #1e293b 100%);
-          border: 1px solid #4c0519;
-          border-bottom: 3px solid #d97706;
-          border-radius: 14px 14px 0 0;
-          padding: 20px 24px 18px;
+          background: linear-gradient(135deg, #fff1f2 0%, #fffbeb 100%);
+          border: 1.5px solid rgba(239, 68, 68, 0.15);
+          border-bottom: 3.5px solid #b91c1c;
+          border-radius: 16px 16px 0 0;
+          padding: 24px 28px 22px;
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 20px;
+          box-shadow: 0 4px 15px rgba(185, 28, 28, 0.03);
         }
         .party-title-group h2 {
-          font-size: 1.45rem;
+          font-size: 1.6rem;
           font-weight: 850;
-          color: #ffffff;
-          margin: 6px 0 2px;
+          color: #991b1b;
+          margin: 6px 0 3px;
           letter-spacing: -0.3px;
         }
-        .party-title-group p { font-size: 0.88rem; color: #fef08a; margin: 0; font-weight: 600; }
+        .party-title-group p { 
+          font-size: 0.9rem; 
+          color: #78350f; 
+          margin: 0; 
+          font-weight: 600; 
+        }
         .party-badge {
           display: inline-flex;
           align-items: center;
-          gap: 5px;
-          background: #d97706;
+          gap: 6px;
+          background: #b91c1c;
           color: #ffffff;
-          border: 1px solid #f59e0b;
+          border: 1px solid #dc2626;
           border-radius: 6px;
-          padding: 4px 10px;
+          padding: 5px 12px;
           font-size: 0.72rem;
           font-weight: 800;
-          letter-spacing: 1px;
+          letter-spacing: 1.2px;
+          box-shadow: 0 2px 6px rgba(185, 28, 28, 0.2);
         }
 
         .party-tabs {
           display: flex;
           gap: 0;
-          background: #0f172a;
-          border-left: 1px solid #334155;
-          border-right: 1px solid #334155;
-          border-bottom: 3px solid #d97706;
+          background: #ffffff;
+          border-left: 1px solid #e2e8f0;
+          border-right: 1px solid #e2e8f0;
+          border-bottom: 3px solid #b91c1c;
           overflow-x: auto;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.01);
         }
         .party-tab-btn {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 14px 22px;
+          padding: 15px 24px;
           border: none;
           background: transparent;
-          color: #cbd5e1;
-          font-size: 0.9rem;
+          color: #64748b;
+          font-size: 0.92rem;
           font-weight: 700;
           cursor: pointer;
           border-bottom: 3px solid transparent;
-          transition: all 0.2s;
+          transition: all 0.25s ease;
           white-space: nowrap;
         }
-        .party-tab-btn:hover { color: #ffffff; background: rgba(217,119,6,0.1); }
-        .party-tab-btn.active { color: #fef08a; border-bottom-color: #fbbf24; background: rgba(217,119,6,0.15); }
+        .party-tab-btn:hover { 
+          color: #b91c1c; 
+          background: rgba(185, 28, 28, 0.02); 
+        }
+        .party-tab-btn.active { 
+          color: #b91c1c; 
+          border-bottom-color: #b91c1c; 
+          background: rgba(185, 28, 28, 0.05); 
+        }
 
         .party-content {
-          background: #1e293b;
-          border: 1px solid #334155;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
           border-top: none;
-          border-radius: 0 0 14px 14px;
-          padding: 24px;
-          min-height: 420px;
+          border-radius: 0 0 16px 16px;
+          padding: 28px;
+          min-height: 450px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.02);
         }
 
         /* ── Stats row ── */
-        .party-stats { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-        .party-stat-card {
-          flex: 1; min-width: 110px;
-          background: #0f172a;
-          border: 1px solid rgba(217,119,6,0.2);
-          border-radius: 12px;
-          padding: 14px 18px;
-          text-align: center;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        .party-stats { 
+          display: flex; 
+          gap: 16px; 
+          margin-bottom: 24px; 
+          flex-wrap: wrap; 
         }
-        .party-stat-card .stat-num { font-size: 2.2rem; font-weight: 900; color: #fbbf24; }
-        .party-stat-card .stat-label { font-size: 0.8rem; color: #ffffff; margin-top: 4px; font-weight: 700; }
+        .party-stat-card {
+          flex: 1; 
+          min-width: 120px;
+          background: linear-gradient(135deg, #ffffff 0%, #fefcfb 100%);
+          border: 1.5px solid rgba(217, 119, 6, 0.12);
+          border-radius: 14px;
+          padding: 16px 20px;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .party-stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(185, 28, 28, 0.04);
+        }
+        .party-stat-card .stat-num { 
+          font-size: 2.2rem; 
+          font-weight: 900; 
+          color: #b91c1c; 
+          line-height: 1;
+        }
+        .party-stat-card .stat-label { 
+          font-size: 0.82rem; 
+          color: #475569; 
+          margin-top: 6px; 
+          font-weight: 700; 
+        }
 
         /* ── Table ── */
-        .party-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #475569; }
-        .party-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .party-table-wrap { 
+          overflow-x: auto; 
+          border-radius: 12px; 
+          border: 1px solid #e2e8f0; 
+          box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+        }
+        .party-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          font-size: 0.9rem; 
+        }
         .party-table th {
-          background: #0f172a;
-          color: #fbbf24;
+          background: #f8fafc;
+          color: #475569;
           font-weight: 800;
-          font-size: 0.8rem;
+          font-size: 0.82rem;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          padding: 12px 14px;
+          letter-spacing: 0.6px;
+          padding: 14px 16px;
           text-align: left;
           white-space: nowrap;
-          border-bottom: 2px solid #fbbf24;
+          border-bottom: 2px solid #e2e8f0;
         }
-        .party-table td { padding: 12px 14px; color: #ffffff; border-top: 1px solid #334155; vertical-align: middle; }
-        .party-table tr:hover td { background: #334155; }
+        .party-table td { 
+          padding: 14px 16px; 
+          color: #1e293b; 
+          border-top: 1px solid #f1f5f9; 
+          vertical-align: middle; 
+        }
+        .party-table tr:hover td { 
+          background: #f8fafc; 
+        }
 
         /* ── Buttons ── */
         .party-btn-primary {
-          display: inline-flex; align-items: center; gap: 6px;
-          background: linear-gradient(135deg, #991b1b, #7f1d1d);
-          color: white; border: 1px solid #7f1d1d; border-radius: 8px;
-          padding: 10px 20px; font-size: 0.88rem; font-weight: 750;
-          cursor: pointer; transition: all 0.2s;
-          box-shadow: 0 4px 10px rgba(153,27,27,0.3);
+          display: inline-flex; 
+          align-items: center; 
+          gap: 6px;
+          background: linear-gradient(135deg, #b91c1c, #991b1b);
+          color: white; 
+          border: none; 
+          border-radius: 8px;
+          padding: 10px 22px; 
+          font-size: 0.88rem; 
+          font-weight: 750;
+          cursor: pointer; 
+          transition: all 0.25s ease;
+          box-shadow: 0 4px 12px rgba(185, 28, 28, 0.2);
         }
-        .party-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(153,27,27,0.5); }
+        .party-btn-primary:hover { 
+          transform: translateY(-1px); 
+          box-shadow: 0 6px 16px rgba(185, 28, 28, 0.3); 
+        }
         .party-btn-icon {
-          background: none; border: none; cursor: pointer;
-          padding: 6px; border-radius: 6px; transition: all 0.2s;
-          color: #ffffff;
+          background: none; 
+          border: none; 
+          cursor: pointer;
+          padding: 7px; 
+          border-radius: 8px; 
+          transition: all 0.2s ease;
+          color: #64748b;
         }
-        .party-btn-icon:hover { background: #dc2626; color: #ffffff; }
-        .party-btn-icon.delete:hover { background: #ef4444; color: #ffffff; }
+        .party-btn-icon:hover { 
+          background: #fee2e2; 
+          color: #b91c1c; 
+        }
+        .party-btn-icon.delete:hover { 
+          background: #fef2f2; 
+          color: #ef4444; 
+        }
 
         /* ── Status badges ── */
         .status-badge {
-          display: inline-flex; align-items: center; gap: 4px;
-          padding: 4px 12px; border-radius: 4px; font-size: 0.78rem; font-weight: 800;
+          display: inline-flex; 
+          align-items: center; 
+          gap: 5px;
+          padding: 5px 12px; 
+          border-radius: 6px; 
+          font-size: 0.78rem; 
+          font-weight: 800;
           white-space: nowrap;
         }
 
         /* ── Modal ── */
         .party-modal-overlay {
-          position: fixed; inset: 0; z-index: 10000;
-          background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
-          display: flex; align-items: center; justify-content: center; padding: 20px;
+          position: fixed; 
+          inset: 0; 
+          z-index: 10000;
+          background: rgba(15, 23, 42, 0.6); 
+          backdrop-filter: blur(6px);
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          padding: 20px;
         }
         .party-modal {
-          background: #1e293b;
-          border: 1px solid rgba(220,38,38,0.4);
+          background: #ffffff;
+          border: 1.5px solid rgba(185, 28, 28, 0.15);
           border-radius: 16px;
-          width: 100%; max-width: 520px;
-          max-height: 90vh; overflow-y: auto;
-          box-shadow: 0 25px 60px rgba(0,0,0,0.75);
-          animation: fadeIn 0.2s ease;
+          width: 100%; 
+          max-width: 520px;
+          max-height: 90vh; 
+          overflow-y: auto;
+          box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+          animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalSlideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .party-modal-header {
-          display: flex; justify-content: space-between; align-items: center;
-          padding: 18px 22px 14px;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center;
+          padding: 20px 24px 16px;
+          border-bottom: 1px solid #f1f5f9;
         }
-        .party-modal-header h3 { margin: 0; font-size: 1.05rem; font-weight: 800; color: #fff; }
-        .party-modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+        .party-modal-header h3 { 
+          margin: 0; 
+          font-size: 1.15rem; 
+          font-weight: 800; 
+          color: #b91c1c; 
+        }
+        .party-modal-body { 
+          padding: 22px 24px; 
+          display: flex; 
+          flex-direction: column; 
+          gap: 18px; 
+        }
         .party-modal-footer {
-          display: flex; gap: 10px; justify-content: flex-end;
-          padding: 14px 22px 18px;
-          border-top: 1px solid rgba(255,255,255,0.08);
+          display: flex; 
+          gap: 12px; 
+          justify-content: flex-end;
+          padding: 16px 24px 20px;
+          border-top: 1px solid #f1f5f9;
         }
 
-        .party-form-group { display: flex; flex-direction: column; gap: 6px; }
-        .party-form-group label { font-size: 0.78rem; color: #cbd5e1; font-weight: 700; }
+        .party-form-group { 
+          display: flex; 
+          flex-direction: column; 
+          gap: 6px; 
+        }
+        .party-form-group label { 
+          font-size: 0.8rem; 
+          color: #475569; 
+          font-weight: 700; 
+        }
         .party-form-group input,
         .party-form-group select,
         .party-form-group textarea {
-          background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.18);
-          border-radius: 8px; color: #fff; padding: 10px 14px;
-          font-size: 0.88rem; outline: none; width: 100%; box-sizing: border-box;
-          transition: all 0.2s;
+          background: #f8fafc; 
+          border: 1.5px solid #e2e8f0;
+          border-radius: 8px; 
+          color: #1e293b; 
+          padding: 10px 14px;
+          font-size: 0.9rem; 
+          outline: none; 
+          width: 100%; 
+          box-sizing: border-box;
+          transition: all 0.2s ease;
         }
         .party-form-group input:focus,
         .party-form-group select:focus,
-        .party-form-group textarea:focus { border-color: rgba(220,38,38,0.6); box-shadow: 0 0 8px rgba(220,38,38,0.25); }
-        .party-form-group textarea { resize: vertical; min-height: 80px; }
-        .party-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .party-form-group select option { background: #1e293b; }
+        .party-form-group textarea:focus { 
+          border-color: #b91c1c; 
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1); 
+        }
+        .party-form-group textarea { 
+          resize: vertical; 
+          min-height: 90px; 
+        }
+        .party-form-row { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 14px; 
+        }
+        .party-form-group select option { 
+          background: #ffffff; 
+          color: #1e293b;
+        }
 
         .btn-cancel {
-          background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
-          color: #cbd5e1; border-radius: 8px; padding: 8px 16px;
-          font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+          background: #f1f5f9; 
+          border: 1px solid #e2e8f0;
+          color: #475569; 
+          border-radius: 8px; 
+          padding: 10px 20px;
+          font-size: 0.88rem; 
+          font-weight: 650; 
+          cursor: pointer; 
+          transition: all 0.2s ease;
         }
-        .btn-cancel:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .btn-cancel:hover { 
+          background: #e2e8f0; 
+          color: #1e293b; 
+        }
 
         /* ── Fee matrix ── */
-        .fee-matrix-wrap { overflow-x: auto; }
-        .fee-table { border-collapse: collapse; font-size: 0.88rem; min-width: 720px; width: 100%; }
-        .fee-table th { background: #0f172a; color: #fbbf24; font-weight: 800; padding: 10px 8px; text-align: center; border: 1px solid #475569; font-size: 0.78rem; text-transform: uppercase; }
-        .fee-table th.name-col { text-align: left; min-width: 150px; }
-        .fee-table td { padding: 8px 8px; border: 1px solid #334155; text-align: center; color: #ffffff; vertical-align: middle; }
-        .fee-table td.name-col { text-align: left; font-weight: 700; color: #fff; white-space: nowrap; }
-        .fee-cell-btn {
-          width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; margin: auto;
-          transition: all 0.2s;
+        .fee-matrix-wrap { 
+          overflow-x: auto; 
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.01);
         }
-        .fee-cell-btn.paid { background: #16a34a; color: #ffffff; border: 1px solid #15803d; box-shadow: 0 2px 6px rgba(22,163,74,0.35); }
-        .fee-cell-btn.unpaid { background: #334155; color: #cbd5e1; border: 1px solid #475569; }
-        .fee-cell-btn.paid:hover { background: #15803d; transform: scale(1.18); }
-        .fee-cell-btn.unpaid:hover { background: #475569; color: #ffffff; transform: scale(1.18); }
+        .fee-table { 
+          border-collapse: collapse; 
+          font-size: 0.9rem; 
+          min-width: 720px; 
+          width: 100%; 
+        }
+        .fee-table th { 
+          background: #f8fafc; 
+          color: #475569; 
+          font-weight: 800; 
+          padding: 12px 10px; 
+          text-align: center; 
+          border: 1px solid #e2e8f0; 
+          font-size: 0.8rem; 
+          text-transform: uppercase; 
+        }
+        .fee-table th.name-col { 
+          text-align: left; 
+          min-width: 160px; 
+          padding-left: 16px;
+        }
+        .fee-table td { 
+          padding: 10px 8px; 
+          border: 1px solid #f1f5f9; 
+          text-align: center; 
+          color: #1e293b; 
+          vertical-align: middle; 
+        }
+        .fee-table td.name-col { 
+          text-align: left; 
+          font-weight: 700; 
+          color: #0f172a; 
+          white-space: nowrap; 
+          padding-left: 16px;
+        }
+        .fee-cell-btn {
+          width: 32px; 
+          height: 32px; 
+          border-radius: 8px; 
+          border: none; 
+          cursor: pointer;
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          margin: auto;
+          transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .fee-cell-btn.paid { 
+          background: #10b981; 
+          color: #ffffff; 
+          border: 1px solid #059669; 
+          box-shadow: 0 2px 6px rgba(16,185,129,0.3); 
+        }
+        .fee-cell-btn.unpaid { 
+          background: #f1f5f9; 
+          color: #94a3b8; 
+          border: 1px solid #cbd5e1; 
+        }
+        .fee-cell-btn.paid:hover { 
+          background: #059669; 
+          transform: scale(1.15); 
+        }
+        .fee-cell-btn.unpaid:hover { 
+          background: #cbd5e1; 
+          color: #475569; 
+          transform: scale(1.15); 
+        }
 
         /* ── Progress bar ── */
-        .rating-bar { height: 6px; border-radius: 3px; margin-top: 3px; transition: width 0.5s ease; }
+        .rating-bar { 
+          height: 6px; 
+          border-radius: 3px; 
+          margin-top: 5px; 
+          transition: width 0.5s ease; 
+        }
 
         /* ── Search ── */
         .party-search {
-          position: relative; flex: 1;
+          position: relative; 
+          flex: 1;
         }
         .party-search input {
-          width: 100%; padding: 9px 12px 9px 38px;
-          background: #0f172a; border: 2px solid #cbd5e1;
-          border-radius: 8px; color: #ffffff; font-size: 0.88rem; outline: none;
+          width: 100%; 
+          padding: 10px 14px 10px 42px;
+          background: #ffffff; 
+          border: 1.5px solid #cbd5e1;
+          border-radius: 8px; 
+          color: #1e293b; 
+          font-size: 0.9rem; 
+          outline: none;
           box-sizing: border-box;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
         }
         .party-search input::placeholder {
-          color: #cbd5e1;
+          color: #94a3b8;
           opacity: 1;
         }
-        .party-search input:focus { border-color: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-        .party-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #cbd5e1; pointer-events: none; }
+        .party-search input:focus { 
+          border-color: #b91c1c; 
+          box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1); 
+        }
+        .party-search-icon { 
+          position: absolute; 
+          left: 14px; 
+          top: 50%; 
+          transform: translateY(-50%); 
+          color: #94a3b8; 
+          pointer-events: none; 
+        }
 
-        .party-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
-        .no-data { text-align: center; color: #cbd5e1; padding: 40px 20px; font-size: 0.9rem; }
-        .no-data svg { margin: 0 auto 12px; display: block; opacity: 0.6; }
+        .party-toolbar { 
+          display: flex; 
+          gap: 14px; 
+          align-items: center; 
+          margin-bottom: 22px; 
+          flex-wrap: wrap; 
+        }
+        .no-data { 
+          text-align: center; 
+          color: #94a3b8; 
+          padding: 50px 20px; 
+          font-size: 0.92rem; 
+        }
+        .no-data svg { 
+          margin: 0 auto 14px; 
+          display: block; 
+          opacity: 0.5; 
+        }
       `}</style>
     </div>
   );
@@ -810,21 +1045,21 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             <tbody>
               {filtered.map((m, i) => (
                 <tr key={m.id}>
-                  <td style={{ color: '#cbd5e1', fontWeight: 700 }}>{i + 1}</td>
-                  <td style={{ fontWeight: 700, color: '#fff' }}>{m.full_name}</td>
-                  <td style={{ color: '#f1f5f9' }}>{m.party_code || '—'}</td>
+                  <td style={{ color: '#94a3b8', fontWeight: 700 }}>{i + 1}</td>
+                  <td style={{ fontWeight: 700 }}>{m.full_name}</td>
+                  <td>{m.party_code || '—'}</td>
                   <td>
                     <span className="status-badge" style={{ 
-                      background: m.position === 'secretary' ? '#991b1b' : m.position === 'deputy_secretary' ? '#b45309' : '#334155', 
-                      color: '#ffffff', 
-                      border: '1px solid rgba(255,255,255,0.15)',
+                      background: m.position === 'secretary' ? '#fee2e2' : m.position === 'deputy_secretary' ? '#fef3c7' : '#f1f5f9', 
+                      color: m.position === 'secretary' ? '#991b1b' : m.position === 'deputy_secretary' ? '#b45309' : '#475569', 
+                      border: m.position === 'secretary' ? '1px solid #fca5a5' : m.position === 'deputy_secretary' ? '1px solid #fcd34d' : '1px solid #cbd5e1',
                       fontWeight: 'bold'
                     }}>
                       {POSITION_LABEL[m.position] || m.position}
                     </span>
                   </td>
-                  <td style={{ color: '#f1f5f9' }}>{fmtDate(m.join_date)}</td>
-                  <td style={{ color: '#f1f5f9' }}>
+                  <td>{fmtDate(m.join_date)}</td>
+                  <td>
                     {(() => {
                       const dateStr = m.probation_date || m.join_date;
                       if (!dateStr) return '—';
@@ -839,7 +1074,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                           {hasBadge && (
                             <span 
                               title={`Đủ điều kiện nhận Huy hiệu ${tuoiDang} năm tuổi Đảng!`} 
-                              style={{ color: '#fbbf24', fontSize: '0.92rem', cursor: 'help' }}
+                              style={{ color: '#d97706', fontSize: '0.92rem', cursor: 'help' }}
                             >
                               🎖️
                             </span>
@@ -849,11 +1084,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                     })()}
                   </td>
                   <td>
-                    <span className="status-badge" style={{ background: `${STATUS_COLOR[m.status]}20`, color: STATUS_COLOR[m.status] === '#64748b' ? '#cbd5e1' : STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}40` }}>
+                    <span className="status-badge" style={{ background: `${STATUS_COLOR[m.status]}15`, color: STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}30` }}>
                       {STATUS_LABEL[m.status]}
                     </span>
                   </td>
-                  <td style={{ color: '#cbd5e1', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.notes || '—'}</td>
+                  <td style={{ color: '#64748b', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.notes || '—'}</td>
                   <td>
                     {!isGuest && (
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -892,11 +1127,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                   />
                 </div>
                 {showResidentDrop && residentSearch && filteredResidents.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', marginTop: 4 }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 8, maxHeight: 200, overflowY: 'auto', marginTop: 4, boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
                     {filteredResidents.map(r => (
                       <div
                         key={r.id}
-                        style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '0.82rem', color: '#e2e8f0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                        style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '0.82rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9' }}
                         onMouseDown={() => {
                           setForm(f => ({ ...f, resident_id: r.id, full_name: r.full_name }));
                           setResidentSearch(r.full_name);
@@ -1035,9 +1270,9 @@ const MeetingsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     <>
       <div className="party-toolbar">
         <div style={{ flex: 1 }}>
-          <span style={{ color: '#cbd5e1', fontSize: '0.85rem', fontWeight: 600 }}>
+          <span style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
             <BookOpen size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
-            Tổng cộng <strong style={{ color: '#f87171' }}>{meetings.length}</strong> buổi sinh hoạt
+            Tổng cộng <strong style={{ color: '#b91c1c' }}>{meetings.length}</strong> buổi sinh hoạt
           </span>
         </div>
         {!isGuest && (
@@ -1050,18 +1285,18 @@ const MeetingsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {meetings.map(m => (
-            <div key={m.id} style={{ background: 'rgba(30,41,59,0.7)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 18px' }}>
+            <div key={m.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.01)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: '#fff', fontSize: '0.9rem', marginBottom: 4 }}>{m.title}</div>
-                  <div style={{ fontSize: '0.78rem', color: '#cbd5e1', display: 'flex', gap: 16, flexWrap: 'wrap', fontWeight: 500 }}>
+                  <div style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem', marginBottom: 4 }}>{m.title}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', gap: 16, flexWrap: 'wrap', fontWeight: 500 }}>
                     <span>📅 {fmtDate(m.date)}{m.time ? ` — ${m.time}` : ''}</span>
                     {m.location && <span>📍 {m.location}</span>}
                     <span>👥 {m.attendance_count} đảng viên tham dự</span>
                   </div>
-                  {m.content && <div style={{ marginTop: 8, fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.5 }}>{m.content}</div>}
+                  {m.content && <div style={{ marginTop: 8, fontSize: '0.82rem', color: '#475569', lineHeight: 1.5 }}>{m.content}</div>}
                   {m.resolution && (
-                    <div style={{ marginTop: 8, background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 6, padding: '6px 10px', fontSize: '0.78rem', color: '#fca5a5' }}>
+                    <div style={{ marginTop: 8, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', fontSize: '0.78rem', color: '#991b1b' }}>
                       <strong>Nghị quyết:</strong> {m.resolution}
                     </div>
                   )}
@@ -1187,12 +1422,12 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ color: '#cbd5e1', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
           <select value={year} onChange={e => setYear(parseInt(e.target.value))}
-            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none' }}>
+            style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#1e293b', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none', fontWeight: 650 }}>
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <span style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
-          Đã đánh giá <strong style={{ color: '#f87171' }}>{rated}/{total}</strong> đảng viên
+        <span style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
+          Đã đánh giá <strong style={{ color: '#b91c1c' }}>{rated}/{total}</strong> đảng viên
         </span>
       </div>
 
@@ -1200,10 +1435,10 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       {rated > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
           {(['excellent', 'good', 'average', 'weak'] as const).map(r => (
-            <div key={r} style={{ background: '#0f172a', border: `2px solid ${RATING_COLOR[r]}`, borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+            <div key={r} style={{ background: '#ffffff', border: `2.5px solid ${RATING_COLOR[r]}`, borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
               <div style={{ fontSize: '1.6rem', fontWeight: 900, color: RATING_COLOR[r] }}>{ratingCounts[r]}</div>
-              <div style={{ fontSize: '0.78rem', color: '#ffffff', marginTop: 2, fontWeight: 700 }}>{RATING_LABEL[r]}</div>
-              <div className="rating-bar" style={{ background: '#334155', marginTop: 8 }}>
+              <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 4, fontWeight: 700 }}>{RATING_LABEL[r]}</div>
+              <div className="rating-bar" style={{ background: '#f1f5f9', marginTop: 8 }}>
                 <div className="rating-bar" style={{ width: total > 0 ? `${(ratingCounts[r] / total) * 100}%` : '0%', background: RATING_COLOR[r] }} />
               </div>
             </div>
@@ -1228,9 +1463,9 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                 const isSaving = saving === m.id;
                 return (
                   <tr key={m.id}>
-                    <td style={{ color: '#cbd5e1', fontWeight: 700 }}>{i + 1}</td>
-                    <td style={{ fontWeight: 700, color: '#fff' }}>{m.full_name}</td>
-                    <td style={{ color: '#e2e8f0', fontSize: '0.82rem', fontWeight: 600 }}>{POSITION_LABEL[m.position]}</td>
+                    <td style={{ color: '#94a3b8', fontWeight: 700 }}>{i + 1}</td>
+                    <td style={{ fontWeight: 700 }}>{m.full_name}</td>
+                    <td style={{ color: '#475569', fontSize: '0.82rem', fontWeight: 600 }}>{POSITION_LABEL[m.position]}</td>
                     {(['excellent', 'good', 'average', 'weak'] as const).map(r => (
                       <td key={r}>
                         <button
@@ -1238,12 +1473,12 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                           disabled={isSaving || isGuest}
                           style={{
                             width: 32, height: 32, borderRadius: '50%', cursor: isSaving ? 'wait' : 'pointer',
-                            background: ev?.rating === r ? RATING_COLOR[r] : '#334155',
-                            color: ev?.rating === r ? '#ffffff' : '#cbd5e1',
-                            border: ev?.rating === r ? `2px solid ${RATING_COLOR[r]}` : '2px solid #475569',
+                            background: ev?.rating === r ? RATING_COLOR[r] : '#f1f5f9',
+                            color: ev?.rating === r ? '#ffffff' : '#94a3b8',
+                            border: ev?.rating === r ? `2px solid ${RATING_COLOR[r]}` : '2px solid #cbd5e1',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 'auto',
                             transition: 'all 0.2s',
-                            boxShadow: ev?.rating === r ? `0 4px 10px ${RATING_COLOR[r]}40` : '1px 1px 3px rgba(0,0,0,0.1)',
+                            boxShadow: ev?.rating === r ? `0 4px 10px ${RATING_COLOR[r]}40` : 'none',
                           }}
                           title={`Xếp loại: ${RATING_LABEL[r]}`}
                         >
@@ -1371,32 +1606,32 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   return (
     <>
       {/* Thông tin quy định */}
-      <div style={{ background: '#0f172a', border: '1.5px solid #d97706', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.82rem', color: '#ffffff', display: 'flex', alignItems: 'flex-start', gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+      <div style={{ background: '#fffbeb', border: '1.5px solid #f59e0b', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.82rem', color: '#78350f', display: 'flex', alignItems: 'flex-start', gap: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
         <span style={{ fontSize: '1rem', flexShrink: 0 }}>📋</span>
         <span>
-          <strong style={{ color: '#fef08a' }}>Quy định 01-QĐ/TW (01/02/2026):</strong> Có BHXH = 1% lương | Lương hưu = 0,5% | Không BHXH chưa hưu = 0,3% LTT vùng | Đủ tuổi hưu chưa hưởng = 0,2% | Học sinh = 5.000đ/tháng.{' '}
-          <strong style={{ color: '#fca5a5' }}>⚠️ Không đóng 3 tháng trong năm → Chi bộ xem xét và Bí thư thực hiện xóa tên thủ công trong danh sách (hệ thống không tự động xóa).</strong>
+          <strong style={{ color: '#b45309' }}>Quy định 01-QĐ/TW (01/02/2026):</strong> Có BHXH = 1% lương | Lương hưu = 0,5% | Không BHXH chưa hưu = 0,3% LTT vùng | Đủ tuổi hưu chưa hưởng = 0,2% | Học sinh = 5.000đ/tháng.{' '}
+          <strong style={{ color: '#991b1b' }}>⚠️ Không đóng 3 tháng trong năm → Chi bộ xem xét và Bí thư thực hiện xóa tên thủ công trong danh sách (hệ thống không tự động xóa).</strong>
         </span>
       </div>
 
       {/* Thống kê + Chọn năm */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'stretch' }}>
         <div className="party-stat-card" style={{ flex: '1 1 130px' }}>
-          <div className="stat-num" style={{ color: '#4ade80', fontSize: '1.4rem', fontWeight: 900 }}>{fmtMoney(totalCollected)}</div>
+          <div className="stat-num" style={{ color: '#10b981', fontSize: '1.4rem', fontWeight: 900 }}>{fmtMoney(totalCollected)}</div>
           <div className="stat-label">Đã thu được</div>
         </div>
         <div className="party-stat-card" style={{ flex: '1 1 130px' }}>
-          <div className="stat-num" style={{ color: '#f59e0b', fontSize: '1.4rem', fontWeight: 900 }}>{fmtMoney(Math.max(0, totalExpected - totalCollected))}</div>
+          <div className="stat-num" style={{ color: '#d97706', fontSize: '1.4rem', fontWeight: 900 }}>{fmtMoney(Math.max(0, totalExpected - totalCollected))}</div>
           <div className="stat-label">Còn phải thu</div>
         </div>
         <div className="party-stat-card" style={{ flex: '1 1 90px' }}>
-          <div className="stat-num" style={{ color: alertMembers.length > 0 ? '#f87171' : '#4ade80' }}>{alertMembers.length}</div>
+          <div className="stat-num" style={{ color: alertMembers.length > 0 ? '#b91c1c' : '#10b981' }}>{alertMembers.length}</div>
           <div className="stat-label">⚠️ Nợ ≥3 tháng</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-          <label style={{ color: '#ffffff', fontSize: '0.85rem', fontWeight: 700 }}>Năm:</label>
+          <label style={{ color: '#475569', fontSize: '0.85rem', fontWeight: 700 }}>Năm:</label>
           <select value={year} onChange={e => setYear(parseInt(e.target.value))}
-            style={{ background: '#0f172a', border: '2px solid #cbd5e1', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none', fontWeight: 650 }}>
+            style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#1e293b', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none', fontWeight: 650 }}>
             {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
@@ -1404,17 +1639,17 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       {/* Cảnh báo nợ phí */}
       {alertMembers.length > 0 && (
-        <div style={{ background: '#991b1b', border: '1.5px solid #ef4444', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', color: '#ffffff', fontWeight: 650, boxShadow: '0 4px 12px rgba(239,68,68,0.2)' }}>
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', color: '#991b1b', fontWeight: 650, boxShadow: '0 4px 12px rgba(239,68,68,0.03)' }}>
           <strong>⚠️ Cảnh báo nợ đảng phí:</strong>{' '}
           {alertMembers.map(m => `${m.full_name} (${getUnpaidCount(m.id)} tháng)`).join(' • ')}
         </div>
       )}
 
       {/* Chú thích */}
-      <div style={{ display: 'flex', gap: 14, marginBottom: 12, fontSize: '0.8rem', color: '#ffffff', fontWeight: 600, flexWrap: 'wrap' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} color="#4ade80" /> Đã nộp</span>
+      <div style={{ display: 'flex', gap: 14, marginBottom: 12, fontSize: '0.8rem', color: '#475569', fontWeight: 600, flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} color="#10b981" /> Đã nộp</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XCircle size={12} color="#94a3b8" /> Chưa nộp — click để đánh dấu đã nộp</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Pencil size={12} color="#38bdf8" /> Nhấn ✏️ để cài mức phí từng đảng viên</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Pencil size={12} color="#2563eb" /> Nhấn ✏️ để cài mức phí từng đảng viên</span>
       </div>
 
       {loading ? <div className="no-data">Đang tải...</div> : members.length === 0 ? (
@@ -1439,17 +1674,17 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                 const unpaid = getUnpaidCount(member.id);
                 const isAlert = unpaid >= 3;
                 return (
-                  <tr key={member.id} style={{ background: isAlert ? 'rgba(239,68,68,0.05)' : undefined }}>
+                  <tr key={member.id} style={{ background: isAlert ? 'rgba(239,68,68,0.03)' : undefined }}>
                     <td className="name-col">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         {isAlert && <span title={`Nợ ${unpaid} tháng!`}>⚠️</span>}
-                        <span style={{ fontWeight: 700, color: '#ffffff' }}>{member.full_name}</span>
+                        <span style={{ fontWeight: 700, color: '#1e293b' }}>{member.full_name}</span>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginTop: 2, fontWeight: 550 }}>{POSITION_LABEL[member.position]}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2, fontWeight: 550 }}>{POSITION_LABEL[member.position]}</div>
                     </td>
                     <td style={{ textAlign: 'left' }}>
-                      <div style={{ fontWeight: 800, color: '#38bdf8', fontSize: '0.88rem' }}>{fmtMoney(monthlyFee)}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: 2, fontWeight: 500 }}>{FEE_CATEGORY_LABEL[member.fee_category || 'bhxh']?.split('(')[0]?.trim()}</div>
+                      <div style={{ fontWeight: 800, color: '#2563eb', fontSize: '0.88rem' }}>{fmtMoney(monthlyFee)}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: 2, fontWeight: 500 }}>{FEE_CATEGORY_LABEL[member.fee_category || 'bhxh']?.split('(')[0]?.trim()}</div>
                     </td>
                     {months.map(month => {
                       const paid = isPaid(member.id, month);
