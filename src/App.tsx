@@ -197,7 +197,7 @@ const App = () => {
     }
     
     const toastMsg = role === 'demo'
-      ? `👁️ Chế độ Xem Demo – chỉ đọc, không thể chỉnh sửa dữ liệu.`
+      ? `👁️ Trang chủ – chỉ đọc, không thể chỉnh sửa dữ liệu.`
       : `✅ Đã chuyển sang vai trò: ${roleLabels[role]}`;
     const ev = new CustomEvent('show-toast', { 
       detail: { message: toastMsg, type: role === 'demo' ? 'info' : 'success' } 
@@ -278,7 +278,7 @@ const App = () => {
   const resetToDefaultConfig = () => {
     const defaults: Record<string, string> = {
       tdp_name: 'Quảng Giao',
-      ward_name: 'Phường Quảng Đại',
+      ward_name: 'Phường Nam Sầm Sơn',
       leader_name: 'Nguyễn Kim Tuyến',
       leader_phone: '0912 083 018 - 0899 661 982',
       group_id: 'NAM_SAM_SON_01',
