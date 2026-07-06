@@ -40,6 +40,32 @@ const Dashboard = () => {
     militaryEligibleCount: 0,
   });
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getGreetingMessage = () => {
+    const hours = currentTime.getHours();
+    if (hours >= 5 && hours < 12) {
+      return {
+        greeting: 'Chào buổi sáng! ☀️',
+        wish: 'Chúc bạn một ngày mới tốt lành, tràn đầy năng lượng và làm việc hiệu quả!'
+      };
+    } else if (hours >= 12 && hours < 18) {
+      return {
+        greeting: 'Chào buổi chiều! ⛅',
+        wish: 'Chúc bạn một buổi chiều làm việc thuận lợi và gặt hái nhiều niềm vui!'
+      };
+    } else {
+      return {
+        greeting: 'Chào buổi tối! 🌙',
+        wish: 'Chúc bạn một buổi tối thư giãn thoải mái và ấm áp bên gia đình!'
+      };
+    }
+  };
+
   // Đọc tên Tổ dân phố từ localStorage (có thể được sửa từ phần Cấu hình)
   const [tdpName, setTdpName] = useState(() => {
     return localStorage.getItem('tdp_name') || 'Tiến Quảng Giao';
@@ -251,22 +277,32 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <div className="welcome-section">
-        <div>
-          <h1>{isGuest ? 'Chào mừng bà con nhân dân! 👋' : 'Xin chào, Tổ trưởng! 👋'}</h1>
+      <div className="premium-welcome-banner">
+        <div className="welcome-message">
+          <h1>{isGuest ? 'Chào mừng bà con nhân dân! 👋' : getGreetingMessage().greeting}</h1>
           <p>Hệ thống quản lý thông tin dân cư Tổ dân phố <strong style={{color: 'var(--primary)'}}>{tdpName}</strong></p>
+          <span className="welcome-wish">{getGreetingMessage().wish}</span>
         </div>
-        <div className="action-btns">
-          <button className="btn btn-secondary" onClick={handleViewFinanceClick}>
-            {isGuest ? 'Xem chi tiết thu chi' : 'Quản lý thu chi'}
+        <div className="welcome-datetime">
+          <div className="welcome-time">
+            {currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+          <div className="welcome-date">
+            {currentTime.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <button className="btn btn-secondary" onClick={handleViewFinanceClick}>
+          {isGuest ? 'Xem chi tiết thu chi' : 'Quản lý thu chi'}
+        </button>
+        {!isGuest && (
+          <button className="btn btn-primary" onClick={handleAddResidentClick}>
+            <UserPlus size={18} />
+            Thêm nhân khẩu mới
           </button>
-          {!isGuest && (
-            <button className="btn btn-primary" onClick={handleAddResidentClick}>
-              <UserPlus size={18} />
-              Thêm nhân khẩu mới
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="stats-grid">
@@ -312,14 +348,15 @@ const Dashboard = () => {
                   const multiplier = Math.max(1, stats.totalHouseholds);
                   const data = funds[fund.name] || { collected: 0, target: fund.target * multiplier };
                   const percent = data.target > 0 ? Math.round((data.collected / data.target) * 100) : 0;
+                  const barColor = percent >= 75 ? '#10b981' : percent >= 30 ? '#f59e0b' : '#ef4444';
                   return (
                     <div key={i} className="progress-item" style={{ marginBottom: 0 }}>
                       <div className="progress-info">
                         <span style={{ fontWeight: '600', fontSize: '0.88rem' }}>{fund.name}</span>
-                        <span style={{ fontSize: '0.85rem' }}>{percent}% ({formatVND(data.collected)} / {formatVND(data.target)})</span>
+                        <span style={{ fontSize: '0.85rem', color: barColor, fontWeight: 'bold' }}>{percent}% ({formatVND(data.collected)} / {formatVND(data.target)})</span>
                       </div>
                       <div className="progress-bar-bg">
-                        <div className="progress-bar-fill" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: fund.name.includes('vệ sinh') ? 'var(--warning)' : undefined }}></div>
+                        <div className="progress-bar-fill" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: barColor }}></div>
                       </div>
                     </div>
                   );
@@ -361,27 +398,63 @@ const Dashboard = () => {
           to { opacity: 1; transform: translateY(0); }
         }
 
-        .welcome-section {
+        .premium-welcome-banner {
+          background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+          border: 1.5px solid rgba(37, 99, 235, 0.15);
+          border-radius: var(--radius-lg);
+          padding: 24px 30px;
+          margin-bottom: 16px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 32px;
+          gap: 20px;
+          box-shadow: 0 4px 20px rgba(37, 99, 235, 0.02);
+          position: relative;
+          overflow: hidden;
         }
-
-        .welcome-section h1 {
-          font-size: 1.8rem;
+        .premium-welcome-banner::before {
+          content: '';
+          position: absolute;
+          width: 300px;
+          height: 300px;
+          background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
+          right: -100px;
+          top: -100px;
+          pointer-events: none;
+        }
+        .welcome-message h1 {
+          font-size: 1.65rem;
+          font-weight: 850;
           color: var(--text-main);
+          margin-bottom: 6px;
+        }
+        .welcome-message p {
+          font-size: 0.95rem;
+          color: var(--text-muted);
           margin-bottom: 4px;
         }
-
-        .welcome-section p {
-          color: var(--text-muted);
-          font-size: 0.95rem;
+        .welcome-message .welcome-wish {
+          font-size: 0.88rem;
+          color: var(--primary);
+          font-weight: 600;
         }
-
-        .action-btns {
-          display: flex;
-          gap: 12px;
+        .welcome-datetime {
+          text-align: right;
+          flex-shrink: 0;
+        }
+        .welcome-time {
+          font-size: 1.8rem;
+          font-weight: 800;
+          color: var(--primary);
+          line-height: 1.1;
+          font-family: monospace;
+        }
+        .welcome-date {
+          font-size: 0.88rem;
+          color: var(--text-muted);
+          font-weight: 550;
+          margin-top: 4px;
+          text-transform: capitalize;
         }
 
         .btn {
@@ -578,6 +651,17 @@ const Dashboard = () => {
         @media (max-width: 1024px) {
           .dashboard-charts {
             grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 768px) {
+          .premium-welcome-banner {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 20px;
+          }
+          .welcome-datetime {
+            text-align: left;
+            margin-top: 12px;
           }
         }
       `}</style>

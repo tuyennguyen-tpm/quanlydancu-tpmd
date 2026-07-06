@@ -155,15 +155,40 @@ const CitizenMap = () => {
           <h1>Bản đồ số dân cư {tdpName}</h1>
           <p>{isGuest ? 'Hiển thị vị trí thực tế của từng hộ dân trên địa bàn.' : 'Hiển thị vị trí thực tế của từng hộ dân. Click lên bản đồ để chấm tọa độ định vị hộ dân mới hoặc di chuyển hộ cũ.'}</p>
         </div>
-        <div className="map-filters">
-           <select className="map-select" value={policyFilter} onChange={(e) => setPolicyFilter(e.target.value)}>
-             <option value="all">Tất cả các hộ</option>
-             <option value="none">Hộ bình thường</option>
-             <option value="poor">Hộ nghèo</option>
-             <option value="near_poor">Hộ cận nghèo</option>
-             <option value="policy_family">Hộ chính sách</option>
-           </select>
-        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', background: '#f8fafc', padding: '12px 18px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+        <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>🔍 Phân loại hộ & Bộ lọc nhanh:</span>
+        {[
+          { key: 'all', label: 'Tất cả các hộ', color: '#2563eb' },
+          { key: 'none', label: 'Hộ bình thường', color: '#64748b' },
+          { key: 'poor', label: 'Hộ nghèo', color: '#ef4444' },
+          { key: 'near_poor', label: 'Hộ cận nghèo', color: '#f59e0b' },
+          { key: 'policy_family', label: 'Hộ chính sách', color: '#6366f1' },
+        ].map(item => (
+          <button
+            key={item.key}
+            onClick={() => setPolicyFilter(item.key)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: policyFilter === item.key ? 'white' : 'transparent',
+              border: policyFilter === item.key ? '2.5px solid ' + item.color : '1.5px solid #e2e8f0',
+              borderRadius: '20px',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: '700',
+              color: policyFilter === item.key ? '#0f172a' : '#64748b',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: policyFilter === item.key ? '0 2px 6px rgba(0,0,0,0.05)' : 'none'
+            }}
+          >
+            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: item.color }}></span>
+            {item.label}
+          </button>
+        ))}
       </div>
 
       <div className="map-main">
@@ -332,14 +357,17 @@ const CitizenMap = () => {
           padding: 12px;
           border-radius: var(--radius-md);
           background-color: #f8fafc;
-          border: 1px solid transparent;
+          border: 1px solid #e2e8f0;
           cursor: pointer;
           align-items: center;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .mini-card:hover {
-          background-color: rgba(37, 99, 235, 0.05);
+          background-color: #ffffff;
           border-color: var(--primary);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+          transform: translateY(-2px);
         }
         
         .mini-card.positioned {
@@ -363,8 +391,31 @@ const CitizenMap = () => {
         .pos-badge.yes { background-color: rgba(16, 185, 129, 0.1); color: var(--success); }
         .pos-badge.no { background-color: #f1f5f9; color: var(--text-muted); }
 
-        .popup-content h4 { margin-bottom: 4px; font-weight: 700; font-size: 1rem; color: var(--text-main); }
-        .popup-content p { margin-bottom: 6px; }
+        /* Leaflet Glassmorphism styling override */
+        .leaflet-popup-content-wrapper {
+          background: rgba(255, 255, 255, 0.82) !important;
+          backdrop-filter: blur(12px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
+          border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
+          border-radius: 16px !important;
+          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+        }
+        .leaflet-popup-tip {
+          background: rgba(255, 255, 255, 0.82) !important;
+          backdrop-filter: blur(12px) !important;
+          box-shadow: none !important;
+        }
+        .popup-content h4 { 
+          margin: 0 0 6px 0; 
+          font-weight: 800; 
+          font-size: 1.05rem; 
+          color: #0f172a; 
+        }
+        .popup-content p { 
+          margin: 4px 0; 
+          font-size: 0.82rem;
+          color: #475569;
+        }
 
         @media (max-width: 1024px) {
           .map-sidebar { display: none; }

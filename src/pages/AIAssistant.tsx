@@ -73,7 +73,129 @@ const AIAssistant = () => {
       return new Intl.NumberFormat('vi-VN').format(amt) + ' đồng';
     };
 
-    // Check for voluntary contribution detailed templates first
+    const fmtDate = (dStr: string) => {
+      if (!dStr) return '—';
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return dStr;
+      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+    };
+
+    // 1. Nghĩa vụ quân sự query handler
+    if (query.includes('nghĩa vụ quân sự') || query.includes('nghia vu quan su') || query.includes('nghĩa vụ') || query.includes('nhập ngũ')) {
+      const currentYear = new Date().getFullYear();
+      const eligibleMen = residents.filter(r => {
+        if (r.gender !== 'male' || !r.dob || r.status === 'deceased') return false;
+        const birthYear = new Date(r.dob).getFullYear();
+        const age = currentYear - birthYear;
+        return age >= 18 && age <= 27;
+      });
+
+      return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+---
+TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}
+
+BÁO CÁO RÀ SOÁT NGHĨA VỤ QUÂN SỰ NĂM ${currentYear}
+Về việc rà soát nam thanh niên trong độ tuổi sẵn sàng nhập ngũ (18-27 tuổi).
+
+Kính gửi: Hội đồng Nghĩa vụ quân sự ${wardDisplay}
+
+Thực hiện công tác rà soát thực tế đối chiếu với Cơ sở dữ liệu dân cư năm ${currentYear}, Tổ dân phố ${tdpName} xin báo cáo danh sách công dân nam trong độ tuổi gọi nhập ngũ như sau:
+
+I. SỐ LIỆU TỔNG HỢP:
+- Tổng số nam thanh niên tuổi từ 18 đến 27: ${eligibleMen.length} công dân.
+- Đủ điều kiện gọi khám tuyển đợt tới: ${eligibleMen.length} công dân.
+
+II. DANH SÁCH CHI TIẾT THANH NIÊN TRONG DIỆN NGHĨA VỤ QUÂN SỰ:
+${eligibleMen.length > 0 ? eligibleMen.map((m, idx) => {
+  const hh = households.find(h => h.id === m.household_id);
+  const parentName = hh ? hh.leader_name : 'Không rõ';
+  return `  ${idx + 1}. Họ và tên: ${m.full_name} - Ngày sinh: ${fmtDate(m.dob)} - Chủ hộ: Hộ ông/bà ${parentName} - Địa chỉ: ${hh?.address || 'Tổ dân phố'}`;
+}).join('\n') : '  (Hiện tại không có nam thanh niên nào trong độ tuổi 18-27 trên cơ sở dữ liệu)'}
+
+III. KIẾN NGHỊ:
+Kính trình Hội đồng Nghĩa vụ quân sự Phường xem xét phê duyệt danh sách phát lệnh gọi khám tuyển.
+
+                                                            ${tdpName}, ngày ${new Date().getDate().toString().padStart(2, '0')} tháng ${(new Date().getMonth() + 1).toString().padStart(2, '0')} năm ${currentYear}
+                                                            TRƯỞNG TỔ DÂN PHỐ
+                                                            
+                                                            ${leaderDisplay.replace('Ông ', '').replace('Bà ', '')}`;
+    }
+
+    // 2. Hộ nghèo query handler
+    if (query.includes('hộ nghèo') || query.includes('ho ngheo') || query.includes('chính sách hỗ hỗ trợ') || query.includes('chính sách hộ nghèo')) {
+      const poorHouseholds = households.filter(h => h.policy_type === 'poor');
+      const nearPoorHouseholds = households.filter(h => h.policy_type === 'near_poor');
+      const policyHouseholds = households.filter(h => h.policy_type === 'wounded' || h.policy_type === 'agent_orange');
+
+      return `TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}
+---
+BÁO CÁO TỔNG HỢP HỘ NGHÈO, HỘ CẬN NGHÈO VÀ DIỆN CHÍNH XÃ HỘI NĂM ${new Date().getFullYear()}
+
+I. CHÍNH SÁCH HỖ TRỢ HIỆN HÀNH:
+1. Hộ nghèo: Trợ cấp tiền điện (55.000đ/hộ/tháng), hỗ trợ 100% thẻ BHYT, miễn học phí cho con em đi học, được tiếp cận nguồn vốn vay ưu đãi của Ngân hàng CSXH.
+2. Hộ cận nghèo: Hỗ trợ 70% mức đóng BHYT, con em được giảm 50% học phí tại các cơ sở giáo dục quốc lập.
+3. Hộ chính sách (Thương binh/Bệnh binh/Chất độc hóa học): Nhận trợ cấp ưu đãi hàng tháng theo quy định chung, hỗ trợ cải thiện nhà ở nếu gặp khó khăn.
+
+II. THỐNG KÊ THỰC TẾ TRÊN ĐỊA BÀN TỔ DÂN PHỐ ${tdpName.toUpperCase()}:
+- Số hộ nghèo: ${poorHouseholds.length} hộ.
+- Số hộ cận nghèo: ${nearPoorHouseholds.length} hộ.
+- Số hộ chính sách có công: ${policyHouseholds.length} hộ.
+
+III. DANH SÁCH CHI TIẾT CÁC HỘ THUỘC DIỆN QUẢN LÝ CHÍNH SÁCH:
+${poorHouseholds.length > 0 ? '\n* Danh sách Hộ nghèo:\n' + poorHouseholds.map((h, i) => `  ${i + 1}. Chủ hộ: ${h.leader_name} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`).join('\n') : '* Không ghi nhận hộ nghèo nào.'}
+${nearPoorHouseholds.length > 0 ? '\n* Danh sách Hộ cận nghèo:\n' + nearPoorHouseholds.map((h, i) => `  ${i + 1}. Chủ hộ: ${h.leader_name} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`).join('\n') : '* Không ghi nhận hộ cận nghèo nào.'}
+${policyHouseholds.length > 0 ? '\n* Danh sách Hộ thương binh/chính sách:\n' + policyHouseholds.map((h, i) => `  ${i + 1}. Chủ hộ: ${h.leader_name} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`).join('\n') : '* Không ghi nhận hộ chính sách nào.'}
+
+Tổ dân phố cam kết triển khai đúng, đủ các gói hỗ trợ và quà thăm hỏi từ chính quyền các cấp nhân các dịp ngày lễ tết.`;
+    }
+
+    // 3. Biên bản họp chi bộ query handler
+    if (query.includes('biên bản họp chi bộ') || query.includes('bien ban hop chi bo') || query.includes('biên bản chi bộ') || (query.includes('viết biên bản') && query.includes('chi bộ'))) {
+      return `ĐẢNG CỘNG SẢN VIỆT NAM
+CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+*
+BIÊN BẢN HỌP CHI BỘ THƯỜNG KỲ
+(Thực hiện theo Hướng dẫn số 12-HD/BTCTW của Ban Tổ chức Trung ương)
+
+Hôm nay, vào hồi ..... giờ ..... ngày ..... tháng ..... năm ....., tại .....
+Chi bộ Tổ dân phố ${tdpName} đã tổ chức cuộc họp thường kỳ tháng ...../.....
+
+I. THÀNH PHẦN THAM DỰ:
+1. Số đảng viên được triệu tập: ..... đồng chí. Trong đó chính thức: .....; dự bị: ......
+2. Đảng viên có mặt dự họp: ..... đồng chí.
+3. Đảng viên vắng mặt: ..... đồng chí (Có lý do: .....; Không lý do: .....).
+4. Đại biểu đại diện Đảng ủy cấp trên tham dự (nếu có): .....
+- Chủ trì cuộc họp: Đồng chí Bí thư Chi bộ.
+- Thư ký cuộc họp: Đồng chí Chi ủy viên.
+
+II. NỘI DUNG BUỔI HỌP:
+1. Công tác chính trị, tư tưởng đảng viên:
+- Đồng chí Bí thư phổ biến các tin tức thời sự nổi bật trong tháng và quán triệt các văn bản chỉ đạo mới nhất của Đảng ủy phường.
+- Nhận xét tinh thần gương mẫu của đảng viên trong các hoạt động cộng đồng.
+
+2. Báo cáo đánh giá hoạt động công tác tháng qua:
+- Chi bộ lãnh đạo Ban điều hành tổ dân phố thực hiện công tác quản lý cư trú, thu nộp quỹ và bảo đảm an ninh trật tự ngõ xóm.
+- Nhận xét ưu khuyết điểm cụ thể trong tháng.
+
+3. Phương hướng công tác lãnh đạo tháng tới:
+- Tập trung tuyên truyền an toàn giao thông, tổng vệ sinh môi trường.
+- Triển khai thu các khoản đảng phí theo Quy định 01-QĐ/TW.
+- Bồi dưỡng quần chúng ưu tú để giới thiệu kết nạp Đảng.
+
+4. Ý kiến thảo luận của Đảng viên:
+- Đồng chí ..... phát biểu ý kiến thảo luận về giải pháp .....
+- Đồng chí ..... phát biểu ý kiến thảo luận về giải pháp .....
+
+III. KẾT LUẬN & BIỂU QUYẾT NGHỊ QUYẾT:
+Chi bộ thống nhất ban hành Nghị quyết họp với các nội dung trên. Tỷ lệ biểu quyết thông qua đạt 100% nhất trí.
+
+Biên bản sinh hoạt được thông qua trước toàn thể Chi bộ dự họp và kết thúc vào lúc ..... giờ ..... cùng ngày.
+
+             THƯ KÝ GHI BIÊN BẢN                                   BÍ THƯ CHI BỘ
+           (Ký và ghi rõ họ tên)                               (Ký và ghi rõ họ tên)`;
+    }
+
     const isPlanVoluntary = query.includes('kế hoạch vận động') || (query.includes('kế hoạch') && (query.includes('vận động') || query.includes('đóng góp') || query.includes('tự nguyện')));
     const isMeetingVoluntary = (query.includes('hội nghị nhân dân') || query.includes('nội dung họp')) && (query.includes('đóng góp') || query.includes('vận động') || query.includes('tự nguyện'));
 
@@ -503,15 +625,37 @@ TỔ TRƯỞNG DÂN PHỐ
     return finalDocument;
   };
 
-  const handleGenerate = () => {
-    if (!prompt) return;
+  const typeText = (text: string) => {
+    let currentIdx = 0;
+    setResult('');
+    const step = 8;
+    const interval = setInterval(() => {
+      currentIdx += step;
+      if (currentIdx >= text.length) {
+        setResult(text);
+        clearInterval(interval);
+      } else {
+        setResult(text.substring(0, currentIdx));
+      }
+    }, 15);
+  };
+
+  const handleGenerate = (customPrompt?: string) => {
+    const pText = typeof customPrompt === 'string' ? customPrompt : prompt;
+    if (!pText) return;
     setIsGenerating(true);
     setIsCopied(false);
+    setResult(null);
     setTimeout(async () => {
-      const doc = await generateDocument(prompt);
-      setResult(doc);
+      const doc = await generateDocument(pText);
       setIsGenerating(false);
+      typeText(doc);
     }, 1200);
+  };
+
+  const triggerQuickPrompt = (q: string) => {
+    setPrompt(q);
+    handleGenerate(q);
   };
 
   const handleCopy = () => {
@@ -641,6 +785,35 @@ TỔ TRƯỞNG DÂN PHỐ
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '12px 0 4px', borderTop: '1px solid #f1f5f9' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 'bold', display: 'flex', alignItems: 'center', width: '100%', marginBottom: '2px' }}>
+                💡 Hỏi nhanh trợ lý:
+              </span>
+              {[
+                { label: 'Độ tuổi nghĩa vụ quân sự của tổ ta?', query: 'Độ tuổi nghĩa vụ quân sự của tổ ta?' },
+                { label: 'Tóm tắt chính sách hỗ trợ hộ nghèo', query: 'Tóm tắt chính sách hỗ trợ hộ nghèo năm nay' },
+                { label: 'Hướng dẫn viết biên bản họp chi bộ', query: 'Hướng dẫn viết biên bản họp chi bộ chuẩn' }
+              ].map((qp, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => triggerQuickPrompt(qp.query)}
+                  style={{
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '16px',
+                    padding: '6px 14px',
+                    fontSize: '0.78rem',
+                    color: 'var(--primary)',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  className="quick-prompt-btn"
+                >
+                  {qp.label}
+                </button>
+              ))}
+            </div>
             <div className="chat-actions">
               <button 
                 className="btn btn-primary" 
@@ -794,6 +967,12 @@ TỔ TRƯỞNG DÂN PHỐ
           font-size: 1rem;
           font-family: inherit;
           line-height: 1.5;
+        }
+
+        .quick-prompt-btn:hover {
+          background-color: var(--primary) !important;
+          color: white !important;
+          transform: translateY(-1px);
         }
 
         .ai-result-section {

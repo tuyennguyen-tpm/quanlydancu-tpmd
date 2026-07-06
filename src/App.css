@@ -862,3 +862,22 @@
   padding: 0 12px;
 }
 
+/* Page transition slide up animation */
+.content-area > div, 
+.map-page-container, 
+.ai-container, 
+.party-cell-wrapper {
+  animation: pageFadeInSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes pageFadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
