@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ExcelJS from 'exceljs';
 import { partyDb, generateUUID } from '../services/db';
 import type { PartyMember, PartyMeeting, PartyEvaluation, PartyFee } from '../services/db';
 import { db } from '../services/db';
@@ -689,50 +690,247 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     return 'bhxh';
   };
 
-  const handleExportExcel = () => {
-    const csvContent = "\uFEFF" + [
-      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (Chính thức/Dự bị/Miễn sinh hoạt)", "Loại đảng phí", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
-      ...filtered.map(m => [
-        `"${m.full_name.replace(/"/g, '""')}"`,
-        `"${(m.party_code || '').replace(/"/g, '""')}"`,
-        POSITION_LABEL[m.position] || m.position,
-        m.probation_date || '',
-        m.join_date || '',
-        STATUS_LABEL[m.status] || m.status,
-        FEE_CATEGORY_LABEL[m.fee_category || 'bhxh'] || m.fee_category || 'bhxh',
-        m.salary_base || 0,
-        m.wage_zone || 3,
-        `"${(m.notes || '').replace(/"/g, '""')}"`
-      ].join(","))
-    ].join("\n");
+  const handleExportExcel = async () => {
+    if (filtered.length === 0) {
+      showToast('Không có dữ liệu để xuất!', 'warning');
+      return;
+    }
+    showToast('Đang khởi tạo file Excel...', 'info');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Danh_sach_Dang_vien_Chi_bo_${currentYear}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Đã xuất file Excel thành công!', 'success');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Danh sách đảng viên');
+
+      // Title header rows (for premium look)
+      worksheet.mergeCells('A1:J1');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = `DANH SÁCH ĐẢNG VIÊN CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`;
+      titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF991B1B' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(1).height = 35;
+
+      worksheet.mergeCells('A2:J2');
+      const subCell = worksheet.getCell('A2');
+      subCell.value = `Thời gian xuất bản: ${new Date().toLocaleDateString('vi-VN')} - Tổng cộng: ${filtered.length} đảng viên`;
+      subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
+      subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(2).height = 20;
+
+      // Empty separator row
+      worksheet.addRow([]);
+      worksheet.getRow(3).height = 10;
+
+      // Headers definition
+      const headers = [
+        "Họ và tên", "Số thẻ Đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
+        "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
+      ];
+      
+      const headerRow = worksheet.addRow(headers);
+      headerRow.height = 28;
+
+      headerRow.eachCell(cell => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFB91C1C' } // Crimson Red
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' },
+          name: 'Segoe UI',
+          size: 10.5
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+          wrapText: true
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          bottom: { style: 'medium', color: { argb: 'FF990000' } },
+          right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+        };
+      });
+
+      // Rows data
+      filtered.forEach(m => {
+        const addedRow = worksheet.addRow([
+          m.full_name,
+          m.party_code || '',
+          POSITION_LABEL[m.position] || m.position,
+          m.probation_date ? fmtDate(m.probation_date) : '',
+          m.join_date ? fmtDate(m.join_date) : '',
+          STATUS_LABEL[m.status] || m.status,
+          FEE_CATEGORY_LABEL[m.fee_category || 'bhxh'] || m.fee_category || 'bhxh',
+          m.salary_base || 0,
+          m.wage_zone || 3,
+          m.notes || ''
+        ]);
+
+        addedRow.height = 22;
+
+        // Custom cell formats
+        const isLeader = m.position === 'secretary' || m.position === 'deputy_secretary';
+        addedRow.eachCell((cell, colNumber) => {
+          cell.font = {
+            name: 'Segoe UI',
+            size: 10,
+            bold: isLeader && colNumber === 1
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFF1F5F9' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFF1F5F9' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+          
+          // Alignments
+          if (colNumber === 1 || colNumber === 8 || colNumber === 10) {
+            cell.alignment = { vertical: 'middle', horizontal: colNumber === 8 ? 'right' : 'left' };
+          } else {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          }
+
+          // Format numbers
+          if (colNumber === 8) {
+            cell.numFormat = '#,##0';
+          }
+          if (colNumber === 2) {
+            cell.numFormat = '@'; // Force text format for party code
+          }
+
+          // Highlight leaders
+          if (isLeader) {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFFFFBEB' } // light Gold highlight
+            };
+          }
+        });
+      });
+
+      // Auto-fit columns
+      worksheet.columns.forEach((column, colIdx) => {
+        if (colIdx > 9) return;
+        let maxLen = 12;
+        column.values?.forEach((v, rowIdx) => {
+          if (rowIdx <= 4) return;
+          const valStr = v ? v.toString() : '';
+          if (valStr.length > maxLen) maxLen = valStr.length;
+        });
+        column.width = Math.min(Math.max(maxLen + 4, 12), 40);
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Danh_sach_Dang_vien_Chi_bo_${tdpName.replace(/\s+/g, '_')}_${currentYear}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Đã xuất file Excel thành công!', 'success');
+    } catch (err: any) {
+      showToast(`Lỗi xuất Excel: ${err.message}`, 'danger');
+    }
   };
 
-  const handleExportTemplate = () => {
-    const csvContent = "\uFEFF" + [
-      ["Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)", "Trạng thái (Chính thức/Dự bị/Miễn sinh hoạt)", "Loại đảng phí", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"].join(","),
-      ["Nguyễn Văn A", "DV-0001", "Đảng viên", "2024-05-19", "2025-05-19", "Chính thức", "Có BHXH bắt buộc", "6500000", "3", "Mẫu đảng viên chính thức"],
-      ["Trần Thị B", "DV-0002", "Đảng viên", "2025-10-01", "", "Dự bị", "Học sinh, sinh viên", "0", "3", "Mẫu đảng viên dự bị"]
-    ].join("\n");
+  const handleExportTemplate = async () => {
+    showToast('Đang tải mẫu file Excel...', 'info');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Mẫu nhập đảng viên');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "Mau_Nhap_Dang_Vien.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Đã tải file Excel mẫu thành công!', 'success');
+      // Instructions block
+      worksheet.mergeCells('A1:J1');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = 'MẪU NHẬP LIỆU DANH SÁCH ĐẢNG VIÊN CHI BỘ';
+      titleCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FF0F766E' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(1).height = 30;
+
+      worksheet.mergeCells('A2:J2');
+      const subCell = worksheet.getCell('A2');
+      subCell.value = 'Lưu ý: Không thay đổi tiêu đề cột. Ngày nhập dạng YYYY-MM-DD (VD: 1995-10-24). Nhập đúng các trạng thái/chức vụ mẫu.';
+      subCell.font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FFE11D48' } };
+      subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(2).height = 20;
+
+      worksheet.addRow([]);
+      worksheet.getRow(3).height = 8;
+
+      const headers = [
+        "Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (YYYY-MM-DD)", "Ngày chính thức (YYYY-MM-DD)",
+        "Trạng thái (Chính thức/Dự bị/Miễn sinh hoạt)", "Loại đảng phí", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"
+      ];
+
+      const headerRow = worksheet.addRow(headers);
+      headerRow.height = 26;
+
+      headerRow.eachCell(cell => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF374151' }
+        };
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Segoe UI', size: 10 };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          bottom: { style: 'medium', color: { argb: 'FF1F2937' } },
+          right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+        };
+      });
+
+      const samples = [
+        ["Nguyễn Văn A", "DV-0001", "Bí thư", "2020-05-19", "2021-05-19", "Chính thức", "Có BHXH bắt buộc", 6500000, 3, "Chủ trì họp chi bộ"],
+        ["Trần Thị B", "DV-0002", "Đảng viên", "2025-10-01", "", "Dự bị", "Học sinh, sinh viên", 0, 3, "Đảng viên dự bị"]
+      ];
+
+      samples.forEach(row => {
+        const addedRow = worksheet.addRow(row);
+        addedRow.height = 22;
+        addedRow.eachCell((cell, colNumber) => {
+          cell.font = { name: 'Segoe UI', size: 10 };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+          if (colNumber === 1 || colNumber === 10) {
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          } else {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          }
+          if (colNumber === 8) cell.numFormat = '#,##0';
+          if (colNumber === 2) cell.numFormat = '@';
+        });
+      });
+
+      worksheet.columns.forEach((column, colIdx) => {
+        if (colIdx > 9) return;
+        column.width = colIdx === 0 ? 18 : colIdx === 2 ? 18 : colIdx === 6 ? 22 : colIdx === 7 ? 22 : 16;
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "Mau_Nhap_Dang_Vien.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Đã tải file Excel mẫu thành công!', 'success');
+    } catch (err: any) {
+      showToast(`Lỗi tạo mẫu: ${err.message}`, 'danger');
+    }
   };
 
   const parseCSVLine = (text: string): string[] => {
@@ -763,12 +961,63 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     if (!file) return;
 
     const reader = new FileReader();
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    if (isXlsx) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file, 'utf-8');
+    }
+
     reader.onload = async (evt) => {
       try {
-        const text = evt.target?.result as string;
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        if (lines.length <= 1) {
-          showToast('File Excel trống hoặc không đúng định dạng!', 'danger');
+        let rows: string[][] = [];
+
+        if (isXlsx) {
+          const arrayBuffer = evt.target?.result as ArrayBuffer;
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.load(arrayBuffer);
+          const worksheet = workbook.worksheets[0];
+          if (!worksheet) {
+            showToast('File Excel không có trang tính nào!', 'danger');
+            return;
+          }
+          
+          worksheet.eachRow((row) => {
+            const firstCellVal = row.getCell(1).value?.toString() || '';
+            if (firstCellVal.includes('Họ và tên') || firstCellVal.includes('MẪU') || firstCellVal.includes('Lưu ý') || firstCellVal.trim() === '') {
+              return;
+            }
+
+            const rowValues: string[] = [];
+            for (let c = 1; c <= 10; c++) {
+              const cell = row.getCell(c);
+              let val = cell.value;
+              if (val && typeof val === 'object' && 'result' in val) {
+                val = (val as any).result;
+              }
+              rowValues.push(val !== undefined && val !== null ? val.toString().trim() : '');
+            }
+            rows.push(rowValues);
+          });
+        } else {
+          const text = evt.target?.result as string;
+          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+          if (lines.length <= 1) {
+            showToast('File CSV trống hoặc không đúng định dạng!', 'danger');
+            return;
+          }
+          
+          for (let i = 1; i < lines.length; i++) {
+            const line = lines[i];
+            const cols = parseCSVLine(line).map(val => val.replace(/^"|"$/g, '').trim());
+            if (cols[0] === 'Họ và tên' || cols[0].includes('MẪU') || cols[0] === '') continue;
+            rows.push(cols);
+          }
+        }
+
+        if (rows.length === 0) {
+          showToast('Không tìm thấy dòng dữ liệu nào hợp lệ trong file!', 'danger');
           return;
         }
 
@@ -776,10 +1025,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         let addedCount = 0;
         let updatedCount = 0;
 
-        for (let i = 1; i < lines.length; i++) {
-          const row = lines[i];
-          const columns = parseCSVLine(row).map(val => val.replace(/^"|"$/g, '').trim());
-
+        for (const columns of rows) {
           if (columns.length < 1 || !columns[0]) continue;
 
           const fullName = columns[0];
@@ -793,7 +1039,6 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           const zone = (parseInt(columns[8]) || 3) as any;
           const notesStr = columns[9] || '';
 
-          // Đối chiếu dựa trên Họ tên hoặc Số thẻ Đảng
           const matched = currentMembers.find(m => 
             (partyCode && m.party_code === partyCode) || 
             (m.full_name.toLowerCase().trim() === fullName.toLowerCase().trim())
@@ -821,13 +1066,13 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           }
         }
 
-        showToast(`Đã nhập thành công! Thêm mới ${addedCount} và cập nhật ${updatedCount} đảng viên từ Excel.`, 'success');
+        showToast(`Đã nhập thành công! Thêm mới ${addedCount} và cập nhật ${updatedCount} đảng viên.`, 'success');
         load();
       } catch (err: any) {
         showToast(`Lỗi phân tích file: ${err.message}`, 'danger');
       }
     };
-    reader.readAsText(file, 'UTF-8');
+
     if (e.target) e.target.value = '';
   };
 
