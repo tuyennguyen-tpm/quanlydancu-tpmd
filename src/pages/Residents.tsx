@@ -991,7 +991,7 @@ const Residents = () => {
     let filterSubtitle = 'Toàn tổ dân phố';
 
     if (categoryFilter === 'senior') {
-      docTitleHtml = 'DANH SÁCH NGƯỜI CAO TUỔI (≥ 80 tuổi)';
+      docTitleHtml = 'DANH SÁCH NGƯỜI CAO TUỔI (≥ 70 tuổi)';
     } else if (categoryFilter === 'child') {
       docTitleHtml = 'DANH SÁCH TRẺ EM (< 16 tuổi)';
     } else if (categoryFilter === 'military') {
@@ -1736,7 +1736,7 @@ const Residents = () => {
     const age = getAge(r.dob);
     let matchesCategory = true;
     if (categoryFilter === 'senior') {
-      matchesCategory = age >= 80;
+      matchesCategory = age >= 70;
     } else if (categoryFilter === 'child') {
       matchesCategory = age < 16;
     } else if (categoryFilter === 'military') {
@@ -2002,7 +2002,7 @@ const Residents = () => {
               className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
               onClick={() => setCategoryFilter('senior')}
             >
-              <UserCheck size={16} /> Người cao tuổi (≥80)
+              <UserCheck size={16} /> Người cao tuổi (≥70)
             </button>
             <button 
               className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
@@ -2968,10 +2968,11 @@ const Residents = () => {
           font-size: 0.88rem;
           font-weight: 600;
           color: var(--text-muted);
-          background-color: #f8fafc;
-          border: 1px solid #e2e8f0;
+          background-color: #ffffff;
+          border: 1.5px solid #cbd5e1;
           cursor: pointer;
           transition: all 0.2s ease;
+          box-shadow: none !important;
         }
 
         .filter-btn:hover {
