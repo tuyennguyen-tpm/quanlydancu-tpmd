@@ -697,6 +697,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     }
     showToast('Đang khởi tạo file Excel...', 'info');
 
+    const tdpName = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
+
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Danh sách đảng viên');
@@ -795,10 +797,10 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
           // Format numbers
           if (colNumber === 8) {
-            cell.numFormat = '#,##0';
+            cell.numFmt = '#,##0';
           }
           if (colNumber === 2) {
-            cell.numFormat = '@'; // Force text format for party code
+            cell.numFmt = '@'; // Force text format for party code
           }
 
           // Highlight leaders
@@ -908,8 +910,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           } else {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
-          if (colNumber === 8) cell.numFormat = '#,##0';
-          if (colNumber === 2) cell.numFormat = '@';
+          if (colNumber === 8) cell.numFmt = '#,##0';
+          if (colNumber === 2) cell.numFmt = '@';
         });
       });
 

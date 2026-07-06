@@ -109,7 +109,11 @@ I. SỐ LIỆU TỔNG HỢP:
 II. DANH SÁCH CHI TIẾT THANH NIÊN TRONG DIỆN NGHĨA VỤ QUÂN SỰ:
 ${eligibleMen.length > 0 ? eligibleMen.map((m, idx) => {
   const hh = households.find(h => h.id === m.household_id);
-  const parentName = hh ? hh.leader_name : 'Không rõ';
+  let parentName = 'Không rõ';
+  if (hh) {
+    const headRes = residents.find(r => r.household_id === hh.id && r.is_head);
+    if (headRes) parentName = headRes.full_name;
+  }
   return `  ${idx + 1}. Họ và tên: ${m.full_name} - Ngày sinh: ${fmtDate(m.dob)} - Chủ hộ: Hộ ông/bà ${parentName} - Địa chỉ: ${hh?.address || 'Tổ dân phố'}`;
 }).join('\n') : '  (Hiện tại không có nam thanh niên nào trong độ tuổi 18-27 trên cơ sở dữ liệu)'}
 
@@ -126,7 +130,7 @@ Kính trình Hội đồng Nghĩa vụ quân sự Phường xem xét phê duyệ
     if (query.includes('hộ nghèo') || query.includes('ho ngheo') || query.includes('chính sách hỗ hỗ trợ') || query.includes('chính sách hộ nghèo')) {
       const poorHouseholds = households.filter(h => h.policy_type === 'poor');
       const nearPoorHouseholds = households.filter(h => h.policy_type === 'near_poor');
-      const policyHouseholds = households.filter(h => h.policy_type === 'wounded' || h.policy_type === 'agent_orange');
+      const policyHouseholds = households.filter(h => h.policy_type === 'policy_family');
 
       return `TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}
 ---
@@ -142,10 +146,19 @@ II. THỐNG KÊ THỰC TẾ TRÊN ĐỊA BÀN TỔ DÂN PHỐ ${tdpName.toUpperC
 - Số hộ cận nghèo: ${nearPoorHouseholds.length} hộ.
 - Số hộ chính sách có công: ${policyHouseholds.length} hộ.
 
-III. DANH SÁCH CHI TIẾT CÁC HỘ THUỘC DIỆN QUẢN LÝ CHÍNH SÁCH:
-${poorHouseholds.length > 0 ? '\n* Danh sách Hộ nghèo:\n' + poorHouseholds.map((h, i) => `  ${i + 1}. Chủ hộ: ${h.leader_name} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`).join('\n') : '* Không ghi nhận hộ nghèo nào.'}
-${nearPoorHouseholds.length > 0 ? '\n* Danh sách Hộ cận nghèo:\n' + nearPoorHouseholds.map((h, i) => `  ${i + 1}. Chủ hộ: ${h.leader_name} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`).join('\n') : '* Không ghi nhận hộ cận nghèo nào.'}
-${policyHouseholds.length > 0 ? '\n* Danh sách Hộ thương binh/chính sách:\n' + policyHouseholds.map((h, i) => `  ${i + 1}. Chủ hộ: ${h.leader_name} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`).join('\n') : '* Không ghi nhận hộ chính sách nào.'}
+I. DANH SÁCH CHI TIẾT CÁC HỘ THUỘC DIỆN QUẢN LÝ CHÍNH SÁCH:
+${poorHouseholds.length > 0 ? '\n* Danh sách Hộ nghèo:\n' + poorHouseholds.map((h, i) => {
+  const headRes = residents.find(r => r.household_id === h.id && r.is_head);
+  return `  ${i + 1}. Chủ hộ: ${headRes ? headRes.full_name : 'Không rõ'} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`;
+}).join('\n') : '* Không ghi nhận hộ nghèo nào.'}
+${nearPoorHouseholds.length > 0 ? '\n* Danh sách Hộ cận nghèo:\n' + nearPoorHouseholds.map((h, i) => {
+  const headRes = residents.find(r => r.household_id === h.id && r.is_head);
+  return `  ${i + 1}. Chủ hộ: ${headRes ? headRes.full_name : 'Không rõ'} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`;
+}).join('\n') : '* Không ghi nhận hộ cận nghèo nào.'}
+${policyHouseholds.length > 0 ? '\n* Danh sách Hộ thương binh/chính sách:\n' + policyHouseholds.map((h, i) => {
+  const headRes = residents.find(r => r.household_id === h.id && r.is_head);
+  return `  ${i + 1}. Chủ hộ: ${headRes ? headRes.full_name : 'Không rõ'} - Sổ hộ khẩu: ${h.household_number} - Địa chỉ: ${h.address}`;
+}).join('\n') : '* Không ghi nhận hộ chính sách nào.'}
 
 Tổ dân phố cam kết triển khai đúng, đủ các gói hỗ trợ và quà thăm hỏi từ chính quyền các cấp nhân các dịp ngày lễ tết.`;
     }
@@ -817,7 +830,7 @@ TỔ TRƯỞNG DÂN PHỐ
             <div className="chat-actions">
               <button 
                 className="btn btn-primary" 
-                onClick={handleGenerate}
+                onClick={() => handleGenerate()}
                 disabled={isGenerating || !prompt.trim()}
                 style={{width: '100%', justifyContent: 'center'}}
               >
