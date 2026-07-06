@@ -15,7 +15,7 @@ import { db } from '../services/db';
 
 
 const StatCard = ({ title, value, subtext, icon: Icon, color, trend }: any) => (
-  <div className="stat-card">
+  <div className={`stat-card border-${color}`}>
     <div className="stat-card-left">
       <span className="stat-card-title">{title}</span>
       <h2 className="stat-card-value">{value}</h2>
@@ -513,6 +513,16 @@ const Dashboard = () => {
           box-shadow: var(--shadow-lg);
           transform: translateY(-4px);
         }
+
+        .stat-card.border-blue { border-left: 4px solid var(--primary) !important; }
+        .stat-card.border-indigo { border-left: 4px solid #6366f1 !important; }
+        .stat-card.border-orange { border-left: 4px solid #f59e0b !important; }
+        .stat-card.border-red { border-left: 4px solid var(--danger) !important; }
+
+        .stat-card.border-blue .stat-card-value { color: var(--primary) !important; }
+        .stat-card.border-indigo .stat-card-value { color: #4f46e5 !important; }
+        .stat-card.border-orange .stat-card-value { color: #d97706 !important; }
+        .stat-card.border-red .stat-card-value { color: var(--danger) !important; }
 
         .stat-card-title {
           font-size: 0.9rem;
