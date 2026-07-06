@@ -53,7 +53,7 @@ const CitizenMap = () => {
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedHouseholdToMove, setSelectedHouseholdToMove] = useState<string>('');
-  const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('street');
+  const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('satellite');
   const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
   const [popupSearchTerm, setPopupSearchTerm] = useState<string>('');
 
