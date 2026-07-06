@@ -1159,7 +1159,7 @@ const Residents = () => {
         let lastCsvHhNum = '';
 
         // 1. Phân tích để tìm dòng tiêu đề (Header Row)
-        let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10, hhNumIdx = -1, deathDateIdx = -1;
+        let nameIdx = 0, genderIdx = 1, dobIdx = 2, addressIdx = 3, cccdIdx = 4, phoneIdx = 5, relIdx = 6, occIdx = 7, pobIdx = 8, statusIdx = 9, notesIdx = 10, hhNumIdx = -1, deathDateIdx = -1, selfManagementGroupIdx = -1;
         
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(5, rows.length); i++) {
@@ -1193,6 +1193,7 @@ const Residents = () => {
           notesIdx = findIdx(['ghi chú', 'note'], -1);
           hhNumIdx = findIdx(['sổ hộ khẩu', 'mã hộ', 'số hộ'], -1);
           deathDateIdx = findIdx(['ngày mất', 'ngày qua đời', 'death_date', 'mất'], -1);
+          selfManagementGroupIdx = findIdx(['cụm', 'tổ', 'tổ tự quản'], -1);
         } else if (rows.length > 0) {
           const firstData = rows[0].map(c => (typeof c === 'string' ? c.toLowerCase().trim() : ''));
           
@@ -1358,6 +1359,7 @@ const Residents = () => {
 
           const residentId = mapToUUID(matched ? matched.id : generateUUID());
           const csvHhNum = hhNumIdx !== -1 ? row[hhNumIdx]?.trim() : '';
+          const selfManagementGroupVal = selfManagementGroupIdx !== -1 ? row[selfManagementGroupIdx]?.trim() : '';
 
           if (csvHhNum && csvHhNum !== lastCsvHhNum) {
             currentHouseholdId = '';
@@ -1380,6 +1382,7 @@ const Residents = () => {
               id: currentHouseholdId,
               household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
               address: permAddress || (existingHh ? existingHh.address : ''),
+              self_management_group: selfManagementGroupVal || (existingHh ? existingHh.self_management_group : ''),
               head_of_household_id: residentId,
               created_at: new Date(Date.now() + i * 1000).toISOString()
             } as Household);
@@ -1402,6 +1405,7 @@ const Residents = () => {
                id: currentHouseholdId,
                household_number: csvHhNum || (existingHh ? existingHh.household_number : `HH${(currentHouseholdNumber).toString().slice(-6)}`),
                address: permAddress || (existingHh ? existingHh.address : ''),
+               self_management_group: selfManagementGroupVal || (existingHh ? existingHh.self_management_group : ''),
                head_of_household_id: existingHh ? existingHh.head_of_household_id : null,
                created_at: new Date(Date.now() + i * 1000).toISOString()
              } as Household);
