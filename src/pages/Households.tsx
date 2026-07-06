@@ -1055,22 +1055,15 @@ const Households = () => {
 
   return (
     <div className="households-page">
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: '18px' }}>
         <h1>Quản lý Hộ dân</h1>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Danh sách các hộ gia đình đang sinh sống tại Tổ dân phố {tdpName}.
-          </p>
-          {!isGuest && (
-            <button className="btn btn-primary" onClick={handleOpenAdd} style={{ flexShrink: 0 }}>
-              <Plus size={18} /> Thêm hộ mới
-            </button>
-          )}
-        </div>
+        <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+          Danh sách các hộ gia đình đang sinh sống tại Tổ dân phố {tdpName}.
+        </p>
       </div>
 
-      <div className="filter-bar">
-        <div className="search-box">
+      <div className="filter-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
+        <div className="search-box" style={{ flex: 1, minWidth: '320px' }}>
           <Search size={20} />
           <input 
             type="text" 
@@ -1080,11 +1073,52 @@ const Households = () => {
           />
         </div>
         
-        <div className="filter-tabs">
-          <button className={`tab-mini ${policyFilter === 'all' ? 'active' : ''}`} onClick={() => setPolicyFilter('all')}>Tất cả</button>
-          <button className={`tab-mini ${policyFilter === 'poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('poor')}>Hộ nghèo</button>
-          <button className={`tab-mini ${policyFilter === 'near_poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('near_poor')}>Hộ cận nghèo</button>
-          <button className={`tab-mini ${policyFilter === 'policy_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('policy_family')}>Gia đình chính sách</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="filter-tabs" style={{ display: 'flex', gap: '8px' }}>
+            <button className={`tab-mini ${policyFilter === 'all' ? 'active' : ''}`} onClick={() => setPolicyFilter('all')}>Tất cả</button>
+            <button className={`tab-mini ${policyFilter === 'poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('poor')}>Hộ nghèo</button>
+            <button className={`tab-mini ${policyFilter === 'near_poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('near_poor')}>Hộ cận nghèo</button>
+            <button className={`tab-mini ${policyFilter === 'policy_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('policy_family')}>Gia đình chính sách</button>
+          </div>
+
+          {!isGuest && (
+            <button 
+              className="tab-mini btn-add-household-3d" 
+              onClick={handleOpenAdd}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: '700',
+                backgroundColor: 'var(--primary)',
+                color: '#ffffff',
+                border: '1px solid var(--primary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.25), 0 2px 4px -1px rgba(37, 99, 235, 0.15)',
+                fontFamily: 'inherit',
+                height: '38px',
+                boxSizing: 'border-box'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(37, 99, 235, 0.35), 0 4px 6px -2px rgba(37, 99, 235, 0.2)';
+                e.currentTarget.style.backgroundColor = 'var(--primary-hover)';
+                e.currentTarget.style.borderColor = 'var(--primary-hover)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(37, 99, 235, 0.25), 0 2px 4px -1px rgba(37, 99, 235, 0.15)';
+                e.currentTarget.style.backgroundColor = 'var(--primary)';
+                e.currentTarget.style.borderColor = 'var(--primary)';
+              }}
+            >
+              <Plus size={18} /> Thêm hộ mới
+            </button>
+          )}
         </div>
       </div>
 
