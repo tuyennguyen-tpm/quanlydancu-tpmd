@@ -745,7 +745,7 @@ const App = () => {
     const newName = tdpNameInput.trim() || 'Tiến Quảng Giao';
     localStorage.setItem('tdp_name', newName);
     setTdpName(newName);
-    // Thông báo cho các trang khác (Dashboard...) cập nhật tên ngay lập tức
+    // g báo cho các trang khác (Dashboard...) cập nhật tên ngay lập tức
     window.dispatchEvent(new CustomEvent('tdp-name-changed'));
     
     // Lưu tên Phường
@@ -1172,7 +1172,7 @@ const App = () => {
                 <ShieldCheck size={36} color="rgba(251, 255, 0, 1)" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
               )}
               <div className="logo-text" style={{ gap: '2px', display: 'flex', flexDirection: 'column' }}>
-                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TÔN/TỔ DÂN PHỐ</span>
+                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>THÔN/TỔ DÂN PHỐ</span>
                 <span className="logo-subtitle" style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 1, lineHeight: '1.2' }}>{tdpName}</span>
                 <span className="logo-ward" style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{wardName}</span>
               </div>
@@ -1411,7 +1411,7 @@ const App = () => {
             </div>
             <form onSubmit={handleSaveSettings} className="modal-form">
 
-              {/* ─── Phần 1: Thông tin Tổ dân phố ─── */}
+              {/* ─── Phần 1: g tin Tổ dân phố ─── */}
               <div style={{
                 background: 'linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02))',
                 border: '1.5px solid rgba(37,99,235,0.18)',
@@ -1422,7 +1422,7 @@ const App = () => {
                 gap: '12px'
               }}>
                 <div style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                  🏘️ Thông tin địa bàn
+                  🏘️ g tin địa bàn
                 </div>
                 <div className="form-group">
                   <label>Tên  / Khu dân cư</label>
@@ -1430,7 +1430,7 @@ const App = () => {
                     type="text"
                     value={tdpNameInput}
                     onChange={(e) => setTdpNameInput(e.target.value)}
-                    placeholder="Ví dụ: Nam Sầm Sơn, Thôn 7..."
+                    placeholder="Ví dụ: Nam Sầm Sơn,  7..."
                     maxLength={50}
                   />
                 </div>
@@ -1964,7 +1964,7 @@ const App = () => {
         </div>
       )}
 
-      {/* Modal Thông báo cập nhật phiên bản */}
+      {/* Modal g báo cập nhật phiên bản */}
       {showUpdateModal && (
         <div className="modal-overlay" style={{ zIndex: 99999, background: 'rgba(15, 23, 42, 0.95)' }}>
           <div className="modal-content" style={{ background: 'white', border: '2px solid #ef4444', maxWidth: '450px', textAlign: 'center', padding: '30px' }}>
@@ -2562,7 +2562,7 @@ const OnboardingModal = ({
               </div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: '800', textAlign: 'center', color: '#0f172a', margin: 0 }}>Đã sẵn sàng!</h2>
               <p style={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'center', margin: '0 0 10px 0', lineHeight: '1.5' }}>
-                Thông tin thiết lập ban đầu của bạn:
+                g tin thiết lập ban đầu của bạn:
               </p>
 
               <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0' }}>
