@@ -1327,31 +1327,33 @@ const App = () => {
           </div>
 
           <div className="header-right">
-            <div className="search-bar" style={{ position: 'relative' }}>
-              <Search size={24} />
-              <input 
-                type="text" 
-                placeholder="Tìm kiếm hộ dân, nhân khẩu..." 
-                value={globalQuery}
-                onChange={(e) => setGlobalQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-              />
-              {isSearchFocused && searchResults.length > 0 && (
-                <div className="search-results-dropdown">
-                  {searchResults.map(res => (
-                    <div 
-                      key={res.id} 
-                      className="search-result-item" 
-                      onMouseDown={() => handleSearchResultClick(res)}
-                    >
-                      <div className="res-name">{res.name}</div>
-                      <div className="res-detail">{res.detail}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {activeTab === 'dashboard' && (
+              <div className="search-bar" style={{ position: 'relative' }}>
+                <Search size={24} />
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm hộ dân, nhân khẩu..." 
+                  value={globalQuery}
+                  onChange={(e) => setGlobalQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                />
+                {isSearchFocused && searchResults.length > 0 && (
+                  <div className="search-results-dropdown">
+                    {searchResults.map(res => (
+                      <div 
+                        key={res.id} 
+                        className="search-result-item" 
+                        onMouseDown={() => handleSearchResultClick(res)}
+                      >
+                        <div className="res-name">{res.name}</div>
+                        <div className="res-detail">{res.detail}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setNotifOpen(!isNotifOpen)} title="Cảnh báo">
