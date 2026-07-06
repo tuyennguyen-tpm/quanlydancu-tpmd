@@ -1093,12 +1093,6 @@ const Residents = () => {
     const reader = new FileReader();
     const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
-    if (isXlsx) {
-      reader.readAsArrayBuffer(file);
-    } else {
-      reader.readAsText(file, 'utf-8');
-    }
-
     reader.onload = async (event) => {
       let rows: string[][] = [];
 
@@ -1495,7 +1489,13 @@ const Residents = () => {
       }
     };
 
-    reader.readAsText(file, 'UTF-8');
+    // Bắt đầu đọc file sau khi đã đăng ký sự kiện onload
+    if (isXlsx) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file, 'utf-8');
+    }
+
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
