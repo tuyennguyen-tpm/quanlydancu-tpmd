@@ -143,7 +143,8 @@ const CitizenMap = () => {
 
   // Filter households that have coordinates for Map rendering
   const mappedHouseholds = households.filter(h => {
-    const hasCoords = h.latitude !== undefined && h.longitude !== undefined;
+    const hasCoords = h.latitude !== null && h.latitude !== undefined && 
+                      h.longitude !== null && h.longitude !== undefined;
     const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
     return hasCoords && matchesPolicy;
   });
@@ -196,7 +197,8 @@ const CitizenMap = () => {
            <h3>Danh sách hộ dân ({households.length})</h3>
            <div className="household-mini-list">
               {households.map(h => {
-                const hasC = h.latitude !== undefined && h.longitude !== undefined;
+                 const hasC = h.latitude !== null && h.latitude !== undefined && 
+                              h.longitude !== null && h.longitude !== undefined;
                 return (
                   <div 
                     key={h.id} 
