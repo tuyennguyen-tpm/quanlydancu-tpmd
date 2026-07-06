@@ -45,7 +45,10 @@ import {
   Send,
   Bot,
   Plus,
-  Trash2
+  Trash2,
+  ArrowRight,
+  KeyRound,
+  Check
 } from 'lucide-react';
 import './App.css';
 
@@ -76,6 +79,7 @@ const formatInputNumber = (val: string) => {
 
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [isOfflineMode, setOfflineMode] = useState<boolean>(localStorage.getItem('offline_mode') === 'true');
   const [isGuestMode, setGuestMode] = useState<boolean>(localStorage.getItem('guest_mode') === 'true');
 
@@ -362,6 +366,18 @@ const App = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Lắng nghe trạng thái đăng nhập để tự động kích hoạt bộ thiết lập Onboarding
+  useEffect(() => {
+    if (session && localStorage.getItem('welcome_setup_completed') !== 'true') {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOnboarding(false);
+    }
+  }, [session]);
 
   // Lắng nghe tham số URL để chuyển sang chế độ Bà con (Guest Mode) của tổ cụ thể
   useEffect(() => {
@@ -805,6 +821,63 @@ const App = () => {
         window.location.reload();
       }, 1500);
     }
+  };
+
+  const handleOnboardingComplete = async (tdpNameVal: string, adminPinVal: string) => {
+    try {
+      // 1. Lưu tên TDP
+      localStorage.setItem('tdp_name', tdpNameVal);
+      setTdpName(tdpNameVal);
+      setTdpNameInput(tdpNameVal);
+      
+      if (supabase && session) {
+        const uId = session.user.id;
+        const configItems = [
+          { user_id: uId, key: 'tdp_name', value: tdpNameVal }
+        ];
+        await supabase.from('app_config').upsert(configItems);
+      }
+      
+      // 2. Lưu mã PIN Quản trị mới
+      localStorage.setItem('role_pin_admin', adminPinVal);
+      setRolePinAdminInput(adminPinVal);
+      if (supabase && session) {
+        await (db as any).saveRolePin('admin', adminPinVal);
+      }
+
+      // 3. Tự động chuyển vai trò sang admin (được xác thực trực tiếp trên thiết bị này)
+      localStorage.setItem('current_role', 'admin');
+      localStorage.setItem('role_verified_admin', 'true');
+      setUserRole('admin');
+      
+      // Phát tín hiệu sự kiện cập nhật trên toàn hệ thống
+      window.dispatchEvent(new CustomEvent('tdp-name-changed'));
+      window.dispatchEvent(new CustomEvent('role-changed', { detail: 'admin' }));
+
+      // 4. Đánh dấu đã hoàn thành onboarding
+      localStorage.setItem('welcome_setup_completed', 'true');
+      setShowOnboarding(false);
+      
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: `🎉 Chào mừng! Thiết lập Tổ dân phố ${tdpNameVal} và mật khẩu Quản trị thành công!`, type: 'success' } 
+      });
+      window.dispatchEvent(ev);
+    } catch (e: any) {
+      console.error(e);
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: `❌ Lỗi thiết lập: ${e.message || e}`, type: 'danger' } 
+      });
+      window.dispatchEvent(ev);
+    }
+  };
+
+  const handleOnboardingSkip = () => {
+    localStorage.setItem('welcome_setup_completed', 'true');
+    setShowOnboarding(false);
+    const ev = new CustomEvent('show-toast', { 
+      detail: { message: `ℹ️ Bỏ qua thiết lập. Bạn có thể thay đổi các mục này trong phần Cài đặt sau.`, type: 'info' } 
+    });
+    window.dispatchEvent(ev);
   };
 
   const handleChangePassword = async () => {
@@ -1891,6 +1964,12 @@ const App = () => {
           }}
         />
       )}
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingSkip}
+        />
+      )}
 
       {/* ═══ FLOATING BUTTONS: Zalo + AI Chat (always visible) ═══ */}
       <>
@@ -2185,6 +2264,9 @@ const RolePinModal = ({
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', lineHeight: '1.5' }}>
             Nhập mã PIN để chuyển sang vai trò <strong>{roleLabel}</strong>:
           </p>
+          <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', marginTop: '-6px' }}>
+            * Nếu là tài khoản mới, mã PIN mặc định ban đầu là: <strong style={{ color: '#0284c7' }}>{defaultPins[role] || '1234'}</strong>
+          </span>
 
           <input
             type="password"
@@ -2265,6 +2347,245 @@ const RolePinModal = ({
           to { opacity: 1; transform: scale(1); }
         }
       `}</style>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════
+// HỢP THOẠI HƯỚNG DẪN THIẾT LẬP NHANH (Onboarding Wizard)
+// ═══════════════════════════════════════════════════════════
+const OnboardingModal = ({
+  onComplete,
+  onSkip
+}: {
+  onComplete: (tdpName: string, adminPin: string) => Promise<void>;
+  onSkip: () => void;
+}) => {
+  const [step, setStep] = useState(1);
+  const [tdpInput, setTdpInput] = useState('');
+  const [pinInput, setPinInput] = useState('9999');
+  const [loading, setLoading] = useState(false);
+
+  const handleNext = () => {
+    if (step === 1 && !tdpInput.trim()) {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: '⚠️ Vui lòng nhập tên Tổ dân phố của bạn!', type: 'warning' } 
+      });
+      window.dispatchEvent(ev);
+      return;
+    }
+    if (step === 2 && (!pinInput.trim() || pinInput.length < 4)) {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: '⚠️ Mã PIN quản trị phải có ít nhất 4 chữ số!', type: 'warning' } 
+      });
+      window.dispatchEvent(ev);
+      return;
+    }
+    setStep(step + 1);
+  };
+
+  const handleBack = () => {
+    setStep(step - 1);
+  };
+
+  const handleFinish = async () => {
+    setLoading(true);
+    try {
+      await onComplete(tdpInput.trim(), pinInput.trim());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.45)',
+      backdropFilter: 'blur(6px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 99999,
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.95)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        borderRadius: '24px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+        width: '100%',
+        maxWidth: '500px',
+        overflow: 'hidden',
+        animation: 'modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* Progress Bar */}
+        <div style={{ display: 'flex', height: '6px', width: '100%', backgroundColor: '#f1f5f9' }}>
+          <div style={{ width: `${(step / 3) * 100}%`, backgroundColor: '#10b981', transition: 'width 0.3s ease' }}></div>
+        </div>
+
+        {/* Modal content */}
+        <div style={{ padding: '30px', flex: 1 }}>
+          {step === 1 && (
+            <div style={{ animation: 'fadeIn 0.2s ease', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ fontSize: '3rem', textAlign: 'center' }}>👋</div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: '800', textAlign: 'center', color: '#0f172a', margin: 0 }}>Chào mừng bạn!</h2>
+              <p style={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'center', margin: '0 0 10px 0', lineHeight: '1.5' }}>
+                Hệ thống Quản lý Dân cư TDP đã khởi tạo không gian làm việc riêng cho bạn. Hãy đặt tên Tổ dân phố của bạn để bắt đầu.
+              </p>
+              
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontWeight: '700', fontSize: '0.85rem', color: '#334155' }}>
+                  Tên Tổ dân phố của bạn <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Home size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: Tổ dân phố 5 Phường Sầm Sơn"
+                    value={tdpInput}
+                    onChange={(e) => setTdpInput(e.target.value)}
+                    style={{ padding: '12px 12px 12px 38px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div style={{ animation: 'fadeIn 0.2s ease', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ fontSize: '3rem', textAlign: 'center' }}>🔑</div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: '800', textAlign: 'center', color: '#0f172a', margin: 0 }}>Mã PIN Quản trị</h2>
+              <p style={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'center', margin: '0 0 10px 0', lineHeight: '1.5' }}>
+                Quyền chỉnh sửa dữ liệu, quản lý tài chính và cài đặt hệ thống được bảo vệ bởi mã PIN Quản trị. Hãy đổi mã PIN này theo ý bạn.
+              </p>
+              
+              <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontWeight: '700', fontSize: '0.85rem', color: '#334155' }}>
+                  Mã PIN Quản trị mới của bạn (Số) <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <KeyRound size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    placeholder="Nhập 4-10 chữ số (Ví dụ: 9999)"
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                    style={{ padding: '12px 12px 12px 38px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem', letterSpacing: '4px', textAlign: 'center', fontWeight: 'bold' }}
+                    maxLength={10}
+                    autoFocus
+                  />
+                </div>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                  * Nhớ kỹ mã này để truy cập các tính năng quản lý. Mã mặc định là 9999.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div style={{ animation: 'fadeIn 0.2s ease', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', fontSize: '1.8rem' }}>
+                <Check size={28} />
+              </div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: '800', textAlign: 'center', color: '#0f172a', margin: 0 }}>Đã sẵn sàng!</h2>
+              <p style={{ fontSize: '0.9rem', color: '#64748b', textAlign: 'center', margin: '0 0 10px 0', lineHeight: '1.5' }}>
+                Thông tin thiết lập ban đầu của bạn:
+              </p>
+
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                  <span style={{ color: '#64748b' }}>Tổ dân phố:</span>
+                  <strong style={{ color: '#0f172a' }}>{tdpInput}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+                  <span style={{ color: '#64748b' }}>Mã PIN Quản trị:</span>
+                  <strong style={{ color: '#0f172a', letterSpacing: '2px' }}>{pinInput}</strong>
+                </div>
+              </div>
+              
+              <p style={{ fontSize: '0.8rem', color: '#94a3b8', textAlign: 'center', margin: '10px 0 0 0' }}>
+                Hệ thống sẽ tự động đăng nhập quyền Quản trị ngay sau khi bạn bấm Bắt đầu.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{ padding: '16px 30px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', background: '#f8fafc', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px' }}>
+          <div>
+            {step === 1 && (
+              <button 
+                type="button" 
+                onClick={onSkip}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}
+              >
+                Bỏ qua
+              </button>
+            )}
+            {step > 1 && (
+              <button 
+                type="button" 
+                onClick={handleBack}
+                disabled={loading}
+                style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.9rem', cursor: 'pointer', fontWeight: '500' }}
+              >
+                Quay lại
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {step < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+                }}
+              >
+                Tiếp tục <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleFinish}
+                disabled={loading}
+                style={{
+                  padding: '10px 24px',
+                  borderRadius: '10px',
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {loading ? 'Đang thiết lập...' : 'Bắt đầu sử dụng'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
