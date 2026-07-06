@@ -308,28 +308,28 @@ const Dashboard = () => {
       <div className="stats-grid">
         <StatCard 
           title="Tổng số hộ dân" 
-          value={stats.totalHouseholds.toString()} 
+          value={new Intl.NumberFormat('vi-VN').format(stats.totalHouseholds)} 
           subtext="Danh sách hộ đăng ký cư trú" 
           icon={Home} 
           color="blue"
         />
         <StatCard 
           title="Tổng nhân khẩu" 
-          value={stats.totalResidents.toString()} 
+          value={new Intl.NumberFormat('vi-VN').format(stats.totalResidents)} 
           subtext="Nhân khẩu thực tế trong tổ" 
           icon={Users} 
           color="indigo"
         />
         <StatCard 
           title="Hộ chính sách & nghèo" 
-          value={stats.policyHouseholds.toString()} 
+          value={new Intl.NumberFormat('vi-VN').format(stats.policyHouseholds)} 
           subtext="Hộ cận nghèo, nghèo & chính sách" 
           icon={HeartHandshake} 
           color="orange"
         />
         <StatCard 
           title="Phản ánh chưa xử lý" 
-          value={stats.pendingComplaints.toString().padStart(2, '0')} 
+          value={new Intl.NumberFormat('vi-VN').format(stats.pendingComplaints)} 
           subtext="Yêu cầu cần phản hồi sớm" 
           icon={AlertCircle} 
           color={stats.pendingComplaints > 0 ? "red" : "blue"}
@@ -399,43 +399,45 @@ const Dashboard = () => {
         }
 
         .premium-welcome-banner {
-          background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
-          border: 1.5px solid rgba(37, 99, 235, 0.15);
+          background: linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, rgba(59, 130, 246, 0.02) 100%);
+          border: 1.5px solid rgba(37, 99, 235, 0.12);
           border-radius: var(--radius-lg);
-          padding: 24px 30px;
+          padding: 14px 24px;
           margin-bottom: 16px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 20px;
-          box-shadow: 0 4px 20px rgba(37, 99, 235, 0.02);
+          box-shadow: 0 4px 15px rgba(37, 99, 235, 0.01);
           position: relative;
           overflow: hidden;
         }
         .premium-welcome-banner::before {
           content: '';
           position: absolute;
-          width: 300px;
-          height: 300px;
-          background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
-          right: -100px;
-          top: -100px;
+          width: 250px;
+          height: 250px;
+          background: radial-gradient(circle, rgba(37, 99, 235, 0.04) 0%, transparent 70%);
+          right: -80px;
+          top: -80px;
           pointer-events: none;
         }
         .welcome-message h1 {
-          font-size: 1.65rem;
+          font-size: 1.4rem;
           font-weight: 850;
-          color: var(--text-main);
-          margin-bottom: 6px;
-        }
-        .welcome-message p {
-          font-size: 0.95rem;
-          color: var(--text-muted);
+          background: linear-gradient(135deg, #1d4ed8 0%, #10b981 50%, #84cc16 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
           margin-bottom: 4px;
         }
-        .welcome-message .welcome-wish {
+        .welcome-message p {
           font-size: 0.88rem;
-          color: var(--primary);
+          color: var(--text-muted);
+          margin-bottom: 2px;
+        }
+        .welcome-message .welcome-wish {
+          font-size: 0.82rem;
+          color: #059669;
           font-weight: 600;
         }
         .welcome-datetime {
@@ -443,17 +445,19 @@ const Dashboard = () => {
           flex-shrink: 0;
         }
         .welcome-time {
-          font-size: 1.8rem;
+          font-size: 1.55rem;
           font-weight: 800;
-          color: var(--primary);
+          background: linear-gradient(135deg, #1d4ed8 0%, #10b981 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
           line-height: 1.1;
           font-family: monospace;
         }
         .welcome-date {
-          font-size: 0.88rem;
+          font-size: 0.82rem;
           color: var(--text-muted);
           font-weight: 550;
-          margin-top: 4px;
+          margin-top: 2px;
           text-transform: capitalize;
         }
 
@@ -657,7 +661,7 @@ const Dashboard = () => {
           .premium-welcome-banner {
             flex-direction: column;
             align-items: flex-start;
-            padding: 20px;
+            padding: 12px 18px;
           }
           .welcome-datetime {
             text-align: left;
