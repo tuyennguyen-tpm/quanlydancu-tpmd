@@ -250,6 +250,10 @@ const Residents = () => {
   const [showDeceased, setShowDeceased] = useState(false);
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
+  const [groups, setGroups] = useState<string[]>(() => {
+    const saved = localStorage.getItem('tdp_groups_config');
+    return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+  });
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
@@ -257,6 +261,15 @@ const Residents = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
+
+  useEffect(() => {
+    const handleGroupsChange = () => {
+      const saved = localStorage.getItem('tdp_groups_config');
+      setGroups(saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']);
+    };
+    window.addEventListener('tdp-groups-changed', handleGroupsChange);
+    return () => window.removeEventListener('tdp-groups-changed', handleGroupsChange);
+  }, []);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
@@ -1981,13 +1994,9 @@ const Residents = () => {
               }}
             >
               <option value="all">📍 Toàn tổ dân phố</option>
-              <option value="Tổ Việt Trung">🏢 Tổ Việt Trung</option>
-              <option value="Tổ 4">🏢 Tổ 4</option>
-              <option value="Tổ 5">🏢 Tổ 5</option>
-              <option value="Tổ 6">🏢 Tổ 6</option>
-              <option value="Tổ 7">🏢 Tổ 7</option>
-              <option value="Tổ 8">🏢 Tổ 8</option>
-              <option value="Tổ 9">🏢 Tổ 9</option>
+              {groups.map(g => (
+                <option key={g} value={g}>🏢 {g}</option>
+              ))}
             </select>
             <button 
               className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}

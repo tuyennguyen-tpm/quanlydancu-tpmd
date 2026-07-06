@@ -143,6 +143,19 @@ const Households = () => {
   const [lng, setLng] = useState('105.9230');
   const [fireSafetyGroup, setFireSafetyGroup] = useState('');
   const [selfManagementGroup, setSelfManagementGroup] = useState('');
+  const [groups, setGroups] = useState<string[]>(() => {
+    const saved = localStorage.getItem('tdp_groups_config');
+    return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+  });
+
+  useEffect(() => {
+    const handleGroupsChange = () => {
+      const saved = localStorage.getItem('tdp_groups_config');
+      setGroups(saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']);
+    };
+    window.addEventListener('tdp-groups-changed', handleGroupsChange);
+    return () => window.removeEventListener('tdp-groups-changed', handleGroupsChange);
+  }, []);
 
   const handleNewHeadDobChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
@@ -1267,12 +1280,15 @@ const Households = () => {
               <div className="form-row">
                 <div className="form-group">
                   <label>Tổ tự quản liên kết</label>
-                  <input 
-                    type="text" 
+                  <select 
                     value={selfManagementGroup} 
                     onChange={(e) => setSelfManagementGroup(e.target.value)} 
-                    placeholder="Ví dụ: Tổ tự quản số 1" 
-                  />
+                  >
+                    <option value="">-- Chọn Cụm/Tổ tự quản --</option>
+                    {groups.map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label>Tổ liên gia an toàn PCCC</label>

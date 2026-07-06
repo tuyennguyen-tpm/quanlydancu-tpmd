@@ -237,6 +237,10 @@ const App = () => {
   const [logoUrlInput, setLogoUrlInput] = useState(logoUrl);
   const [supportNameInput, setSupportNameInput] = useState(supportName);
   const [supportPhoneInput, setSupportPhoneInput] = useState(supportPhone);
+  const [groupsConfig, setGroupsConfig] = useState<string[]>(() => {
+    const saved = localStorage.getItem('tdp_groups_config');
+    return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+  });
 
   // Password change states
   const [newPassword, setNewPassword] = useState('');
@@ -714,6 +718,20 @@ const App = () => {
     setFundsConfig(updated);
   };
 
+  const handleAddGroupConfig = () => {
+    setGroupsConfig([...groupsConfig, '']);
+  };
+
+  const handleRemoveGroupConfig = (index: number) => {
+    setGroupsConfig(groupsConfig.filter((_, i) => i !== index));
+  };
+
+  const handleGroupConfigChange = (index: number, value: string) => {
+    const updated = [...groupsConfig];
+    updated[index] = value;
+    setGroupsConfig(updated);
+  };
+
   const handleOpenSettings = () => {
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
@@ -736,6 +754,11 @@ const App = () => {
     setRolePinBiThuInput(localStorage.getItem('role_pin_bi_thu') || '1111');
     setRolePinMatTranInput(localStorage.getItem('role_pin_mat_tran') || '2222');
     setLatestAppVersionInput(localStorage.getItem('latest_app_version') || APP_VERSION);
+    
+    // Load groups configuration
+    const savedGroups = localStorage.getItem('tdp_groups_config');
+    setGroupsConfig(savedGroups ? JSON.parse(savedGroups) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']);
+
     setSettingsOpen(true);
   };
 
@@ -799,6 +822,17 @@ const App = () => {
     }));
     await db.saveFundList(mappedFunds);
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
+
+    // Save groups configuration
+    const cleanedGroups = groupsConfig.map(g => g.trim()).filter(Boolean);
+    if (cleanedGroups.length === 0) {
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { message: `Danh sách Cụm/Tổ không được bỏ trống!`, type: 'warning' } 
+      }));
+      return;
+    }
+    localStorage.setItem('tdp_groups_config', JSON.stringify(cleanedGroups));
+    window.dispatchEvent(new CustomEvent('tdp-groups-changed'));
     
     // Lưu phiên bản mới nhất
     const newVersion = latestAppVersionInput.trim() || APP_VERSION;
@@ -1589,6 +1623,72 @@ const App = () => {
                   {fundsConfig.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
                       Chưa cấu hình loại quỹ nào. Hãy bấm "Thêm Quỹ" để tạo mới.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ─── Phần 1bb: Danh sách Cụm/Tổ tự quản (Động) ─── */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.06), rgba(59,130,246,0.02))',
+                border: '1.5px solid rgba(59,130,246,0.18)',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginTop: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                    🏬 Danh sách Cụm / Tổ tự quản
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddGroupConfig}
+                    className="btn btn-primary"
+                    style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', height: 'fit-content' }}
+                  >
+                    <Plus size={14} /> Thêm Cụm/Tổ
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {groupsConfig.map((group, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Tên Cụm/Tổ (Ví dụ: Tổ 4, Tổ Việt Trung)"
+                        value={group}
+                        onChange={(e) => handleGroupConfigChange(idx, e.target.value)}
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveGroupConfig(idx)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        title="Xóa Tổ này"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {groupsConfig.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                      Chưa cấu hình Cụm/Tổ nào. Hãy bấm "Thêm Cụm/Tổ" để tạo mới.
                     </div>
                   )}
                 </div>
