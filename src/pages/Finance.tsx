@@ -1103,11 +1103,11 @@ const Finance = () => {
           <div className="finance-table-wrapper" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
             <table className="data-table" style={{ minWidth: '1300px', borderCollapse: 'collapse', margin: 0 }}>
               <thead>
-                <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc' }}>
-                  <th style={{ width: '250px', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>Hộ gia đình / Chủ hộ</th>
-                  <th style={{ width: '130px', textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>Tổng đã nộp</th>
+                <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f0fdf4', color: '#166534' }}>
+                  <th style={{ width: '250px', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>Hộ gia đình / Chủ hộ</th>
+                  <th style={{ width: '130px', textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>Tổng đã nộp</th>
                   {fundNames.map((name, i) => (
-                    <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10, borderBottom: '2px solid var(--border)' }}>{name}</th>
+                    <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>{name}</th>
                   ))}
                 </tr>
               </thead>
@@ -1314,6 +1314,13 @@ const Finance = () => {
           display: flex;
           align-items: center;
           gap: 20px;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .finance-stat-card:hover {
+          box-shadow: var(--shadow-lg);
+          transform: translateY(-4px);
         }
 
         .stat-icon {
@@ -1401,12 +1408,12 @@ const Finance = () => {
         }
 
         .data-table th {
-          background-color: #f8fafc;
+          background-color: #f0fdf4;
           padding: 16px;
           font-size: 0.85rem;
           font-weight: 700;
-          color: var(--text-muted);
-          border-bottom: 1px solid var(--border);
+          color: #166534;
+          border-bottom: 2px solid #bbf7d0;
         }
 
         .data-table td {
