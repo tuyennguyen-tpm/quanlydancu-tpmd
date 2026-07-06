@@ -232,13 +232,14 @@ const Residents = () => {
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
   const [showDeceased, setShowDeceased] = useState(false);
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, householdFilter, showDeceased]);
+  }, [searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter]);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
@@ -652,7 +653,7 @@ const Residents = () => {
 
     const headers = [
       'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
-      'Nghề nghiệp', 'Thường trú', 
+      'Nghề nghiệp', 'Cụm/Tổ', 'Thường trú', 
       'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
       'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
       'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
@@ -681,6 +682,7 @@ const Residents = () => {
         r.cccd || '',
         r.phone || '',
         r.occupation || '',
+        hh?.self_management_group || '', // Cụm/Tổ
         r.permanent_address || '', // Thường trú
         r.pob || '',
         r.native_place || '',
@@ -1537,7 +1539,22 @@ const Residents = () => {
       matchesDeceased = r.status !== 'deceased';
     }
 
-    return matchesSearch && matchesCategory && matchesHousehold && matchesDeceased;
+    // Group filter matches
+    let matchesGroup = true;
+    if (groupFilter !== 'all') {
+      const hh = households.find(h => h.id === r.household_id);
+      if (!hh || !hh.self_management_group) {
+        matchesGroup = false;
+      } else {
+        const smg = hh.self_management_group.trim().toLowerCase();
+        const filterVal = groupFilter.trim().toLowerCase();
+        matchesGroup = smg === filterVal || 
+                       smg.includes(filterVal) || 
+                       filterVal.includes(smg);
+      }
+    }
+
+    return matchesSearch && matchesCategory && matchesHousehold && matchesDeceased && matchesGroup;
   }).sort((a, b) => {
     // Nhóm theo hộ gia đình (sắp xếp cùng hộ ở cạnh nhau)
     if (a.household_id !== b.household_id) {
@@ -1688,31 +1705,52 @@ const Residents = () => {
           </div>
 
           <div className="filter-btns">
-              <button 
-                className={`filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
-                onClick={() => setCategoryFilter('all')}
-              >
-              <Users2 size={16} /> Tất cả
-            </button>
+            <select 
+              className={`filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
+              value={groupFilter}
+              onChange={(e) => {
+                setGroupFilter(e.target.value);
+                setCategoryFilter('all');
+              }}
+              style={{
+                paddingRight: '28px',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                background: `url("data:image/svg+xml;utf8,<svg fill='${categoryFilter === 'all' ? '%232563eb' : '%2364748b'}' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 8px center`,
+                backgroundSize: '16px',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="all">👥 Tất Cả</option>
+              <option value="Tổ Việt Trung">👥 Tổ Việt Trung</option>
+              <option value="Tổ 4">👥 Tổ 4</option>
+              <option value="Tổ 5">👥 Tổ 5</option>
+              <option value="Tổ 6">👥 Tổ 6</option>
+              <option value="Tổ 7">👥 Tổ 7</option>
+              <option value="Tổ 8">👥 Tổ 8</option>
+              <option value="Tổ 9">👥 Tổ 9</option>
+            </select>
             <button 
               className={`filter-btn ${categoryFilter === 'senior' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('senior')}
+              onClick={() => { setCategoryFilter('senior'); setGroupFilter('all'); }}
             >
               <UserCheck size={16} /> Người cao tuổi (≥80)
             </button>
             <button 
               className={`filter-btn ${categoryFilter === 'child' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('child')}
+              onClick={() => { setCategoryFilter('child'); setGroupFilter('all'); }}
             >
               <Baby size={16} /> Trẻ em (&lt;16)
             </button>
             <button 
               className={`filter-btn ${categoryFilter === 'military' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('military')}
+              onClick={() => { setCategoryFilter('military'); setGroupFilter('all'); }}
             >
               <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
             </button>
-        </div>
+          </div>
       </div>
 
       <div className="table-container">
