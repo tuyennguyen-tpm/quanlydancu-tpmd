@@ -525,9 +525,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 font-size: 13pt;
                 line-height: 1.6;
                 color: #000;
-                margin: 20mm 15mm 20mm 30mm !important;
+                margin: 0 !important;
                 padding: 0 !important;
-                max-width: none !important;
               }
               .no-print { display: none; }
             }
@@ -535,10 +534,24 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               font-family: "Times New Roman", Times, serif;
               font-size: 13pt;
               line-height: 1.6;
-              padding: 40px;
-              max-width: 800px;
-              margin: 0 auto;
+              padding: 0;
+              margin: 0;
               color: #000;
+            }
+            .print-table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            .print-cell {
+              padding-left: 30mm;
+              padding-right: 15mm;
+              box-sizing: border-box;
+            }
+            .page-header-space {
+              height: 20mm;
+            }
+            .page-footer-space {
+              height: 20mm;
             }
             .header-table {
               width: 100%;
@@ -589,13 +602,6 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               margin: 8px 0;
               text-align: justify;
             }
-            .meta-list {
-              margin: 10px 0;
-              padding-left: 20px;
-            }
-            .meta-item {
-              margin-bottom: 5px;
-            }
             .bullet-content {
               white-space: pre-wrap;
               text-align: justify;
@@ -623,64 +629,89 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           </style>
         </head>
         <body>
-          <table class="header-table">
-            <tr>
-              <td>
-                <div class="org-title" style="font-weight: normal;">${orgLevel1}</div>
-                <div class="org-title" style="font-size: 11pt; font-weight: bold;">${orgLevel2}</div>
-                <div style="margin-top: 3px; border-bottom: 1px solid #000; width: 60px; margin-left: auto; margin-right: auto; height: 1px;"></div>
-                <div class="org-sub" style="margin-top: 4px;">Số: ${docNumber} /BB-TDP</div>
-              </td>
-              <td>
-                <div class="nation-title">${nationLevel1}</div>
-                <div class="nation-sub">${nationLevel2}</div>
-                <div style="margin-top: 4px; border-bottom: 1px solid #000; width: 140px; margin-left: auto; margin-right: auto; height: 1px;"></div>
-              </td>
-            </tr>
-          </table>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <td class="print-cell">
+                  <div class="page-header-space"></div>
+                </td>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="print-cell">
+                  
+                  <!-- Main Content starts here -->
+                  <table class="header-table">
+                    <tr>
+                      <td>
+                        <div class="org-title" style="font-weight: normal;">${orgLevel1}</div>
+                        <div class="org-title" style="font-size: 11pt; font-weight: bold;">${orgLevel2}</div>
+                        <div style="margin-top: 3px; border-bottom: 1px solid #000; width: 60px; margin-left: auto; margin-right: auto; height: 1px;"></div>
+                        <div class="org-sub" style="margin-top: 4px;">Số: ${docNumber} /BB-TDP</div>
+                      </td>
+                      <td>
+                        <div class="nation-title">${nationLevel1}</div>
+                        <div class="nation-sub">${nationLevel2}</div>
+                        <div style="margin-top: 4px; border-bottom: 1px solid #000; width: 140px; margin-left: auto; margin-right: auto; height: 1px;"></div>
+                      </td>
+                    </tr>
+                  </table>
 
-          <div class="title-section">
-            <div class="main-title">${docTitle}</div>
-            <div class="sub-title">Về việc: ${title}</div>
-          </div>
+                  <div class="title-section">
+                    <div class="main-title">${docTitle}</div>
+                    <div class="sub-title">Về việc: ${title}</div>
+                  </div>
 
-          <div class="content-p">
-            Hôm nay, vào hồi <strong>${time}</strong> ngày <strong>${day}</strong> tháng <strong>${month}</strong> năm <strong>${year}</strong>, tại <strong>${location}</strong>, Tổ dân phố ${tdpName} đã tiến hành tổ chức cuộc họp với nội dung chính như sau:
-          </div>
+                  <div class="content-p">
+                    Hôm nay, vào hồi <strong>${time}</strong> ngày <strong>${day}</strong> tháng <strong>${month}</strong> năm <strong>${year}</strong>, tại <strong>${location}</strong>, Tổ dân phố ${tdpName} đã tiến hành tổ chức cuộc họp với nội dung chính như sau:
+                  </div>
 
-          <div class="section-title">I. THÀNH PHẦN THAM DỰ</div>
-          <div class="content-p">
-            1. <strong>Chủ trì cuộc họp:</strong> Ông/Bà ${chairman}<br/>
-            2. <strong>Thư ký ghi biên bản:</strong> Ông/Bà ${secretary}<br/>
-            3. <strong>Đại diện tham dự:</strong> Đại diện của <strong>${attendance}</strong> hộ gia đình trên địa bàn Tổ dân phố tham gia đầy đủ.
-          </div>
+                  <div class="section-title">I. THÀNH PHẦN THAM DỰ</div>
+                  <div class="content-p">
+                    1. <strong>Chủ trì cuộc họp:</strong> Ông/Bà ${chairman}<br/>
+                    2. <strong>Thư ký ghi biên bản:</strong> Ông/Bà ${secretary}<br/>
+                    3. <strong>Đại diện tham dự:</strong> Đại diện của <strong>${attendance}</strong> hộ gia đình trên địa bàn Tổ dân phố tham gia đầy đủ.
+                  </div>
 
-          <div class="section-title">II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
-          <div class="bullet-content">${content.replace(/\n/g, '<br/>')}</div>
+                  <div class="section-title">II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
+                  <div class="bullet-content">${content.replace(/\n/g, '<br/>')}</div>
 
-          <div class="content-p" style="margin-top: 20px;">
-            Cuộc họp đã diễn ra dân chủ, công khai và kết thúc vào hồi <strong>${endTime}</strong> cùng ngày. Biên bản này đã được đọc lại cho toàn thể cuộc họp cùng nghe, thống nhất biểu quyết thông qua và ký xác nhận dưới đây.
-          </div>
+                  <div class="content-p" style="margin-top: 20px;">
+                    Cuộc họp đã diễn ra dân chủ, công khai và kết thúc vào hồi <strong>${endTime}</strong> cùng ngày. Biên bản này đã được đọc lại cho toàn thể cuộc họp cùng nghe, thống nhất biểu quyết thông qua và ký xác nhận dưới đây.
+                  </div>
 
-          <div style="text-align: right; font-style: italic; font-size: 11pt; margin-top: 35px; margin-right: 40px;">
-            ${wardName}, ngày ${day} tháng ${month} năm ${year}
-          </div>
+                  <div style="text-align: right; font-style: italic; font-size: 11pt; margin-top: 35px; margin-right: 40px;">
+                    ${wardName}, ngày ${day} tháng ${month} năm ${year}
+                  </div>
 
-          <table class="footer-table" style="margin-top: 10px;">
-            <tr>
-              <td>
-                <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
-                <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">${secretary.split('-')[0].trim()}</div>
-              </td>
-              <td>
-                <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
-                <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
-                <div class="signature-space"></div>
-                <div class="signature-name">${chairman.split('-')[0].trim()}</div>
-              </td>
-            </tr>
+                  <table class="footer-table" style="margin-top: 10px;">
+                    <tr>
+                      <td>
+                        <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
+                        <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-name">${secretary.split('-')[0].trim()}</div>
+                      </td>
+                      <td>
+                        <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
+                        <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
+                        <div class="signature-space"></div>
+                        <div class="signature-name">${chairman.split('-')[0].trim()}</div>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="print-cell">
+                  <div class="page-footer-space"></div>
+                </td>
+              </tr>
+            </tfoot>
           </table>
 
           <script>
