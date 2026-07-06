@@ -344,6 +344,9 @@ const App = () => {
           localStorage.setItem(item.key, item.value);
         });
         
+        // Nếu đã có cấu hình trong CSDL, đánh dấu đã thiết lập
+        localStorage.setItem('welcome_setup_completed', 'true');
+        
         // Update states from synchronized local storage values
         const newTdp = localStorage.getItem('tdp_name') || 'Quảng Giao';
         const newWard = localStorage.getItem('ward_name') || 'Phường Quảng Đại';
@@ -419,7 +422,10 @@ const App = () => {
   useEffect(() => {
     if (session && localStorage.getItem('welcome_setup_completed') !== 'true') {
       const timer = setTimeout(() => {
-        setShowOnboarding(true);
+        // Kiểm tra lại localStorage khi hết thời gian chờ để tránh xung đột với tiến trình loadSystemConfig bất đồng bộ
+        if (localStorage.getItem('welcome_setup_completed') !== 'true') {
+          setShowOnboarding(true);
+        }
       }, 1500);
       return () => clearTimeout(timer);
     } else {
@@ -881,7 +887,8 @@ const App = () => {
       if (supabase && session) {
         const uId = session.user.id;
         const configItems = [
-          { user_id: uId, key: 'tdp_name', value: tdpNameVal }
+          { user_id: uId, key: 'tdp_name', value: tdpNameVal },
+          { user_id: uId, key: 'welcome_setup_completed', value: 'true' }
         ];
         await supabase.from('app_config').upsert(configItems);
       }
@@ -919,9 +926,19 @@ const App = () => {
     }
   };
 
-  const handleOnboardingSkip = () => {
+  const handleOnboardingSkip = async () => {
     localStorage.setItem('welcome_setup_completed', 'true');
     setShowOnboarding(false);
+    if (supabase && session) {
+      try {
+        const uId = session.user.id;
+        await supabase.from('app_config').upsert([
+          { user_id: uId, key: 'welcome_setup_completed', value: 'true' }
+        ]);
+      } catch (err) {
+        console.error('Failed to save onboarding skip to Supabase:', err);
+      }
+    }
     const ev = new CustomEvent('show-toast', { 
       detail: { message: `ℹ️ Bỏ qua thiết lập. Bạn có thể thay đổi các mục này trong phần Cài đặt sau.`, type: 'info' } 
     });
@@ -1155,7 +1172,7 @@ const App = () => {
                 <ShieldCheck size={36} color="rgba(251, 255, 0, 1)" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
               )}
               <div className="logo-text" style={{ gap: '2px', display: 'flex', flexDirection: 'column' }}>
-                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thôn/Tổ Dân Phố</span>
+                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TÔN/TỔ DÂN PHỐ</span>
                 <span className="logo-subtitle" style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 1, lineHeight: '1.2' }}>{tdpName}</span>
                 <span className="logo-ward" style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{wardName}</span>
               </div>
