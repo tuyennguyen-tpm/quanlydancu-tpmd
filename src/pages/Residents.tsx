@@ -1830,17 +1830,16 @@ const Residents = () => {
               In danh sách
             </button>
           </div>
-          {categoryFilter === 'longevity' ? (
+          {categoryFilter === 'longevity' && (
             <button className="btn btn-secondary btn-export-excel" style={{ borderColor: '#eab308', color: '#854d0e', background: '#fef9c3' }} onClick={handleExportLongevityExcel}>
               <FileDown size={16} style={{ color: '#ca8a04' }} />
               Xuất Excel Mừng Thọ
             </button>
-          ) : (
-            <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
-              <FileDown size={16} />
-              Xuất Excel/CSV
-            </button>
           )}
+          <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
+            <FileDown size={16} />
+            Xuất Excel/CSV
+          </button>
           {!isGuest && (
             <button className="btn btn-primary" onClick={handleOpenAdd}>
               <UserPlus size={16} />
