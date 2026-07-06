@@ -210,16 +210,16 @@ const App = () => {
 
   // Tên Tổ dân phố (có thể sửa)
   const [tdpName, setTdpName] = useState(() => {
-    return localStorage.getItem('tdp_name') || 'Tiến Quảng Giao';
+    return localStorage.getItem('tdp_name') || 'Quảng Giao';
   });
-  const [wardName, setWardName] = useState(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn');
-  const [leaderName, setLeaderName] = useState(localStorage.getItem('leader_name') || 'Kim Tuyến');
+  const [wardName, setWardName] = useState(localStorage.getItem('ward_name') || 'Phường Quảng Đại');
+  const [leaderName, setLeaderName] = useState(localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến');
   const [leaderPhone, setLeaderPhone] = useState(localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982');
   const [groupId, setGroupId] = useState(localStorage.getItem('group_id') || 'NAM_SAM_SON_01');
   const [logoUrl, setLogoUrl] = useState(localStorage.getItem('logo_url') || '');
   const [logoError, setLogoError] = useState(false);
-  const [supportName, setSupportName] = useState(localStorage.getItem('support_name') || 'Kim Tuyến');
-  const [supportPhone, setSupportPhone] = useState(localStorage.getItem('support_phone') || '0912 083 018 - 0899661982');
+  const [supportName, setSupportName] = useState(localStorage.getItem('support_name') || 'Lê Thị Dung');
+  const [supportPhone, setSupportPhone] = useState(localStorage.getItem('support_phone') || '0912 083 018 - 0899 661 982');
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
@@ -275,6 +275,52 @@ const App = () => {
     document.title = `QL TDP – ${tdpName}`;
   }, [tdpName]);
 
+  const resetToDefaultConfig = () => {
+    const defaults: Record<string, string> = {
+      tdp_name: 'Quảng Giao',
+      ward_name: 'Phường Quảng Đại',
+      leader_name: 'Nguyễn Kim Tuyến',
+      leader_phone: '0912 083 018 - 0899 661 982',
+      group_id: 'NAM_SAM_SON_01',
+      logo_url: '',
+      support_name: 'Lê Thị Dung',
+      support_phone: '0912 083 018 - 0899 661 982',
+      welcome_setup_completed: 'false'
+    };
+    
+    Object.keys(defaults).forEach(key => {
+      localStorage.setItem(key, defaults[key]);
+    });
+    
+    // Clear role verification keys
+    ['admin', 'to_truong', 'bi_thu', 'mat_tran'].forEach(role => {
+      localStorage.removeItem(`role_verified_${role}`);
+      localStorage.removeItem(`role_pin_${role}`);
+    });
+    localStorage.setItem('current_role', 'demo');
+    
+    // Update states
+    setTdpName(defaults.tdp_name);
+    setWardName(defaults.ward_name);
+    setLeaderName(defaults.leader_name);
+    setLeaderPhone(defaults.leader_phone);
+    setGroupId(defaults.group_id);
+    setLogoUrl(defaults.logo_url);
+    setSupportName(defaults.support_name);
+    setSupportPhone(defaults.support_phone);
+    setUserRole('demo');
+    
+    // Sync inputs in Settings modal
+    setTdpNameInput(defaults.tdp_name);
+    setWardNameInput(defaults.ward_name);
+    setLeaderNameInput(defaults.leader_name);
+    setLeaderPhoneInput(defaults.leader_phone);
+    setGroupIdInput(defaults.group_id);
+    setLogoUrlInput(defaults.logo_url);
+    setSupportNameInput(defaults.support_name);
+    setSupportPhoneInput(defaults.support_phone);
+  };
+
   const loadSystemConfig = async () => {
     if (!supabase) return;
     try {
@@ -299,14 +345,14 @@ const App = () => {
         });
         
         // Update states from synchronized local storage values
-        const newTdp = localStorage.getItem('tdp_name') || 'Tiến Quảng Giao';
-        const newWard = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
-        const newLeader = localStorage.getItem('leader_name') || 'Kim Tuyến';
+        const newTdp = localStorage.getItem('tdp_name') || 'Quảng Giao';
+        const newWard = localStorage.getItem('ward_name') || 'Phường Quảng Đại';
+        const newLeader = localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến';
         const newPhone = localStorage.getItem('leader_phone') || '0912 083 018 - 0899 661 982';
         const newGroup = localStorage.getItem('group_id') || 'NAM_SAM_SON_01';
         const newLogoUrl = localStorage.getItem('logo_url') || '';
-        const newSupportName = localStorage.getItem('support_name') || 'Kim Tuyến';
-        const newSupportPhone = localStorage.getItem('support_phone') || '0912 083 018 - 0899661982';
+        const newSupportName = localStorage.getItem('support_name') || 'Lê Thị Dung';
+        const newSupportPhone = localStorage.getItem('support_phone') || '0912 083 018 - 0899 661 982';
         const newLatestVersion = localStorage.getItem('latest_app_version') || APP_VERSION;
         
         setTdpName(newTdp);
@@ -331,6 +377,8 @@ const App = () => {
         window.dispatchEvent(new CustomEvent('leader-phone-changed'));
         window.dispatchEvent(new CustomEvent('group-id-changed'));
         window.dispatchEvent(new CustomEvent('fund-targets-changed'));
+      } else if (!error && (!data || data.length === 0)) {
+        resetToDefaultConfig();
       }
     } catch (e) {
       console.error('Failed to load system config from Supabase:', e);
@@ -949,6 +997,8 @@ const App = () => {
     if (window.confirm('Bạn muốn đăng xuất và đặt lại phiên làm việc? Cấu hình Supabase sẽ được giữ nguyên.')) {
       const ev = new CustomEvent('show-toast', { detail: { message: 'Đang đăng xuất...', type: 'info' } });
       window.dispatchEvent(ev);
+      
+      resetToDefaultConfig();
       
       localStorage.removeItem('offline_mode');
       localStorage.removeItem('guest_mode');

@@ -32,6 +32,7 @@ const MeetingMinutes = () => {
   const [chairman, setChairman] = useState('Nguyễn Kim Tuyến - Tổ trưởng');
   const [secretary, setSecretary] = useState('Lê Thị Dung - Thư ký');
   const [attendance, setAttendance] = useState('85');
+  const [meetingType, setMeetingType] = useState<string>('general');
   const [content, setContent] = useState('');
 
   const loadSavedMinutes = async () => {
@@ -122,6 +123,7 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
       setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
       setSecretary('Lê Thị Dung - Thư ký');
       setAttendance('85');
+      setMeetingType('general');
       setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
       return;
     }
@@ -131,6 +133,7 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
       const formattedTitle = m.title;
       const meetingDate = new Date(m.date);
       const mType = m.type || 'general';
+      setMeetingType(mType);
       
       let initialChairman = 'Nguyễn Kim Tuyến - Tổ trưởng';
       let initialSecretary = 'Lê Thị Dung - Thư ký';
@@ -195,6 +198,7 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
           setChairman(initialChairman);
           setSecretary(initialSecretary);
           setAttendance(defaultAttendance);
+          setMeetingType(preSelectedType);
           setContent(applyDefaultContentCustom(defaultTitle, '', preSelectedType, initialChairman, initialSecretary));
         } else {
           // Default general
@@ -202,6 +206,7 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
           setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
           setSecretary('Lê Thị Dung - Thư ký');
           setAttendance('85');
+          setMeetingType('general');
           setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
         }
       } catch (e) {
@@ -730,7 +735,13 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
           </div>
 
           <div className="form-group">
-            <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>Số lượng hộ gia đình tham gia</label>
+            <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>
+              {meetingType === 'party' 
+                ? 'Số lượng Đảng viên tham gia' 
+                : meetingType === 'front' 
+                  ? 'Số lượng thành viên tham gia' 
+                  : 'Số lượng hộ gia đình tham gia'}
+            </label>
             <input
               type="number"
               value={attendance}

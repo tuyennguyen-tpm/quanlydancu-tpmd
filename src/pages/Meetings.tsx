@@ -285,7 +285,15 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
                     <div className="m-t">{m.title}</div>
                     <div style={{fontSize: '0.9rem', color: '#475569', margin: '4px 0'}}>{m.content}</div>
                     <div className="m-s" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <span>{m.attendance_count} hộ tham gia - Địa điểm: {m.location}</span>
+                       <span>
+                         {m.attendance_count}{' '}
+                         {type === 'party' 
+                           ? 'Đảng viên tham gia' 
+                           : type === 'front' 
+                             ? 'thành viên tham gia' 
+                             : 'hộ tham gia'}{' '}
+                         - Địa điểm: {m.location}
+                       </span>
                        {!isGuest && (
                          <div style={{ display: 'flex', gap: '8px' }}>
                            <button
@@ -404,7 +412,13 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
               </div>
 
               <div className="form-group">
-                <label>Số lượng hộ gia đình tham gia dự kiến / thực tế</label>
+                <label>
+                  {type === 'party' 
+                    ? 'Số lượng Đảng viên tham gia dự kiến / thực tế' 
+                    : type === 'front' 
+                      ? 'Số lượng thành viên tham gia dự kiến / thực tế' 
+                      : 'Số lượng hộ gia đình tham gia dự kiến / thực tế'}
+                </label>
                 <input 
                   type="number" 
                   value={attendanceCount}
