@@ -984,7 +984,8 @@ const Finance = () => {
       ) : (
         <div className="funds-matrix-view" style={{ animation: 'fadeIn 0.3s ease' }}>
           {/* Top toolbar */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
+            {/* Hàng 1: Bộ lọc năm và trạng thái */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Năm đóng quỹ:</label>
@@ -1011,8 +1012,11 @@ const Finance = () => {
                   <option value="unpaid">Hộ chưa nộp</option>
                 </select>
               </div>
+            </div>
 
-              <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '250px', margin: 0 }}>
+            {/* Hàng 2: Tìm kiếm bên trái, Tổng thu & Xuất Excel bên phải */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '320px', margin: 0 }}>
                 <div className="input-with-icon" style={{ flex: 1, position: 'relative' }}>
                   <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input
@@ -1049,38 +1053,38 @@ const Finance = () => {
                   )}
                 </div>
               </div>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                Tổng thu quỹ địa phương {fundYear}: <strong style={{ color: 'var(--success)' }}>
-                  {formatCurrency(
-                    householdFunds
-                      .filter(f => f.year === fundYear)
-                      .reduce((sum, f) => sum + f.amount, 0)
-                  )}
-                </strong>
-              </span>
-              <button 
-                className="btn btn-success" 
-                onClick={handleExportFundsExcel}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  height: '38px',
-                  backgroundColor: '#16a34a',
-                  color: 'white',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <Download size={16} /> Xuất Excel
-              </button>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                  Tổng thu quỹ địa phương {fundYear}: <strong style={{ color: 'var(--success)' }}>
+                    {formatCurrency(
+                      householdFunds
+                        .filter(f => f.year === fundYear)
+                        .reduce((sum, f) => sum + f.amount, 0)
+                    )}
+                  </strong>
+                </span>
+                <button 
+                  className="btn btn-success" 
+                  onClick={handleExportFundsExcel}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.9rem',
+                    fontWeight: '600',
+                    height: '38px',
+                    backgroundColor: '#16a34a',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={16} /> Xuất Excel
+                </button>
+              </div>
             </div>
           </div>
 
