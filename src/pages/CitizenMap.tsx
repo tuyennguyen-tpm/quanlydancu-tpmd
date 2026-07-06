@@ -55,6 +55,7 @@ const CitizenMap = () => {
   const [selectedHouseholdToMove, setSelectedHouseholdToMove] = useState<string>('');
   const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('street');
   const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
+  const [popupSearchTerm, setPopupSearchTerm] = useState<string>('');
 
   const loadData = async () => {
     try {
@@ -117,6 +118,7 @@ const CitizenMap = () => {
   const handleMapClick = (lat: number, lng: number) => {
     setClickedCoords({ lat, lng });
     setSelectedHouseholdToMove('');
+    setPopupSearchTerm('');
   };
 
   const handleAssignCoordsSubmit = async (e: React.FormEvent) => {
@@ -157,6 +159,15 @@ const CitizenMap = () => {
     const address = (h.address || '').toLowerCase();
     const householdNum = (h.household_number || '').toLowerCase();
     const search = mapSearchTerm.toLowerCase().trim();
+    return headName.includes(search) || address.includes(search) || householdNum.includes(search);
+  });
+
+  // Filter households in the coordinate assignment modal based on search query
+  const filteredPopupHouseholds = households.filter(h => {
+    const headName = getHeadName(h).toLowerCase();
+    const address = (h.address || '').toLowerCase();
+    const householdNum = (h.household_number || '').toLowerCase();
+    const search = popupSearchTerm.toLowerCase().trim();
     return headName.includes(search) || address.includes(search) || householdNum.includes(search);
   });
 
@@ -285,7 +296,7 @@ const CitizenMap = () => {
             onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
             onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
           >
-            {mapLayer === 'street' ? '🛰️ Xem vệ tinh' : '🗺️ Bản đồ thường'}
+            {mapLayer === 'street' ? '🛰️ Bản đồ 3D' : '🗺️ Bản đồ 2D'}
           </button>
           <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
             {mapLayer === 'street' ? (
@@ -335,13 +346,32 @@ const CitizenMap = () => {
             <form onSubmit={handleAssignCoordsSubmit} className="modal-form">
               <div className="form-group">
                 <label>Chọn hộ gia đình muốn ghim vào vị trí này:</label>
+                <div style={{ marginBottom: '8px', position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="Gõ tìm tên chủ hộ hoặc địa chỉ để lọc nhanh..."
+                    value={popupSearchTerm}
+                    onChange={(e) => setPopupSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px 8px 32px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: '#94a3b8' }} />
+                </div>
                 <select 
                   value={selectedHouseholdToMove} 
                   onChange={(e) => setSelectedHouseholdToMove(e.target.value)}
                   required
                 >
-                  <option value="">-- Chọn hộ dân từ danh sách --</option>
-                  {households.map(h => (
+                  <option value="">-- Chọn hộ dân từ danh sách ({filteredPopupHouseholds.length} hộ) --</option>
+                  {filteredPopupHouseholds.map(h => (
                     <option key={h.id} value={h.id}>
                       {getHeadName(h)} - {h.address}
                     </option>
