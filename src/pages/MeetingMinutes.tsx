@@ -84,6 +84,12 @@ const MeetingMinutes = () => {
     return fullContent;
   };
 
+  const getDocNumberSuffix = (type: string) => {
+    if (type === 'party') return '/BB-CB';
+    if (type === 'front') return '/BB-MT';
+    return '/BB-TDP';
+  };
+
   const loadSavedMinutes = async () => {
     try {
       const list = await db.getMeetingMinutes();
@@ -648,7 +654,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                         <div class="org-title" style="font-weight: normal;">${orgLevel1}</div>
                         <div class="org-title" style="font-size: 11pt; font-weight: bold;">${orgLevel2}</div>
                         <div style="margin-top: 3px; border-bottom: 1px solid #000; width: 60px; margin-left: auto; margin-right: auto; height: 1px;"></div>
-                        <div class="org-sub" style="margin-top: 4px;">Số: ${docNumber} /BB-TDP</div>
+                        <div class="org-sub" style="margin-top: 4px;">Số: ${docNumber}${getDocNumberSuffix(meetingType)}</div>
                       </td>
                       <td>
                         <div class="nation-title">${nationLevel1}</div>
@@ -1125,7 +1131,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 <div style={{ fontSize: '8.5pt', textTransform: 'uppercase' }}>{orgLevel1}</div>
                 <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>{orgLevel2}</div>
                 <div style={{ borderBottom: '1px solid #000', width: '45px', margin: '3px auto 4px auto', height: '1px' }}></div>
-                <div style={{ fontSize: '8.5pt' }}>Số: {docNumber} /BB-TDP</div>
+                <div style={{ fontSize: '8.5pt' }}>Số: {docNumber}{getDocNumberSuffix(meetingType)}</div>
               </div>
               <div style={{ textAlign: 'center', width: '55%' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>{nationLevel1}</div>
@@ -1405,7 +1411,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                       }}
                       className="word-input"
                     />
-                    <span>/BB-TDP</span>
+                    <span>{getDocNumberSuffix(meetingType)}</span>
                   </div>
                 </div>
                 
