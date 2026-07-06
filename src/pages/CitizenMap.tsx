@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Home, Filter, MapPin, X, Plus } from 'lucide-react';
+import { Home, Filter, MapPin, X, Plus, Search } from 'lucide-react';
 import { db } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Household, Resident } from '../types';
@@ -53,6 +53,8 @@ const CitizenMap = () => {
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedHouseholdToMove, setSelectedHouseholdToMove] = useState<string>('');
+  const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('street');
+  const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
 
   const loadData = async () => {
     try {
@@ -149,6 +151,15 @@ const CitizenMap = () => {
     return hasCoords && matchesPolicy;
   });
 
+  // Filter households in the sidebar based on search query
+  const filteredSidebarHouseholds = households.filter(h => {
+    const headName = getHeadName(h).toLowerCase();
+    const address = (h.address || '').toLowerCase();
+    const householdNum = (h.household_number || '').toLowerCase();
+    const search = mapSearchTerm.toLowerCase().trim();
+    return headName.includes(search) || address.includes(search) || householdNum.includes(search);
+  });
+
   return (
     <div className="map-page-container">
       <div className="map-header">
@@ -194,9 +205,30 @@ const CitizenMap = () => {
 
       <div className="map-main">
         <div className="map-sidebar">
-           <h3>Danh sách hộ dân ({households.length})</h3>
+           <h3>Danh sách hộ dân ({filteredSidebarHouseholds.length})</h3>
+           
+           <div style={{ marginBottom: '12px', position: 'relative' }}>
+             <input
+               type="text"
+               placeholder="Tìm tên chủ hộ, địa chỉ..."
+               value={mapSearchTerm}
+               onChange={(e) => setMapSearchTerm(e.target.value)}
+               style={{
+                 width: '100%',
+                 padding: '8px 12px 8px 32px',
+                 borderRadius: '8px',
+                 border: '1px solid var(--border)',
+                 fontSize: '0.85rem',
+                 outline: 'none',
+                 fontFamily: 'inherit',
+                 boxSizing: 'border-box'
+               }}
+             />
+             <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: '#94a3b8' }} />
+           </div>
+
            <div className="household-mini-list">
-              {households.map(h => {
+              {filteredSidebarHouseholds.map(h => {
                  const hasC = h.latitude !== null && h.latitude !== undefined && 
                               h.longitude !== null && h.longitude !== undefined;
                 return (
@@ -216,15 +248,57 @@ const CitizenMap = () => {
                   </div>
                 );
               })}
+              {filteredSidebarHouseholds.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                  Không tìm thấy hộ dân nào
+                </div>
+              )}
            </div>
         </div>
 
         <div className="map-wrapper">
+          <button 
+            type="button"
+            className="map-layer-toggle-btn"
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              zIndex: 1000,
+              padding: '8px 14px',
+              backgroundColor: 'white',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              fontWeight: '700',
+              fontSize: '0.82rem',
+              color: '#0f172a',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              transition: 'all 0.2s',
+              outline: 'none',
+              fontFamily: 'inherit'
+            }}
+            onClick={() => setMapLayer(mapLayer === 'street' ? 'satellite' : 'street')}
+            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
+          >
+            {mapLayer === 'street' ? '🛰️ Xem vệ tinh' : '🗺️ Bản đồ thường'}
+          </button>
           <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+            {mapLayer === 'street' ? (
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+            ) : (
+              <TileLayer
+                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+            )}
             <ChangeView center={mapCenter} zoom={mapZoom} />
             {!isGuest && <MapClickHandler onMapClick={handleMapClick} />}
             
