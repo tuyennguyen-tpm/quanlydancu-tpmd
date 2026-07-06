@@ -1065,24 +1065,35 @@ const Finance = () => {
                   </strong>
                 </span>
                 <button 
-                  className="btn btn-success" 
                   onClick={handleExportFundsExcel}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '8px',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    fontSize: '0.9rem',
+                    backgroundColor: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    color: '#16a34a',
                     fontWeight: '600',
-                    height: '38px',
-                    backgroundColor: '#16a34a',
-                    color: 'white',
-                    border: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    height: 'auto',
+                    minHeight: '36px',
+                    fontSize: '0.85rem'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#dcfce7';
+                    e.currentTarget.style.borderColor = '#86efac';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f0fdf4';
+                    e.currentTarget.style.borderColor = '#bbf7d0';
+                    e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  <Download size={16} /> Xuất Excel
+                  <Download size={16} style={{ color: '#16a34a' }} /> Xuất Excel
                 </button>
               </div>
             </div>
