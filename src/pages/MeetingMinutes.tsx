@@ -56,59 +56,102 @@ const MeetingMinutes = () => {
     const activeSecretary = customSecretary || secretary;
     
     if (mType === 'party') {
-      return `1. Khai mạc sinh hoạt Chi bộ:
-- Đồng chí: ${activeChairman} tuyên bố lý do, giới thiệu thành phần sinh hoạt Chi bộ thường kỳ.
-- Thông qua nội dung sinh hoạt và biểu quyết nhất trí chương trình làm việc.
+      return `I. THÀNH PHẦN THAM DỰ
+1. Tổng số Đảng viên của Chi bộ: ...... đồng chí, trong đó:
+- Đảng viên chính thức: ...... đồng chí.
+- Đảng viên dự bị: ...... đồng chí.
+- Đảng viên miễn sinh hoạt: ...... đồng chí.
+2. Số Đảng viên có mặt: ...... đồng chí (Vắng mặt: ...... đồng chí, có lý do: ......, không lý do: ......).
+3. Chủ trì hội nghị: Đồng chí ${activeChairman.split('-')[0].trim()} - Bí thư Chi bộ.
+4. Thư ký hội nghị: Đồng chí ${activeSecretary.split('-')[0].trim()} - Chi ủy viên.
+5. Đại biểu cấp trên tham dự (nếu có): ........................................................................
 
-2. Nội dung sinh hoạt Chi bộ:
-- Đánh giá tình hình tư tưởng đảng viên và quần chúng nhân dân trong tháng qua.
-- Triển khai nghị quyết cấp trên và nội dung công tác trọng tâm: ${rawContent || 'Tăng cường vai trò gương mẫu của đảng viên trong các phong trào địa phương.'}
-- Phân công nhiệm vụ cụ thể cho từng đảng viên phụ trách các tổ liên gia.
+II. NỘI DUNG VÀ DIỄN BIẾN SINH HOẠT
+1. Đồng chí Chủ trì quán triệt mục đích, yêu cầu và thông qua chương trình sinh hoạt Chi bộ thường kỳ tháng. Chi bộ biểu quyết thống nhất 100% nội dung chương trình.
+2. Công tác giáo dục chính trị tư tưởng:
+- Chi bộ tiến hành sinh hoạt chính trị, học tập và làm theo tư tưởng, đạo đức, phong cách Hồ Chí Minh về chủ đề chuyên đề năm.
+- Đánh giá tình hình tư tưởng của Đảng viên và quần chúng nhân dân trên địa bàn.
+3. Đánh giá kết quả thực hiện nhiệm vụ chính trị tháng qua:
+- Đánh giá kết quả công tác lãnh đạo thực hiện nhiệm vụ phát triển kinh tế - xã hội, an ninh trật tự và công tác xây dựng Đảng.
+- Chỉ rõ những ưu điểm đạt được, hạn chế tồn tại và nguyên nhân.
+4. Triển khai phương hướng công tác tháng tới:
+- Trọng tâm công tác lãnh đạo của Chi bộ: ${rawContent || 'Tăng cường vai trò gương mẫu của đảng viên trong các hoạt động địa phương.'}
+- Phân công nhiệm vụ cụ thể cho từng Chi ủy viên và Đảng viên phụ trách các tổ liên gia, đoàn thể.
+5. Chi bộ thảo luận:
+- Ý kiến 1: Đồng chí ................................. nhất trí với báo cáo đánh giá và đề xuất giải pháp đẩy mạnh công tác tuyên truyền vận động nhân dân dọn dẹp vệ sinh môi trường.
+- Ý kiến 2: Đồng chí ................................. đề xuất tăng cường sinh hoạt chuyên đề và quan tâm bồi dưỡng quần chúng ưu tú tạo nguồn kết nạp Đảng.
+- Đồng chí Chủ trì tiếp thu các ý kiến đóng góp và giải trình làm rõ các nội dung liên quan.
 
-3. Chi bộ tiến hành thảo luận đóng góp ý kiến:
-- Ý kiến 1: Đảng viên nhất trí cao với báo cáo công tác của Chi ủy.
-- Ý kiến 2: Đề xuất tổ chức sinh hoạt chuyên đề về học tập và làm theo tư tưởng, đạo đức, phong cách Hồ Chí Minh.
-- Ý kiến 3: Cần đẩy mạnh công tác phát triển đảng viên mới tại chi bộ.
-
-4. Biểu quyết và thông qua nghị quyết Chi bộ:
-- 100% đảng viên dự họp nhất trí biểu quyết thông qua Nghị quyết tháng mới của Chi bộ.
-- Giao Ban Chi ủy đôn đốc triển khai thực hiện.`;
+III. QUYẾT NGHỊ VÀ BIỂU QUYẾT
+Chi bộ thống nhất quyết nghị các nội dung sau:
+- Thông qua Báo cáo đánh giá công tác tháng trước và Phương hướng nhiệm vụ tháng tới.
+- Thống nhất các chỉ tiêu biện pháp lãnh đạo trọng tâm đã đề ra.
+- Kết quả biểu quyết thông qua Nghị quyết:
++ Số Đảng viên đồng ý: ....../...... đồng chí (đạt ......%).
++ Số Đảng viên không đồng ý: Không.
++ Ý kiến khác: Không.`;
     }
 
     if (mType === 'front') {
-      return `1. Khai mạc cuộc họp Ban công tác Mặt trận:
-- Ông/Bà: ${activeChairman} tuyên bố lý do cuộc họp: ${meetingTitle || 'Họp thống nhất kế hoạch công tác Mặt trận'}.
-- Giới thiệu đại biểu tham dự cuộc họp.
+      return `I. THÀNH PHẦN THAM DỰ
+1. Thành viên Ban Công tác Mặt trận Tổ dân phố: Có mặt ....../...... thành viên.
+2. Đại diện Ban Thường trực Ủy ban MTTQ Việt Nam phường: ...................................................
+3. Khách mời tham dự (Bí thư Chi bộ, Tổ trưởng Tổ dân phố, đại diện các chi hội đoàn thể):
+- Đồng chí Bí thư Chi bộ: ...................................................
+- Ông/Bà Tổ trưởng Tổ dân phố: ...................................................
+4. Chủ trì hội nghị: Ông/Bà ${activeChairman.split('-')[0].trim()} - Trưởng ban Công tác Mặt trận.
+5. Thư ký hội nghị: Ông/Bà ${activeSecretary.split('-')[0].trim()} - Thành viên Ban Công tác Mặt trận.
 
-2. Nội dung báo cáo và triển khai nhiệm vụ:
-- Đánh giá kết quả thực hiện các cuộc vận động toàn dân đoàn kết xây dựng đời sống văn hóa.
-- Phổ biến kế hoạch triển khai: ${rawContent || 'Tổ chức ngày hội Đại đoàn kết toàn dân tộc và các hoạt động an sinh xã hội.'}
+II. NỘI DUNG VÀ DIỄN BIẾN CUỘC HỌP
+1. Ông/Bà Chủ trì tuyên bố lý do, giới thiệu đại biểu và thông qua nội dung cuộc họp: ${meetingTitle || 'Họp thống nhất kế hoạch công tác Mặt trận'}.
+2. Đánh giá kết quả công tác Mặt trận tháng qua:
+- Báo cáo kết quả thực hiện cuộc vận động "Toàn dân đoàn kết xây dựng nông thôn mới, đô thị văn minh".
+- Kết quả hoạt động giám sát, hòa giải cơ sở và xây dựng khối đại đoàn kết toàn dân tộc.
+3. Triển khai công tác Mặt trận tháng tới:
+- Trọng tâm công tác: ${rawContent || 'Tổ chức Ngày hội Đại đoàn kết toàn dân tộc và thực hiện các hoạt động an sinh xã hội chăm lo gia đình chính sách.'}
+- Phối hợp với các tổ chức thành viên (Hội Phụ nữ, Hội Cựu chiến binh, Đoàn Thanh niên, Hội Nông dân) thực hiện các phong trào thi đua.
+4. Thảo luận, đóng góp ý kiến:
+- Ý kiến 1: Ông/Bà ................................. đại diện Chi hội Cựu chiến binh nhất trí với kế hoạch và cam kết đảm nhận tuyên truyền vận động nhân dân giữ gìn an ninh trật tự đường ngõ.
+- Ý kiến 2: Ông/Bà ................................. đại diện Chi hội Phụ nữ đề xuất rà soát kỹ danh sách các hộ nghèo, hộ khó khăn để hỗ trợ tặng quà nhân dịp Ngày hội Đại đoàn kết.
+- Ông/Bà Chủ trì tổng hợp, giải trình và tiếp thu các ý kiến đóng góp của hội nghị.
 
-3. Các ý kiến thảo luận và đề xuất:
-- Ý kiến 1: Nhất trí với kế hoạch và cam kết vận động 100% hộ dân tham gia.
-- Ý kiến 2: Cần rà soát kỹ các đối tượng khó khăn để hỗ trợ quà Tết/ngày hội công bằng.
-- Ý kiến 3: Tăng cường tuyên truyền phòng chống rác thải nhựa tại cộng đồng.
-
-4. Thống nhất nội dung hành động:
-- 100% thành viên Mặt trận nhất trí thông qua chương trình phối hợp thống nhất hành động.
-- Trưởng ban Công tác Mặt trận kết luận và bế mạc cuộc họp.`;
+III. QUYẾT NGHỊ VÀ BIỂU QUYẾT
+Hội nghị thống nhất quyết nghị:
+- Nhất trí thông qua báo cáo kết quả công tác và kế hoạch hành động phối hợp thống nhất tháng tới.
+- Phân công nhiệm vụ cụ thể cho các thành viên và tổ chức đoàn thể.
+- Kết quả biểu quyết thống nhất:
++ Tỷ lệ đồng ý: 100% thành viên tham dự nhất trí biểu quyết thông qua.
++ Ý kiến không đồng ý: Không.
++ Ý kiến khác: Không.`;
     }
 
     // Default general
-    return `1. Trình bày báo cáo, nội dung triển khai của Ban cán sự Tổ dân phố:
-- Triển khai nội dung trọng tâm: ${rawContent || 'Đánh giá công tác thời gian qua và bàn thảo kế hoạch thực hiện nhiệm vụ mới.'}
-- Phổ biến các văn bản chỉ đạo cấp trên đến toàn thể bà con nhân dân.
+    return `I. THÀNH PHẦN THAM DỰ
+1. Ban cán sự Tổ dân phố gồm: Tổ trưởng, Tổ phó, đại diện các tổ liên gia.
+2. Đại diện cấp ủy Chi bộ, Ban công tác Mặt trận tham dự và chỉ đạo.
+3. Đại diện các hộ gia đình trong Tổ dân phố: Có mặt đại diện của ....../...... hộ gia đình (đạt tỷ lệ ......%).
+4. Chủ trì hội nghị: Ông/Bà ${activeChairman.split('-')[0].trim()} - Tổ trưởng Tổ dân phố.
+5. Thư ký hội nghị: Ông/Bà ${activeSecretary.split('-')[0].trim()} - Thư ký Tổ dân phố.
 
-2. Ý kiến thảo luận và đóng góp của bà con Nhân dân:
-- Ý kiến 1 (Ông/Bà đại diện hộ dân): Nhất trí với các nội dung báo cáo và kế hoạch đề ra. Đề nghị ban tự quản đôn đốc tiến độ thực hiện.
-- Ý kiến 2 (Ông/Bà đại diện hộ dân): Đóng góp bổ sung ý kiến thực tế về công tác an ninh trật tự và dọn dẹp vệ sinh môi trường các tuyến đường tự quản.
-- Ban cán sự Tổ dân phố đã tiếp thu các ý kiến đóng góp và giải trình thỏa đáng các thắc mắc của bà con.
+II. NỘI DUNG VÀ DIỄN BIẾN CUỘC HỌP
+1. Ông/Bà Chủ trì khai mạc hội nghị, tuyên bố lý do và báo cáo tóm tắt kết quả công tác tự quản của Tổ dân phố thời gian qua.
+2. Phổ biến các chủ trương, chính sách mới của Nhà nước và nghị quyết, chỉ đạo của Ủy ban nhân dân phường đến bà con nhân dân.
+3. Triển khai kế hoạch công tác tự quản thời gian tới:
+- Trọng tâm công tác: ${rawContent || 'Đánh giá công tác tự quản và bàn bạc triển khai thực hiện các phong trào thi đua tại địa phương.'}
+- Triển khai thu nộp các loại quỹ công ích, phí dịch vụ vệ sinh môi trường, an ninh trật tự đường phố.
+4. Ý kiến thảo luận đóng góp của bà con Nhân dân:
+- Ý kiến 1 (Ông/Bà đại diện hộ dân): Nhất trí cao với báo cáo công tác và kế hoạch đề ra. Đề nghị Ban tự quản Tổ dân phố đôn đốc và công khai tiến độ thực hiện các công trình ngõ phố.
+- Ý kiến 2 (Ông/Bà đại diện hộ dân): Kiến nghị tăng cường kiểm tra công tác phòng cháy chữa cháy tại các hộ gia đình và nhắc nhở việc đổ rác đúng giờ, đúng nơi quy định.
+- Ban cán sự Tổ dân phố đã tiếp thu ý kiến, giải trình thỏa đáng và thống nhất phương án xử lý cụ thể.
 
-3. Biểu quyết và quyết định thống nhất của Hội nghị:
-Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia hội nghị đối với nội dung triển khai:
-- Tỷ lệ biểu quyết đồng ý: 100% đại biểu tham dự cuộc họp nhất trí thông qua.
-- Ý kiến không đồng ý: Không có.
-- Ý kiến khác: Không có.`;
+III. QUYẾT NGHỊ VÀ BIỂU QUYẾT
+Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các nội dung:
+- Nhất trí Báo cáo công tác tự quản của Tổ dân phố và Kế hoạch thực hiện nhiệm vụ mới.
+- Thống nhất mức đóng góp tự nguyện và các biện pháp giữ gìn an ninh, vệ sinh môi trường.
+- Kết quả biểu quyết thống nhất:
++ Tỷ lệ biểu quyết đồng ý: 100% đại diện hộ dân dự họp biểu quyết thông qua.
++ Ý kiến không đồng ý: Không.
++ Ý kiến khác: Không.`;
   };
 
   // Pre-fill fields when selecting a meeting
@@ -339,7 +382,7 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
           <title>Biên bản cuộc họp - ${title}</title>
           <style>
             @media print {
-              @page { size: A4 portrait; margin: 20mm 15mm 20mm 20mm; }
+              @page { size: A4 portrait; margin: 20mm 15mm 20mm 30mm; }
               body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.5; color: #000; }
               .no-print { display: none; }
             }
@@ -369,7 +412,6 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
             }
             .org-sub {
               font-size: 11pt;
-              text-decoration: underline;
             }
             .nation-title {
               font-weight: bold;
@@ -439,14 +481,15 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
           <table class="header-table">
             <tr>
               <td>
-                <div class="org-title">ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}</div>
+                <div class="org-title" style="font-weight: normal;">ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}</div>
                 <div class="org-title" style="font-size: 11pt; font-weight: bold;">TỔ DÂN PHỐ ${tdpName.toUpperCase()}</div>
-                <div class="org-sub">Số: ..... /BB-TDP</div>
+                <div style="margin-top: 3px; border-bottom: 1px solid #000; width: 60px; margin-left: auto; margin-right: auto; height: 1px;"></div>
+                <div class="org-sub" style="margin-top: 4px;">Số: ..... /BB-TDP</div>
               </td>
               <td>
                 <div class="nation-title">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
                 <div class="nation-sub">Độc lập - Tự do - Hạnh phúc</div>
-                <div style="margin-top: 5px; border-bottom: 1px solid #000; width: 150px; margin-left: auto; margin-right: auto; height: 1px;"></div>
+                <div style="margin-top: 4px; border-bottom: 1px solid #000; width: 140px; margin-left: auto; margin-right: auto; height: 1px;"></div>
               </td>
             </tr>
           </table>
@@ -855,14 +898,15 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>UBND {wardName}</div>
-                <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>TỔ DÂN PHỐ {tdpName}</div>
-                <div style={{ fontSize: '9pt', textDecoration: 'underline' }}>Số: ..... /BB-TDP</div>
+                <div style={{ fontSize: '8.5pt', textTransform: 'uppercase' }}>ỦY BAN NHÂN DÂN {wardName.toUpperCase()}</div>
+                <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>TỔ DÂN PHỐ {tdpName.toUpperCase()}</div>
+                <div style={{ borderBottom: '1px solid #000', width: '45px', margin: '3px auto 4px auto', height: '1px' }}></div>
+                <div style={{ fontSize: '8.5pt' }}>Số: ..... /BB-TDP</div>
               </div>
               <div style={{ textAlign: 'center', width: '55%' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
                 <div style={{ fontWeight: 'bold', fontSize: '9pt' }}>Độc lập - Tự do - Hạnh phúc</div>
-                <div style={{ borderBottom: '1px solid #475569', width: '80px', margin: '4px auto 0 auto', height: '1px' }}></div>
+                <div style={{ borderBottom: '1px solid #000', width: '90px', margin: '4px auto 0 auto', height: '1px' }}></div>
               </div>
             </div>
 
@@ -873,13 +917,13 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
             </div>
 
             {/* Introductory text */}
-            <div style={{ fontSize: '10.5pt', marginBottom: '12px' }}>
+            <div style={{ fontSize: '10.5pt', marginBottom: '12px', textAlign: 'justify' }}>
               Hôm nay, vào hồi <strong>{time}</strong> ngày <strong>{new Date(date).getDate()}</strong> tháng <strong>{new Date(date).getMonth() + 1}</strong> năm <strong>{new Date(date).getFullYear()}</strong>, tại <strong>{location}</strong>, Tổ dân phố {tdpName} đã tiến hành tổ chức cuộc họp với nội dung chính như sau:
             </div>
 
             {/* Part I */}
             <div style={{ fontWeight: 'bold', fontSize: '11pt', margin: '10px 0 4px 0' }}>I. THÀNH PHẦN THAM DỰ</div>
-            <div style={{ fontSize: '10.5pt', paddingLeft: '8px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '10.5pt', paddingLeft: '8px', marginBottom: '12px', textAlign: 'justify' }}>
               1. Chủ trì cuộc họp: Ông/Bà {chairman}<br/>
               2. Thư ký ghi biên bản: Ông/Bà {secretary}<br/>
               3. Đại diện tham dự: Đại diện của <strong>{attendance}</strong> hộ gia đình.
@@ -892,12 +936,13 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
               whiteSpace: 'pre-wrap',
               paddingLeft: '8px',
               fontFamily: '"Times New Roman", Times, serif',
-              lineHeight: '1.5'
+              lineHeight: '1.5',
+              textAlign: 'justify'
             }}>
               {content}
             </div>
 
-            <div style={{ fontSize: '10.5pt', marginTop: '16px' }}>
+            <div style={{ fontSize: '10.5pt', marginTop: '16px', textAlign: 'justify' }}>
               Cuộc họp kết thúc vào hồi ...... giờ cùng ngày. Biên bản đã được biểu quyết thông qua.
             </div>
 
@@ -910,7 +955,7 @@ Tiến hành biểu quyết lấy ý kiến của toàn thể hộ dân tham gia
                 <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
               </div>
               <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontStyle: 'italic', fontSize: '9.5pt' }}>..., ngày {new Date(date).getDate()} tháng {new Date(date).getMonth() + 1} năm {new Date(date).getFullYear()}</div>
+                <div style={{ fontStyle: 'italic', fontSize: '9.5pt' }}>{wardName}, ngày {new Date(date).getDate()} tháng {new Date(date).getMonth() + 1} năm {new Date(date).getFullYear()}</div>
                 <div style={{ fontWeight: 'bold' }}>CHỦ TRÌ CUỘC HỌP</div>
                 <div style={{ height: '40px' }}></div>
                 <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
