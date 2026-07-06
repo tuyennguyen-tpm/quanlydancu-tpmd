@@ -1724,7 +1724,7 @@ const Residents = () => {
               <th>Ngày sinh</th>
               <th>CCCD / Định danh</th>
               <th>Quan hệ chủ hộ</th>
-              <th>Địa chỉ Hộ dân</th>
+              <th>Địa chỉ hộ dân</th>
               <th>Trạng thái</th>
               <th>Hành động</th>
             </tr>
@@ -2666,7 +2666,6 @@ const Residents = () => {
           font-size: 0.85rem;
           font-weight: 700;
           color: var(--text-muted);
-          text-transform: uppercase;
           letter-spacing: 0.5px;
           border-bottom: 1px solid var(--border);
         }
