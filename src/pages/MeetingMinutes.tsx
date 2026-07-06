@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Printer, RotateCcw, Calendar, User, Clock, MapPin, Trash2, Plus } from 'lucide-react';
+import { FileText, Printer, RotateCcw, Calendar, User, Clock, MapPin, Trash2, Plus, Maximize2 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Meeting, MeetingMinutesData } from '../types';
@@ -34,6 +34,7 @@ const MeetingMinutes = () => {
   const [attendance, setAttendance] = useState('85');
   const [meetingType, setMeetingType] = useState<string>('general');
   const [content, setContent] = useState('');
+  const [isFullscreenEdit, setIsFullscreenEdit] = useState(false);
 
   const loadSavedMinutes = async () => {
     try {
@@ -828,6 +829,27 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             )}
             {!isGuest && (
               <button
+                onClick={() => setIsFullscreenEdit(true)}
+                className="btn btn-secondary"
+                style={{
+                  flex: '1.2 1 140px',
+                  padding: '9px',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                  boxShadow: '0 4px 10px rgba(79, 70, 229, 0.25)',
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                <Maximize2 size={14} /> Soạn thảo Word A4
+              </button>
+            )}
+            {!isGuest && (
+              <button
                 onClick={handleSaveMinutes}
                 className="btn btn-primary"
                 style={{
@@ -879,9 +901,34 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           position: 'sticky',
           top: '84px'
         }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FileText size={18} color="var(--primary)" /> Xem trước văn bản in ấn
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FileText size={18} color="var(--primary)" /> Xem trước văn bản in ấn
+            </h3>
+            {!isGuest && (
+              <button
+                onClick={() => setIsFullscreenEdit(true)}
+                style={{
+                  background: 'rgba(79, 70, 229, 0.1)',
+                  border: 'none',
+                  color: '#4f46e5',
+                  padding: '5px 10px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.2)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.1)'}
+              >
+                <Maximize2 size={13} /> Phóng to soạn thảo (Word)
+              </button>
+            )}
+          </div>
           
           {/* Mock A4 Page Sheet */}
           <div className="a4-sheet" style={{
@@ -970,6 +1017,402 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         </div>
       </div>
 
+      {/* Fullscreen Word-Like A4 Editor */}
+      {isFullscreenEdit && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: '#e2e8f0',
+          zIndex: 2000,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: '"Segoe UI", Roboto, sans-serif'
+        }}>
+          {/* Top Toolbar */}
+          <div style={{
+            position: 'sticky',
+            top: 0,
+            background: '#1e293b',
+            color: 'white',
+            padding: '12px 24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            zIndex: 10
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FileText size={20} color="#60a5fa" />
+              <div>
+                <span style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>Soạn thảo Biên bản cuộc họp (Word)</span>
+                <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                  Khổ giấy A4 - Căn lề chuẩn
+                </span>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleReset}
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <RotateCcw size={14} /> Khôi phục mặc định
+              </button>
+              
+              <button
+                onClick={handleSaveMinutes}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)'
+                }}
+              >
+                <FileText size={14} /> {currentMinutesId ? 'Cập nhật (Lưu)' : 'Lưu biên bản'}
+              </button>
+              
+              <button
+                onClick={handlePrint}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)'
+                }}
+              >
+                <Printer size={14} /> In biên bản (A4)
+              </button>
+              
+              <div style={{ width: '1px', background: 'rgba(255,255,255,0.2)', margin: '0 4px' }}></div>
+              
+              <button
+                onClick={() => setIsFullscreenEdit(false)}
+                style={{
+                  background: '#ef4444',
+                  border: 'none',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.2)'
+                }}
+              >
+                Thoát (Đóng)
+              </button>
+            </div>
+          </div>
+          
+          {/* Workspace Area */}
+          <div style={{
+            flex: 1,
+            padding: '40px 20px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            overflowY: 'auto'
+          }}>
+            {/* Word A4 Page Sheet */}
+            <div style={{
+              width: '210mm',
+              minHeight: '297mm',
+              background: 'white',
+              padding: '20mm 15mm 20mm 30mm',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+              fontFamily: '"Times New Roman", Times, serif',
+              color: '#000',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              boxSizing: 'border-box',
+              position: 'relative',
+              borderRadius: '2px'
+            }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ fontSize: '11pt', textTransform: 'uppercase' }}>ỦY BAN NHÂN DÂN {wardName.toUpperCase()}</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '11pt', textTransform: 'uppercase' }}>TỔ DÂN PHỐ {tdpName.toUpperCase()}</div>
+                  <div style={{ borderBottom: '1px solid #000', width: '60px', margin: '3px auto 4px auto', height: '1px' }}></div>
+                  <div style={{ fontSize: '10pt', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                    <span>Số: </span>
+                    <input 
+                      type="text" 
+                      placeholder="....."
+                      value={selectedMeetingId ? `BB-${selectedMeetingId.slice(0, 4).toUpperCase()}` : '.....'} 
+                      disabled
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        width: '70px',
+                        textAlign: 'center',
+                        fontSize: '10pt',
+                        fontFamily: 'inherit',
+                        outline: 'none'
+                      }}
+                    />
+                    <span>/BB-TDP</span>
+                  </div>
+                </div>
+                
+                <div style={{ textAlign: 'center', width: '55%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '11pt', textTransform: 'uppercase' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '11pt' }}>Độc lập - Tự do - Hạnh phúc</div>
+                  <div style={{ borderBottom: '1px solid #000', width: '130px', margin: '4px auto 0 auto', height: '1px' }}></div>
+                </div>
+              </div>
+
+              {/* Title Section */}
+              <div style={{ textAlign: 'center', margin: '20px 0' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '15pt' }}>BIÊN BẢN CUỘC HỌP</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '6px' }}>
+                  <span style={{ fontStyle: 'italic', fontSize: '12pt' }}>Về việc:</span>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ví dụ: Họp bàn phương án bê tông hóa ngõ 47"
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: '1px dashed #cbd5e1',
+                      fontWeight: 'bold',
+                      fontSize: '12pt',
+                      width: '400px',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      padding: '2px 4px',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
+                </div>
+              </div>
+
+              {/* Introductory details inline */}
+              <div style={{ fontSize: '12pt', lineHeight: '1.6', textAlign: 'justify' }}>
+                Hôm nay, vào hồi{' '}
+                <input
+                  type="text"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    borderBottom: '1px dashed #cbd5e1',
+                    width: '60px',
+                    textAlign: 'center',
+                    fontFamily: 'inherit',
+                    fontWeight: 'bold',
+                    fontSize: '12pt',
+                    outline: 'none',
+                    color: '#000'
+                  }}
+                  className="word-input"
+                />{' '}
+                ngày{' '}
+                <strong style={{ borderBottom: '1px solid #e2e8f0', padding: '0 4px' }}>
+                  {new Date(date).getDate()}
+                </strong>{' '}
+                tháng{' '}
+                <strong style={{ borderBottom: '1px solid #e2e8f0', padding: '0 4px' }}>
+                  {new Date(date).getMonth() + 1}
+                </strong>{' '}
+                năm{' '}
+                <strong style={{ borderBottom: '1px solid #e2e8f0', padding: '0 4px' }}>
+                  {new Date(date).getFullYear()}
+                </strong>
+                , tại{' '}
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    borderBottom: '1px dashed #cbd5e1',
+                    width: '260px',
+                    fontFamily: 'inherit',
+                    fontWeight: 'bold',
+                    fontSize: '12pt',
+                    outline: 'none',
+                    color: '#000',
+                    padding: '2px 4px'
+                  }}
+                  className="word-input"
+                />
+                , Tổ dân phố {tdpName} đã tiến hành tổ chức cuộc họp với nội dung chính như sau:
+              </div>
+
+              {/* Part I */}
+              <div style={{ fontWeight: 'bold', fontSize: '13pt', marginTop: '12px' }}>I. THÀNH PHẦN THAM DỰ</div>
+              <div style={{ fontSize: '12pt', paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '8px', lineHeight: '1.6' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>1. Chủ trì cuộc họp: Ông/Bà</span>
+                  <input
+                    type="text"
+                    value={chairman}
+                    onChange={(e) => setChairman(e.target.value)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: '1px dashed #cbd5e1',
+                      width: '320px',
+                      fontFamily: 'inherit',
+                      fontWeight: 'bold',
+                      fontSize: '12pt',
+                      outline: 'none',
+                      color: '#000',
+                      padding: '2px 4px'
+                    }}
+                    className="word-input"
+                  />
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>2. Thư ký ghi biên bản: Ông/Bà</span>
+                  <input
+                    type="text"
+                    value={secretary}
+                    onChange={(e) => setSecretary(e.target.value)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: '1px dashed #cbd5e1',
+                      width: '320px',
+                      fontFamily: 'inherit',
+                      fontWeight: 'bold',
+                      fontSize: '12pt',
+                      outline: 'none',
+                      color: '#000',
+                      padding: '2px 4px'
+                    }}
+                    className="word-input"
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>3. Đại diện tham dự: Đại diện của</span>
+                  <input
+                    type="number"
+                    value={attendance}
+                    onChange={(e) => setAttendance(e.target.value)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: '1px dashed #cbd5e1',
+                      width: '60px',
+                      textAlign: 'center',
+                      fontFamily: 'inherit',
+                      fontWeight: 'bold',
+                      fontSize: '12pt',
+                      outline: 'none',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
+                  <span>hộ gia đình.</span>
+                </div>
+              </div>
+
+              {/* Part II */}
+              <div style={{ fontWeight: 'bold', fontSize: '13pt', marginTop: '16px' }}>II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
+              
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Nhập nội dung diễn biến chi tiết cuộc họp ở đây..."
+                  style={{
+                    width: '100%',
+                    flexGrow: 1,
+                    minHeight: '260px',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    fontFamily: '"Times New Roman", Times, serif',
+                    fontSize: '12pt',
+                    lineHeight: '1.6',
+                    textAlign: 'justify',
+                    background: 'transparent',
+                    color: '#000',
+                    borderLeft: '2px solid transparent',
+                    paddingLeft: '6px',
+                    transition: 'border-color 0.2s'
+                  }}
+                  className="word-textarea"
+                />
+              </div>
+
+              <div style={{ fontSize: '12pt', marginTop: '16px', textAlign: 'justify' }}>
+                Cuộc họp kết thúc vào hồi ...... giờ cùng ngày. Biên bản đã được biểu quyết thông qua.
+              </div>
+
+              {/* Date line above signatures */}
+              <div style={{ textAlign: 'right', fontStyle: 'italic', fontSize: '11pt', marginTop: '30px', paddingRight: '8%' }}>
+                {wardName}, ngày {new Date(date).getDate()} tháng {new Date(date).getMonth() + 1} năm {new Date(date).getFullYear()}
+              </div>
+
+              {/* Signatures */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '12pt', marginBottom: '20px' }}>
+                <div style={{ textAlign: 'center', width: '45%' }}>
+                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>THƯ KÝ CUỘC HỌP</div>
+                  <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
+                  <div style={{ height: '65px' }}></div>
+                  <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
+                </div>
+                <div style={{ textAlign: 'center', width: '45%' }}>
+                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>CHỦ TRÌ CUỘC HỌP</div>
+                  <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
+                  <div style={{ height: '65px' }}></div>
+                  <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .minutes-page {
           animation: fadeIn 0.4s ease-out;
@@ -977,6 +1420,28 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         .saved-item:hover {
           background: rgba(59, 130, 246, 0.04) !important;
           border-color: rgba(59, 130, 246, 0.4) !important;
+        }
+        .word-input {
+          transition: all 0.2s;
+        }
+        .word-input:hover {
+          border-bottom-color: #cbd5e1 !important;
+          background-color: #f8fafc;
+        }
+        .word-input:focus {
+          border-bottom-color: #3b82f6 !important;
+          background-color: #eff6ff;
+        }
+        .word-textarea {
+          transition: all 0.2s;
+        }
+        .word-textarea:hover {
+          border-left: 2px solid #cbd5e1 !important;
+          background-color: rgba(248, 250, 252, 0.4);
+        }
+        .word-textarea:focus {
+          border-left: 2px solid #3b82f6 !important;
+          background-color: rgba(239, 246, 255, 0.3);
         }
         @media (max-width: 1200px) {
           .minutes-container {
