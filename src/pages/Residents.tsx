@@ -3035,13 +3035,13 @@ const Residents = () => {
         }
 
         .data-table th {
-          background-color: #f8fafc;
+          background-color: #f0fdf4;
           padding: 16px;
           font-size: 0.85rem;
           font-weight: 700;
-          color: var(--text-muted);
+          color: #166534;
           letter-spacing: 0.5px;
-          border-bottom: 1px solid var(--border);
+          border-bottom: 2px solid #bbf7d0;
         }
 
         .data-table td {
