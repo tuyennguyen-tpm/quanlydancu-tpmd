@@ -3042,10 +3042,10 @@ const Residents = () => {
         }
 
         .filter-btn-military.active {
-          background-color: #e11d48 !important;
-          color: #ffffff !important;
-          border-color: #e11d48 !important;
-          box-shadow: 0 6px 20px rgba(225, 29, 72, 0.4) !important;
+          background-color: #f0fdf4 !important;
+          color: #15803d !important;
+          border-color: #22c55e !important;
+          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3) !important;
         }
 
         .filter-btn-longevity.active {
