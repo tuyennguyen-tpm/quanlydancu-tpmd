@@ -1965,11 +1965,15 @@ const Households = () => {
           box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
         }
         
-        .tab-mini:nth-of-type(1) {
-          background-color: #eff6ff;
-          color: #1d4ed8;
-          border: 1px solid #bfdbfe;
+        .tab-mini:nth-of-type(1),
+        .tab-mini:nth-of-type(2),
+        .tab-mini:nth-of-type(3),
+        .tab-mini:nth-of-type(4) {
+          background-color: #eff6ff !important;
+          color: #0369a1 !important;
+          border: 1px solid #bae6fd !important;
         }
+        
         .tab-mini:nth-of-type(1).active {
           background-color: #2563eb !important;
           color: white !important;
@@ -1978,11 +1982,6 @@ const Households = () => {
           transform: translateY(0);
         }
 
-        .tab-mini:nth-of-type(2) {
-          background-color: #fff1f2;
-          color: #e11d48;
-          border: 1px solid #fecdd3;
-        }
         .tab-mini:nth-of-type(2).active {
           background-color: #ef4444 !important;
           color: white !important;
@@ -1991,11 +1990,6 @@ const Households = () => {
           transform: translateY(0);
         }
 
-        .tab-mini:nth-of-type(3) {
-          background-color: #fffbeb;
-          color: #d97706;
-          border: 1px solid #fde68a;
-        }
         .tab-mini:nth-of-type(3).active {
           background-color: #d97706 !important;
           color: white !important;
@@ -2004,11 +1998,6 @@ const Households = () => {
           transform: translateY(0);
         }
 
-        .tab-mini:nth-of-type(4) {
-          background-color: #faf5ff;
-          color: #7e22ce;
-          border: 1px solid #e9d5ff;
-        }
         .tab-mini:nth-of-type(4).active {
           background-color: #6366f1 !important;
           color: white !important;
