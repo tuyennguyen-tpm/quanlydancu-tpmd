@@ -973,22 +973,29 @@ const Residents = () => {
     
     const isLongevity = categoryFilter === 'longevity';
 
-    // Determine the subtitle based on filters
-    let filterSubtitle = 'Tất cả nhân khẩu';
+    // Determine the main title and subtitle based on filters
+    let docTitleHtml = 'DANH SÁCH NHÂN KHẨU';
+    let filterSubtitle = 'Toàn tổ dân phố';
+
+    if (categoryFilter === 'senior') {
+      docTitleHtml = 'DANH SÁCH NGƯỜI CAO TUỔI (≥ 80 tuổi)';
+    } else if (categoryFilter === 'child') {
+      docTitleHtml = 'DANH SÁCH TRẺ EM (< 16 tuổi)';
+    } else if (categoryFilter === 'military') {
+      docTitleHtml = 'DANH SÁCH THANH NIÊN TRONG ĐỘ TUỔI NGHĨA VỤ QUÂN SỰ (18-27 tuổi)';
+    } else if (isLongevity) {
+      docTitleHtml = `DANH SÁCH NGƯỜI CAO TUỔI MỪNG THỌ NĂM ${longevityYear}`;
+      filterSubtitle = 'Mốc mừng thọ tròn/lẻ';
+    }
+
     if (householdFilter !== 'all') {
       const selectedHh = households.find(h => h.id === householdFilter);
       if (selectedHh) {
         const headRes = residents.find(r => r.id === selectedHh.head_of_household_id);
         filterSubtitle = `Hộ gia đình: ${selectedHh.address} (${headRes ? `Chủ hộ: ${headRes.full_name}` : `Hộ số: ${selectedHh.household_number}`})`;
       }
-    } else if (categoryFilter === 'senior') {
-      filterSubtitle = 'Danh sách Người cao tuổi (≥80 tuổi)';
-    } else if (categoryFilter === 'child') {
-      filterSubtitle = 'Danh sách Trẻ em (<16 tuổi)';
-    } else if (categoryFilter === 'military') {
-      filterSubtitle = 'Danh sách Thanh niên trong độ tuổi Nghĩa vụ quân sự (18-27 tuổi)';
-    } else if (isLongevity) {
-      filterSubtitle = `Danh sách mừng thọ mốc tuổi tròn/lẻ năm ${longevityYear}`;
+    } else if (categoryFilter === 'all') {
+      filterSubtitle = 'Tất cả nhân khẩu';
     }
 
     if (groupFilter !== 'all') {
@@ -1193,7 +1200,7 @@ const Residents = () => {
         </table>
 
         <div class="doc-title-container">
-          <h1 class="doc-title">${isLongevity ? `DANH SÁCH NGƯỜI CAO TUỔI MỪNG THỌ NĂM ${longevityYear}` : 'DANH SÁCH NHÂN KHẨU'}</h1>
+          <h1 class="doc-title">${docTitleHtml}</h1>
           <p class="doc-subtitle">(${filterSubtitle})</p>
         </div>
 
