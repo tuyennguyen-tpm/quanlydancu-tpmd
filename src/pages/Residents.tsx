@@ -1552,9 +1552,41 @@ const Residents = () => {
       } else {
         const smg = hh.self_management_group.trim().toLowerCase();
         const filterVal = groupFilter.trim().toLowerCase();
-        matchesGroup = smg === filterVal || 
-                       smg.includes(filterVal) || 
-                       filterVal.includes(smg);
+
+        // Chuẩn hoá: cả hai phía đều bỏ dấu cách thừa
+        if (smg === filterVal) {
+          matchesGroup = true;
+        } else if (smg.includes(filterVal) || filterVal.includes(smg)) {
+          matchesGroup = true;
+        } else {
+          // So khớp thông minh theo số Tổ ở cuối chuỗi
+          // Ví dụ: "tổ 4" vs "tổ tự quản số 4" hoặc "4"
+          const extractNum = (s: string) => {
+            const m = s.match(/(\d+)\s*$/);
+            return m ? m[1] : null;
+          };
+          const extractName = (s: string) => {
+            // Kiểm tra xem có phải là tên đặc biệt (Việt Trung, ...)
+            const lower = s.toLowerCase();
+            if (lower.includes('việt trung')) return 'việt trung';
+            return null;
+          };
+
+          const numFilter = extractNum(filterVal);
+          const numSmg = extractNum(smg);
+          const nameFilter = extractName(filterVal);
+          const nameSmg = extractName(smg);
+
+          if (nameFilter && nameSmg) {
+            matchesGroup = nameFilter === nameSmg;
+          } else if (nameFilter) {
+            matchesGroup = smg.includes(nameFilter);
+          } else if (numFilter && numSmg) {
+            matchesGroup = numFilter === numSmg;
+          } else {
+            matchesGroup = false;
+          }
+        }
       }
     }
 
