@@ -1950,8 +1950,14 @@ const Residents = () => {
           </div>
 
           <div className="filter-btns">
+            <button 
+              className={`filter-btn filter-btn-all ${categoryFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setCategoryFilter('all')}
+            >
+              👥 Tất Cả
+            </button>
             <select 
-              className={`filter-btn filter-btn-all ${categoryFilter === 'all' || groupFilter !== 'all' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-group ${groupFilter !== 'all' ? 'active' : ''}`}
               value={groupFilter}
               onChange={(e) => {
                 setGroupFilter(e.target.value);
@@ -1961,20 +1967,20 @@ const Residents = () => {
                 appearance: 'none',
                 WebkitAppearance: 'none',
                 MozAppearance: 'none',
-                background: `url("data:image/svg+xml;utf8,<svg fill='${categoryFilter === 'all' || groupFilter !== 'all' ? '%232563eb' : '%2364748b'}' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 8px center`,
+                background: `url("data:image/svg+xml;utf8,<svg fill='${groupFilter !== 'all' ? '%230ea5e9' : '%2364748b'}' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 8px center`,
                 backgroundSize: '16px',
                 cursor: 'pointer',
                 outline: 'none',
               }}
             >
-              <option value="all">👥 Tất Cả</option>
-              <option value="Tổ Việt Trung">👥 Tổ Việt Trung</option>
-              <option value="Tổ 4">👥 Tổ 4</option>
-              <option value="Tổ 5">👥 Tổ 5</option>
-              <option value="Tổ 6">👥 Tổ 6</option>
-              <option value="Tổ 7">👥 Tổ 7</option>
-              <option value="Tổ 8">👥 Tổ 8</option>
-              <option value="Tổ 9">👥 Tổ 9</option>
+              <option value="all">📍 Toàn tổ dân phố</option>
+              <option value="Tổ Việt Trung">🏢 Tổ Việt Trung</option>
+              <option value="Tổ 4">🏢 Tổ 4</option>
+              <option value="Tổ 5">🏢 Tổ 5</option>
+              <option value="Tổ 6">🏢 Tổ 6</option>
+              <option value="Tổ 7">🏢 Tổ 7</option>
+              <option value="Tổ 8">🏢 Tổ 8</option>
+              <option value="Tổ 9">🏢 Tổ 9</option>
             </select>
             <button 
               className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
@@ -2959,13 +2965,19 @@ const Residents = () => {
         }
 
         .filter-btn.active {
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          box-shadow: none !important;
         }
 
         .filter-btn-all.active {
           background-color: #eff6ff !important;
           color: #1d4ed8 !important;
           border-color: #3b82f6 !important;
+        }
+
+        .filter-btn-group.active {
+          background-color: #f0f9ff !important;
+          color: #0369a1 !important;
+          border-color: #0ea5e9 !important;
         }
 
         .filter-btn-senior.active {
