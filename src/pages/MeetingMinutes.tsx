@@ -36,6 +36,54 @@ const MeetingMinutes = () => {
   const [content, setContent] = useState('');
   const [isFullscreenEdit, setIsFullscreenEdit] = useState(false);
 
+  const [orgLevel1, setOrgLevel1] = useState('');
+  const [orgLevel2, setOrgLevel2] = useState('');
+  const [nationLevel1, setNationLevel1] = useState('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+  const [nationLevel2, setNationLevel2] = useState('Độc lập - Tự do - Hạnh phúc');
+  const [docTitle, setDocTitle] = useState('BIÊN BẢN CUỘC HỌP');
+  const [secretaryTitle, setSecretaryTitle] = useState('THƯ KÝ CUỘC HỌP');
+  const [chairmanTitle, setChairmanTitle] = useState('CHỦ TRÌ CUỘC HỌP');
+  const [docNumber, setDocNumber] = useState('.....');
+  const [endTime, setEndTime] = useState('...... giờ');
+
+  const serializeMetadata = (rawContent: string) => {
+    const metadata = {
+      orgLevel1,
+      orgLevel2,
+      nationLevel1,
+      nationLevel2,
+      docTitle,
+      secretaryTitle,
+      chairmanTitle,
+      docNumber,
+      endTime
+    };
+    return `${rawContent}\n\n<!--METADATA:${JSON.stringify(metadata)}-->`;
+  };
+
+  const deserializeContentAndMetadata = (fullContent: string) => {
+    const regex = /\n\n<!--METADATA:({.*?})-->$/s;
+    const match = fullContent.match(regex);
+    if (match) {
+      try {
+        const meta = JSON.parse(match[1]);
+        if (meta.orgLevel1) setOrgLevel1(meta.orgLevel1);
+        if (meta.orgLevel2) setOrgLevel2(meta.orgLevel2);
+        if (meta.nationLevel1) setNationLevel1(meta.nationLevel1);
+        if (meta.nationLevel2) setNationLevel2(meta.nationLevel2);
+        if (meta.docTitle) setDocTitle(meta.docTitle);
+        if (meta.secretaryTitle) setSecretaryTitle(meta.secretaryTitle);
+        if (meta.chairmanTitle) setChairmanTitle(meta.chairmanTitle);
+        if (meta.docNumber) setDocNumber(meta.docNumber);
+        if (meta.endTime) setEndTime(meta.endTime);
+        return fullContent.replace(regex, '');
+      } catch (e) {
+        console.error('Lỗi parse metadata:', e);
+      }
+    }
+    return fullContent;
+  };
+
   const loadSavedMinutes = async () => {
     try {
       const list = await db.getMeetingMinutes();
@@ -169,6 +217,16 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       setAttendance('85');
       setMeetingType('general');
       setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
+      
+      setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+      setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+      setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+      setNationLevel2('Độc lập - Tự do - Hạnh phúc');
+      setDocTitle('BIÊN BẢN CUỘC HỌP');
+      setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+      setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
+      setDocNumber('.....');
+      setEndTime('...... giờ');
       return;
     }
 
@@ -184,10 +242,31 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       if (mType === 'party') {
         initialChairman = 'Nguyễn Kim Tuyến - Bí thư Chi bộ';
         initialSecretary = 'Lê Thị Dung - Chi ủy viên';
+        setOrgLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+        setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+        setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
+        setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
+        setChairmanTitle('BÍ THƯ CHI BỘ');
       } else if (mType === 'front') {
         initialChairman = 'Nguyễn Kim Tuyến - Trưởng ban CTMT';
         initialSecretary = 'Lê Thị Dung - Ủy viên Mặt trận';
+        const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+        setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
+        setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
+        setDocTitle('BIÊN BẢN CUỘC HỌP');
+        setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+        setChairmanTitle('TRƯỞNG BAN');
+      } else {
+        setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+        setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+        setDocTitle('BIÊN BẢN CUỘC HỌP');
+        setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+        setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
       }
+      setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+      setNationLevel2('Độc lập - Tự do - Hạnh phúc');
+      setDocNumber('.....');
+      setEndTime('...... giờ');
       
       setTitle(formattedTitle);
       setDate(meetingDate.toISOString().slice(0, 10));
@@ -300,7 +379,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       chairman,
       secretary,
       attendance: parseInt(attendance) || 0,
-      content,
+      content: serializeMetadata(content),
       created_at: new Date().toISOString()
     };
 
@@ -348,7 +427,54 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     setChairman(minutes.chairman);
     setSecretary(minutes.secretary);
     setAttendance(minutes.attendance.toString());
-    setContent(minutes.content);
+    
+    // Guess meeting type
+    let mType = 'general';
+    if (minutes.meeting_id && meetings.length > 0) {
+      const match = meetings.find(m => m.id === minutes.meeting_id);
+      if (match) mType = match.type || 'general';
+    } else {
+      if (minutes.title.includes('Chi bộ') || minutes.content.includes('Chi bộ') || minutes.chairman.includes('Bí thư')) {
+        mType = 'party';
+      } else if (minutes.title.includes('Mặt trận') || minutes.content.includes('Mặt trận') || minutes.chairman.includes('Trưởng ban CTMT') || minutes.chairman.includes('Mặt trận')) {
+        mType = 'front';
+      }
+    }
+    setMeetingType(mType);
+
+    const regex = /\n\n<!--METADATA:({.*?})-->$/s;
+    const hasMetadata = minutes.content.match(regex);
+    
+    const cleanContent = deserializeContentAndMetadata(minutes.content);
+    setContent(cleanContent);
+    
+    if (!hasMetadata) {
+      if (mType === 'party') {
+        setOrgLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+        setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+        setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
+        setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
+        setChairmanTitle('BÍ THƯ CHI BỘ');
+      } else if (mType === 'front') {
+        const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+        setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
+        setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
+        setDocTitle('BIÊN BẢN CUỘC HỌP');
+        setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+        setChairmanTitle('TRƯỞNG BAN');
+      } else {
+        setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+        setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+        setDocTitle('BIÊN BẢN CUỘC HỌP');
+        setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+        setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
+      }
+      setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+      setNationLevel2('Độc lập - Tự do - Hạnh phúc');
+      setDocNumber('.....');
+      setEndTime('...... giờ');
+    }
+    
     showToast('Đã mở biên bản đã lưu!', 'success');
   };
 
@@ -362,7 +488,17 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
     setSecretary('Lê Thị Dung - Thư ký');
     setAttendance('85');
+    setMeetingType('general');
     setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
+    setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+    setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+    setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+    setNationLevel2('Độc lập - Tự do - Hạnh phúc');
+    setDocTitle('BIÊN BẢN CUỘC HỌP');
+    setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+    setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
+    setDocNumber('.....');
+    setEndTime('...... giờ');
   };
 
   const handlePrint = () => {
@@ -383,8 +519,16 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           <title>Biên bản cuộc họp - ${title}</title>
           <style>
             @media print {
-              @page { size: A4 portrait; margin: 20mm 15mm 20mm 30mm; }
-              body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.5; color: #000; }
+              @page { size: A4 portrait; margin: 0; }
+              body {
+                font-family: "Times New Roman", Times, serif;
+                font-size: 13pt;
+                line-height: 1.6;
+                color: #000;
+                margin: 20mm 15mm 20mm 30mm !important;
+                padding: 0 !important;
+                max-width: none !important;
+              }
               .no-print { display: none; }
             }
             body {
@@ -482,21 +626,21 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           <table class="header-table">
             <tr>
               <td>
-                <div class="org-title" style="font-weight: normal;">ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}</div>
-                <div class="org-title" style="font-size: 11pt; font-weight: bold;">TỔ DÂN PHỐ ${tdpName.toUpperCase()}</div>
+                <div class="org-title" style="font-weight: normal;">${orgLevel1}</div>
+                <div class="org-title" style="font-size: 11pt; font-weight: bold;">${orgLevel2}</div>
                 <div style="margin-top: 3px; border-bottom: 1px solid #000; width: 60px; margin-left: auto; margin-right: auto; height: 1px;"></div>
-                <div class="org-sub" style="margin-top: 4px;">Số: ..... /BB-TDP</div>
+                <div class="org-sub" style="margin-top: 4px;">Số: ${docNumber} /BB-TDP</div>
               </td>
               <td>
-                <div class="nation-title">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div class="nation-sub">Độc lập - Tự do - Hạnh phúc</div>
+                <div class="nation-title">${nationLevel1}</div>
+                <div class="nation-sub">${nationLevel2}</div>
                 <div style="margin-top: 4px; border-bottom: 1px solid #000; width: 140px; margin-left: auto; margin-right: auto; height: 1px;"></div>
               </td>
             </tr>
           </table>
 
           <div class="title-section">
-            <div class="main-title">BIÊN BẢN CUỘC HỌP</div>
+            <div class="main-title">${docTitle}</div>
             <div class="sub-title">Về việc: ${title}</div>
           </div>
 
@@ -515,7 +659,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           <div class="bullet-content">${content.replace(/\n/g, '<br/>')}</div>
 
           <div class="content-p" style="margin-top: 20px;">
-            Cuộc họp đã diễn ra dân chủ, công khai và kết thúc vào hồi ...... giờ cùng ngày. Biên bản này đã được đọc lại cho toàn thể cuộc họp cùng nghe, thống nhất biểu quyết thông qua và ký xác nhận dưới đây.
+            Cuộc họp đã diễn ra dân chủ, công khai và kết thúc vào hồi <strong>${endTime}</strong> cùng ngày. Biên bản này đã được đọc lại cho toàn thể cuộc họp cùng nghe, thống nhất biểu quyết thông qua và ký xác nhận dưới đây.
           </div>
 
           <div style="text-align: right; font-style: italic; font-size: 11pt; margin-top: 35px; margin-right: 40px;">
@@ -525,13 +669,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           <table class="footer-table" style="margin-top: 10px;">
             <tr>
               <td>
-                <div style="font-weight: bold; text-transform: uppercase;">THƯ KÝ CUỘC HỌP</div>
+                <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
                 <div class="signature-space"></div>
                 <div class="signature-name">${secretary.split('-')[0].trim()}</div>
               </td>
               <td>
-                <div style="font-weight: bold; text-transform: uppercase;">CHỦ TRÌ CUỘC HỌP</div>
+                <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
                 <div class="signature-space"></div>
                 <div class="signature-name">${chairman.split('-')[0].trim()}</div>
@@ -947,21 +1091,21 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontSize: '8.5pt', textTransform: 'uppercase' }}>ỦY BAN NHÂN DÂN {wardName.toUpperCase()}</div>
-                <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>TỔ DÂN PHỐ {tdpName.toUpperCase()}</div>
+                <div style={{ fontSize: '8.5pt', textTransform: 'uppercase' }}>{orgLevel1}</div>
+                <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>{orgLevel2}</div>
                 <div style={{ borderBottom: '1px solid #000', width: '45px', margin: '3px auto 4px auto', height: '1px' }}></div>
-                <div style={{ fontSize: '8.5pt' }}>Số: ..... /BB-TDP</div>
+                <div style={{ fontSize: '8.5pt' }}>Số: {docNumber} /BB-TDP</div>
               </div>
               <div style={{ textAlign: 'center', width: '55%' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style={{ fontWeight: 'bold', fontSize: '9pt' }}>Độc lập - Tự do - Hạnh phúc</div>
+                <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>{nationLevel1}</div>
+                <div style={{ fontWeight: 'bold', fontSize: '9pt' }}>{nationLevel2}</div>
                 <div style={{ borderBottom: '1px solid #000', width: '90px', margin: '4px auto 0 auto', height: '1px' }}></div>
               </div>
             </div>
 
             {/* Title */}
             <div style={{ textAlign: 'center', margin: '15px 0' }}>
-              <div style={{ fontWeight: 'bold', fontSize: '13pt' }}>BIÊN BẢN CUỘC HỌP</div>
+              <div style={{ fontWeight: 'bold', fontSize: '13pt', textTransform: 'uppercase' }}>{docTitle}</div>
               <div style={{ fontStyle: 'italic', fontSize: '10.5pt' }}>Về việc: {title || '...'}</div>
             </div>
 
@@ -992,7 +1136,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             </div>
 
             <div style={{ fontSize: '10.5pt', marginTop: '16px', textAlign: 'justify' }}>
-              Cuộc họp kết thúc vào hồi ...... giờ cùng ngày. Biên bản đã được biểu quyết thông qua.
+              Cuộc họp kết thúc vào hồi <strong>{endTime}</strong> cùng ngày. Biên bản đã được biểu quyết thông qua.
             </div>
 
             {/* Date line above signatures */}
@@ -1003,12 +1147,12 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             {/* Signatures */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10.5pt' }}>
               <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontWeight: 'bold' }}>THƯ KÝ CUỘC HỌP</div>
+                <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{secretaryTitle}</div>
                 <div style={{ height: '55px' }}></div>
                 <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
               </div>
               <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontWeight: 'bold' }}>CHỦ TRÌ CUỘC HỌP</div>
+                <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{chairmanTitle}</div>
                 <div style={{ height: '55px' }}></div>
                 <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
               </div>
@@ -1171,40 +1315,133 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ fontSize: '11pt', textTransform: 'uppercase' }}>ỦY BAN NHÂN DÂN {wardName.toUpperCase()}</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '11pt', textTransform: 'uppercase' }}>TỔ DÂN PHỐ {tdpName.toUpperCase()}</div>
+                  <input
+                    type="text"
+                    value={orgLevel1}
+                    onChange={(e) => setOrgLevel1(e.target.value)}
+                    disabled={isGuest}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontSize: '11pt',
+                      width: '100%',
+                      textAlign: 'center',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      textTransform: 'uppercase',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
+                  <input
+                    type="text"
+                    value={orgLevel2}
+                    onChange={(e) => setOrgLevel2(e.target.value)}
+                    disabled={isGuest}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontWeight: 'bold',
+                      fontSize: '11pt',
+                      width: '100%',
+                      textAlign: 'center',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      textTransform: 'uppercase',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
                   <div style={{ borderBottom: '1px solid #000', width: '60px', margin: '3px auto 4px auto', height: '1px' }}></div>
-                  <div style={{ fontSize: '10pt', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                  <div style={{ fontSize: '10pt', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px' }}>
                     <span>Số: </span>
                     <input 
                       type="text" 
                       placeholder="....."
-                      value={selectedMeetingId ? `BB-${selectedMeetingId.slice(0, 4).toUpperCase()}` : '.....'} 
-                      disabled
+                      value={docNumber} 
+                      onChange={(e) => setDocNumber(e.target.value)}
+                      disabled={isGuest}
                       style={{
                         border: 'none',
                         background: 'transparent',
+                        borderBottom: '1px dashed #cbd5e1',
                         width: '70px',
                         textAlign: 'center',
                         fontSize: '10pt',
                         fontFamily: 'inherit',
-                        outline: 'none'
+                        outline: 'none',
+                        color: '#000'
                       }}
+                      className="word-input"
                     />
                     <span>/BB-TDP</span>
                   </div>
                 </div>
                 
                 <div style={{ textAlign: 'center', width: '55%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '11pt', textTransform: 'uppercase' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                  <div style={{ fontWeight: 'bold', fontSize: '11pt' }}>Độc lập - Tự do - Hạnh phúc</div>
+                  <input
+                    type="text"
+                    value={nationLevel1}
+                    onChange={(e) => setNationLevel1(e.target.value)}
+                    disabled={isGuest}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontWeight: 'bold',
+                      fontSize: '11pt',
+                      width: '100%',
+                      textAlign: 'center',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      textTransform: 'uppercase',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
+                  <input
+                    type="text"
+                    value={nationLevel2}
+                    onChange={(e) => setNationLevel2(e.target.value)}
+                    disabled={isGuest}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      fontWeight: 'bold',
+                      fontSize: '11pt',
+                      width: '100%',
+                      textAlign: 'center',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
                   <div style={{ borderBottom: '1px solid #000', width: '130px', margin: '4px auto 0 auto', height: '1px' }}></div>
                 </div>
               </div>
 
               {/* Title Section */}
               <div style={{ textAlign: 'center', margin: '20px 0' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '15pt' }}>BIÊN BẢN CUỘC HỌP</div>
+                <input
+                  type="text"
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                  disabled={isGuest}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    borderBottom: '1px dashed #cbd5e1',
+                    fontWeight: 'bold',
+                    fontSize: '15pt',
+                    width: '320px',
+                    textAlign: 'center',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    textTransform: 'uppercase',
+                    color: '#000'
+                  }}
+                  className="word-input"
+                />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '6px' }}>
                   <span style={{ fontStyle: 'italic', fontSize: '12pt' }}>Về việc:</span>
                   <input
@@ -1212,6 +1449,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Ví dụ: Họp bàn phương án bê tông hóa ngõ 47"
+                    disabled={isGuest}
                     style={{
                       border: 'none',
                       background: 'transparent',
@@ -1236,6 +1474,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   type="text"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
+                  disabled={isGuest}
                   style={{
                     border: 'none',
                     background: 'transparent',
@@ -1251,22 +1490,31 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   className="word-input"
                 />{' '}
                 ngày{' '}
-                <strong style={{ borderBottom: '1px solid #e2e8f0', padding: '0 4px' }}>
-                  {new Date(date).getDate()}
-                </strong>{' '}
-                tháng{' '}
-                <strong style={{ borderBottom: '1px solid #e2e8f0', padding: '0 4px' }}>
-                  {new Date(date).getMonth() + 1}
-                </strong>{' '}
-                năm{' '}
-                <strong style={{ borderBottom: '1px solid #e2e8f0', padding: '0 4px' }}>
-                  {new Date(date).getFullYear()}
-                </strong>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  disabled={isGuest}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    borderBottom: '1px dashed #cbd5e1',
+                    width: '130px',
+                    fontFamily: 'inherit',
+                    fontWeight: 'bold',
+                    fontSize: '12pt',
+                    outline: 'none',
+                    color: '#000',
+                    textAlign: 'center'
+                  }}
+                  className="word-input"
+                />
                 , tại{' '}
                 <input
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
+                  disabled={isGuest}
                   style={{
                     border: 'none',
                     background: 'transparent',
@@ -1293,6 +1541,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     type="text"
                     value={chairman}
                     onChange={(e) => setChairman(e.target.value)}
+                    disabled={isGuest}
                     style={{
                       border: 'none',
                       background: 'transparent',
@@ -1315,6 +1564,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     type="text"
                     value={secretary}
                     onChange={(e) => setSecretary(e.target.value)}
+                    disabled={isGuest}
                     style={{
                       border: 'none',
                       background: 'transparent',
@@ -1337,6 +1587,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     type="number"
                     value={attendance}
                     onChange={(e) => setAttendance(e.target.value)}
+                    disabled={isGuest}
                     style={{
                       border: 'none',
                       background: 'transparent',
@@ -1363,6 +1614,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Nhập nội dung diễn biến chi tiết cuộc họp ở đây..."
+                  disabled={isGuest}
                   style={{
                     width: '100%',
                     flexGrow: 1,
@@ -1384,8 +1636,29 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 />
               </div>
 
-              <div style={{ fontSize: '12pt', marginTop: '16px', textAlign: 'justify' }}>
-                Cuộc họp kết thúc vào hồi ...... giờ cùng ngày. Biên bản đã được biểu quyết thông qua.
+              <div style={{ fontSize: '12pt', marginTop: '16px', textAlign: 'justify', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>Cuộc họp kết thúc vào hồi</span>
+                <input
+                  type="text"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  placeholder="...... giờ"
+                  disabled={isGuest}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    borderBottom: '1px dashed #cbd5e1',
+                    width: '80px',
+                    textAlign: 'center',
+                    fontFamily: 'inherit',
+                    fontWeight: 'bold',
+                    fontSize: '12pt',
+                    outline: 'none',
+                    color: '#000'
+                  }}
+                  className="word-input"
+                />
+                <span>cùng ngày. Biên bản đã được biểu quyết thông qua.</span>
               </div>
 
               {/* Date line above signatures */}
@@ -1395,14 +1668,52 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
               {/* Signatures */}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '12pt', marginBottom: '20px' }}>
-                <div style={{ textAlign: 'center', width: '45%' }}>
-                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>THƯ KÝ CUỘC HỌP</div>
+                <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={secretaryTitle}
+                    onChange={(e) => setSecretaryTitle(e.target.value)}
+                    disabled={isGuest}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: '1px dashed #cbd5e1',
+                      fontWeight: 'bold',
+                      fontSize: '12pt',
+                      width: '180px',
+                      textAlign: 'center',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      textTransform: 'uppercase',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
                   <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
                   <div style={{ height: '65px' }}></div>
                   <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
                 </div>
-                <div style={{ textAlign: 'center', width: '45%' }}>
-                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>CHỦ TRÌ CUỘC HỌP</div>
+                <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    value={chairmanTitle}
+                    onChange={(e) => setChairmanTitle(e.target.value)}
+                    disabled={isGuest}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: '1px dashed #cbd5e1',
+                      fontWeight: 'bold',
+                      fontSize: '12pt',
+                      width: '220px',
+                      textAlign: 'center',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      textTransform: 'uppercase',
+                      color: '#000'
+                    }}
+                    className="word-input"
+                  />
                   <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
                   <div style={{ height: '65px' }}></div>
                   <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
