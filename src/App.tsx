@@ -155,7 +155,7 @@ const App = () => {
 
   const handleRoleChange = (role: string) => {
     const roleLabels: Record<string, string> = {
-      demo: 'Xem Demo (Chỉ đọc)',
+      demo: 'Trang chủ',
       admin: 'Quản trị hệ thống',
       to_truong: 'Tổ trưởng dân phố',
       bi_thu: 'Bí thư Chi bộ',
@@ -1226,7 +1226,7 @@ const App = () => {
                   fontFamily: 'inherit'
                 }}
               >
-                <option value="demo">👁️ Xem Demo (Chỉ đọc)</option>
+                <option value="demo">👁️ Trang chủ</option>
                 <option value="admin">Quản trị hệ thống (Admin)</option>
                 <option value="to_truong">Tổ trưởng dân phố</option>
                 <option value="bi_thu">Bí thư Chi bộ</option>
@@ -1411,7 +1411,7 @@ const App = () => {
                     type="text"
                     value={tdpNameInput}
                     onChange={(e) => setTdpNameInput(e.target.value)}
-                    placeholder="Ví dụ: Nam Sầm Sơn, Thôn 5..."
+                    placeholder="Ví dụ: Nam Sầm Sơn, Thôn 7..."
                     maxLength={50}
                   />
                 </div>
@@ -2494,7 +2494,7 @@ const OnboardingModal = ({
                   <Home size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                   <input
                     type="text"
-                    placeholder="Ví dụ: Tổ dân phố 5 Phường Sầm Sơn"
+                    placeholder="Ví dụ: Tổ dân phố 7 Phường Sầm Sơn"
                     value={tdpInput}
                     onChange={(e) => setTdpInput(e.target.value)}
                     style={{ padding: '12px 12px 12px 38px', width: '100%', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
