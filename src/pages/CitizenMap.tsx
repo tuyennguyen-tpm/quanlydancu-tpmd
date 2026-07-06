@@ -53,7 +53,7 @@ const CitizenMap = () => {
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedHouseholdToMove, setSelectedHouseholdToMove] = useState<string>('');
-  const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('satellite');
+  const [mapLayer, setMapLayer] = useState<'street' | 'satellite' | 'terrain'>('satellite');
   const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
   const [popupSearchTerm, setPopupSearchTerm] = useState<string>('');
 
@@ -268,46 +268,98 @@ const CitizenMap = () => {
         </div>
 
         <div className="map-wrapper">
-          <button 
-            type="button"
-            className="map-layer-toggle-btn"
+          <div 
+            className="map-layer-toggle-container"
             style={{
               position: 'absolute',
               top: '12px',
               right: '12px',
               zIndex: 1000,
-              padding: '8px 14px',
+              padding: '4px',
               backgroundColor: 'white',
               border: '1px solid var(--border)',
               borderRadius: '8px',
-              fontWeight: '700',
-              fontSize: '0.82rem',
-              color: '#0f172a',
-              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '4px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
               transition: 'all 0.2s',
               outline: 'none',
               fontFamily: 'inherit'
             }}
-            onClick={() => setMapLayer(mapLayer === 'street' ? 'satellite' : 'street')}
-            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'white'; }}
           >
-            {mapLayer === 'street' ? '🛰️ Bản đồ 3D' : '🗺️ Bản đồ 2D'}
-          </button>
+            <button
+              type="button"
+              style={{
+                padding: '6px 12px',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '700',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                backgroundColor: mapLayer === 'street' ? 'var(--primary)' : 'transparent',
+                color: mapLayer === 'street' ? 'white' : '#475569',
+                transition: 'all 0.2s',
+                fontFamily: 'inherit'
+              }}
+              onClick={(e) => { e.stopPropagation(); setMapLayer('street'); }}
+            >
+              🗺️ Bản đồ 2D
+            </button>
+            <button
+              type="button"
+              style={{
+                padding: '6px 12px',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '700',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                backgroundColor: mapLayer === 'satellite' ? 'var(--primary)' : 'transparent',
+                color: mapLayer === 'satellite' ? 'white' : '#475569',
+                transition: 'all 0.2s',
+                fontFamily: 'inherit'
+              }}
+              onClick={(e) => { e.stopPropagation(); setMapLayer('satellite'); }}
+            >
+              🛰️ Xem vệ tinh
+            </button>
+            <button
+              type="button"
+              style={{
+                padding: '6px 12px',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '700',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                backgroundColor: mapLayer === 'terrain' ? 'var(--primary)' : 'transparent',
+                color: mapLayer === 'terrain' ? 'white' : '#475569',
+                transition: 'all 0.2s',
+                fontFamily: 'inherit'
+              }}
+              onClick={(e) => { e.stopPropagation(); setMapLayer('terrain'); }}
+            >
+              ⛰️ Xem 3D
+            </button>
+          </div>
           <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-            {mapLayer === 'street' ? (
+            {mapLayer === 'street' && (
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-            ) : (
+            )}
+            {mapLayer === 'satellite' && (
               <TileLayer
                 attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+            )}
+            {mapLayer === 'terrain' && (
+              <TileLayer
+                attribution='Map data &copy; <a href="https://opentopomap.org">OpenTopoMap</a> contributors'
+                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
               />
             )}
             <ChangeView center={mapCenter} zoom={mapZoom} />
