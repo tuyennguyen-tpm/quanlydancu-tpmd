@@ -517,17 +517,19 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             Cuộc họp đã diễn ra dân chủ, công khai và kết thúc vào hồi ...... giờ cùng ngày. Biên bản này đã được đọc lại cho toàn thể cuộc họp cùng nghe, thống nhất biểu quyết thông qua và ký xác nhận dưới đây.
           </div>
 
-          <table class="footer-table">
+          <div style="text-align: right; font-style: italic; font-size: 11pt; margin-top: 35px; margin-right: 40px;">
+            ${wardName}, ngày ${day} tháng ${month} năm ${year}
+          </div>
+
+          <table class="footer-table" style="margin-top: 10px;">
             <tr>
               <td>
-                <div style="font-style: italic; font-size: 11pt; margin-bottom: 3px; visibility: hidden;">&nbsp;</div>
                 <div style="font-weight: bold; text-transform: uppercase;">THƯ KÝ CUỘC HỌP</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
                 <div class="signature-space"></div>
                 <div class="signature-name">${secretary.split('-')[0].trim()}</div>
               </td>
               <td>
-                <div style="font-style: italic; font-size: 11pt; margin-bottom: 3px;">${wardName}, ngày ${day} tháng ${month} năm ${year}</div>
                 <div style="font-weight: bold; text-transform: uppercase;">CHỦ TRÌ CUỘC HỌP</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
                 <div class="signature-space"></div>
@@ -946,18 +948,21 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               Cuộc họp kết thúc vào hồi ...... giờ cùng ngày. Biên bản đã được biểu quyết thông qua.
             </div>
 
+            {/* Date line above signatures */}
+            <div style={{ textAlign: 'right', fontStyle: 'italic', fontSize: '9.5pt', marginTop: '24px', paddingRight: '8%' }}>
+              {wardName}, ngày {new Date(date).getDate()} tháng {new Date(date).getMonth() + 1} năm {new Date(date).getFullYear()}
+            </div>
+
             {/* Signatures */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '30px', fontSize: '10.5pt' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10.5pt' }}>
               <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontStyle: 'italic', fontSize: '9.5pt', visibility: 'hidden' }}>&nbsp;</div>
                 <div style={{ fontWeight: 'bold' }}>THƯ KÝ CUỘC HỌP</div>
-                <div style={{ height: '40px' }}></div>
+                <div style={{ height: '55px' }}></div>
                 <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
               </div>
               <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontStyle: 'italic', fontSize: '9.5pt' }}>{wardName}, ngày {new Date(date).getDate()} tháng {new Date(date).getMonth() + 1} năm {new Date(date).getFullYear()}</div>
                 <div style={{ fontWeight: 'bold' }}>CHỦ TRÌ CUỘC HỌP</div>
-                <div style={{ height: '40px' }}></div>
+                <div style={{ height: '55px' }}></div>
                 <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
               </div>
             </div>
