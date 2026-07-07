@@ -736,6 +736,27 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     load();
   };
 
+  const handleClearAll = async () => {
+    if (isGuest) { showToast('Bạn không có quyền chỉnh sửa chi bộ!', 'warning'); return; }
+    const confirmName = prompt('⚠️ CẢNH BÁO CỰC KỲ QUAN TRỌNG:\nHành động này sẽ XÓA SẠCH toàn bộ danh sách đảng viên hiện có!\nHành động này KHÔNG THỂ HOÀN TÁC.\n\nNếu bạn thực sự muốn xóa, hãy gõ chữ "XÓA" vào ô dưới đây để xác nhận:');
+    if (confirmName !== 'XÓA') {
+      if (confirmName !== null) {
+        showToast('Nhập xác nhận sai. Đã hủy thao tác xóa!', 'warning');
+      }
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await partyDb.clearAllPartyMembers();
+      showToast('Đã xóa sạch toàn bộ danh sách đảng viên!', 'success');
+      await load();
+    } catch (e: any) {
+      showToast(`Lỗi: ${e.message}`, 'danger');
+      setLoading(false);
+    }
+  };
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const getPositionFromLabel = (lbl: string): string => {
@@ -1516,6 +1537,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
           {!isGuest && (
             <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+          )}
+          {!isGuest && (
+            <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderColor: '#b91c1c', boxShadow: '0 4px 10px rgba(220,38,38,0.2)' }} onClick={handleClearAll}>🗑️ Xóa sạch danh sách</button>
           )}
         </div>
       </div>

@@ -1718,6 +1718,17 @@ export const partyDb = {
     setStorageItem('party_members', list.filter(m => m.id !== id));
     return true;
   },
+  clearAllPartyMembers: async (): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('party_members').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) handleDbError('xóa toàn bộ đảng viên', error);
+        if (!error) return true;
+      } catch (e) { console.error('clearAllPartyMembers fallback:', e); }
+    }
+    setStorageItem('party_members', []);
+    return true;
+  },
 
   // --- Sinh hoạt Chi bộ ---
   getPartyMeetings: async (): Promise<PartyMeeting[]> => {
