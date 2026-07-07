@@ -43,8 +43,13 @@ const WardFunds = () => {
   
   // Modal State
   const [editingRecord, setEditingRecord] = useState<WardFund | null>(null);
+  const [fullNameInput, setFullNameInput] = useState<string>('');
+  const [dobInput, setDobInput] = useState<string>('');
+  const [addressInput, setAddressInput] = useState<string>('');
+  const [pcttExpected, setPcttExpected] = useState<string>('');
   const [pcttActual, setPcttActual] = useState<string>('');
   const [pcttDate, setPcttDate] = useState<string>('');
+  const [dodnExpected, setDodnExpected] = useState<string>('');
   const [dodnActual, setDodnActual] = useState<string>('');
   const [dodnDate, setDodnDate] = useState<string>('');
   const [note, setNote] = useState<string>('');
@@ -115,8 +120,13 @@ const WardFunds = () => {
       return;
     }
     setEditingRecord(record);
+    setFullNameInput(record.full_name);
+    setDobInput(record.dob || '');
+    setAddressInput(record.address || '');
+    setPcttExpected(record.pctt_expected.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."));
     setPcttActual(record.pctt_actual.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."));
     setPcttDate(record.pctt_date || new Date().toISOString().slice(0, 10));
+    setDodnExpected(record.dodn_expected.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."));
     setDodnActual(record.dodn_actual.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."));
     setDodnDate(record.dodn_date || new Date().toISOString().slice(0, 10));
     setNote(record.note || '');
@@ -151,25 +161,37 @@ const WardFunds = () => {
     e.preventDefault();
     if (!editingRecord) return;
 
+    if (!fullNameInput.trim()) {
+      showToast('Vui lòng nhập họ và tên!', 'warning');
+      return;
+    }
+
+    const expPCTT = parseInt(pcttExpected.replace(/\./g, '')) || 0;
     const valPCTT = parseInt(pcttActual.replace(/\./g, '')) || 0;
+    const expDODN = parseInt(dodnExpected.replace(/\./g, '')) || 0;
     const valDODN = parseInt(dodnActual.replace(/\./g, '')) || 0;
 
-    if (valPCTT < 0 || valDODN < 0) {
-      showToast('Số tiền nộp không hợp lệ!', 'warning');
+    if (expPCTT < 0 || valPCTT < 0 || expDODN < 0 || valDODN < 0) {
+      showToast('Số tiền không hợp lệ!', 'warning');
       return;
     }
 
     try {
       const payload: WardFund = {
         ...editingRecord,
+        full_name: fullNameInput.trim(),
+        dob: dobInput.trim() || undefined,
+        address: addressInput.trim() || undefined,
+        pctt_expected: expPCTT,
         pctt_actual: valPCTT,
         pctt_date: valPCTT > 0 ? pcttDate : undefined,
+        dodn_expected: expDODN,
         dodn_actual: valDODN,
         dodn_date: valDODN > 0 ? dodnDate : undefined,
         note: note.trim()
       };
       await db.saveWardFund(payload);
-      showToast('Cập nhật số tiền nộp thành công!', 'success');
+      showToast('Cập nhật thông tin thành công!', 'success');
       setEditingRecord(null);
       loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
@@ -1185,6 +1207,75 @@ const WardFunds = () => {
             {/* Modal Body / Form */}
             <form onSubmit={handleSavePayment} style={{ padding: '20px' }}>
               
+              {/* Thông tin cá nhân */}
+              <div style={{ 
+                border: '1.5px solid var(--border)', 
+                borderRadius: '12px', 
+                padding: '12px 14px', 
+                marginBottom: '16px',
+                backgroundColor: 'var(--bg-main)'
+              }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                  Thông tin cá nhân
+                </span>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
+                      Họ và tên
+                    </label>
+                    <input 
+                      type="text"
+                      value={fullNameInput}
+                      onChange={(e) => setFullNameInput(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '6px',
+                        border: '1.5px solid var(--border)',
+                        fontSize: '0.88rem'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
+                      Năm/Ngày sinh
+                    </label>
+                    <input 
+                      type="text"
+                      value={dobInput}
+                      onChange={(e) => setDobInput(e.target.value)}
+                      placeholder="VD: 1990"
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '6px',
+                        border: '1.5px solid var(--border)',
+                        fontSize: '0.88rem'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
+                    Địa chỉ (Số nhà / Ngõ / Tổ)
+                  </label>
+                  <input 
+                    type="text"
+                    value={addressInput}
+                    onChange={(e) => setAddressInput(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '7px 10px',
+                      borderRadius: '6px',
+                      border: '1.5px solid var(--border)',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                </div>
+              </div>
+
               {/* Quỹ Thiên tai */}
               <div style={{ 
                 border: '1.5px solid #d1fae5', 
@@ -1193,29 +1284,22 @@ const WardFunds = () => {
                 padding: '12px 14px', 
                 marginBottom: '16px' 
               }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#065f46', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#065f46', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
                   1. Quỹ phòng chống thiên tai (PCTT)
                 </span>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#047857', margin: '4px 0 10px 0' }}>
-                  <span>Số tiền phải nộp: <strong>{formatCurrency(editingRecord.pctt_expected)}</strong></span>
-                  {editingRecord.pctt_expected === 0 && <span style={{ color: '#94a3b8' }}>(Miễn đóng)</span>}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
-                      Số tiền thực nộp (đ)
+                      Mức phải đóng (đ)
                     </label>
                     <input 
                       type="text"
-                      disabled={editingRecord.pctt_expected === 0}
-                      value={pcttActual}
-                      onChange={(e) => setPcttActual(formatInputNumber(e.target.value))}
-                      placeholder="0"
+                      value={pcttExpected}
+                      onChange={(e) => setPcttExpected(formatInputNumber(e.target.value))}
                       style={{
                         width: '100%',
-                        padding: '8px 10px',
+                        padding: '7px 10px',
                         borderRadius: '6px',
                         border: '1.5px solid #a7f3d0',
                         fontSize: '0.88rem',
@@ -1225,19 +1309,38 @@ const WardFunds = () => {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
-                      Ngày nộp tiền
+                      Thực nộp (đ)
                     </label>
                     <input 
-                      type="date"
-                      disabled={editingRecord.pctt_expected === 0}
-                      value={pcttDate}
-                      onChange={(e) => setPcttDate(e.target.value)}
+                      type="text"
+                      value={pcttActual}
+                      onChange={(e) => setPcttActual(formatInputNumber(e.target.value))}
+                      placeholder="0"
                       style={{
                         width: '100%',
                         padding: '7px 10px',
                         borderRadius: '6px',
                         border: '1.5px solid #a7f3d0',
-                        fontSize: '0.88rem'
+                        fontSize: '0.88rem',
+                        fontWeight: '700',
+                        color: '#065f46'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
+                      Ngày nộp
+                    </label>
+                    <input 
+                      type="date"
+                      value={pcttDate}
+                      onChange={(e) => setPcttDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #a7f3d0',
+                        fontSize: '0.82rem'
                       }}
                     />
                   </div>
@@ -1252,29 +1355,22 @@ const WardFunds = () => {
                 padding: '12px 14px', 
                 marginBottom: '16px' 
               }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#78350f', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#78350f', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
                   2. Quỹ đền ơn đáp nghĩa (ĐOĐN)
                 </span>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#b45309', margin: '4px 0 10px 0' }}>
-                  <span>Chỉ tiêu vận động: <strong>{formatCurrency(editingRecord.dodn_expected)}</strong></span>
-                  {editingRecord.dodn_expected === 0 && <span style={{ color: '#94a3b8' }}>(Không thu)</span>}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
-                      Số tiền thực nộp (đ)
+                      Mức phải đóng (đ)
                     </label>
                     <input 
                       type="text"
-                      disabled={editingRecord.dodn_expected === 0}
-                      value={dodnActual}
-                      onChange={(e) => setDodnActual(formatInputNumber(e.target.value))}
-                      placeholder="0"
+                      value={dodnExpected}
+                      onChange={(e) => setDodnExpected(formatInputNumber(e.target.value))}
                       style={{
                         width: '100%',
-                        padding: '8px 10px',
+                        padding: '7px 10px',
                         borderRadius: '6px',
                         border: '1.5px solid #fde047',
                         fontSize: '0.88rem',
@@ -1284,19 +1380,38 @@ const WardFunds = () => {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
-                      Ngày nộp tiền
+                      Thực nộp (đ)
                     </label>
                     <input 
-                      type="date"
-                      disabled={editingRecord.dodn_expected === 0}
-                      value={dodnDate}
-                      onChange={(e) => setDodnDate(e.target.value)}
+                      type="text"
+                      value={dodnActual}
+                      onChange={(e) => setDodnActual(formatInputNumber(e.target.value))}
+                      placeholder="0"
                       style={{
                         width: '100%',
                         padding: '7px 10px',
                         borderRadius: '6px',
                         border: '1.5px solid #fde047',
-                        fontSize: '0.88rem'
+                        fontSize: '0.88rem',
+                        fontWeight: '700',
+                        color: '#78350f'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
+                      Ngày nộp
+                    </label>
+                    <input 
+                      type="date"
+                      value={dodnDate}
+                      onChange={(e) => setDodnDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #fde047',
+                        fontSize: '0.82rem'
                       }}
                     />
                   </div>
