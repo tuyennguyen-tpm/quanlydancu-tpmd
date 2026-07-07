@@ -655,6 +655,15 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       return;
     }
     try {
+      let rId = form.resident_id || null;
+      if (!rId) {
+        const cleanFormName = form.full_name!.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
+        const matchedRes = residents.find(r => r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanFormName);
+        if (matchedRes) {
+          rId = matchedRes.id;
+        }
+      }
+
       const payload: Omit<PartyMember, 'created_at'> = {
         id: editing?.id || generateUUID(),
         full_name: form.full_name!.trim(),
@@ -663,7 +672,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         probation_date: form.probation_date || undefined,
         position: form.position || 'member',
         status: form.status || 'official',
-        resident_id: form.resident_id || null,
+        resident_id: rId,
         is_exempt_party_activities: form.is_exempt_party_activities || false,
         notes: form.notes || '',
         fee_category: form.fee_category,
@@ -783,7 +792,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Rows data
       filtered.forEach((m, index) => {
-        const res = residents.find(r => r.id === m.resident_id || r.full_name.toLowerCase().trim() === m.full_name.toLowerCase().trim());
+        const cleanMName = m.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
+        const res = residents.find(r => 
+          r.id === m.resident_id || 
+          r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanMName
+        );
         const dobStr = res && res.dob ? fmtDate(res.dob) : '';
 
         const addedRow = worksheet.addRow([
@@ -1132,10 +1145,20 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           const zone = (parseInt(columns[offset + 8]) || 3) as any;
           const notesStr = columns[offset + 9] || '';
 
+          const cleanFullName = fullName.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
           const matched = currentMembers.find(m => 
             (partyCode && m.party_code === partyCode) || 
-            (m.full_name.toLowerCase().trim() === fullName.toLowerCase().trim())
+            (m.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanFullName)
           );
+
+          // Auto-link to resident_id if not present
+          let rId = matched?.resident_id || null;
+          if (!rId) {
+            const matchedRes = residents.find(r => r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanFullName);
+            if (matchedRes) {
+              rId = matchedRes.id;
+            }
+          }
 
           await partyDb.savePartyMember({
             id: matched ? matched.id : generateUUID(),
@@ -1145,6 +1168,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             probation_date: probationD || (matched ? matched.probation_date : undefined),
             join_date: joinD || (matched ? matched.join_date : undefined),
             status: stat,
+            resident_id: rId,
             fee_category: feeCat,
             salary_base: salary,
             wage_zone: [1, 2, 3, 4].includes(zone) ? zone : 3,
@@ -1326,9 +1350,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     printWindow.document.close();
   };
 
-  const filteredResidents = residents.filter(r =>
-    r.full_name.toLowerCase().includes(residentSearch.toLowerCase())
-  ).slice(0, 6);
+  const filteredResidents = residents.filter(r => {
+    const cleanR = r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
+    const cleanS = residentSearch.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
+    return cleanR.includes(cleanS);
+  }).slice(0, 6);
 
   return (
     <>
