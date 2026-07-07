@@ -2166,7 +2166,7 @@ const App = () => {
           {/* Floating Button Group — ngang hàng, Zalo trái / AI phải */}
           <div style={{
             position: 'fixed',
-            bottom: '80px',
+            bottom: '20px',
             right: '20px',
             display: 'flex',
             flexDirection: 'row',
@@ -2222,7 +2222,7 @@ const App = () => {
           {/* Zalo Popup — hiển thị phía trên nút Zalo */}
           {zaloOpen && (
             <div style={{
-              position: 'fixed', bottom: '152px', right: '70px', zIndex: 1300,
+              position: 'fixed', bottom: '92px', right: '70px', zIndex: 1300,
               background: '#fff', border: '2px solid #dbeafe',
               borderRadius: '16px', padding: '20px',
               boxShadow: '0 8px 32px rgba(0,104,255,0.14)',
@@ -2269,7 +2269,7 @@ const App = () => {
           {/* AI Chat Widget — hiển thị phía trên nút Bot */}
           {aiChatOpen && (
             <div style={{
-              position: 'fixed', bottom: '152px', right: '20px', zIndex: 1300,
+              position: 'fixed', bottom: '92px', right: '20px', zIndex: 1300,
               background: '#fff', border: '2px solid #bfdbfe',
               borderRadius: '16px',
               boxShadow: '0 8px 32px rgba(37,99,235,0.14)',
