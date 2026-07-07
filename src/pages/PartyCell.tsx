@@ -1496,7 +1496,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       </div>
 
       {/* Toolbar */}
-      <div className="party-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="party-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: '12px' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="party-search" style={{ minWidth: 260 }}>
             <Search size={15} className="party-search-icon" />
@@ -1526,22 +1526,34 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             🎖️ {filterMilestones ? 'Đang lọc Huy hiệu (30 - 120 năm)' : 'Lọc Huy hiệu (30 - 120 năm)'}
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', borderColor: '#15803d', boxShadow: '0 4px 10px rgba(22,163,74,0.2)' }} onClick={handleExportExcel}>📤 Xuất Excel</button>
-          {!isGuest && (
-            <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)', borderColor: '#0f766e', boxShadow: '0 4px 10px rgba(13,148,136,0.2)' }} onClick={() => fileInputRef.current?.click()}>📥 Nhập Excel</button>
-          )}
-          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', borderColor: '#374151', boxShadow: '0 4px 10px rgba(75,85,99,0.2)' }} onClick={handleExportTemplate} title="Tải file Excel mẫu để nhập dữ liệu">📄 Tải mẫu</button>
-          <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv,.xlsx,.xls" onChange={handleImportExcel} />
-          
-          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
-          {!isGuest && (
-            <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
-          )}
-          {!isGuest && (
-            <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderColor: '#b91c1c', boxShadow: '0 4px 10px rgba(220,38,38,0.2)' }} onClick={handleClearAll}>🗑️ Xóa sạch danh sách</button>
-          )}
-        </div>
+
+        {!isGuest && (
+          <button 
+            className="party-btn-primary" 
+            style={{ 
+              background: 'linear-gradient(135deg, #dc2626, #b91c1c)', 
+              borderColor: '#b91c1c', 
+              boxShadow: '0 4px 10px rgba(220,38,38,0.2)' 
+            }} 
+            onClick={handleClearAll}
+          >
+            Xóa danh sách
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '16px' }}>
+        <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', borderColor: '#15803d', boxShadow: '0 4px 10px rgba(22,163,74,0.2)' }} onClick={handleExportExcel}>📤 Xuất Excel</button>
+        {!isGuest && (
+          <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)', borderColor: '#0f766e', boxShadow: '0 4px 10px rgba(13,148,136,0.2)' }} onClick={() => fileInputRef.current?.click()}>📥 Nhập Excel</button>
+        )}
+        <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', borderColor: '#374151', boxShadow: '0 4px 10px rgba(75,85,99,0.2)' }} onClick={handleExportTemplate} title="Tải file Excel mẫu để nhập dữ liệu">📄 Tải mẫu</button>
+        <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv,.xlsx,.xls" onChange={handleImportExcel} />
+        
+        <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
+        {!isGuest && (
+          <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+        )}
       </div>
 
       {/* Table */}
