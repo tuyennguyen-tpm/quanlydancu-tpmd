@@ -259,6 +259,7 @@ const PartyCell: React.FC = () => {
         }
         .party-table { 
           width: 100%; 
+          min-width: 1100px; 
           border-collapse: collapse; 
           font-size: 0.9rem; 
         }
@@ -1843,6 +1844,14 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [evals, setEvals] = useState<PartyEvaluation[]>([]);
   const [year, setYear] = useState(currentYear);
   const [saving, setSaving] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  const filteredMembers = useMemo(() => {
+    return members.filter(m => {
+      const s = search.toLowerCase();
+      return m.full_name.toLowerCase().includes(s) || (m.party_code || '').toLowerCase().includes(s);
+    });
+  }, [members, search]);
 
   const load = useCallback(async () => {
     const [m, e] = await Promise.all([partyDb.getPartyMembers(), partyDb.getPartyEvaluations(year)]);
@@ -1886,17 +1895,25 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   return (
     <>
       {/* Selector & stats */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ color: '#cbd5e1', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
-          <select value={year} onChange={e => setYear(parseInt(e.target.value))}
-            style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#1e293b', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none', fontWeight: 650 }}>
-            {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ color: '#cbd5e1', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
+            <select value={year} onChange={e => setYear(parseInt(e.target.value))}
+              style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#1e293b', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none', fontWeight: 650 }}>
+              {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <span style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
+            Đã đánh giá <strong style={{ color: '#b91c1c' }}>{rated}/{total}</strong> đảng viên
+          </span>
         </div>
-        <span style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
-          Đã đánh giá <strong style={{ color: '#b91c1c' }}>{rated}/{total}</strong> đảng viên
-        </span>
+
+        {/* Ô tìm kiếm */}
+        <div className="party-search" style={{ minWidth: 260, maxWidth: 320 }}>
+          <Search size={15} className="party-search-icon" />
+          <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
       </div>
 
       {/* Rating summary */}
@@ -1916,6 +1933,8 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       {members.length === 0 ? (
         <div className="no-data"><Award size={36} /><p>Chưa có đảng viên nào trong danh sách</p></div>
+      ) : filteredMembers.length === 0 ? (
+        <div className="no-data"><Search size={36} /><p>Không tìm thấy đảng viên phù hợp</p></div>
       ) : (
         <div className="party-table-wrap">
           <table className="party-table">
@@ -1926,7 +1945,7 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               </tr>
             </thead>
             <tbody>
-              {members.map((m, i) => {
+              {filteredMembers.map((m, i) => {
                 const ev = getEval(m.id);
                 const isSaving = saving === m.id;
                 return (
@@ -2010,6 +2029,14 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [editingMember, setEditingMember] = useState<PartyMember | null>(null);
   const [feeForm, setFeeForm] = useState<Partial<PartyMember>>({});
   const [showWarningDetails, setShowWarningDetails] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filteredMembers = useMemo(() => {
+    return members.filter(m => {
+      const s = search.toLowerCase();
+      return m.full_name.toLowerCase().includes(s) || (m.party_code || '').toLowerCase().includes(s);
+    });
+  }, [members, search]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2195,15 +2222,25 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         </div>
       )}
 
-      {/* Chú thích */}
-      <div style={{ display: 'flex', gap: 14, marginBottom: 12, fontSize: '0.8rem', color: '#475569', fontWeight: 600, flexWrap: 'wrap' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} color="#10b981" /> Đã nộp</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XCircle size={12} color="#94a3b8" /> Chưa nộp — click để đánh dấu đã nộp</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Pencil size={12} color="#2563eb" /> Nhấn ✏️ để cài mức phí từng đảng viên</span>
+      {/* Chú thích & Tìm kiếm */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 14, fontSize: '0.8rem', color: '#475569', fontWeight: 600, flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} color="#10b981" /> Đã nộp</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><XCircle size={12} color="#94a3b8" /> Chưa nộp — click để đánh dấu đã nộp</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Pencil size={12} color="#2563eb" /> Nhấn ✏️ để cài mức phí từng đảng viên</span>
+        </div>
+
+        {/* Ô tìm kiếm */}
+        <div className="party-search" style={{ minWidth: 260, maxWidth: 320 }}>
+          <Search size={15} className="party-search-icon" />
+          <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
       </div>
 
       {loading ? <div className="no-data">Đang tải...</div> : members.length === 0 ? (
         <div className="no-data"><DollarSign size={36} /><p>Chưa có đảng viên hoạt động nào</p></div>
+      ) : filteredMembers.length === 0 ? (
+        <div className="no-data"><Search size={36} /><p>Không tìm thấy đảng viên phù hợp</p></div>
       ) : (
         <div className="fee-matrix-wrap">
           <table className="fee-table">
@@ -2217,7 +2254,7 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               </tr>
             </thead>
             <tbody>
-              {members.map(member => {
+              {filteredMembers.map(member => {
                 const paidMonths = months.filter(m => isPaid(member.id, m)).length;
                 const monthlyFee = calcMonthlyFee(member, year);
                 const totalPaidAmt = fees.filter(f => f.member_id === member.id && f.paid_at).reduce((s, f) => s + (f.amount || monthlyFee), 0);
