@@ -1534,14 +1534,26 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                 </select>
               </div>
 
-              <div className="party-form-group" style={{ flexDirection: 'row', gap: 8, alignItems: 'center', paddingTop: 10 }}>
-                <input 
-                  type="checkbox" 
-                  id="isExemptCheck"
-                  checked={form.is_exempt_party_activities || false} 
-                  onChange={e => setForm(f => ({ ...f, is_exempt_party_activities: e.target.checked }))} 
-                />
-                <label htmlFor="isExemptCheck" style={{ cursor: 'pointer', margin: 0 }}>Miễn sinh hoạt Đảng</label>
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', paddingTop: '10px', marginBottom: '10px' }}>
+                <div className="party-form-group" style={{ flexDirection: 'row', gap: 8, alignItems: 'center', margin: 0 }}>
+                  <input 
+                    type="checkbox" 
+                    id="isExemptCheck"
+                    checked={form.is_exempt_party_activities || false} 
+                    onChange={e => setForm(f => ({ ...f, is_exempt_party_activities: e.target.checked }))} 
+                  />
+                  <label htmlFor="isExemptCheck" style={{ cursor: 'pointer', margin: 0 }}>Miễn sinh hoạt Đảng</label>
+                </div>
+
+                <div className="party-form-group" style={{ flexDirection: 'row', gap: 8, alignItems: 'center', margin: 0 }}>
+                  <input 
+                    type="checkbox" 
+                    id="isExemptFeeCheck"
+                    checked={form.fee_category === 'exempt'} 
+                    onChange={e => setForm(f => ({ ...f, fee_category: e.target.checked ? 'exempt' : 'bhxh' }))} 
+                  />
+                  <label htmlFor="isExemptFeeCheck" style={{ cursor: 'pointer', margin: 0 }}>Miễn đóng đảng phí</label>
+                </div>
               </div>
 
               <div className="party-form-group">
