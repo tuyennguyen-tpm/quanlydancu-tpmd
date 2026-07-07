@@ -20,13 +20,15 @@ const STATUS_LABEL: Record<string, string> = {
   official: 'Chính thức',
   probation: 'Dự bị',
   inactive: 'Không HĐ',
-  party_213: 'Đảng viên 213'
+  party_213: 'Đảng viên 213',
+  deceased: 'Đã mất'
 };
 const STATUS_COLOR: Record<string, string> = {
   official: '#22c55e',
   probation: '#f59e0b',
   inactive: '#64748b',
-  party_213: '#f43f5e'
+  party_213: '#f43f5e',
+  deceased: '#94a3b8'
 };
 const RATING_LABEL: Record<string, string> = {
   excellent: 'Xuất sắc',
@@ -698,7 +700,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     const val = lbl.trim().toLowerCase();
     if (val.includes('chính thức')) return 'official';
     if (val.includes('dự bị')) return 'probation';
-    if (val.includes('miễn') || val.includes('tạm miễn') || val.includes('không hoạt động')) return 'inactive';
+    if (val.includes('mất') || val.includes('qua đời') || val.includes('tử vong')) return 'deceased';
+    if (val.includes('miễn') || val.includes('tạm miễn') || val.includes('không hoạt động') || val.includes('không hđ')) return 'inactive';
     return 'official';
   };
 
@@ -746,8 +749,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Headers definition
       const headers = [
-        "STT", "Họ và tên", "Số thẻ Đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
-        "Ngày tháng năm sinh", "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
+        "STT", "Họ và tên", "Ngày tháng năm sinh", "Số thẻ Đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
+        "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
       ];
       
       const headerRow = worksheet.addRow(headers);
@@ -786,11 +789,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         const addedRow = worksheet.addRow([
           index + 1,
           m.full_name,
+          dobStr,
           m.party_code || '',
           POSITION_LABEL[m.position] || m.position,
           m.probation_date ? fmtDate(m.probation_date) : '',
           m.join_date ? fmtDate(m.join_date) : '',
-          dobStr,
           STATUS_LABEL[m.status] || m.status,
           FEE_CATEGORY_LABEL[m.fee_category || 'bhxh'] || m.fee_category || 'bhxh',
           m.salary_base || 0,
@@ -828,7 +831,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           if (colNumber === 10) {
             cell.numFmt = '#,##0';
           }
-          if (colNumber === 3) {
+          if (colNumber === 4) {
             cell.numFmt = '@'; // Force text format for party code
           }
 
@@ -1188,13 +1191,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   });
 
   const stats = {
-    total: members.length,
+    total: members.filter(m => m.status !== 'deceased').length,
     official: members.filter(m => m.status === 'official').length,
     probation: members.filter(m => m.status === 'probation').length,
     party213: members.filter(m => m.status === 'party_213').length,
   };
 
   const badgeNominees = members
+    .filter(m => m.status !== 'deceased')
     .map(m => {
       const age = getPartyAge(m);
       if (age === 0) return null;
@@ -1439,7 +1443,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #0d9488, #0f766e)', borderColor: '#0f766e', boxShadow: '0 4px 10px rgba(13,148,136,0.2)' }} onClick={() => fileInputRef.current?.click()}>📥 Nhập Excel</button>
           )}
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #4b5563, #374151)', borderColor: '#374151', boxShadow: '0 4px 10px rgba(75,85,99,0.2)' }} onClick={handleExportTemplate} title="Tải file Excel mẫu để nhập dữ liệu">📄 Tải mẫu</button>
-          <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv" onChange={handleImportExcel} />
+          <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv,.xlsx,.xls" onChange={handleImportExcel} />
           
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
           {!isGuest && (
@@ -1608,6 +1612,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                   <option value="probation">Dự bị</option>
                   <option value="inactive">Không hoạt động</option>
                   <option value="party_213">Đảng viên 213 (Nơi cư trú)</option>
+                  <option value="deceased">Đã mất</option>
                 </select>
               </div>
 
@@ -1982,7 +1987,7 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const load = useCallback(async () => {
     setLoading(true);
     const [m, f] = await Promise.all([partyDb.getPartyMembers(), partyDb.getPartyFees(year)]);
-    setMembers(m.filter(x => x.status !== 'inactive' && x.status !== 'party_213'));
+    setMembers(m.filter(x => x.status !== 'inactive' && x.status !== 'party_213' && x.status !== 'deceased'));
     setFees(f);
     setLoading(false);
   }, [year]);

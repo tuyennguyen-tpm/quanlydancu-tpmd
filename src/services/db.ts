@@ -1624,7 +1624,7 @@ export interface PartyMember {
   join_date?: string;
   probation_date?: string;
   position: 'secretary' | 'deputy_secretary' | 'member';
-  status: 'official' | 'probation' | 'inactive' | 'party_213';
+  status: 'official' | 'probation' | 'inactive' | 'party_213' | 'deceased';
   is_exempt_party_activities?: boolean;
   // Thu đảng phí - Quy định 01-QĐ/TW 2026
   fee_category?: 'bhxh' | 'pension' | 'no_bhxh_under_retire' | 'no_bhxh_over_retire' | 'student' | 'exempt';
