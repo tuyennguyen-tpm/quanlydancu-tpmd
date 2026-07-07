@@ -1627,7 +1627,7 @@ export interface PartyMember {
   status: 'official' | 'probation' | 'inactive' | 'party_213';
   is_exempt_party_activities?: boolean;
   // Thu đảng phí - Quy định 01-QĐ/TW 2026
-  fee_category?: 'bhxh' | 'pension' | 'no_bhxh_under_retire' | 'no_bhxh_over_retire' | 'student';
+  fee_category?: 'bhxh' | 'pension' | 'no_bhxh_under_retire' | 'no_bhxh_over_retire' | 'student' | 'exempt';
   salary_base?: number;   // Lương làm căn cứ (đ/tháng)
   wage_zone?: 1 | 2 | 3 | 4; // Vùng lương tối thiểu
   notes?: string;

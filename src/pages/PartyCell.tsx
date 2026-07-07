@@ -604,6 +604,18 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   });
   const [residentSearch, setResidentSearch] = useState('');
   const [showResidentDrop, setShowResidentDrop] = useState(false);
+  const [partySecretaryName, setPartySecretaryName] = useState(
+    localStorage.getItem('party_secretary_name') || ''
+  );
+
+  useEffect(() => {
+    if (!localStorage.getItem('party_secretary_name') && members.length > 0) {
+      const sec = members.find(m => m.position === 'secretary');
+      if (sec) {
+        setPartySecretaryName(sec.full_name);
+      }
+    }
+  }, [members]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1148,6 +1160,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       showToast('Vui lòng cho phép mở cửa sổ bật lên để in!', 'warning');
       return;
     }
+    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
     
     const rowsHtml = filtered.map((m, idx) => {
       const dateStr = m.probation_date || m.join_date;
@@ -1201,7 +1214,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             <tr>
               <td style="width: 45%; text-align: center; line-height: 1.3;">
                 <strong>ĐẢNG BỘ PHƯỜNG QUẢNG GIAO</strong><br>
-                <strong style="text-decoration: underline;">CHI BỘ TDP QUẢNG GIAO</strong>
+                <strong style="text-decoration: underline;">CHI BỘ TDP ${tdpName.toUpperCase()}</strong>
               </td>
               <td style="width: 55%; text-align: center; line-height: 1.3;">
                 <strong>ĐẢNG CỘNG SẢN VIỆT NAM</strong><br>
@@ -1212,7 +1225,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
           <div class="title">
             <h2>DANH SÁCH ĐẢNG VIÊN</h2>
-            <p>Chi bộ Tổ dân phố Kim Tuyến - Năm ${currentYear}</p>
+            <p>Chi bộ Tổ dân phố ${tdpName} - Năm ${currentYear}</p>
           </div>
 
           <table class="main-table">
@@ -1240,7 +1253,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               <td>
                 <div class="footer-date">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</div>
                 <div class="footer-role">T/M CHI BỘ<br>BÍ THƯ</div>
-                <div style="font-weight: bold; margin-top: 50px;">Nguyễn Kim Tuyến</div>
+                <div style="font-weight: bold; margin-top: 50px;">${partySecretaryName || 'Nguyễn Kim Tuyến'}</div>
               </td>
             </tr>
           </table>
@@ -1285,6 +1298,56 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#22c55e' }}>{stats.official}</div><div className="stat-label">Chính thức</div></div>
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#f59e0b' }}>{stats.probation}</div><div className="stat-label">Dự bị</div></div>
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#f43f5e' }}>{stats.party213}</div><div className="stat-label">Đảng viên 213</div></div>
+      </div>
+
+      {/* Cấu hình Bí thư Chi bộ */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '12px 18px',
+        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(251, 191, 36, 0.05) 100%)',
+        border: '1px solid rgba(239, 68, 68, 0.15)',
+        borderRadius: '12px',
+        marginBottom: '16px',
+        fontSize: '0.85rem',
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '1.1rem' }}>✍️</span>
+          <span style={{ fontWeight: '700', color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Bí thư Chi bộ:</span>
+        </div>
+        {isGuest ? (
+          <span style={{ fontWeight: '700', color: '#fff', background: '#334155', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {partySecretaryName || 'Nguyễn Kim Tuyến'}
+          </span>
+        ) : (
+          <input
+            type="text"
+            value={partySecretaryName}
+            onChange={(e) => {
+              const newVal = e.target.value;
+              setPartySecretaryName(newVal);
+              localStorage.setItem('party_secretary_name', newVal);
+            }}
+            placeholder="Nhập tên Bí thư Chi bộ..."
+            style={{
+              padding: '6px 12px',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              width: '240px',
+              outline: 'none',
+              fontWeight: 'bold',
+              color: '#f8fafc',
+              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)'
+            }}
+          />
+        )}
+        <span style={{ color: '#94a3b8', fontSize: '0.78rem', fontStyle: 'italic' }}>
+          (Tên này sẽ hiển thị ở phần ký tên cuối danh sách khi in ấn)
+        </span>
       </div>
 
       {/* Toolbar */}
@@ -1797,6 +1860,7 @@ const calcMonthlyFee = (member: PartyMember, year: number): number => {
   const zone = member.wage_zone || 3;
   const minWage = MIN_WAGE[zone];
   switch (cat) {
+    case 'exempt':               return 0;
     case 'bhxh':                 return Math.round(salary * 0.01);
     case 'pension':              return Math.round(salary * 0.005);
     case 'no_bhxh_under_retire': return Math.round(minWage * (year < 2028 ? 0.003 : 0.005));
@@ -1812,6 +1876,7 @@ const FEE_CATEGORY_LABEL: Record<string, string> = {
   no_bhxh_under_retire:  'Chưa đến tuổi hưu, không BHXH (0,3% LTT vùng)',
   no_bhxh_over_retire:   'Đủ tuổi hưu chưa hưởng (0,2% LTT vùng)',
   student:               'Học sinh/Sinh viên (5.000đ cố định)',
+  exempt:                'Được miễn đóng đảng phí (0đ)',
 };
 
 const fmtMoney = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ';
@@ -2025,6 +2090,7 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                   <option value="no_bhxh_under_retire">Chưa đến tuổi hưu, không có BHXH → 0,3% LTT vùng</option>
                   <option value="no_bhxh_over_retire">Đủ tuổi nghỉ hưu nhưng chưa hưởng → 0,2% LTT vùng</option>
                   <option value="student">Học sinh / Sinh viên → 5.000đ/tháng cố định</option>
+                  <option value="exempt">Được miễn đóng đảng phí → 0đ/tháng</option>
                 </select>
               </div>
 
