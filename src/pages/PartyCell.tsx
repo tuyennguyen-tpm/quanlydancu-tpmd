@@ -726,14 +726,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       const worksheet = workbook.addWorksheet('Danh sách đảng viên');
 
       // Title header rows (for premium look)
-      worksheet.mergeCells('A1:J1');
+      worksheet.mergeCells('A1:K1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = `DANH SÁCH ĐẢNG VIÊN CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`;
       titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF991B1B' } };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(1).height = 35;
 
-      worksheet.mergeCells('A2:J2');
+      worksheet.mergeCells('A2:K2');
       const subCell = worksheet.getCell('A2');
       subCell.value = `Thời gian xuất bản: ${new Date().toLocaleDateString('vi-VN')} - Tổng cộng: ${filtered.length} đảng viên`;
       subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
@@ -746,7 +746,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Headers definition
       const headers = [
-        "Họ và tên", "Số thẻ Đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
+        "STT", "Họ và tên", "Số thẻ Đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
         "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
       ];
       
@@ -779,8 +779,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       });
 
       // Rows data
-      filtered.forEach(m => {
+      filtered.forEach((m, index) => {
         const addedRow = worksheet.addRow([
+          index + 1,
           m.full_name,
           m.party_code || '',
           POSITION_LABEL[m.position] || m.position,
@@ -801,7 +802,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           cell.font = {
             name: 'Segoe UI',
             size: 10,
-            bold: isLeader && colNumber === 1
+            bold: isLeader && colNumber === 2
           };
           cell.border = {
             top: { style: 'thin', color: { argb: 'FFF1F5F9' } },
@@ -811,17 +812,19 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           };
           
           // Alignments
-          if (colNumber === 1 || colNumber === 8 || colNumber === 10) {
-            cell.alignment = { vertical: 'middle', horizontal: colNumber === 8 ? 'right' : 'left' };
+          if (colNumber === 1) {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          } else if (colNumber === 2 || colNumber === 9 || colNumber === 11) {
+            cell.alignment = { vertical: 'middle', horizontal: colNumber === 9 ? 'right' : 'left' };
           } else {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
 
           // Format numbers
-          if (colNumber === 8) {
+          if (colNumber === 9) {
             cell.numFmt = '#,##0';
           }
-          if (colNumber === 2) {
+          if (colNumber === 3) {
             cell.numFmt = '@'; // Force text format for party code
           }
 
@@ -838,14 +841,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Auto-fit columns
       worksheet.columns.forEach((column, colIdx) => {
-        if (colIdx > 9) return;
-        let maxLen = 12;
+        if (colIdx > 10) return;
+        let maxLen = colIdx === 0 ? 6 : 12;
         column.values?.forEach((v, rowIdx) => {
           if (rowIdx <= 4) return;
           const valStr = v ? v.toString() : '';
           if (valStr.length > maxLen) maxLen = valStr.length;
         });
-        column.width = Math.min(Math.max(maxLen + 4, 12), 40);
+        column.width = Math.min(Math.max(maxLen + 4, colIdx === 0 ? 6 : 12), 40);
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -1128,7 +1131,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     if (e.target) e.target.value = '';
   };
 
-  const [ageFilter, setAgeFilter] = useState('all');
+  const [filterMilestones, setFilterMilestones] = useState(false);
 
   const getPartyAge = (m: PartyMember): number => {
     const dateStr = m.probation_date || m.join_date;
@@ -1143,13 +1146,10 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                           (m.party_code || '').includes(search);
     if (!matchesSearch) return false;
 
-    if (ageFilter === 'all') return true;
+    if (!filterMilestones) return true;
     const age = getPartyAge(m);
     const milestones = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120];
-    if (ageFilter === 'milestones') {
-      return milestones.includes(age);
-    }
-    return age === parseInt(ageFilter, 10);
+    return milestones.includes(age);
   });
 
   const stats = {
@@ -1375,45 +1375,28 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           
-          <select 
-            value={ageFilter} 
-            onChange={e => setAgeFilter(e.target.value)}
+          <button 
+            onClick={() => setFilterMilestones(prev => !prev)}
             style={{
-              padding: '6px 12px',
+              padding: '6px 16px',
               borderRadius: '8px',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              background: 'rgba(15, 23, 42, 0.6)',
-              color: '#f8fafc',
+              border: filterMilestones ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
+              background: filterMilestones ? 'rgba(239, 68, 68, 0.25)' : 'rgba(15, 23, 42, 0.6)',
+              color: filterMilestones ? '#fca5a5' : '#f8fafc',
               fontSize: '0.85rem',
               fontWeight: '600',
-              outline: 'none',
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
               height: '38px',
-              boxSizing: 'border-box'
+              boxSizing: 'border-box',
+              outline: 'none',
+              transition: 'all 0.2s ease-in-out'
             }}
           >
-            <option value="all">🎖️ Tất cả tuổi Đảng</option>
-            <option value="milestones">🏅 Đạt Huy hiệu Đảng (30 - 120 năm)</option>
-            <option value="30">30 năm tuổi Đảng</option>
-            <option value="35">35 năm tuổi Đảng</option>
-            <option value="40">40 năm tuổi Đảng</option>
-            <option value="45">45 năm tuổi Đảng</option>
-            <option value="50">50 năm tuổi Đảng</option>
-            <option value="55">55 năm tuổi Đảng</option>
-            <option value="60">60 năm tuổi Đảng</option>
-            <option value="65">65 năm tuổi Đảng</option>
-            <option value="70">70 năm tuổi Đảng</option>
-            <option value="75">75 năm tuổi Đảng</option>
-            <option value="80">80 năm tuổi Đảng</option>
-            <option value="85">85 năm tuổi Đảng</option>
-            <option value="90">90 năm tuổi Đảng</option>
-            <option value="95">95 năm tuổi Đảng</option>
-            <option value="100">100 năm tuổi Đảng</option>
-            <option value="105">105 năm tuổi Đảng</option>
-            <option value="110">110 năm tuổi Đảng</option>
-            <option value="115">115 năm tuổi Đảng</option>
-            <option value="120">120 năm tuổi Đảng</option>
-          </select>
+            🎖️ {filterMilestones ? 'Đang lọc Huy hiệu (30 - 120 năm)' : 'Lọc Huy hiệu (30 - 120 năm)'}
+          </button>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', borderColor: '#15803d', boxShadow: '0 4px 10px rgba(22,163,74,0.2)' }} onClick={handleExportExcel}>📤 Xuất Excel</button>
