@@ -984,22 +984,23 @@ const WardFunds = () => {
 
           {/* Table container */}
           <div style={{ 
-            overflowX: 'auto', 
+            overflow: 'auto', 
+            maxHeight: 'calc(100vh - 330px)',
             border: '1.5px solid var(--border)', 
             borderRadius: '12px', 
             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
           }}>
-            <table className="data-table" style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', margin: 0 }}>
+            <table className="data-table" style={{ width: '100%', minWidth: '1100px', borderCollapse: 'collapse', margin: 0 }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
-                  <th style={{ width: '50px', textAlign: 'center' }}>STT</th>
-                  <th style={{ width: '220px', textAlign: 'left' }}>Người phải nộp</th>
-                  <th style={{ width: '90px', textAlign: 'center' }}>Năm sinh</th>
-                  <th style={{ width: '200px', textAlign: 'left' }}>Địa chỉ</th>
-                  <th style={{ width: '180px', textAlign: 'center', backgroundColor: '#ecfdf5', color: '#065f46' }}>Quỹ Thiên Tai (PCTT)</th>
-                  <th style={{ width: '180px', textAlign: 'center', backgroundColor: '#fef3c7', color: '#78350f' }}>Quỹ Đền Ơn Đáp Nghĩa</th>
-                  <th style={{ width: '140px', textAlign: 'left' }}>Ghi chú</th>
-                  {!isGuest && <th style={{ width: '90px', textAlign: 'center' }}>Thao tác</th>}
+                <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
+                  <th style={{ width: '50px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>STT</th>
+                  <th style={{ width: '220px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Người phải nộp</th>
+                  <th style={{ width: '90px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Năm sinh</th>
+                  <th style={{ width: '200px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Địa chỉ</th>
+                  <th style={{ width: '180px', textAlign: 'center', backgroundColor: '#ecfdf5', color: '#065f46', position: 'sticky', top: 0, zIndex: 10 }}>Quỹ Thiên Tai (PCTT)</th>
+                  <th style={{ width: '180px', textAlign: 'center', backgroundColor: '#fef3c7', color: '#78350f', position: 'sticky', top: 0, zIndex: 10 }}>Quỹ Đền Ơn Đáp Nghĩa</th>
+                  <th style={{ width: '140px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Ghi chú</th>
+                  {!isGuest && <th style={{ width: '90px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Thao tác</th>}
                 </tr>
               </thead>
               <tbody>
@@ -1179,6 +1180,9 @@ const WardFunds = () => {
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
             width: '90%',
             maxWidth: '520px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden'
           }}>
             {/* Modal Header */}
@@ -1205,7 +1209,7 @@ const WardFunds = () => {
             </div>
 
             {/* Modal Body / Form */}
-            <form onSubmit={handleSavePayment} style={{ padding: '20px' }}>
+            <form onSubmit={handleSavePayment} style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
               
               {/* Thông tin cá nhân */}
               <div style={{ 
