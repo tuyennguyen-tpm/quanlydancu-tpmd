@@ -628,27 +628,42 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [m, r] = await Promise.all([partyDb.getPartyMembers(), db.getResidents()]);
-    
-    // Auto-cleanup corrupted party_code fields containing dates/timezones
-    const cleanedMembers = await Promise.all(m.map(async (member) => {
-      const code = member.party_code || '';
-      const isInvalid = code.includes('GMT') || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(code) || /^\d{4}-\d{2}-\d{2}/.test(code);
-      if (isInvalid) {
-        try {
+    try {
+      const [m, r] = await Promise.all([partyDb.getPartyMembers(), db.getResidents()]);
+      
+      // 1. Clean in-memory instantly (takes < 1ms)
+      const corrupted: PartyMember[] = [];
+      const cleanedMembers = m.map((member) => {
+        const code = member.party_code || '';
+        const isInvalid = code.includes('GMT') || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(code) || /^\d{4}-\d{2}-\d{2}/.test(code);
+        if (isInvalid) {
           const cleaned = { ...member, party_code: '' };
-          await partyDb.savePartyMember(cleaned);
+          corrupted.push(cleaned);
           return cleaned;
-        } catch (err) {
-          console.error('Error cleaning party code:', err);
         }
-      }
-      return member;
-    }));
+        return member;
+      });
 
-    setMembers(cleanedMembers);
-    setResidents(r);
-    setLoading(false);
+      setMembers(cleanedMembers);
+      setResidents(r);
+      setLoading(false);
+
+      // 2. Background cleanup in database (sequential, non-blocking to UI)
+      if (corrupted.length > 0) {
+        (async () => {
+          for (const member of corrupted) {
+            try {
+              await partyDb.savePartyMember(member);
+            } catch (err) {
+              console.error('Background cleanup failed for member:', member.full_name, err);
+            }
+          }
+        })();
+      }
+    } catch (err) {
+      console.error('Load failed:', err);
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
