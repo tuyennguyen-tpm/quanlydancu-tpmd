@@ -2049,8 +2049,23 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       ) : filteredMembers.length === 0 ? (
         <div className="no-data"><Search size={36} /><p>Không tìm thấy đảng viên phù hợp</p></div>
       ) : (
-        <div className="party-table-wrap" style={{ background: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-          <table className="party-table">
+        <div>
+          {/* Thanh cuộn ngang phụ ở phía trên */}
+          <div 
+            ref={topScrollRef} 
+            style={{ 
+              overflowX: 'auto', 
+              overflowY: 'hidden', 
+              width: '100%', 
+              height: '12px', 
+              marginBottom: '6px'
+            }}
+          >
+            <div className="dummy-scroll" style={{ height: '1px' }} />
+          </div>
+
+          <div className="party-table-wrap" ref={tableWrapRef} style={{ background: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+            <table className="party-table">
             <thead>
               <tr>
                 <th>#</th><th>Họ và tên</th><th>Chức vụ</th>
@@ -2092,6 +2107,7 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             </tbody>
           </table>
         </div>
+      </div>
       )}
     </div>
   );
