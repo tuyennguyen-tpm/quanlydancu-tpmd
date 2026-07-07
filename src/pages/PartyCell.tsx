@@ -1983,6 +1983,7 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [toggling, setToggling] = useState<string | null>(null);
   const [editingMember, setEditingMember] = useState<PartyMember | null>(null);
   const [feeForm, setFeeForm] = useState<Partial<PartyMember>>({});
+  const [showWarningDetails, setShowWarningDetails] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2084,8 +2085,33 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       {/* Cảnh báo nợ phí */}
       {alertMembers.length > 0 && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: '0.85rem', color: '#991b1b', fontWeight: 650, boxShadow: '0 4px 12px rgba(239,68,68,0.03)' }}>
-          <strong>⚠️ Cảnh báo nợ đảng phí:</strong>{' '}
-          {alertMembers.map(m => `${m.full_name} (${getUnpaidCount(m.id)} tháng)`).join(' • ')}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setShowWarningDetails(p => !p)}>
+            <span>
+              <strong>⚠️ Cảnh báo nợ đảng phí:</strong> Có <strong>{alertMembers.length}</strong> đồng chí chưa nộp đủ từ 3 tháng trở lên trong năm {year}.
+            </span>
+            <button 
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#b91c1c',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                borderRadius: 4
+              }}
+            >
+              {showWarningDetails ? 'Ẩn chi tiết ▴' : 'Xem chi tiết ▾'}
+            </button>
+          </div>
+          {showWarningDetails && (
+            <div style={{ marginTop: 8, borderTop: '1px solid #fca5a5', paddingTop: 8, color: '#b91c1c', maxHeight: 120, overflowY: 'auto', lineHeight: 1.6 }}>
+              {alertMembers.map(m => `${m.full_name} (${getUnpaidCount(m.id)} tháng)`).join(' • ')}
+            </div>
+          )}
         </div>
       )}
 
