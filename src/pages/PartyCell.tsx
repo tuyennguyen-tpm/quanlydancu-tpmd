@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ExcelJS from 'exceljs';
 import { partyDb, generateUUID } from '../services/db';
 import type { PartyMember, PartyMeeting, PartyEvaluation, PartyFee } from '../services/db';
@@ -600,6 +600,46 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PartyMember | null>(null);
+
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const tableWrap = tableWrapRef.current;
+    const topScroll = topScrollRef.current;
+    if (!tableWrap || !topScroll) return;
+
+    const handleTableScroll = () => {
+      if (topScroll.scrollLeft !== tableWrap.scrollLeft) {
+        topScroll.scrollLeft = tableWrap.scrollLeft;
+      }
+    };
+    const handleTopScroll = () => {
+      if (tableWrap.scrollLeft !== topScroll.scrollLeft) {
+        tableWrap.scrollLeft = topScroll.scrollLeft;
+      }
+    };
+
+    tableWrap.addEventListener('scroll', handleTableScroll);
+    topScroll.addEventListener('scroll', handleTopScroll);
+
+    const updateWidth = () => {
+      const dummy = topScroll.querySelector('.dummy-scroll') as HTMLElement;
+      if (dummy) {
+        dummy.style.width = `${tableWrap.scrollWidth}px`;
+      }
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(tableWrap);
+
+    return () => {
+      tableWrap.removeEventListener('scroll', handleTableScroll);
+      topScroll.removeEventListener('scroll', handleTopScroll);
+      observer.disconnect();
+    };
+  }, [members, loading, search]);
 
   // Form state
   const [form, setForm] = useState<Partial<PartyMember>>({
@@ -1483,8 +1523,23 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       {loading ? <div className="no-data">Đang tải...</div> : filtered.length === 0 ? (
         <div className="no-data"><Users size={36} /><p>Chưa có đảng viên nào</p></div>
       ) : (
-        <div className="party-table-wrap">
-          <table className="party-table">
+        <div>
+          {/* Thanh cuộn ngang phụ ở phía trên */}
+          <div 
+            ref={topScrollRef} 
+            style={{ 
+              overflowX: 'auto', 
+              overflowY: 'hidden', 
+              width: '100%', 
+              height: '10px', 
+              marginBottom: '6px'
+            }}
+          >
+            <div className="dummy-scroll" style={{ height: '1px' }} />
+          </div>
+
+          <div className="party-table-wrap" ref={tableWrapRef}>
+            <table className="party-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -1558,6 +1613,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             </tbody>
           </table>
         </div>
+      </div>
       )}
 
       {/* Modal */}
@@ -1894,8 +1950,8 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
   return (
     <div style={{
-      background: '#f0fdf4',
-      border: '1px solid #dcfce7',
+      background: 'rgba(34, 197, 94, 0.06)',
+      border: '1px solid rgba(34, 197, 94, 0.15)',
       borderRadius: 12,
       padding: '22px',
       margin: '-14px',
