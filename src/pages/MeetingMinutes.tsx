@@ -741,6 +741,21 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     const suffix = getDocNumberSuffix(meetingType);
     const docNumDisplay = docNumber ? `Số: ${docNumber}${suffix}` : `Số: .....${suffix}`;
 
+    const formattedContent = content
+      .split('\n')
+      .map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return '<p style="margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;">&nbsp;</p>';
+        }
+        const isHeaderOrList = /^[I|V|X|\d+\-|*•\+]+[.\s]/.test(trimmed) || trimmed.length < 60;
+        if (isHeaderOrList) {
+          return `<p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;">${trimmed}</p>`;
+        }
+        return `<p style="text-align: justify; text-indent: 36pt; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;">${trimmed}</p>`;
+      })
+      .join('');
+
     const contentHtml = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' 
             xmlns:w='urn:schemas-microsoft-com:office:word' 
@@ -758,98 +773,29 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         <![endif]-->
         <style>
           @page Section1 {
-            size: 595.3pt 841.9pt; /* A4 Portrait */
-            margin: 72.0pt 54.0pt 72.0pt 86.4pt; /* top 2.5cm, right 1.9cm, bottom 2.5cm, left 3.0cm */
+            size: 595.3pt 841.9pt;
+            margin: 72.0pt 54.0pt 72.0pt 86.4pt;
             mso-header-margin: 36.0pt;
             mso-footer-margin: 36.0pt;
             mso-paper-source: 0;
           }
-          div.Section1 {
-            page: Section1;
-          }
-          body {
-            font-family: "Times New Roman", Times, serif;
-            font-size: 13pt;
-            line-height: 1.6;
-            color: #000;
-          }
-          .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 25px;
-          }
-          .header-table td {
-            vertical-align: top;
-            text-align: center;
-            width: 50%;
-          }
-          .org-title {
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 12pt;
-          }
-          .org-sub {
-            font-size: 11pt;
-            font-weight: bold;
-          }
-          .nation-title {
-            font-weight: bold;
-            font-size: 11.5pt;
-          }
-          .nation-sub {
-            font-weight: bold;
-            text-decoration: underline;
-            font-size: 12pt;
-          }
-          .doc-num {
-            font-size: 11pt;
-            margin-top: 5px;
-          }
-          .doc-title-main {
-            text-align: center;
-            font-weight: bold;
-            font-size: 14pt;
-            text-transform: uppercase;
-            margin-top: 15px;
-            margin-bottom: 5px;
-          }
-          .doc-title-sub {
-            text-align: center;
-            font-style: italic;
-            font-size: 12pt;
-            margin-bottom: 25px;
-          }
-          .doc-body {
-            text-align: justify;
-            font-size: 13pt;
-          }
-          .section-title {
-            font-weight: bold;
-            margin-top: 15px;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-          }
-          .sign-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 40px;
-            page-break-inside: avoid;
-          }
-          .sign-table td {
-            width: 50%;
-            text-align: center;
-            vertical-align: top;
-          }
-          .sign-title {
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 12pt;
-          }
-          .sign-name {
-            font-weight: bold;
-            margin-top: 70px;
-            font-size: 13pt;
-          }
+          div.Section1 { page: Section1; }
+          body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.6; color: #000; }
+          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+          .header-table td { vertical-align: top; text-align: center; width: 50%; }
+          .org-title { font-weight: bold; text-transform: uppercase; font-size: 12pt; }
+          .org-sub { font-size: 11pt; font-weight: bold; }
+          .nation-title { font-weight: bold; font-size: 11.5pt; }
+          .nation-sub { font-weight: bold; font-size: 12pt; }
+          .doc-num { font-size: 11pt; margin-top: 5px; }
+          .doc-title-main { text-align: center; font-weight: bold; font-size: 14pt; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px; }
+          .doc-title-sub { text-align: center; font-style: italic; font-size: 12pt; margin-bottom: 25px; }
+          .doc-body { font-size: 13pt; }
+          .section-title { font-weight: bold; margin-top: 15px; margin-bottom: 6px; text-transform: uppercase; }
+          .sign-table { width: 100%; border-collapse: collapse; margin-top: 40px; page-break-inside: avoid; }
+          .sign-table td { width: 50%; text-align: center; vertical-align: top; }
+          .sign-title { font-weight: bold; text-transform: uppercase; font-size: 12pt; }
+          .sign-name { font-weight: bold; margin-top: 70px; font-size: 13pt; }
         </style>
       </head>
       <body>
@@ -859,11 +805,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               <td>
                 <div class="org-title">${orgLevel1 || 'ỦY BAN NHÂN DÂN'}</div>
                 <div class="org-sub">${orgLevel2 || `TỔ DÂN PHỐ ${tdpName.toUpperCase()}`}</div>
+                <div style="border-bottom: 1.5px solid #000; width: 80px; margin: 4px auto 8px auto;"></div>
                 <div class="doc-num">${docNumDisplay}</div>
               </td>
               <td>
                 <div class="nation-title">${nationLevel1 || 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}</div>
                 <div class="nation-sub">${nationLevel2 || 'Độc lập - Tự do - Hạnh phúc'}</div>
+                <div style="border-bottom: 1.5px solid #000; width: 140px; margin: 4px auto 8px auto;"></div>
                 <div style="font-size: 11pt; font-style: italic; margin-top: 5px;">
                   ${wardName}, ngày ${day} tháng ${month} năm ${year}
                 </div>
@@ -872,20 +820,20 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           </table>
 
           <div class="doc-title-main">${docTitle || 'BIÊN BẢN CUỘC HỌP'}</div>
-          <div class="doc-title-sub">${title}</div>
+          <div class="doc-title-sub">Về việc: ${title}</div>
 
           <div class="doc-body">
             <div class="section-title">I. PHẦN THỦ TỤC</div>
-            <strong>1. Thời gian bắt đầu:</strong> Vào hồi ${time} ngày ${day} tháng ${month} năm ${year}<br/>
-            <strong>2. Địa điểm:</strong> Tại ${location}<br/>
-            <strong>3. Chủ trì:</strong> ${chairman}<br/>
-            <strong>4. Thư ký:</strong> ${secretary}<br/>
-            <strong>5. Thành phần tham dự:</strong> Đại diện của ${attendance} hộ gia đình trên địa bàn Tổ dân phố tham gia đầy đủ.<br/><br/>
+            <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>1. Thời gian bắt đầu:</strong> Vào hồi ${time} ngày ${day} tháng ${month} năm ${year}</p>
+            <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>2. Địa điểm:</strong> Tại ${location}</p>
+            <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>3. Chủ trì:</strong> ${chairman}</p>
+            <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>4. Thư ký:</strong> ${secretary}</p>
+            <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>5. Thành phần tham dự:</strong> Đại diện của ${attendance} hộ gia đình trên địa bàn Tổ dân phố tham gia đầy đủ.</p>
             
-            <div class="section-title">II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
-            ${content.replace(/\n/g, '<br/>')}<br/><br/>
+            <div class="section-title" style="margin-top: 18pt;">II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
+            ${formattedContent}
             
-            Cuộc họp đã diễn ra dân chủ, công khai và kết thúc vào hồi ${endTime} cùng ngày. Biên bản này đã được đọc lại cho toàn thể cuộc họp cùng nghe, thống nhất biểu quyết thông qua và ký xác nhận dưới đây.
+            <p style="text-align: justify; text-indent: 36pt; margin: 12pt 0 6pt 0; line-height: 1.5; font-size: 13pt;">Cuộc họp đã diễn ra dân chủ, công khai và kết thúc vào hồi ${endTime} cùng ngày. Biên bản này đã được đọc lại cho toàn thể cuộc họp cùng nghe, thống nhất biểu quyết thông qua và ký xác nhận dưới đây.</p>
           </div>
 
           <table class="sign-table">
