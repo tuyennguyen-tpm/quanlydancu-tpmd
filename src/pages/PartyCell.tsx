@@ -629,7 +629,24 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const load = useCallback(async () => {
     setLoading(true);
     const [m, r] = await Promise.all([partyDb.getPartyMembers(), db.getResidents()]);
-    setMembers(m);
+    
+    // Auto-cleanup corrupted party_code fields containing dates/timezones
+    const cleanedMembers = await Promise.all(m.map(async (member) => {
+      const code = member.party_code || '';
+      const isInvalid = code.includes('GMT') || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(code) || /^\d{4}-\d{2}-\d{2}/.test(code);
+      if (isInvalid) {
+        try {
+          const cleaned = { ...member, party_code: '' };
+          await partyDb.savePartyMember(cleaned);
+          return cleaned;
+        } catch (err) {
+          console.error('Error cleaning party code:', err);
+        }
+      }
+      return member;
+    }));
+
+    setMembers(cleanedMembers);
     setResidents(r);
     setLoading(false);
   }, []);
@@ -1087,7 +1104,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             }
 
             const rowValues: string[] = [];
-            for (let c = 1; c <= 11; c++) {
+            for (let c = 1; c <= 12; c++) {
               const cell = row.getCell(c);
               let val = cell.value;
               if (val && typeof val === 'object' && 'result' in val) {
@@ -1143,19 +1160,21 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           if (columns.length <= offset || !columns[offset]) continue;
 
           const fullName = columns[offset];
-          const partyCode = columns[offset + 1] || '';
-          const pos = getPositionFromLabel(columns[offset + 2] || 'Đảng viên') as any;
-          const probationD = parseInputDate(columns[offset + 3]) || null;
-          const joinD = parseInputDate(columns[offset + 4]) || null;
-          const stat = getStatusFromLabel(columns[offset + 5] || 'Chính thức') as any;
-          const feeCat = getFeeCatFromLabel(columns[offset + 6] || 'Có BHXH bắt buộc') as any;
-          const salary = parseInt(columns[offset + 7]) || 0;
-          const zone = (parseInt(columns[offset + 8]) || 3) as any;
-          const notesStr = columns[offset + 9] || '';
+          // columns[offset + 1] is "Ngày tháng năm sinh" (dob). We skip it here as it's saved in residents and not directly in party_members.
+          const partyCode = columns[offset + 2] || '';
+          const pos = getPositionFromLabel(columns[offset + 3] || 'Đảng viên') as any;
+          const probationD = parseInputDate(columns[offset + 4]) || null;
+          const joinD = parseInputDate(columns[offset + 5]) || null;
+          const stat = getStatusFromLabel(columns[offset + 6] || 'Chính thức') as any;
+          const feeCat = getFeeCatFromLabel(columns[offset + 7] || 'Có BHXH bắt buộc') as any;
+          const salary = parseInt(columns[offset + 8]) || 0;
+          const zone = (parseInt(columns[offset + 9]) || 3) as any;
+          const notesStr = columns[offset + 10] || '';
 
           const cleanFullName = fullName.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
+          const cleanPartyCode = partyCode.trim();
           const matched = currentMembers.find(m => 
-            (partyCode && m.party_code === partyCode) || 
+            (cleanPartyCode && m.party_code === cleanPartyCode) || 
             (m.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanFullName)
           );
 
@@ -1171,7 +1190,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           await partyDb.savePartyMember({
             id: matched ? matched.id : generateUUID(),
             full_name: fullName,
-            party_code: partyCode || (matched ? matched.party_code : ''),
+            party_code: cleanPartyCode,
             position: pos,
             probation_date: probationD || (matched ? matched.probation_date : undefined),
             join_date: joinD || (matched ? matched.join_date : undefined),
