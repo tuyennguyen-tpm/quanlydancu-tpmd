@@ -1,6 +1,6 @@
 // v2.1 - Su dung bang app_config cho dong bo ma PIN (khong phu thuoc documents)
 import { createClient } from '@supabase/supabase-js';
-import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData, HouseholdFund } from '../types';
+import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData, HouseholdFund, WardFund } from '../types';
 
 
 // Types for logs not defined in index.ts
@@ -134,6 +134,7 @@ const handleDbError = (action: string, error: any) => {
       else if (action.includes('tài liệu')) missingTable = 'documents';
       else if (action.includes('biên bản')) missingTable = 'meeting_minutes';
       else if (action.includes('cấu hình') || action.includes('PIN')) missingTable = 'app_config';
+      else if (action.includes('quỹ phường') || action.includes('thiên tai') || action.includes('đền ơn')) missingTable = 'ward_funds';
     }
   }
 
@@ -1331,6 +1332,111 @@ export const db = {
         console.error('Failed to sync fund_list to Supabase:', err);
       }
     }
+  },
+  getWardFunds: async (year: number): Promise<WardFund[]> => {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('ward_funds')
+          .select('*')
+          .eq('year', year)
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        return data || [];
+      } catch (e) {
+        handleDbError('lấy danh sách quỹ phường', e);
+      }
+    }
+    const list = getStorageItem<WardFund[]>('ward_funds', []);
+    return list.filter(f => f.year === year);
+  },
+  saveWardFund: async (fund: Omit<WardFund, 'created_at'> & { created_at?: string }): Promise<WardFund> => {
+    const fullFund: WardFund = {
+      ...fund,
+      created_at: fund.created_at || new Date().toISOString()
+    };
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('ward_funds')
+          .upsert(fullFund)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } catch (e) {
+        handleDbError('lưu đóng quỹ phường', e);
+      }
+    }
+    const list = getStorageItem<WardFund[]>('ward_funds', []);
+    const idx = list.findIndex(f => f.id === fund.id);
+    if (idx >= 0) {
+      list[idx] = fullFund;
+    } else {
+      list.push(fullFund);
+    }
+    setStorageItem('ward_funds', list);
+    return fullFund;
+  },
+  saveWardFundsBatch: async (funds: WardFund[]): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('ward_funds')
+          .upsert(funds);
+        if (error) throw error;
+        return true;
+      } catch (e) {
+        handleDbError('lưu hàng loạt quỹ phường', e);
+      }
+    }
+    const list = getStorageItem<WardFund[]>('ward_funds', []);
+    funds.forEach(fund => {
+      const idx = list.findIndex(f => f.id === fund.id);
+      if (idx >= 0) {
+        list[idx] = fund;
+      } else {
+        list.push(fund);
+      }
+    });
+    setStorageItem('ward_funds', list);
+    return true;
+  },
+  deleteWardFund: async (id: string): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('ward_funds')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+        return true;
+      } catch (e) {
+        handleDbError('xóa nộp quỹ phường', e);
+      }
+    }
+    const list = getStorageItem<WardFund[]>('ward_funds', []);
+    const filtered = list.filter(f => f.id !== id);
+    setStorageItem('ward_funds', filtered);
+    return true;
+  },
+  clearWardFunds: async (year: number): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('ward_funds')
+          .delete()
+          .eq('year', year);
+        if (error) throw error;
+        return true;
+      } catch (e) {
+        handleDbError('xóa toàn bộ quỹ phường của năm', e);
+      }
+    }
+    const list = getStorageItem<WardFund[]>('ward_funds', []);
+    const filtered = list.filter(f => f.year !== year);
+    setStorageItem('ward_funds', filtered);
+    return true;
   }
 };
 
@@ -1606,6 +1712,33 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `CREATE POLICY "Allow admin access household_funds" ON household_funds FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
     sql += `DROP POLICY IF EXISTS "Allow public read household_funds" ON household_funds;\n`;
     sql += `CREATE POLICY "Allow public read household_funds" ON household_funds FOR SELECT TO anon USING (true);\n\n`;
+  }
+
+  // Ward Funds
+  if (isAll || missingTables.includes('ward_funds')) {
+    sql += `-- ─── CẬP NHẬT BẢNG WARD_FUNDS ───\n`;
+    sql += `DROP TABLE IF EXISTS ward_funds CASCADE;\n\n`;
+    sql += `CREATE TABLE ward_funds (\n`;
+    sql += `    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),\n`;
+    sql += `    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),\n`;
+    sql += `    year INTEGER NOT NULL,\n`;
+    sql += `    full_name TEXT NOT NULL,\n`;
+    sql += `    dob TEXT,\n`;
+    sql += `    address TEXT,\n`;
+    sql += `    pctt_expected BIGINT DEFAULT 0,\n`;
+    sql += `    pctt_actual BIGINT DEFAULT 0,\n`;
+    sql += `    pctt_date DATE,\n`;
+    sql += `    dodn_expected BIGINT DEFAULT 0,\n`;
+    sql += `    dodn_actual BIGINT DEFAULT 0,\n`;
+    sql += `    dodn_date DATE,\n`;
+    sql += `    note TEXT,\n`;
+    sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
+    sql += `);\n\n`;
+    sql += `ALTER TABLE ward_funds ENABLE ROW LEVEL SECURITY;\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow admin access ward_funds" ON ward_funds;\n`;
+    sql += `CREATE POLICY "Allow admin access ward_funds" ON ward_funds FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
+    sql += `DROP POLICY IF EXISTS "Allow public read ward_funds" ON ward_funds;\n`;
+    sql += `CREATE POLICY "Allow public read ward_funds" ON ward_funds FOR SELECT TO anon USING (true);\n\n`;
   }
 
   return sql;

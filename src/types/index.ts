@@ -134,3 +134,21 @@ export interface HouseholdFund {
   created_at?: string;
 }
 
+export interface WardFund {
+  id: string;
+  user_id?: string;
+  year: number;
+  full_name: string;
+  dob?: string;
+  address?: string;
+  pctt_expected: number;
+  pctt_actual: number;
+  pctt_date?: string;
+  dodn_expected: number;
+  dodn_actual: number;
+  dodn_date?: string;
+  note?: string;
+  created_at?: string;
+}
+
+

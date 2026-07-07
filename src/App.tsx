@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import AIAssistant from './pages/AIAssistant';
 import CitizenMap from './pages/CitizenMap';
 import Finance from './pages/Finance';
+import WardFunds from './pages/WardFunds';
 import Households from './pages/Households';
 import Residents from './pages/Residents';
 import Policies from './pages/Policies';
@@ -1100,6 +1101,8 @@ const App = () => {
         return <Environment />;
       case 'finance':
         return <Finance />;
+      case 'ward-funds':
+        return <WardFunds />;
       case 'party-cell':
         return <PartyCell />;
       case 'meetings':
@@ -1140,6 +1143,7 @@ const App = () => {
     { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', badge: pendingCount },
     { id: 'environment', icon: Leaf, label: 'Vệ sinh môi trường' },
     { id: 'finance', icon: Wallet, label: 'Thu chi cộng đồng' },
+    { id: 'ward-funds', icon: Wallet, label: 'Thu Quỹ Phường' },
     { id: 'meetings', icon: Calendar, label: 'Họp dân' },
     { id: 'meetings-party', icon: Calendar, label: 'Họp chi bộ' },
     { id: 'meetings-front', icon: Calendar, label: 'Họp mặt trận' },
@@ -1152,7 +1156,7 @@ const App = () => {
   ].filter(item => {
     if (isGuestMode) {
       // Ẩn các mục nhạy cảm với chế độ khách
-      return !['households', 'residents', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant'].includes(item.id);
+      return !['households', 'residents', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds'].includes(item.id);
     }
     if (userRole === 'mat_tran') {
       // Ẩn chi bộ đối với Mặt trận

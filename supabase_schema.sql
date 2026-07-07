@@ -203,3 +203,31 @@ CREATE POLICY "Allow public read meeting_minutes" ON meeting_minutes FOR SELECT 
 
 -- Người dân được gửi phản ánh mới (INSERT vào bảng complaints)
 CREATE POLICY "Allow public submit complaint" ON complaints FOR INSERT TO anon WITH CHECK (true);
+
+-- 12. Bảng Quỹ Phường (ward_funds)
+CREATE TABLE IF NOT EXISTS ward_funds (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    year INTEGER NOT NULL,
+    full_name TEXT NOT NULL,
+    dob TEXT,
+    address TEXT,
+    pctt_expected BIGINT DEFAULT 0,
+    pctt_actual BIGINT DEFAULT 0,
+    pctt_date DATE,
+    dodn_expected BIGINT DEFAULT 0,
+    dodn_actual BIGINT DEFAULT 0,
+    dodn_date DATE,
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Kích hoạt RLS bảo mật cho bảng ward_funds
+ALTER TABLE ward_funds ENABLE ROW LEVEL SECURITY;
+
+-- Quyền của quản trị viên
+CREATE POLICY "Allow admin access ward_funds" ON ward_funds FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Quyền của người dân (chỉ đọc)
+CREATE POLICY "Allow public read ward_funds" ON ward_funds FOR SELECT TO anon USING (true);
+
