@@ -623,15 +623,20 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     tableWrap.addEventListener('scroll', handleTableScroll);
     topScroll.addEventListener('scroll', handleTopScroll);
 
+    const table = tableWrap.querySelector('.party-table') as HTMLElement;
+
     const updateWidth = () => {
       const dummy = topScroll.querySelector('.dummy-scroll') as HTMLElement;
-      if (dummy) {
-        dummy.style.width = `${tableWrap.scrollWidth}px`;
+      if (dummy && table) {
+        dummy.style.width = `${table.offsetWidth}px`;
       }
     };
 
     updateWidth();
     const observer = new ResizeObserver(updateWidth);
+    if (table) {
+      observer.observe(table);
+    }
     observer.observe(tableWrap);
 
     return () => {
@@ -1531,7 +1536,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               overflowX: 'auto', 
               overflowY: 'hidden', 
               width: '100%', 
-              height: '10px', 
+              height: '12px', 
               marginBottom: '6px'
             }}
           >
