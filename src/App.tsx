@@ -1296,22 +1296,22 @@ const App = () => {
             </div>
           )}
 
-          <div className="user-profile" style={{ width: '100%' }}>
+          <div className="user-profile" style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
             {session?.user?.user_metadata?.avatar_url ? (
               <img 
                 src={session.user.user_metadata.avatar_url} 
                 alt="Avatar" 
                 className="avatar-img" 
-                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(59, 130, 246, 0.5)' }} 
+                style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(59, 130, 246, 0.5)', flexShrink: 0 }} 
               />
             ) : (
-              <div className="avatar">
+              <div className="avatar" style={{ flexShrink: 0 }}>
                 {session?.user?.user_metadata?.full_name 
                   ? session.user.user_metadata.full_name.split(' ').pop()?.slice(0, 2).toUpperCase() 
                   : (session?.user?.email ? session.user.email.slice(0, 2).toUpperCase() : 'AD')}
               </div>
             )}
-            <div className="user-info" style={{ overflow: 'hidden' }}>
+            <div className="user-info" style={{ overflow: 'hidden', flex: 1, marginLeft: '12px' }}>
               <span className="user-name" title={session?.user?.user_metadata?.full_name || session?.user?.email || 'Tổ trưởng'} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
                 {session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Tổ trưởng'}
               </span>
@@ -1319,10 +1319,10 @@ const App = () => {
                 {isGuestMode ? 'Xem công khai' : userRole === 'demo' ? '👁️ Trang Chủ' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : userRole === 'mat_tran' ? 'Trưởng ban Mặt trận' : 'Cán bộ Chung'}
               </span>
             </div>
+            <button className="logout-btn" onClick={handleLogout} title="Đăng xuất" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <LogOut size={18} />
+            </button>
           </div>
-          <button className="logout-btn" onClick={handleLogout} title="Đăng xuất">
-            <LogOut size={20} />
-          </button>
         </div>
       </aside>
 
