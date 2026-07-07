@@ -1538,7 +1538,17 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         
         <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
         {!isGuest && (
-          <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+          <button 
+            className="party-btn-primary" 
+            style={{ 
+              background: 'linear-gradient(135deg, #60a5fa, #3b82f6)', 
+              borderColor: '#3b82f6', 
+              boxShadow: '0 4px 10px rgba(96,165,250,0.2)' 
+            }} 
+            onClick={openAdd}
+          >
+            <Plus size={15} />Thêm Đảng viên
+          </button>
         )}
         {!isGuest && (
           <button 
