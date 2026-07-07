@@ -726,14 +726,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       const worksheet = workbook.addWorksheet('Danh sách đảng viên');
 
       // Title header rows (for premium look)
-      worksheet.mergeCells('A1:K1');
+      worksheet.mergeCells('A1:L1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = `DANH SÁCH ĐẢNG VIÊN CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`;
       titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF991B1B' } };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(1).height = 35;
 
-      worksheet.mergeCells('A2:K2');
+      worksheet.mergeCells('A2:L2');
       const subCell = worksheet.getCell('A2');
       subCell.value = `Thời gian xuất bản: ${new Date().toLocaleDateString('vi-VN')} - Tổng cộng: ${filtered.length} đảng viên`;
       subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
@@ -747,7 +747,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       // Headers definition
       const headers = [
         "STT", "Họ và tên", "Số thẻ Đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
-        "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
+        "Ngày tháng năm sinh", "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
       ];
       
       const headerRow = worksheet.addRow(headers);
@@ -780,6 +780,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Rows data
       filtered.forEach((m, index) => {
+        const res = residents.find(r => r.id === m.resident_id || r.full_name.toLowerCase().trim() === m.full_name.toLowerCase().trim());
+        const dobStr = res && res.dob ? fmtDate(res.dob) : '';
+
         const addedRow = worksheet.addRow([
           index + 1,
           m.full_name,
@@ -787,6 +790,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           POSITION_LABEL[m.position] || m.position,
           m.probation_date ? fmtDate(m.probation_date) : '',
           m.join_date ? fmtDate(m.join_date) : '',
+          dobStr,
           STATUS_LABEL[m.status] || m.status,
           FEE_CATEGORY_LABEL[m.fee_category || 'bhxh'] || m.fee_category || 'bhxh',
           m.salary_base || 0,
@@ -814,14 +818,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           // Alignments
           if (colNumber === 1) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          } else if (colNumber === 2 || colNumber === 9 || colNumber === 11) {
-            cell.alignment = { vertical: 'middle', horizontal: colNumber === 9 ? 'right' : 'left' };
+          } else if (colNumber === 2 || colNumber === 10 || colNumber === 12) {
+            cell.alignment = { vertical: 'middle', horizontal: colNumber === 10 ? 'right' : 'left' };
           } else {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
 
           // Format numbers
-          if (colNumber === 9) {
+          if (colNumber === 10) {
             cell.numFmt = '#,##0';
           }
           if (colNumber === 3) {
@@ -841,7 +845,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Auto-fit columns
       worksheet.columns.forEach((column, colIdx) => {
-        if (colIdx > 10) return;
+        if (colIdx > 11) return;
         let maxLen = colIdx === 0 ? 6 : 12;
         column.values?.forEach((v, rowIdx) => {
           if (rowIdx <= 4) return;
