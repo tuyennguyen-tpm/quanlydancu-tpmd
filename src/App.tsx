@@ -2455,9 +2455,7 @@ const RolePinModal = ({
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#334155', lineHeight: '1.5' }}>
             Nhập mã PIN để chuyển sang vai trò <strong>{roleLabel}</strong>:
           </p>
-          <span style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', marginTop: '-6px' }}>
-            * Nếu là tài khoản mới, mã PIN mặc định ban đầu là: <strong style={{ color: '#0284c7' }}>{defaultPins[role] || '1234'}</strong>
-          </span>
+
 
           <input
             type="password"
