@@ -252,7 +252,8 @@ const PartyCell: React.FC = () => {
 
         /* ── Table ── */
         .party-table-wrap { 
-          overflow-x: auto; 
+          overflow: auto; 
+          max-height: calc(100vh - 300px);
           border-radius: 12px; 
           border: 1px solid #e2e8f0; 
           box-shadow: 0 2px 8px rgba(0,0,0,0.01);
@@ -264,6 +265,9 @@ const PartyCell: React.FC = () => {
           font-size: 0.9rem; 
         }
         .party-table th {
+          position: sticky;
+          top: 0;
+          z-index: 10;
           background: #f8fafc;
           color: #475569;
           font-weight: 800;
@@ -273,7 +277,7 @@ const PartyCell: React.FC = () => {
           padding: 14px 16px;
           text-align: left;
           white-space: nowrap;
-          border-bottom: 2px solid #e2e8f0;
+          box-shadow: inset 0 -2px 0 #e2e8f0;
         }
         .party-table td { 
           padding: 14px 16px; 
@@ -601,50 +605,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PartyMember | null>(null);
 
-  const tableWrapRef = useRef<HTMLDivElement>(null);
-  const topScrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const tableWrap = tableWrapRef.current;
-    const topScroll = topScrollRef.current;
-    if (!tableWrap || !topScroll) return;
-
-    const handleTableScroll = () => {
-      if (topScroll.scrollLeft !== tableWrap.scrollLeft) {
-        topScroll.scrollLeft = tableWrap.scrollLeft;
-      }
-    };
-    const handleTopScroll = () => {
-      if (tableWrap.scrollLeft !== topScroll.scrollLeft) {
-        tableWrap.scrollLeft = topScroll.scrollLeft;
-      }
-    };
-
-    tableWrap.addEventListener('scroll', handleTableScroll);
-    topScroll.addEventListener('scroll', handleTopScroll);
-
-    const table = tableWrap.querySelector('.party-table') as HTMLElement;
-
-    const updateWidth = () => {
-      const dummy = topScroll.querySelector('.dummy-scroll') as HTMLElement;
-      if (dummy && table) {
-        dummy.style.width = `${table.offsetWidth}px`;
-      }
-    };
-
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    if (table) {
-      observer.observe(table);
-    }
-    observer.observe(tableWrap);
-
-    return () => {
-      tableWrap.removeEventListener('scroll', handleTableScroll);
-      topScroll.removeEventListener('scroll', handleTopScroll);
-      observer.disconnect();
-    };
-  }, [members, loading, search]);
 
   // Form state
   const [form, setForm] = useState<Partial<PartyMember>>({
@@ -1529,23 +1490,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       {loading ? <div className="no-data">Đang tải...</div> : filtered.length === 0 ? (
         <div className="no-data"><Users size={36} /><p>Chưa có đảng viên nào</p></div>
       ) : (
-        <div>
-          {/* Thanh cuộn ngang phụ ở phía trên */}
-          <div 
-            ref={topScrollRef} 
-            style={{ 
-              overflowX: 'auto', 
-              overflowY: 'hidden', 
-              width: '100%', 
-              height: '12px', 
-              marginBottom: '6px'
-            }}
-          >
-            <div className="dummy-scroll" style={{ height: '1px' }} />
-          </div>
-
-          <div className="party-table-wrap" ref={tableWrapRef}>
-            <table className="party-table">
+        <div className="party-table-wrap">
+          <table className="party-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -1619,7 +1565,6 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             </tbody>
           </table>
         </div>
-      </div>
       )}
 
       {/* Modal */}
@@ -1915,50 +1860,7 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     });
   }, [members, search]);
 
-  const tableWrapRef = useRef<HTMLDivElement>(null);
-  const topScrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const tableWrap = tableWrapRef.current;
-    const topScroll = topScrollRef.current;
-    if (!tableWrap || !topScroll) return;
-
-    const handleTableScroll = () => {
-      if (topScroll.scrollLeft !== tableWrap.scrollLeft) {
-        topScroll.scrollLeft = tableWrap.scrollLeft;
-      }
-    };
-    const handleTopScroll = () => {
-      if (tableWrap.scrollLeft !== topScroll.scrollLeft) {
-        tableWrap.scrollLeft = topScroll.scrollLeft;
-      }
-    };
-
-    tableWrap.addEventListener('scroll', handleTableScroll);
-    topScroll.addEventListener('scroll', handleTopScroll);
-
-    const table = tableWrap.querySelector('.party-table') as HTMLElement;
-
-    const updateWidth = () => {
-      const dummy = topScroll.querySelector('.dummy-scroll') as HTMLElement;
-      if (dummy && table) {
-        dummy.style.width = `${table.offsetWidth}px`;
-      }
-    };
-
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    if (table) {
-      observer.observe(table);
-    }
-    observer.observe(tableWrap);
-
-    return () => {
-      tableWrap.removeEventListener('scroll', handleTableScroll);
-      topScroll.removeEventListener('scroll', handleTopScroll);
-      observer.disconnect();
-    };
-  }, [members, evals, search]);
 
   const load = useCallback(async () => {
     const [m, e] = await Promise.all([partyDb.getPartyMembers(), partyDb.getPartyEvaluations(year)]);
@@ -2050,23 +1952,8 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       ) : filteredMembers.length === 0 ? (
         <div className="no-data"><Search size={36} /><p>Không tìm thấy đảng viên phù hợp</p></div>
       ) : (
-        <div>
-          {/* Thanh cuộn ngang phụ ở phía trên */}
-          <div 
-            ref={topScrollRef} 
-            style={{ 
-              overflowX: 'auto', 
-              overflowY: 'hidden', 
-              width: '100%', 
-              height: '12px', 
-              marginBottom: '6px'
-            }}
-          >
-            <div className="dummy-scroll" style={{ height: '1px' }} />
-          </div>
-
-          <div className="party-table-wrap" ref={tableWrapRef} style={{ background: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-            <table className="party-table">
+        <div className="party-table-wrap" style={{ background: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+          <table className="party-table">
             <thead>
               <tr>
                 <th>#</th><th>Họ và tên</th><th>Chức vụ</th>
@@ -2108,7 +1995,6 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             </tbody>
           </table>
         </div>
-      </div>
       )}
     </div>
   );
