@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ExcelJS from 'exceljs';
 import { partyDb, generateUUID } from '../services/db';
 import type { PartyMember, PartyMeeting, PartyEvaluation, PartyFee } from '../services/db';
@@ -2072,7 +2072,20 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     return s + (f.amount || mFee);
   }, 0);
   const totalExpected = members.reduce((s, m) => s + calcMonthlyFee(m, year) * 12, 0);
-  const alertMembers = members.filter(m => getUnpaidCount(m.id) >= 3);
+  const alertMembers = useMemo(() => {
+    return members
+      .map(m => ({
+        ...m,
+        unpaidCount: getUnpaidCount(m.id)
+      }))
+      .filter(m => m.unpaidCount >= 3)
+      .sort((a, b) => {
+        if (b.unpaidCount !== a.unpaidCount) {
+          return b.unpaidCount - a.unpaidCount;
+        }
+        return a.full_name.localeCompare(b.full_name, 'vi');
+      });
+  }, [members, fees, year]);
 
   return (
     <>
@@ -2134,8 +2147,49 @@ const FeesTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             </button>
           </div>
           {showWarningDetails && (
-            <div style={{ marginTop: 8, borderTop: '1px solid #fca5a5', paddingTop: 8, color: '#b91c1c', maxHeight: 120, overflowY: 'auto', lineHeight: 1.6 }}>
-              {alertMembers.map(m => `${m.full_name} (${getUnpaidCount(m.id)} tháng)`).join(' • ')}
+            <div style={{
+              marginTop: 10,
+              borderTop: '1px solid #fca5a5',
+              paddingTop: 10,
+              maxHeight: 280,
+              overflowY: 'auto',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: 8,
+              paddingRight: 4
+            }}>
+              {alertMembers.map((m, index) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#ffffff',
+                    border: '1px solid #fecaca',
+                    borderRadius: 6,
+                    padding: '6px 10px',
+                    fontSize: '0.82rem',
+                    fontWeight: 650,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <span style={{ color: '#7f1d1d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.full_name}>
+                    {index + 1}. {m.full_name}
+                  </span>
+                  <span style={{
+                    background: '#fee2e2',
+                    color: '#b91c1c',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    flexShrink: 0
+                  }}>
+                    {m.unpaidCount} tháng
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
