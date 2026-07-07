@@ -710,7 +710,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         }
       }
 
-      const payload: Omit<PartyMember, 'created_at'> = {
+      const payload: Omit<PartyMember, 'created_at'> & { created_at?: string } = {
         id: editing?.id || generateUUID(),
         full_name: form.full_name!.trim(),
         party_code: form.party_code || '',
@@ -724,6 +724,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         fee_category: form.fee_category,
         salary_base: form.salary_base,
         wage_zone: form.wage_zone,
+        created_at: editing?.created_at,
       };
       await partyDb.savePartyMember(payload);
       showToast(editing ? 'Đã cập nhật đảng viên!' : 'Đã thêm đảng viên mới!', 'success');
