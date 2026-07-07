@@ -1914,6 +1914,51 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     });
   }, [members, search]);
 
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const tableWrap = tableWrapRef.current;
+    const topScroll = topScrollRef.current;
+    if (!tableWrap || !topScroll) return;
+
+    const handleTableScroll = () => {
+      if (topScroll.scrollLeft !== tableWrap.scrollLeft) {
+        topScroll.scrollLeft = tableWrap.scrollLeft;
+      }
+    };
+    const handleTopScroll = () => {
+      if (tableWrap.scrollLeft !== topScroll.scrollLeft) {
+        tableWrap.scrollLeft = topScroll.scrollLeft;
+      }
+    };
+
+    tableWrap.addEventListener('scroll', handleTableScroll);
+    topScroll.addEventListener('scroll', handleTopScroll);
+
+    const table = tableWrap.querySelector('.party-table') as HTMLElement;
+
+    const updateWidth = () => {
+      const dummy = topScroll.querySelector('.dummy-scroll') as HTMLElement;
+      if (dummy && table) {
+        dummy.style.width = `${table.offsetWidth}px`;
+      }
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    if (table) {
+      observer.observe(table);
+    }
+    observer.observe(tableWrap);
+
+    return () => {
+      tableWrap.removeEventListener('scroll', handleTableScroll);
+      topScroll.removeEventListener('scroll', handleTopScroll);
+      observer.disconnect();
+    };
+  }, [members, evals, search]);
+
   const load = useCallback(async () => {
     const [m, e] = await Promise.all([partyDb.getPartyMembers(), partyDb.getPartyEvaluations(year)]);
     setMembers(m.filter(x => x.status !== 'party_213'));
