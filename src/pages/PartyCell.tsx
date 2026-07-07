@@ -1496,7 +1496,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       </div>
 
       {/* Toolbar */}
-      <div className="party-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: '12px' }}>
+      <div className="party-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="party-search" style={{ minWidth: 260 }}>
             <Search size={15} className="party-search-icon" />
@@ -1526,20 +1526,6 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             🎖️ {filterMilestones ? 'Đang lọc Huy hiệu (30 - 120 năm)' : 'Lọc Huy hiệu (30 - 120 năm)'}
           </button>
         </div>
-
-        {!isGuest && (
-          <button 
-            className="party-btn-primary" 
-            style={{ 
-              background: 'linear-gradient(135deg, #dc2626, #b91c1c)', 
-              borderColor: '#b91c1c', 
-              boxShadow: '0 4px 10px rgba(220,38,38,0.2)' 
-            }} 
-            onClick={handleClearAll}
-          >
-            Xóa danh sách
-          </button>
-        )}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '16px' }}>
@@ -1553,6 +1539,19 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', borderColor: '#1d4ed8', boxShadow: '0 4px 10px rgba(37,99,235,0.2)' }} onClick={handlePrint}>🖨️ In danh sách</button>
         {!isGuest && (
           <button className="party-btn-primary" onClick={openAdd}><Plus size={15} />Thêm Đảng viên</button>
+        )}
+        {!isGuest && (
+          <button 
+            className="party-btn-primary" 
+            style={{ 
+              background: 'linear-gradient(135deg, #dc2626, #b91c1c)', 
+              borderColor: '#b91c1c', 
+              boxShadow: '0 4px 10px rgba(220,38,38,0.2)' 
+            }} 
+            onClick={handleClearAll}
+          >
+            Xóa danh sách
+          </button>
         )}
       </div>
 
