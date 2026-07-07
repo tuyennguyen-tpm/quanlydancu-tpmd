@@ -1128,10 +1128,30 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     if (e.target) e.target.value = '';
   };
 
-  const filtered = members.filter(m =>
-    m.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    (m.party_code || '').includes(search)
-  );
+  const [ageFilter, setAgeFilter] = useState('all');
+
+  const getPartyAge = (m: PartyMember): number => {
+    const dateStr = m.probation_date || m.join_date;
+    if (!dateStr) return 0;
+    const yr = new Date(dateStr).getFullYear();
+    if (isNaN(yr)) return 0;
+    return currentYear - yr;
+  };
+
+  const filtered = members.filter(m => {
+    const matchesSearch = m.full_name.toLowerCase().includes(search.toLowerCase()) ||
+                          (m.party_code || '').includes(search);
+    if (!matchesSearch) return false;
+
+    if (ageFilter === 'all') return true;
+    const age = getPartyAge(m);
+    const milestones = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120];
+    if (ageFilter === 'milestones') {
+      return milestones.includes(age);
+    }
+    return age === parseInt(ageFilter, 10);
+  });
+
   const stats = {
     total: members.length,
     official: members.filter(m => m.status === 'official').length,
@@ -1141,12 +1161,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
   const badgeNominees = members
     .map(m => {
-      const dateStr = m.probation_date || m.join_date;
-      if (!dateStr) return null;
-      const year = new Date(dateStr).getFullYear();
-      if (isNaN(year)) return null;
-      const age = currentYear - year;
-      const milestones = [30, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
+      const age = getPartyAge(m);
+      if (age === 0) return null;
+      const milestones = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120];
       if (milestones.includes(age)) {
         return { name: m.full_name, age };
       }
@@ -1352,9 +1369,51 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       {/* Toolbar */}
       <div className="party-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div className="party-search" style={{ minWidth: 260 }}>
-          <Search size={15} className="party-search-icon" />
-          <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="party-search" style={{ minWidth: 260 }}>
+            <Search size={15} className="party-search-icon" />
+            <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          
+          <select 
+            value={ageFilter} 
+            onChange={e => setAgeFilter(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(15, 23, 42, 0.6)',
+              color: '#f8fafc',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              outline: 'none',
+              cursor: 'pointer',
+              height: '38px',
+              boxSizing: 'border-box'
+            }}
+          >
+            <option value="all">🎖️ Tất cả tuổi Đảng</option>
+            <option value="milestones">🏅 Đạt Huy hiệu Đảng (30 - 120 năm)</option>
+            <option value="30">30 năm tuổi Đảng</option>
+            <option value="35">35 năm tuổi Đảng</option>
+            <option value="40">40 năm tuổi Đảng</option>
+            <option value="45">45 năm tuổi Đảng</option>
+            <option value="50">50 năm tuổi Đảng</option>
+            <option value="55">55 năm tuổi Đảng</option>
+            <option value="60">60 năm tuổi Đảng</option>
+            <option value="65">65 năm tuổi Đảng</option>
+            <option value="70">70 năm tuổi Đảng</option>
+            <option value="75">75 năm tuổi Đảng</option>
+            <option value="80">80 năm tuổi Đảng</option>
+            <option value="85">85 năm tuổi Đảng</option>
+            <option value="90">90 năm tuổi Đảng</option>
+            <option value="95">95 năm tuổi Đảng</option>
+            <option value="100">100 năm tuổi Đảng</option>
+            <option value="105">105 năm tuổi Đảng</option>
+            <option value="110">110 năm tuổi Đảng</option>
+            <option value="115">115 năm tuổi Đảng</option>
+            <option value="120">120 năm tuổi Đảng</option>
+          </select>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="party-btn-primary" style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', borderColor: '#15803d', boxShadow: '0 4px 10px rgba(22,163,74,0.2)' }} onClick={handleExportExcel}>📤 Xuất Excel</button>
