@@ -598,7 +598,17 @@ const WardFunds = () => {
   };
 
   return (
-    <div className="content-card" style={{ animation: 'fadeIn 0.25s ease-out' }}>
+    <div style={{ 
+      animation: 'fadeIn 0.25s ease-out',
+      background: 'var(--bg-card)',
+      borderRadius: 'var(--radius-lg)',
+      padding: '24px',
+      boxShadow: 'var(--shadow-sm)',
+      minHeight: 'calc(100vh - var(--header-height) - 48px)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px'
+    }}>
       
       {/* Top Header */}
       <div style={{ 
