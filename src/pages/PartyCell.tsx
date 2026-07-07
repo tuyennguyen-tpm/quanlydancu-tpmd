@@ -1893,18 +1893,25 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const total = members.length;
 
   return (
-    <>
+    <div style={{
+      background: '#f0fdf4',
+      border: '1px solid #dcfce7',
+      borderRadius: 12,
+      padding: '22px',
+      margin: '-14px',
+      boxShadow: '0 4px 12px rgba(22,163,74,0.03)'
+    }}>
       {/* Selector & stats */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ color: '#cbd5e1', fontSize: '0.82rem', fontWeight: 600 }}>Năm:</label>
+            <label style={{ color: '#374151', fontSize: '0.85rem', fontWeight: 700 }}>Năm:</label>
             <select value={year} onChange={e => setYear(parseInt(e.target.value))}
               style={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#1e293b', borderRadius: 8, padding: '6px 12px', fontSize: '0.85rem', outline: 'none', fontWeight: 650 }}>
               {[currentYear, currentYear - 1, currentYear - 2].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
-          <span style={{ color: '#64748b', fontSize: '0.85rem', fontWeight: 600 }}>
+          <span style={{ color: '#475569', fontSize: '0.85rem', fontWeight: 600 }}>
             Đã đánh giá <strong style={{ color: '#b91c1c' }}>{rated}/{total}</strong> đảng viên
           </span>
         </div>
@@ -1936,7 +1943,7 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       ) : filteredMembers.length === 0 ? (
         <div className="no-data"><Search size={36} /><p>Không tìm thấy đảng viên phù hợp</p></div>
       ) : (
-        <div className="party-table-wrap">
+        <div className="party-table-wrap" style={{ background: '#ffffff', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
           <table className="party-table">
             <thead>
               <tr>
@@ -1980,7 +1987,7 @@ const EvaluationsTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           </table>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
