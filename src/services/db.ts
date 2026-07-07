@@ -1333,6 +1333,39 @@ export const db = {
       }
     }
   },
+  getWardFundList: (): { name: string; target: number }[] => {
+    const stored = localStorage.getItem('ward_fund_list');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error('Failed to parse ward_fund_list, fallback to default', e);
+      }
+    }
+    return [
+      { name: 'Quỹ phòng chống thiên tai', target: 15000 },
+      { name: 'Quỹ Đền ơn đáp nghĩa', target: 70000 }
+    ];
+  },
+  saveWardFundList: async (funds: { name: string; target: number }[]): Promise<void> => {
+    const valueStr = JSON.stringify(funds);
+    localStorage.setItem('ward_fund_list', valueStr);
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        if (uId) {
+          await supabase.from('app_config').upsert({
+            user_id: uId,
+            key: 'ward_fund_list',
+            value: valueStr,
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.error('Failed to sync ward_fund_list to Supabase:', err);
+      }
+    }
+  },
   getWardFunds: async (year: number): Promise<WardFund[]> => {
     if (supabase) {
       try {
@@ -1725,12 +1758,7 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `    full_name TEXT NOT NULL,\n`;
     sql += `    dob TEXT,\n`;
     sql += `    address TEXT,\n`;
-    sql += `    pctt_expected BIGINT DEFAULT 0,\n`;
-    sql += `    pctt_actual BIGINT DEFAULT 0,\n`;
-    sql += `    pctt_date DATE,\n`;
-    sql += `    dodn_expected BIGINT DEFAULT 0,\n`;
-    sql += `    dodn_actual BIGINT DEFAULT 0,\n`;
-    sql += `    dodn_date DATE,\n`;
+    sql += `    contributions JSONB DEFAULT '{}'::jsonb,\n`;
     sql += `    note TEXT,\n`;
     sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()\n`;
     sql += `);\n\n`;

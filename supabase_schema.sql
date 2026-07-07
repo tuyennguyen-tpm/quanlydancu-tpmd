@@ -212,12 +212,7 @@ CREATE TABLE IF NOT EXISTS ward_funds (
     full_name TEXT NOT NULL,
     dob TEXT,
     address TEXT,
-    pctt_expected BIGINT DEFAULT 0,
-    pctt_actual BIGINT DEFAULT 0,
-    pctt_date DATE,
-    dodn_expected BIGINT DEFAULT 0,
-    dodn_actual BIGINT DEFAULT 0,
-    dodn_date DATE,
+    contributions JSONB DEFAULT '{}'::jsonb, -- Lưu thông tin đóng góp của tất cả các quỹ
     note TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -226,8 +221,10 @@ CREATE TABLE IF NOT EXISTS ward_funds (
 ALTER TABLE ward_funds ENABLE ROW LEVEL SECURITY;
 
 -- Quyền của quản trị viên
+DROP POLICY IF EXISTS "Allow admin access ward_funds" ON ward_funds;
 CREATE POLICY "Allow admin access ward_funds" ON ward_funds FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Quyền của người dân (chỉ đọc)
+DROP POLICY IF EXISTS "Allow public read ward_funds" ON ward_funds;
 CREATE POLICY "Allow public read ward_funds" ON ward_funds FOR SELECT TO anon USING (true);
 

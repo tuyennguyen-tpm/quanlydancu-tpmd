@@ -134,6 +134,12 @@ export interface HouseholdFund {
   created_at?: string;
 }
 
+export interface WardFundContribution {
+  expected: number;
+  actual: number;
+  date?: string;
+}
+
 export interface WardFund {
   id: string;
   user_id?: string;
@@ -141,12 +147,7 @@ export interface WardFund {
   full_name: string;
   dob?: string;
   address?: string;
-  pctt_expected: number;
-  pctt_actual: number;
-  pctt_date?: string;
-  dodn_expected: number;
-  dodn_actual: number;
-  dodn_date?: string;
+  contributions: Record<string, WardFundContribution>; // Key là tên quỹ (Ví dụ: "Quỹ phòng chống thiên tai")
   note?: string;
   created_at?: string;
 }

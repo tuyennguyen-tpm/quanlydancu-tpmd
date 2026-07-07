@@ -257,6 +257,7 @@ const App = () => {
 
   // Targets states for TDP Funds (Dynamic)
   const [fundsConfig, setFundsConfig] = useState<{ name: string; target: string }[]>([]);
+  const [wardFundsConfig, setWardFundsConfig] = useState<{ name: string; target: string }[]>([]);
   const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
   const [latestAppVersionInput, setLatestAppVersionInput] = useState(localStorage.getItem('latest_app_version') || APP_VERSION);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -724,6 +725,24 @@ const App = () => {
     setFundsConfig(updated);
   };
 
+  const handleAddWardFundConfig = () => {
+    setWardFundsConfig([...wardFundsConfig, { name: '', target: '0' }]);
+  };
+
+  const handleRemoveWardFundConfig = (index: number) => {
+    setWardFundsConfig(wardFundsConfig.filter((_, i) => i !== index));
+  };
+
+  const handleWardFundConfigChange = (index: number, field: 'name' | 'target', value: string) => {
+    const updated = [...wardFundsConfig];
+    if (field === 'target') {
+      updated[index][field] = formatInputNumber(value);
+    } else {
+      updated[index][field] = value;
+    }
+    setWardFundsConfig(updated);
+  };
+
   const handleAddGroupConfig = () => {
     setGroupsConfig([...groupsConfig, '']);
   };
@@ -749,6 +768,11 @@ const App = () => {
     setSupportPhoneInput(supportPhone);
     const currentFunds = db.getFundList();
     setFundsConfig(currentFunds.map(f => ({
+      name: f.name,
+      target: formatInputNumber(f.target.toString())
+    })));
+    const currentWardFunds = (db as any).getWardFundList();
+    setWardFundsConfig(currentWardFunds.map((f: any) => ({
       name: f.name,
       target: formatInputNumber(f.target.toString())
     })));
@@ -830,6 +854,21 @@ const App = () => {
     await db.saveFundList(mappedFunds);
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
 
+    // Kiểm tra tính hợp lệ của các loại quỹ Phường
+    const hasEmptyWardFundName = wardFundsConfig.some(f => !f.name.trim());
+    if (hasEmptyWardFundName) {
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { message: `Tên các loại quỹ Phường không được bỏ trống!`, type: 'warning' } 
+      }));
+      return;
+    }
+    const mappedWardFunds = wardFundsConfig.map(f => ({
+      name: f.name.trim(),
+      target: parseInt(f.target.replace(/\./g, '')) || 0
+    }));
+    await (db as any).saveWardFundList(mappedWardFunds);
+    window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
+
     // Save groups configuration
     const cleanedGroups = groupsConfig.map(g => g.trim()).filter(Boolean);
     if (cleanedGroups.length === 0) {
@@ -894,6 +933,7 @@ const App = () => {
             { user_id: uId, key: 'support_phone', value: newSupportPhone },
             { user_id: uId, key: 'logo_url', value: newLogo },
             { user_id: uId, key: 'fund_list', value: JSON.stringify(mappedFunds) },
+            { user_id: uId, key: 'ward_fund_list', value: JSON.stringify(mappedWardFunds) },
             { user_id: uId, key: 'latest_app_version', value: newVersion }
           ];
           await supabase.from('app_config').upsert(configItems);
@@ -1637,6 +1677,80 @@ const App = () => {
                   {fundsConfig.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
                       Chưa cấu hình loại quỹ nào. Hãy bấm "Thêm Quỹ" để tạo mới.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ─── Phần 1ba: Chỉ tiêu thu nộp các loại quỹ Ủy thác từ Phường (Động) ─── */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.06), rgba(59,130,246,0.02))',
+                border: '1.5px solid rgba(59,130,246,0.18)',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginTop: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                    🎯 Danh mục Quỹ Phường giao & Chỉ tiêu (VNĐ/Người)
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddWardFundConfig}
+                    className="btn btn-primary"
+                    style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', height: 'fit-content', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                  >
+                    <Plus size={14} /> Thêm Quỹ Phường
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {wardFundsConfig.map((fund, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder="Tên quỹ Phường (Ví dụ: Quỹ phòng chống thiên tai)"
+                        value={fund.name}
+                        onChange={(e) => handleWardFundConfigChange(idx, 'name', e.target.value)}
+                        style={{ flex: 3, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                        required
+                      />
+                      <input
+                        type="text"
+                        placeholder="Chỉ tiêu (VND/Người)"
+                        value={fund.target}
+                        onChange={(e) => handleWardFundConfigChange(idx, 'target', e.target.value)}
+                        style={{ flex: 1.5, minWidth: '110px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'right', fontSize: '0.9rem' }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveWardFundConfig(idx)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        title="Xóa loại quỹ này"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {wardFundsConfig.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                      Chưa cấu hình loại quỹ Phường nào. Hãy bấm "Thêm Quỹ Phường" để tạo mới.
                     </div>
                   )}
                 </div>
