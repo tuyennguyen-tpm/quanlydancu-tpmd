@@ -1000,7 +1000,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
     // Fallback to standard JS parsing
     const d = new Date(clean);
-    if (isNaN(d.getTime())) return clean;
+    if (isNaN(d.getTime())) return undefined;
     const day = d.getDate().toString().padStart(2, '0');
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const year = d.getFullYear();
@@ -1040,12 +1040,26 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           
           worksheet.eachRow((row) => {
             const firstCellVal = row.getCell(1).value?.toString() || '';
-            if (firstCellVal.includes('Họ và tên') || firstCellVal.includes('MẪU') || firstCellVal.includes('Lưu ý') || firstCellVal.trim() === '') {
+            const secondCellVal = row.getCell(2).value?.toString() || '';
+            
+            // Skip title, description or notes rows
+            if (
+              firstCellVal.includes('DANH SÁCH') || 
+              firstCellVal.includes('Thời gian') || 
+              firstCellVal.includes('Lưu ý') || 
+              firstCellVal.includes('MẪU') ||
+              (firstCellVal.trim() === '' && secondCellVal.trim() === '')
+            ) {
+              return;
+            }
+
+            // Skip header row
+            if (firstCellVal.includes('Họ và tên') || secondCellVal.includes('Họ và tên') || firstCellVal.includes('STT')) {
               return;
             }
 
             const rowValues: string[] = [];
-            for (let c = 1; c <= 10; c++) {
+            for (let c = 1; c <= 11; c++) {
               const cell = row.getCell(c);
               let val = cell.value;
               if (val && typeof val === 'object' && 'result' in val) {
@@ -1066,7 +1080,18 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           for (let i = 1; i < lines.length; i++) {
             const line = lines[i];
             const cols = parseCSVLine(line).map(val => val.replace(/^"|"$/g, '').trim());
-            if (cols[0] === 'Họ và tên' || cols[0].includes('MẪU') || cols[0] === '') continue;
+            
+            // Skip title or header rows
+            if (
+              cols[0] === 'Họ và tên' || 
+              cols[1] === 'Họ và tên' || 
+              cols[0] === 'STT' || 
+              cols[0].includes('DANH SÁCH') || 
+              cols[0].includes('MẪU') || 
+              (cols[0] === '' && (!cols[1] || cols[1] === ''))
+            ) {
+              continue;
+            }
             rows.push(cols);
           }
         }
@@ -1081,18 +1106,24 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         let updatedCount = 0;
 
         for (const columns of rows) {
-          if (columns.length < 1 || !columns[0]) continue;
+          if (columns.length < 1) continue;
 
-          const fullName = columns[0];
-          const partyCode = columns[1] || '';
-          const pos = getPositionFromLabel(columns[2] || 'Đảng viên') as any;
-          const probationD = parseInputDate(columns[3]) || null;
-          const joinD = parseInputDate(columns[4]) || null;
-          const stat = getStatusFromLabel(columns[5] || 'Chính thức') as any;
-          const feeCat = getFeeCatFromLabel(columns[6] || 'Có BHXH bắt buộc') as any;
-          const salary = parseInt(columns[7]) || 0;
-          const zone = (parseInt(columns[8]) || 3) as any;
-          const notesStr = columns[9] || '';
+          // Check if the first column is a sequence number (STT). If so, offset indices by 1
+          const isShifted = /^\d+$/.test(columns[0]) || columns[0] === '';
+          const offset = isShifted ? 1 : 0;
+
+          if (columns.length <= offset || !columns[offset]) continue;
+
+          const fullName = columns[offset];
+          const partyCode = columns[offset + 1] || '';
+          const pos = getPositionFromLabel(columns[offset + 2] || 'Đảng viên') as any;
+          const probationD = parseInputDate(columns[offset + 3]) || null;
+          const joinD = parseInputDate(columns[offset + 4]) || null;
+          const stat = getStatusFromLabel(columns[offset + 5] || 'Chính thức') as any;
+          const feeCat = getFeeCatFromLabel(columns[offset + 6] || 'Có BHXH bắt buộc') as any;
+          const salary = parseInt(columns[offset + 7]) || 0;
+          const zone = (parseInt(columns[offset + 8]) || 3) as any;
+          const notesStr = columns[offset + 9] || '';
 
           const matched = currentMembers.find(m => 
             (partyCode && m.party_code === partyCode) || 
