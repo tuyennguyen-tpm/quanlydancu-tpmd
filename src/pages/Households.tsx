@@ -71,6 +71,19 @@ const Households = () => {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    setSearchInput(searchTerm);
+  }, [searchTerm]);
+
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -1291,8 +1304,8 @@ const Households = () => {
           <input 
             type="text" 
             placeholder="Tìm theo chủ hộ, thành viên, số nhà, số sổ..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
         
