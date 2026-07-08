@@ -1018,6 +1018,152 @@ ${content}
       return;
     }
 
+    // Hàm phụ trợ xử lý chữ ký thông minh dạng bảng
+    const renderBodyWithTableSignature = (bodyLines: string[]) => {
+      let sigStartIndex = -1;
+      let isDoubleSignature = false;
+
+      // Duyệt ngược từ cuối lên tối đa 15 dòng để tìm dòng bắt đầu phần chữ ký
+      for (let i = bodyLines.length - 1; i >= Math.max(0, bodyLines.length - 15); i--) {
+        const line = bodyLines[i].trim();
+        if (!line) continue;
+        
+        // Nếu dòng chứa cả Thư ký và chức danh khác -> đây là biên bản có 2 chữ ký
+        if (line.includes('THƯ KÝ') && (line.includes('TỔ TRƯỞNG') || line.includes('BÍ THƯ') || line.includes('TRƯỞNG BAN') || line.includes('CHI BỘ') || line.includes('TM') || line.includes('T/M'))) {
+          sigStartIndex = i;
+          isDoubleSignature = true;
+          break;
+        }
+        
+        // Hoặc nếu dòng chứa ngày tháng năm của văn bản 1 chữ ký
+        if (line.match(/ngày\s+\d+\s+tháng\s+\d+\s+năm\s+\d+/) || (line.includes('ngày') && line.includes('tháng') && line.includes('năm') && line.includes(','))) {
+          let hasLeaderTitleBelow = false;
+          for (let j = i + 1; j < bodyLines.length; j++) {
+            const lBelow = bodyLines[j].toUpperCase();
+            if (lBelow.includes('TỔ TRƯỞNG') || lBelow.includes('BÍ THƯ') || lBelow.includes('TRƯỞNG BAN') || lBelow.includes('CHI BỘ') || lBelow.includes('TM') || lBelow.includes('T/M')) {
+              hasLeaderTitleBelow = true;
+              break;
+            }
+          }
+          if (hasLeaderTitleBelow) {
+            sigStartIndex = i;
+            isDoubleSignature = false;
+            break;
+          }
+        }
+      }
+
+      if (sigStartIndex === -1) {
+        // Không phát hiện chữ ký dạng chuẩn, in thô toàn bộ
+        return `<div class="doc-body" style="white-space: pre-wrap; word-wrap: break-word; font-size: 13pt; line-height: 1.7; margin-top: 16px;">${bodyLines.join('\n')}</div>`;
+      }
+
+      const contentLines = bodyLines.slice(0, sigStartIndex);
+      const sigLines = bodyLines.slice(sigStartIndex);
+
+      let signatureHtml = '';
+
+      if (isDoubleSignature) {
+        // Biên bản: 2 cột (Thư ký bên trái, Lãnh đạo bên phải)
+        const leftColParts: string[] = [];
+        const rightColParts: string[] = [];
+
+        sigLines.forEach(line => {
+          if (!line.trim()) return;
+          // Tìm điểm chia đôi hợp lý dựa trên khoảng trắng rộng ở giữa
+          const mid = Math.floor(line.length / 2);
+          let cutPoint = mid;
+          
+          const spacePattern = /\s{3,}/g;
+          let match;
+          let bestSpaceIdx = -1;
+          let minDiff = Infinity;
+          
+          while ((match = spacePattern.exec(line)) !== null) {
+            const idx = match.index;
+            const diff = Math.abs(idx - mid);
+            if (diff < minDiff) {
+              minDiff = diff;
+              bestSpaceIdx = idx;
+            }
+          }
+          
+          if (bestSpaceIdx !== -1) {
+            cutPoint = bestSpaceIdx;
+          } else if (line.includes('  ')) {
+            const spacesIdx = line.indexOf('  ', Math.floor(line.length / 4));
+            if (spacesIdx !== -1) {
+              cutPoint = spacesIdx;
+            }
+          }
+
+          const leftPart = line.substring(0, cutPoint).trim();
+          const rightPart = line.substring(cutPoint).trim();
+
+          leftColParts.push(leftPart);
+          rightColParts.push(rightPart);
+        });
+
+        signatureHtml = `
+          <table class="signature-table" style="width: 100%; border-collapse: collapse; margin-top: 40px; page-break-inside: avoid;">
+            <tr>
+              <td style="width: 50%; text-align: center; vertical-align: top; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+                ${leftColParts.map((text, idx) => {
+                  if (!text) return '<div style="height: 1.2em;"></div>';
+                  const isTitle = idx === 0 || text.includes('THƯ KÝ');
+                  const isInstruction = text.startsWith('(') && text.endsWith(')');
+                  const isName = idx === leftColParts.length - 1 && !isInstruction && !isTitle;
+                  if (isTitle) return `<div class="sig-title" style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
+                  if (isInstruction) return `<div class="sig-instruction" style="font-style: italic; font-size: 12pt; margin-top: 2px;">${text}</div>`;
+                  return `<div class="sig-name" style="${isName ? 'font-weight: bold; margin-top: 65px; font-size: 13pt;' : ''}">${text}</div>`;
+                }).join('')}
+              </td>
+              <td style="width: 50%; text-align: center; vertical-align: top; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+                ${rightColParts.map((text, idx) => {
+                  if (!text) return '<div style="height: 1.2em;"></div>';
+                  const isTitle = idx === 0 || text.includes('TỔ TRƯỞNG') || text.includes('BÍ THƯ') || text.includes('TRƯỞNG BAN');
+                  const isInstruction = text.startsWith('(') && text.endsWith(')');
+                  const isName = idx === rightColParts.length - 1 && !isInstruction && !isTitle;
+                  if (isTitle) return `<div class="sig-title" style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
+                  if (isInstruction) return `<div class="sig-instruction" style="font-style: italic; font-size: 12pt; margin-top: 2px;">${text}</div>`;
+                  return `<div class="sig-name" style="${isName ? 'font-weight: bold; margin-top: 65px; font-size: 13pt;' : ''}">${text}</div>`;
+                }).join('')}
+              </td>
+            </tr>
+          </table>
+        `;
+      } else {
+        // 1 cột bên phải (các báo cáo, thông báo, thư ngỏ)
+        const cleanedSigLines = sigLines.map(line => line.trim()).filter(Boolean);
+        
+        signatureHtml = `
+          <table class="signature-table" style="width: 100%; border-collapse: collapse; margin-top: 40px; page-break-inside: avoid;">
+            <tr>
+              <td style="width: 50%; border: none;"></td>
+              <td style="width: 50%; text-align: center; vertical-align: top; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
+                ${cleanedSigLines.map((text, idx) => {
+                  const isDate = text.includes('ngày') && text.includes('tháng') && text.includes('năm');
+                  const isTitle = text.includes('TỔ TRƯỞNG') || text.includes('BÍ THƯ') || text.includes('TRƯỞNG BAN') || text.includes('T/M') || text.includes('TM');
+                  const isInstruction = text.startsWith('(') && text.endsWith(')');
+                  const isName = idx === cleanedSigLines.length - 1 && !isInstruction && !isTitle && !isDate;
+
+                  if (isDate) return `<div class="sig-date" style="font-style: italic; margin-bottom: 5px;">${text}</div>`;
+                  if (isTitle) return `<div class="sig-title" style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
+                  if (isInstruction) return `<div class="sig-instruction" style="font-style: italic; font-size: 12pt; margin-top: 2px;">${text}</div>`;
+                  return `<div class="sig-name" style="${isName ? 'font-weight: bold; margin-top: 65px; font-size: 13pt;' : ''}">${text}</div>`;
+                }).join('')}
+              </td>
+            </tr>
+          </table>
+        `;
+      }
+
+      return `
+        <div class="doc-body" style="white-space: pre-wrap; word-wrap: break-word; font-size: 13pt; line-height: 1.7; margin-top: 16px;">${contentLines.join('\n')}</div>
+        ${signatureHtml}
+      `;
+    };
+
     // Phân tích loại văn bản để render đúng
     const isPartyDoc = result.includes('ĐẢNG CỘNG SẢN VIỆT NAM') || result.includes('CHI BỘ');
     const isFrontDoc = result.includes('MTTQ') || result.includes('MẶT TRẬN');
@@ -1041,7 +1187,7 @@ ${content}
             </td>
           </tr>
         </table>
-        <div class="doc-body">${bodyLines.join('\n')}</div>`;
+        ${renderBodyWithTableSignature(bodyLines)}`;
     } else {
       // Văn bản Nhà nước: 2 cột tiêu đề
       const sepIdx = lines.findIndex(l => l.includes('CỘNG HÒA XÃ HỘI CHỦ NGHĨA'));
@@ -1062,7 +1208,7 @@ ${content}
             </td>
           </tr>
         </table>
-        <div class="doc-body">${bodyLines.join('\n')}</div>`;
+        ${renderBodyWithTableSignature(bodyLines)}`;
     }
 
     printWindow.document.write(`<!DOCTYPE html>
