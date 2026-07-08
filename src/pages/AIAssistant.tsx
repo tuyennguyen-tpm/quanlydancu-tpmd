@@ -8,7 +8,10 @@ import {
   Sparkles,
   RefreshCw,
   ClipboardCheck,
-  Printer
+  Printer,
+  Home,
+  Star,
+  Users
 } from 'lucide-react';
 import { db, partyDb } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -80,7 +83,7 @@ const AIAssistant = () => {
       return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
     };
 
-    // 1. Nghĩa vụ quân sự query handler
+    // 1. Rà soát nghĩa vụ quân sự
     if (query.includes('nghĩa vụ quân sự') || query.includes('nghia vu quan su') || query.includes('nghĩa vụ') || query.includes('nhập ngũ')) {
       const currentYear = new Date().getFullYear();
       const eligibleMen = residents.filter(r => {
@@ -163,23 +166,25 @@ ${policyHouseholds.length > 0 ? '\n* Danh sách Hộ thương binh/chính sách:
 Tổ dân phố cam kết triển khai đúng, đủ các gói hỗ trợ và quà thăm hỏi từ chính quyền các cấp nhân các dịp ngày lễ tết.`;
     }
 
-    // 3. Biên bản họp chi bộ query handler
+    // 3. Biên bản họp chi bộ
     if (query.includes('biên bản họp chi bộ') || query.includes('bien ban hop chi bo') || query.includes('biên bản chi bộ') || (query.includes('viết biên bản') && query.includes('chi bộ'))) {
+      const secName = localStorage.getItem('party_secretary_name') || '...............';
       return `ĐẢNG CỘNG SẢN VIỆT NAM
+ĐẢNG BỘ ${wardDisplay.toUpperCase()}
 CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
 *
-BIÊN BẢN HỌP CHI BỘ THƯỜNG KỲ
+BIÊN BẢN SINH HOẠT CHI BỘ THƯỜNG KỲ
 (Thực hiện theo Hướng dẫn số 12-HD/BTCTW của Ban Tổ chức Trung ương)
 
 Hôm nay, vào hồi ..... giờ ..... ngày ..... tháng ..... năm ....., tại .....
-Chi bộ Tổ dân phố ${tdpName} đã tổ chức cuộc họp thường kỳ tháng ...../.....
+Chi bộ Tổ dân phố ${tdpName} đã tổ chức cuộc họp thường kỳ tháng ...../${new Date().getFullYear()}
 
 I. THÀNH PHẦN THAM DỰ:
-1. Số đảng viên được triệu tập: ..... đồng chí. Trong đó chính thức: .....; dự bị: ......
+1. Số đảng viên được triệu tập: ..... đồng chí. Trong đó chính thức: ${partyMembers.filter(m => m.status === 'official').length}; dự bị: ${partyMembers.filter(m => m.status === 'probation').length}.
 2. Đảng viên có mặt dự họp: ..... đồng chí.
-3. Đảng viên vắng mặt: ..... đồng chí (Có lý do: .....; Không lý do: .....).
-4. Đại biểu đại diện Đảng ủy cấp trên tham dự (nếu có): .....
-- Chủ trì cuộc họp: Đồng chí Bí thư Chi bộ.
+3. Đảng viên vắng mặt: ..... đồng chí (Có lý do: .....; Không lý do: .....) .
+4. Đại biểu Đảng ủy cấp trên tham dự (nếu có): .....
+- Chủ trì cuộc họp: Đồng chí ${secName} - Bí thư Chi bộ.
 - Thư ký cuộc họp: Đồng chí Chi ủy viên.
 
 II. NỘI DUNG BUỔI HỌP:
@@ -188,7 +193,7 @@ II. NỘI DUNG BUỔI HỌP:
 - Nhận xét tinh thần gương mẫu của đảng viên trong các hoạt động cộng đồng.
 
 2. Báo cáo đánh giá hoạt động công tác tháng qua:
-- Chi bộ lãnh đạo Ban điều hành tổ dân phố thực hiện công tác quản lý cư trú, thu nộp quỹ và bảo đảm an ninh trật tự ngõ xóm.
+- Chi bộ lãnh đạo Ban điều hành tổ dân phố thực hiện tốt công tác quản lý cư trú: ${households.length} hộ, ${residents.length} nhân khẩu.
 - Nhận xét ưu khuyết điểm cụ thể trong tháng.
 
 3. Phương hướng công tác lãnh đạo tháng tới:
@@ -200,14 +205,301 @@ II. NỘI DUNG BUỔI HỌP:
 - Đồng chí ..... phát biểu ý kiến thảo luận về giải pháp .....
 - Đồng chí ..... phát biểu ý kiến thảo luận về giải pháp .....
 
-III. KẾT LUẬN & BIỂU QUYẾT NGHỊ QUYẾT:
+III. KẾT LUẬN & BIỂU QUYẾT:
 Chi bộ thống nhất ban hành Nghị quyết họp với các nội dung trên. Tỷ lệ biểu quyết thông qua đạt 100% nhất trí.
+Biên bản kết thúc vào lúc ..... giờ ..... cùng ngày.
 
-Biên bản sinh hoạt được thông qua trước toàn thể Chi bộ dự họp và kết thúc vào lúc ..... giờ ..... cùng ngày.
+     THƯ KÝ GHI BIÊN BẢN                    BÍ THƯ CHI BỘ
+   (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
 
-             THƯ KÝ GHI BIÊN BẢN                                   BÍ THƯ CHI BỘ
-           (Ký và ghi rõ họ tên)                               (Ký và ghi rõ họ tên)`;
+
+                                           ${secName}`;
     }
+
+    // 4. Kế hoạch học tập Nghị quyết Chi bộ
+    if (query.includes('kế hoạch học tập nghị quyết') || query.includes('học tập nghị quyết') || (query.includes('kế hoạch') && query.includes('nghị quyết') && query.includes('chi bộ'))) {
+      const secName = localStorage.getItem('party_secretary_name') || '...............';
+      return `ĐẢNG CỘNG SẢN VIỆT NAM
+ĐẢNG BỘ ${wardDisplay.toUpperCase()}
+CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+*
+
+KẾ HOẠCH
+Học tập, quán triệt và triển khai thực hiện Nghị quyết
+của Đảng ủy ${wardDisplay} tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}
+
+Thực hiện Kế hoạch của Đảng ủy ${wardDisplay} về việc tổ chức học tập và quán triệt Nghị quyết, Chi bộ Tổ dân phố ${tdpName} xây dựng Kế hoạch học tập như sau:
+
+I. MỤC ĐÍCH, YÊU CẦU:
+1. Tất cả đảng viên trong Chi bộ phải nghiêm túc tham gia học tập, nắm vững nội dung cốt lõi của các Nghị quyết.
+2. Trên cơ sở đó vận dụng sáng tạo vào thực tiễn, lãnh đạo tốt các nhiệm vụ chính trị của địa phương.
+
+II. NỘI DUNG VÀ PHÂN CÔNG THỰC HIỆN:
+1. Tổ chức học tập toàn bộ ${partyMembers.length} đảng viên trong Chi bộ.
+2. Mời báo cáo viên (hoặc tự nghiên cứu tài liệu) theo tài liệu hướng dẫn của cấp trên.
+3. Mỗi đảng viên viết bản thu hoạch cá nhân sau khi học tập xong.
+
+III. THỜI GIAN VÀ ĐỊA ĐIỂM:
+- Thời gian: ..... ngày ..... tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}.
+- Địa điểm: Nhà văn hóa Tổ dân phố ${tdpName}.
+
+IV. TỔ CHỨC THỰC HIỆN:
+- Đồng chí Bí thư chủ trì, điều hành buổi học tập.
+- Thư ký Chi ủy tổng hợp bản thu hoạch cá nhân và báo cáo về Đảng ủy phường.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              T/M CHI BỘ
+                              BÍ THƯ
+
+
+                              ${secName}`;
+    }
+
+    // 5. Báo cáo thi đua khen thưởng Chi bộ
+    if (query.includes('thi đua khen thưởng') || query.includes('khen thưởng đảng viên') || (query.includes('đề nghị khen') && query.includes('chi bộ'))) {
+      const secName = localStorage.getItem('party_secretary_name') || '...............';
+      const officialCount = partyMembers.filter(m => m.status === 'official').length;
+      return `ĐẢNG CỘNG SẢN VIỆT NAM
+ĐẢNG BỘ ${wardDisplay.toUpperCase()}
+CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+*
+
+BÁO CÁO
+Kết quả đánh giá, xếp loại và đề nghị khen thưởng đảng viên
+năm ${new Date().getFullYear()}
+
+Kính gửi: Đảng ủy ${wardDisplay}.
+
+Thực hiện Hướng dẫn đánh giá, xếp loại tổ chức đảng và đảng viên cuối năm, Chi bộ Tổ dân phố ${tdpName} báo cáo kết quả như sau:
+
+I. KẾT QUẢ ĐÁNH GIÁ, XẾP LOẠI ĐẢNG VIÊN:
+- Tổng số đảng viên chính thức: ${officialCount} đồng chí.
+- Đảng viên hoàn thành xuất sắc nhiệm vụ: ..... đồng chí.
+- Đảng viên hoàn thành tốt nhiệm vụ: ..... đồng chí.
+- Đảng viên hoàn thành nhiệm vụ: ..... đồng chí.
+- Đảng viên không hoàn thành nhiệm vụ: 0 đồng chí.
+
+II. ĐỀ NGHỊ KHEN THƯỞNG:
+1. Danh hiệu "Đảng viên hoàn thành xuất sắc nhiệm vụ":
+- Đồng chí ..... (Chức vụ: .....)
+- Đồng chí ..... (Chức vụ: .....)
+
+2. Đề nghị cấp trên công nhận Chi bộ đạt danh hiệu: "Tổ chức đảng hoàn thành xuất sắc nhiệm vụ".
+
+III. KIẾN NGHỊ:
+Kính đề nghị Đảng ủy ${wardDisplay} xem xét, phê duyệt kết quả đánh giá và công nhận các danh hiệu thi đua cho Chi bộ và đảng viên theo quy định.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              T/M CHI BỘ
+                              BÍ THƯ
+
+
+                              ${secName}`;
+    }
+
+    // 6. Biên bản kiểm tra hộ khẩu/rà soát dân cư (Tổ trưởng)
+    if (query.includes('biên bản kiểm tra hộ khẩu') || query.includes('rà soát dân cư') || query.includes('kiểm tra hộ khẩu')) {
+      const poorCount = households.filter(h => h.policy_type === 'poor').length;
+      const nearPoorCount = households.filter(h => h.policy_type === 'near_poor').length;
+      const policyCount = households.filter(h => h.policy_type === 'policy_family').length;
+      return `TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+BIÊN BẢN
+Rà soát, kiểm tra hộ khẩu và nhân khẩu thường trú năm ${new Date().getFullYear()}
+
+Hôm nay, ngày ..... tháng ..... năm ${new Date().getFullYear()}, Tổ dân phố ${tdpName} tiến hành rà soát định kỳ hộ khẩu và nhân khẩu trên địa bàn quản lý.
+
+Thành phần thực hiện:
+- ${leaderDisplay} — Tổ trưởng dân phố, chủ trì.
+- Đại diện công an phường (nếu có): .....
+- Đại diện Ban điều hành: .....
+
+I. KẾT QUẢ RÀ SOÁT THỰC TẾ:
+1. Tổng số hộ quản lý: ${households.length} hộ gia đình.
+2. Tổng số nhân khẩu thường trú: ${residents.filter(r => r.status === 'resident').length} người.
+3. Nhân khẩu tạm vắng: ${residents.filter(r => r.status === 'temporary_absent').length} người.
+4. Nhân khẩu tạm trú: ${residents.filter(r => r.status === 'temporary_resident').length} người.
+
+II. ĐỐI TƯỢNG ĐẶC BIỆT:
+- Hộ nghèo: ${poorCount} hộ.
+- Hộ cận nghèo: ${nearPoorCount} hộ.
+- Hộ gia đình chính sách: ${policyCount} hộ.
+- Người cao tuổi (từ 60 tuổi trở lên): ${residents.filter(r => r.is_senior).length} người.
+
+III. NHẬN XÉT:
+Tình trạng quản lý hộ khẩu cơ bản ổn định. Biên bản đã được đọc lại cho toàn thể những người có mặt nghe và nhất trí ký.
+
+     THƯ KÝ GHI BIÊN BẢN                    TỔ TRƯỞNG DÂN PHỐ
+   (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
+
+
+                                           ${leaderName}`;
+    }
+
+    // 7. Báo cáo an ninh trật tự (Tổ trưởng)
+    if (query.includes('an ninh trật tự') || query.includes('báo cáo antt') || query.includes('an ninh tổ dân phố')) {
+      return `TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+BÁO CÁO
+Tình hình an ninh trật tự tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}
+
+Kính gửi: Ủy ban nhân dân ${wardDisplay} và Công an phường.
+
+Ban điều hành Tổ dân phố ${tdpName} xin báo cáo tình hình an ninh trật tự trên địa bàn tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()} như sau:
+
+I. TÌNH HÌNH CHUNG:
+- Tổng số hộ dân quản lý: ${households.length} hộ, ${residents.length} nhân khẩu.
+- Trong tháng, tình hình an ninh trật tự trên địa bàn về cơ bản ổn định. Không xảy ra tội phạm, tệ nạn xã hội, mâu thuẫn nghiêm trọng.
+
+II. CÁC HOẠT ĐỘNG PHÒNG NGỪA:
+1. Duy trì tổ tự quản an ninh trật tự, thực hiện tuần tra định kỳ ban đêm theo lịch.
+2. Tuyên truyền bà con cảnh giác với tội phạm lừa đảo qua mạng, trộm cắp tài sản.
+3. Vận động nhân dân cung cấp thông tin tội phạm theo kênh đường dây nóng công an phường.
+4. Phối hợp với Công an khu vực nắm địa bàn, giải quyết kịp thời các phát sinh nhỏ.
+
+III. KIẾN NGHỊ:
+- Đề nghị Công an phường tăng cường tuần tra khu vực ngõ nhỏ, khu vực ít người qua lại về ban đêm.
+- Tiếp tục hỗ trợ lắp đặt camera an ninh tại các điểm xung yếu trên địa bàn.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              TỔ TRƯỞNG DÂN PHỐ
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderName}`;
+    }
+
+    // 8. Thông báo Ngày hội Đại đoàn kết (Mặt trận)
+    if (query.includes('thông báo ngày hội') || query.includes('thông báo đại đoàn kết') || (query.includes('thông báo') && query.includes('18/11'))) {
+      return `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
+BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+THÔNG BÁO
+V/v Tổ chức Ngày hội Đại đoàn kết toàn dân tộc năm ${new Date().getFullYear()}
+
+Kính gửi: Toàn thể nhân dân, hộ gia đình và đại diện các tổ chức đoàn thể tại ${tdpDisplay}.
+
+Thực hiện kế hoạch của Ủy ban Mặt trận Tổ quốc Việt Nam ${wardDisplay} về việc tổ chức Ngày hội Đại đoàn kết toàn dân tộc năm ${new Date().getFullYear()}, nhân kỷ niệm Ngày Truyền thống MTTQ Việt Nam (18/11).
+
+Ban công tác Mặt trận ${tdpDisplay} trân trọng kính mời:
+
+1. THÀNH PHẦN THAM DỰ:
+- Toàn thể nhân dân, đại diện các hộ gia đình trong Tổ dân phố.
+- Đại diện lãnh đạo UBND phường, Mặt trận phường và các đoàn thể.
+
+2. THỜI GIAN VÀ ĐỊA ĐIỂM:
+- Thời gian: 8 giờ 00 ngày 18 tháng 11 năm ${new Date().getFullYear()}.
+- Địa điểm: Nhà văn hóa Tổ dân phố ${tdpName}.
+
+3. NỘI DUNG CHƯƠNG TRÌNH:
+- Khai mạc, ôn lại lịch sử truyền thống MTTQ Việt Nam.
+- Biểu dương các hộ gia đình văn hóa, cá nhân tiêu biểu xuất sắc.
+- Trao quà thăm hỏi các gia đình chính sách, hộ có hoàn cảnh khó khăn.
+- Giao lưu văn nghệ quần chúng.
+
+Kính mong toàn thể nhân dân sắp xếp thời gian, tham gia đầy đủ và đúng giờ!
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderName}`;
+    }
+
+    // 9. Biên bản họp Ban công tác Mặt trận
+    if ((query.includes('biên bản') && query.includes('mặt trận')) || query.includes('biên bản họp mặt trận')) {
+      return `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
+BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+BIÊN BẢN HỌP BAN CÔNG TÁC MẶT TRẬN
+Tổ dân phố ${tdpName} — Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}
+
+Hôm nay, vào lúc ..... giờ, ngày ..... tháng ..... năm ${new Date().getFullYear()}, tại Nhà văn hóa ${tdpDisplay}.
+
+I. THÀNH PHẦN THAM DỰ:
+- Chủ trì: ${leaderDisplay} — Trưởng Ban công tác Mặt trận.
+- Thư ký: .....
+- Thành viên Ban công tác Mặt trận có mặt: ..... / ..... thành viên.
+
+II. NỘI DUNG CUỘC HỌP:
+1. Đánh giá kết quả công tác Mặt trận tháng qua:
+- Công tác tuyên truyền chính sách pháp luật đến ${households.length} hộ gia đình đã hoàn thành.
+- Tình hình đoàn kết khu dân cư ổn định, không có mâu thuẫn phát sinh.
+- Kết quả vận động các quỹ xã hội: Đạt .....% kế hoạch đề ra.
+
+2. Bàn công tác Mặt trận tháng tới:
+- Chuẩn bị tổ chức Ngày hội Đại đoàn kết toàn dân tộc năm ${new Date().getFullYear()}.
+- Tiếp tục vận động ủng hộ Quỹ Vì người nghèo và Quỹ An sinh xã hội.
+- Phối hợp với Chi bộ và Ban điều hành TDP tổ chức tốt các hoạt động cộng đồng.
+
+III. KẾT LUẬN:
+Cuộc họp kết thúc vào lúc ..... giờ cùng ngày. Biên bản được thống nhất thông qua.
+
+     THƯ KÝ GHI BIÊN BẢN               TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
+   (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
+
+
+                                           ${leaderName}`;
+    }
+
+    // 10. Báo cáo thăm hỏi hộ nghèo / trao quà (Mặt trận)
+    if (query.includes('thăm hỏi hộ nghèo') || query.includes('trao quà') || (query.includes('báo cáo') && query.includes('thăm hỏi'))) {
+      const poorHH = households.filter(h => h.policy_type === 'poor');
+      const policyHH = households.filter(h => h.policy_type === 'policy_family');
+      return `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
+BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+BÁO CÁO
+Kết quả thăm hỏi, tặng quà các gia đình chính sách,
+hộ nghèo và hộ khó khăn nhân dịp Lễ, Tết năm ${new Date().getFullYear()}
+
+Kính gửi: Ban Thường trực UBMTTQ Việt Nam ${wardDisplay}.
+
+Thực hiện kế hoạch và hướng dẫn của cấp trên, Ban công tác Mặt trận Tổ dân phố ${tdpName} báo cáo kết quả thăm hỏi và tặng quà như sau:
+
+I. ĐỐI TƯỢNG ĐƯỢC THĂM HỎI:
+- Số hộ nghèo được thăm hỏi, tặng quà: ${poorHH.length} hộ.
+- Số hộ gia đình chính sách được thăm hỏi: ${policyHH.length} hộ.
+- Số hộ khó khăn đột xuất được hỗ trợ: ..... hộ.
+- Tổng số suất quà đã trao: ..... suất.
+
+II. GIÁ TRỊ QUÀ TẶNG:
+- Nguồn từ Quỹ Vì người nghèo MTTQ phường: ..... suất × 200.000 đồng/suất.
+- Nguồn từ Ban điều hành TDP vận động: ..... suất × 200.000 đồng/suất.
+- Nguồn do cá nhân, doanh nghiệp hảo tâm ủng hộ trực tiếp: ..... suất.
+
+III. KẾT QUẢ VÀ Ý NGHĨA:
+Cuộc thăm hỏi đã tạo ra không khí ấm áp, thể hiện tinh thần "tương thân tương ái" của truyền thống dân tộc. Các gia đình được thăm hỏi đều bày tỏ sự xúc động và lòng biết ơn sâu sắc.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderName}`;
+    }
+
 
     const isPlanVoluntary = query.includes('kế hoạch vận động') || (query.includes('kế hoạch') && (query.includes('vận động') || query.includes('đóng góp') || query.includes('tự nguyện')));
     const isMeetingVoluntary = (query.includes('hội nghị nhân dân') || query.includes('nội dung họp')) && (query.includes('đóng góp') || query.includes('vận động') || query.includes('tự nguyện'));
@@ -588,51 +880,76 @@ TỔ TRƯỞNG DÂN PHỐ
       }
     }
 
-    // Wrap in formal organizational header
+    // Lấy tên Bí thư Chi bộ từ cấu hình Chi bộ Đảng
+    const partySecretaryName = localStorage.getItem('party_secretary_name') || '';
+    const partySecretaryDisplay = partySecretaryName.trim() || '(Ký, ghi rõ họ tên)';
+
+    // Định dạng ngày tháng năm đúng chuẩn
+    const d = new Date();
+    const dayStr = d.getDate().toString().padStart(2, '0');
+    const monthStr = (d.getMonth() + 1).toString().padStart(2, '0');
+    const yearStr = d.getFullYear();
+    const dateStr = `ngày ${dayStr} tháng ${monthStr} năm ${yearStr}`;
+
+    // ─── Tạo văn bản cuối cùng theo từng loại ───
     let finalDocument = '';
+
     if (docType === 'party') {
+      // Văn bản Đảng: tiêu đề bên trái "ĐẢNG CỘNG SẢN VIỆT NAM"
       finalDocument = `ĐẢNG CỘNG SẢN VIỆT NAM
-ĐẢNG BỘ ${wardName.toUpperCase()}
+ĐẢNG BỘ ${wardDisplay.toUpperCase()}
 CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
----
+*
 
 ${title}
 
 ${content}
 
-${tdpName}, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}
-BÍ THƯ CHI BỘ
-(Ký, ghi rõ họ tên)
-      `;
+                              ${tdpName}, ${dateStr}
+                              T/M CHI BỘ
+                              BÍ THƯ
+
+
+                              ${partySecretaryDisplay}`;
+
     } else if (docType === 'front') {
-      finalDocument = `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
-Độc lập - Tự do - Hạnh phúc
----
-ỦY BAN MTTQ VN ${wardName.toUpperCase()}
+      // Văn bản Mặt trận: tiêu đề bên phải "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"
+      finalDocument = `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
 BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
 
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
 ${title}
 
 ${content}
 
-${tdpName}, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}
-TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
-(Ký, ghi rõ họ tên)
-      `;
+                              ${tdpName}, ${dateStr}
+                              TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderDisplay.replace(/^(Ông|Bà)\s+/i, '')}`;
+
     } else {
-      finalDocument = `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
-Độc lập - Tự do - Hạnh phúc
----
-${tdpHeader}
+      // Văn bản hành chính chung: theo mẫu UBND/TDP
+      finalDocument = `${tdpHeader} - ${wardDisplay.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
 
 ${title}
 
 ${content}
 
-${tdpName}, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}
-TỔ TRƯỞNG DÂN PHỐ
-(Ký, ghi rõ họ tên)
-      `;
+                              ${tdpName}, ${dateStr}
+                              TỔ TRƯỞNG DÂN PHỐ
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderDisplay.replace(/^(Ông|Bà)\s+/i, '')}`;
     }
 
     return finalDocument;
@@ -694,51 +1011,150 @@ TỔ TRƯỞNG DÂN PHỐ
 
   const handlePrint = () => {
     if (!result) return;
-    
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép mở popup trên trình duyệt!', 'danger');
       return;
     }
-    
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>In văn bản hành chính</title>
-          <style>
-            @page {
-              size: A4;
-              margin: 20mm 20mm 20mm 25mm; /* Trên, dưới, phải 20mm, trái 25mm */
-            }
-            body {
-              font-family: "Times New Roman", Times, serif;
-              font-size: 14pt;
-              line-height: 1.6;
-              color: #000;
-              margin: 0;
-              padding: 0;
-              background-color: #fff;
-            }
-            .document-container {
-              width: 100%;
-              white-space: pre-wrap;
-              word-wrap: break-word;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="document-container">${result}</div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() {
-                window.close();
-              }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `);
+
+    // Phân tích loại văn bản để render đúng
+    const isPartyDoc = result.includes('ĐẢNG CỘNG SẢN VIỆT NAM') || result.includes('CHI BỘ');
+    const isFrontDoc = result.includes('MTTQ') || result.includes('MẶT TRẬN');
+
+    // Tách phần tiêu đề (trước nội dung) và phần thân
+    const lines = result.split('\n');
+
+    // Xây dựng HTML chuẩn văn bản hành chính Việt Nam
+    let headerHtml = '';
+    if (isPartyDoc) {
+      // Lấy các dòng tiêu đề Đảng (trước dấu *)
+      const starIdx = lines.findIndex(l => l.trim() === '*');
+      const headerLines = starIdx > 0 ? lines.slice(0, starIdx) : lines.slice(0, 3);
+      const bodyLines = starIdx > 0 ? lines.slice(starIdx + 1) : lines.slice(3);
+      headerHtml = `
+        <table class="letterhead" cellpadding="0" cellspacing="0">
+          <tr>
+            <td class="left-col">
+              ${headerLines.map((l, i) => `<div class="${i === 0 ? 'org-top' : i === 1 ? 'org-mid' : 'org-bot'}">${l}</div>`).join('')}
+              <div class="dash-line">*</div>
+            </td>
+          </tr>
+        </table>
+        <div class="doc-body">${bodyLines.join('\n')}</div>`;
+    } else {
+      // Văn bản Nhà nước: 2 cột tiêu đề
+      const sepIdx = lines.findIndex(l => l.includes('CỘNG HÒA XÃ HỘI CHỦ NGHĨA'));
+      const leftLines = sepIdx > 0 ? lines.slice(0, sepIdx).filter(l => l.trim()) : [];
+      const rightStartIdx = sepIdx >= 0 ? sepIdx : 0;
+      const rightLines = lines.slice(rightStartIdx, rightStartIdx + 3);
+      const bodyLines = lines.slice(Math.max(sepIdx + 3, 0));
+      headerHtml = `
+        <table class="letterhead" cellpadding="0" cellspacing="0">
+          <tr>
+            <td class="left-col">
+              ${leftLines.map((l, i) => `<div class="${i === 0 ? 'org-top' : i === 1 ? 'org-mid' : 'org-bot'}">${l}</div>`).join('')}
+            </td>
+            <td class="right-col">
+              <div class="republic-title">${rightLines[0] || ''}</div>
+              <div class="republic-sub">${rightLines[1] || ''}</div>
+              <div class="dash-line">───────────────────────</div>
+            </td>
+          </tr>
+        </table>
+        <div class="doc-body">${bodyLines.join('\n')}</div>`;
+    }
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Văn bản hành chính</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 20mm 20mm 20mm 30mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 13pt;
+      line-height: 1.7;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+    .letterhead {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+    .left-col {
+      width: 50%;
+      vertical-align: top;
+      padding-right: 10px;
+    }
+    .right-col {
+      width: 50%;
+      vertical-align: top;
+      text-align: center;
+      padding-left: 10px;
+    }
+    .org-top {
+      font-weight: bold;
+      font-size: 13pt;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .org-mid {
+      font-size: 12pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .org-bot {
+      font-size: 12pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+      text-decoration: underline;
+    }
+    .republic-title {
+      font-weight: bold;
+      font-size: 13pt;
+      text-align: center;
+    }
+    .republic-sub {
+      font-style: italic;
+      font-size: 13pt;
+      text-align: center;
+    }
+    .dash-line {
+      text-align: center;
+      font-weight: bold;
+      font-size: 15pt;
+      margin-top: 2px;
+    }
+    .doc-body {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 13pt;
+      line-height: 1.7;
+      margin-top: 16px;
+    }
+    @media print {
+      body { -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  ${isPartyDoc ? headerHtml : (isFrontDoc ? headerHtml : headerHtml)}
+  <script>
+    window.onload = function() { window.print(); };
+  <\/script>
+</body>
+</html>`);
     printWindow.document.close();
   };
 
@@ -754,18 +1170,35 @@ TỔ TRƯỞNG DÂN PHỐ
   const currentTdpName = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
   const currentWardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
 
-  const templates = [
-    { title: 'Kế hoạch vận động quỹ', prompt: 'Lập báo cáo kế hoạch vận động các khoản đóng góp tự nguyện năm 2026 gửi UBND phường.' },
-    { title: 'Nội dung họp vận động', prompt: 'Soạn nội dung hội nghị nhân dân thảo luận mức đóng góp tự nguyện năm 2026.' },
-    { title: 'Thông báo họp dân', prompt: 'Viết thông báo họp dân về việc tổng vệ sinh môi trường ngõ xóm vào sáng Chủ Nhật tuần này.' },
-    { title: 'Biên bản họp tổ', prompt: 'Viết biên bản cuộc họp tổ dân phố thảo luận dự án bê tông hóa ngõ 47 tối thứ Hai vừa rồi.' },
-    { title: 'Báo cáo tháng TDP', prompt: `Soạn báo cáo tình hình hoạt động tháng của Tổ dân phố ${currentTdpName} để gửi lên UBND Phường.` },
-    { title: 'Thư ngỏ vận động quỹ', prompt: `Viết thư ngỏ kêu gọi toàn thể nhân dân đóng góp ủng hộ quỹ Vì người nghèo năm 2026.` },
-    { title: 'Nghị quyết Chi bộ', prompt: `Soạn Nghị quyết cuộc họp Chi bộ Tổ dân phố ${currentTdpName} tháng này lãnh đạo công tác an ninh trật tự.` },
-    { title: 'Báo cáo công tác Chi bộ', prompt: `Viết báo cáo đánh giá hoạt động định kỳ của Chi bộ Tổ dân phố ${currentTdpName} gửi Đảng ủy phường.` },
-    { title: 'Báo cáo Đại đoàn kết', prompt: `Soạn báo cáo kết quả tổ chức Ngày hội Đại đoàn kết toàn dân tộc của Ban công tác Mặt trận.` },
-    { title: 'Báo cáo quỹ Mặt trận', prompt: `Viết báo cáo tổng kết kết động vận động ủng hộ Quỹ Vì người nghèo của Ban công tác Mặt trận.` },
-  ];
+  const [activeGroup, setActiveGroup] = useState<'to_truong' | 'party' | 'front'>('to_truong');
+
+  const templateGroups = {
+    to_truong: [
+      { title: 'Thông báo họp dân', icon: '📢', prompt: 'Viết thông báo họp dân về việc tổng vệ sinh môi trường ngõ xóm vào sáng Chủ Nhật tuần này.' },
+      { title: 'Biên bản họp tổ', icon: '📋', prompt: 'Viết biên bản cuộc họp tổ dân phố thảo luận dự án bê tông hóa ngõ 47 tối thứ Hai vừa rồi.' },
+      { title: 'Báo cáo tháng TDP', icon: '📊', prompt: `Soạn báo cáo tình hình hoạt động tháng của Tổ dân phố ${currentTdpName} để gửi lên UBND Phường.` },
+      { title: 'Kế hoạch vận động quỹ', icon: '💰', prompt: 'Lập báo cáo kế hoạch vận động các khoản đóng góp tự nguyện năm 2026 gửi UBND phường.' },
+      { title: 'Nội dung họp vận động', icon: '🗣️', prompt: 'Soạn nội dung hội nghị nhân dân thảo luận mức đóng góp tự nguyện năm 2026.' },
+      { title: 'Thư ngỏ vận động quỹ', icon: '✉️', prompt: 'Viết thư ngỏ kêu gọi toàn thể nhân dân đóng góp ủng hộ quỹ Vì người nghèo năm 2026.' },
+      { title: 'Biên bản kiểm tra hộ khẩu', icon: '🏠', prompt: 'Soạn biên bản kiểm tra hộ khẩu rà soát dân cư định kỳ năm 2026.' },
+      { title: 'Báo cáo ANTT', icon: '🔐', prompt: `Soạn báo cáo an ninh trật tự tháng ${new Date().getMonth() + 1} của Tổ dân phố ${currentTdpName} gửi Công an phường.` },
+    ],
+    party: [
+      { title: 'Nghị quyết Chi bộ', icon: '⚖️', prompt: `Soạn Nghị quyết cuộc họp Chi bộ Tổ dân phố ${currentTdpName} tháng này lãnh đạo công tác an ninh trật tự.` },
+      { title: 'Báo cáo công tác Chi bộ', icon: '📝', prompt: `Viết báo cáo đánh giá hoạt động định kỳ của Chi bộ Tổ dân phố ${currentTdpName} gửi Đảng ủy phường.` },
+      { title: 'Biên bản họp Chi bộ', icon: '📋', prompt: `Soạn biên bản sinh hoạt họp Chi bộ Tổ dân phố ${currentTdpName} tháng ${new Date().getMonth() + 1}.` },
+      { title: 'Kế hoạch học tập NQ', icon: '📚', prompt: `Soạn kế hoạch học tập nghị quyết Chi bộ Tổ dân phố ${currentTdpName} tháng ${new Date().getMonth() + 1}.` },
+      { title: 'Danh sách đảng viên tự kiểm', icon: '✅', prompt: `Soạn mẫu đảng viên tự kiểm điểm cuối năm của Chi bộ Tổ dân phố ${currentTdpName}.` },
+      { title: 'Báo cáo thi đua khen thưởng', icon: '🏆', prompt: `Viết báo cáo thi đua khen thưởng đề nghị công nhận danh hiệu đảng viên của Chi bộ Tổ dân phố ${currentTdpName}.` },
+    ],
+    front: [
+      { title: 'Báo cáo Đại đoàn kết', icon: '🤝', prompt: 'Soạn báo cáo kết quả tổ chức Ngày hội Đại đoàn kết toàn dân tộc của Ban công tác Mặt trận.' },
+      { title: 'Báo cáo quỹ Mặt trận', icon: '💵', prompt: 'Viết báo cáo tổng kết vận động ủng hộ Quỹ Vì người nghèo của Ban công tác Mặt trận.' },
+      { title: 'Thông báo Ngày hội ĐĐK', icon: '📢', prompt: `Soạn thông báo ngày hội Đại đoàn kết 18/11 của Ban công tác Mặt trận Tổ dân phố ${currentTdpName}.` },
+      { title: 'Biên bản họp Mặt trận', icon: '📋', prompt: `Soạn biên bản họp Ban công tác Mặt trận Tổ dân phố ${currentTdpName} tháng ${new Date().getMonth() + 1}.` },
+      { title: 'Báo cáo thăm hỏi hộ nghèo', icon: '🎁', prompt: `Soạn báo cáo kết quả thăm hỏi trao quà hộ nghèo và hộ chính sách của Tổ dân phố ${currentTdpName}.` },
+    ]
+  };
 
   return (
     <div className="ai-container">
@@ -780,13 +1213,52 @@ TỔ TRƯỞNG DÂN PHỐ
 
       <div className="ai-grid">
         <div className="ai-input-section">
+          {/* === 3 TAB CHỌN BAN === */}
+          <div style={{
+            display: 'flex', gap: '8px', marginBottom: '14px',
+            background: '#f8fafc', borderRadius: '12px', padding: '6px'
+          }}>
+            {([
+              { key: 'to_truong', label: '🏠 Tổ trưởng', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+              { key: 'party',     label: '⭐ Bí thư Chi bộ', color: '#991b1b', bg: '#fef2f2', border: '#fecaca' },
+              { key: 'front',     label: '🤝 Mặt trận',    color: '#92400e', bg: '#fffbeb', border: '#fde68a' },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveGroup(tab.key)}
+                style={{
+                  flex: 1,
+                  padding: '8px 6px',
+                  borderRadius: '8px',
+                  border: activeGroup === tab.key ? `1.5px solid ${tab.border}` : '1.5px solid transparent',
+                  background: activeGroup === tab.key ? tab.bg : 'transparent',
+                  color: activeGroup === tab.key ? tab.color : '#64748b',
+                  fontWeight: activeGroup === tab.key ? '700' : '500',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >{tab.label}</button>
+            ))}
+          </div>
+
+          {/* Label mô tả nhóm */}
+          <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '10px', fontStyle: 'italic' }}>
+            {activeGroup === 'to_truong' && '📌 Các mẫu văn bản dành cho Tổ trưởng dân phố'}
+            {activeGroup === 'party'     && '📌 Các mẫu văn bản dành cho Bí thư và Chi ủy Chi bộ'}
+            {activeGroup === 'front'     && '📌 Các mẫu văn bản dành cho Ban công tác Mặt trận'}
+          </div>
+
           <div className="template-grid">
-            {templates.map((t, i) => (
+            {templateGroups[activeGroup].map((t, i) => (
               <button key={i} className="template-card" onClick={() => setPrompt(t.prompt)}>
-                <FileText size={18} style={{color: 'var(--primary)'}} />
+                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{t.icon}</span>
                 <div style={{textAlign: 'left'}}>
                   <div style={{fontWeight: '700', fontSize: '0.9rem'}}>{t.title}</div>
-                  <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '160px'}}>{t.prompt}</div>
+                  <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '150px'}}>{t.prompt}</div>
                 </div>
               </button>
             ))}

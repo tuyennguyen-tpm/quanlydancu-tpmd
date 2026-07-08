@@ -116,6 +116,9 @@ const Households = () => {
 
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'chung');
 
+  // Quyền in danh sách & xuất Excel: không cho phép demo (Trang chủ) và guest_mode
+  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
+
   // State for Transfer / Split Household
   const [transferringMember, setTransferringMember] = useState<Resident | null>(null);
   const [targetHouseholdIdForTransfer, setTargetHouseholdIdForTransfer] = useState<string>('');
@@ -1327,49 +1330,53 @@ const Households = () => {
             </select>
           </div>
 
-          {/* Nút In A4 */}
-          <button
-            onClick={handlePrintList}
-            title={`In danh sách${policyFilter !== 'all' ? ' (' + getPolicyLabel(policyFilter) + ')' : ''}${groupFilter !== 'all' ? ' – ' + groupFilter : ''}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '8px',
-              border: '1.5px solid #cbd5e1',
-              backgroundColor: '#fff',
-              color: '#334155',
-              fontWeight: '700',
-              fontSize: '0.82rem',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <Printer size={15} /> In A4
-          </button>
+          {/* Nút In A4 – chỉ hiện với vai trò có quyền (không phải Trang chủ/demo) */}
+          {canPrintExport && (
+            <button
+              onClick={handlePrintList}
+              title={`In danh sách${policyFilter !== 'all' ? ' (' + getPolicyLabel(policyFilter) + ')' : ''}${groupFilter !== 'all' ? ' – ' + groupFilter : ''}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                border: '1.5px solid #cbd5e1',
+                backgroundColor: '#fff',
+                color: '#334155',
+                fontWeight: '700',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Printer size={15} /> In A4
+            </button>
+          )}
 
-          {/* Nút Xuất Excel */}
-          <button
-            onClick={handleExportListExcel}
-            title={`Xuất Excel danh sách hộ dân`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '7px 14px',
-              borderRadius: '8px',
-              border: '1.5px solid #bbf7d0',
-              backgroundColor: '#f0fdf4',
-              color: '#16a34a',
-              fontWeight: '700',
-              fontSize: '0.82rem',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            <FileSpreadsheet size={15} /> Xuất Excel
-          </button>
+          {/* Nút Xuất Excel – chỉ hiện với vai trò có quyền (không phải Trang chủ/demo) */}
+          {canPrintExport && (
+            <button
+              onClick={handleExportListExcel}
+              title={`Xuất Excel danh sách hộ dân`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                border: '1.5px solid #bbf7d0',
+                backgroundColor: '#f0fdf4',
+                color: '#16a34a',
+                fontWeight: '700',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <FileSpreadsheet size={15} /> Xuất Excel
+            </button>
+          )}
         </div>
       </div>
 
