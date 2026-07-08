@@ -32,6 +32,7 @@ const Finance = () => {
   }, []);
 
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -688,38 +689,40 @@ const Finance = () => {
           </p>
           {subTab === 'ledger' && (
             <div className="header-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <button 
-                className="btn btn-secondary" 
-                onClick={handleExportExcel}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#f0fdfa',
-                  border: '1px solid #ccfbf1',
-                  color: '#0f766e',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  height: 'auto',
-                  minHeight: '36px',
-                  fontSize: '0.85rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#ccfbf1';
-                  e.currentTarget.style.borderColor = '#99f6e4';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f0fdfa';
-                  e.currentTarget.style.borderColor = '#ccfbf1';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <Download size={16} /> Sổ thu chi
-              </button>
+              {canPrintExport && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={handleExportExcel}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#f0fdfa',
+                    border: '1px solid #ccfbf1',
+                    color: '#0f766e',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    height: 'auto',
+                    minHeight: '36px',
+                    fontSize: '0.85rem'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ccfbf1';
+                    e.currentTarget.style.borderColor = '#99f6e4';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f0fdfa';
+                    e.currentTarget.style.borderColor = '#ccfbf1';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <Download size={16} /> Sổ thu chi
+                </button>
+              )}
               {!isGuest && (
                 <button 
                   className="btn btn-primary" 
@@ -1064,37 +1067,39 @@ const Finance = () => {
                     )}
                   </strong>
                 </span>
-                <button 
-                  onClick={handleExportFundsExcel}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    backgroundColor: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    color: '#16a34a',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    height: 'auto',
-                    minHeight: '36px',
-                    fontSize: '0.85rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#dcfce7';
-                    e.currentTarget.style.borderColor = '#86efac';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f0fdf4';
-                    e.currentTarget.style.borderColor = '#bbf7d0';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <Download size={16} style={{ color: '#16a34a' }} /> Xuất Excel
-                </button>
+                {canPrintExport && (
+                  <button 
+                    onClick={handleExportFundsExcel}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      color: '#16a34a',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dcfce7';
+                      e.currentTarget.style.borderColor = '#86efac';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f0fdf4';
+                      e.currentTarget.style.borderColor = '#bbf7d0';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Download size={16} style={{ color: '#16a34a' }} /> Xuất Excel
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -882,7 +882,66 @@ Xin trân trọng cảm ơn!`;
     else if (query.includes('ngõ 47')) location = `Khu vực Ngõ 47, ${tdpName}`;
 
     if (docType === 'party') {
-      if (query.includes('nghị quyết')) {
+      if (query.includes('báo cáo kết quả thực hiện nhiệm vụ chi bộ') || query.includes('bc sinh hoạt chi bộ') || query.includes('báo cáo sinh hoạt chi bộ') || (query.includes('nhiệm vụ') && query.includes('triển khai') && query.includes('chi bộ'))) {
+        const cMonth = new Date().getMonth() + 1;
+        const nMonth = cMonth === 12 ? 1 : cMonth + 1;
+        const cYear = new Date().getFullYear();
+        const nYear = cMonth === 12 ? cYear + 1 : cYear;
+        const officialCount = partyMembers.filter(m => m.status === 'official').length;
+        const probationCount = partyMembers.filter(m => m.status === 'probation').length;
+
+        title = `BÁO CÁO\nKết quả thực hiện nhiệm vụ tháng ${cMonth} năm ${cYear} và triển khai chương trình công tác tháng ${nMonth} năm ${nYear}`;
+        content = `Kính thưa các đồng chí đảng viên trong Chi bộ!
+
+Thực hiện chương trình công tác năm ${cYear} của Chi bộ và sự chỉ đạo của Đảng ủy phường ${wardDisplay.replace('Phường ', '')}, Chi bộ Tổ dân phố ${tdpName} tổ chức sinh hoạt thường kỳ nhằm đánh giá kết quả thực hiện nhiệm vụ tháng ${cMonth} năm ${cYear}, đồng thời triển khai phương hướng, nhiệm vụ công tác tháng ${nMonth} năm ${nYear} như sau:
+
+I. ĐÁNH GIÁ KẾT QUẢ THỰC HIỆN NHIỆM VỤ THÁNG ${cMonth} NĂM ${cYear}
+
+1. Công tác chính trị, tư tưởng
+Chi bộ đã tổ chức tuyên truyền, quán triệt kịp thời các chủ trương của Đảng, chính sách, pháp luật của Nhà nước; các văn bản chỉ đạo của Trung ương, Tỉnh ủy, Thành ủy, Đảng ủy phường đến toàn thể cán bộ, đảng viên.
+Đảng viên giữ vững lập trường tư tưởng, chấp hành nghiêm Điều lệ Đảng, Quy định về những điều đảng viên không được làm; tích cực học tập và làm theo tư tưởng, đạo đức, phong cách Hồ Chí Minh; nêu cao tinh thần trách nhiệm, gương mẫu trong thực hiện nhiệm vụ và vận động Nhân dân.
+
+2. Kết quả thực hiện nhiệm vụ chính trị
+- Phối hợp với Ban Công tác Mặt trận và các đoàn thể tuyên truyền Nhân dân thực hiện tốt các chủ trương, chính sách của Đảng và pháp luật của Nhà nước.
+- Tiếp tục thực hiện tốt công tác quản lý dân cư, cập nhật biến động dân số, bảo đảm dữ liệu quản lý chính xác, kịp thời cho ${households.length} hộ gia đình và ${residents.length} nhân khẩu.
+- Phối hợp giữ vững an ninh chính trị, trật tự an toàn xã hội trên địa bàn; tăng cường tuyên truyền phòng, chống tội phạm, phòng cháy chữa cháy, phòng chống tai nạn thương tích và bảo đảm an sinh.
+- Duy trì công tác vệ sinh môi trường, xây dựng tuyến đường xanh - sạch - đẹp; vận động Nhân dân thực hiện nếp sống văn minh đô thị.
+- Thực hiện tốt công tác tuyên truyền, vận động Nhân dân tham gia các phong trào thi đua yêu nước, xây dựng khu dân cư đoàn kết, văn minh.
+
+3. Công tác xây dựng Đảng
+Chi bộ duy trì nền nếp sinh hoạt định kỳ theo quy định; thực hiện nguyên tắc tập trung dân chủ, tự phê bình và phê bình.
+Tổng số đảng viên hiện có của Chi bộ là ${partyMembers.length} đồng chí (Trong đó chính thức: ${officialCount} đồng chí, dự bị: ${probationCount} đồng chí). Đảng viên chấp hành nghiêm sự phân công của Chi bộ, thực hiện tốt nhiệm vụ được giao; giữ mối liên hệ chặt chẽ với Nhân dân nơi cư trú.
+
+4. Công tác kiểm tra, giám sát
+Chi bộ thường xuyên kiểm tra việc thực hiện nghị quyết, chương trình công tác và nhiệm vụ của từng đảng viên. Qua kiểm tra, các đảng viên đều chấp hành tốt quy định của Đảng, không có trường hợp vi phạm kỷ luật.
+
+5. Đánh giá chung
+* Ưu điểm:
+- Chi bộ đoàn kết, thống nhất, phát huy tốt vai trò lãnh đạo.
+- Đảng viên có tinh thần trách nhiệm, gương mẫu trong thực hiện nhiệm vụ.
+- Tình hình an ninh chính trị, trật tự an toàn xã hội ổn định; Nhân dân đồng thuận với các chủ trương của địa phương.
+* Hạn chế: Công tác tuyên truyền ở một số nội dung chưa thật sự sâu rộng. Một số nhiệm vụ cần tăng cường sự phối hợp giữa các tổ chức đoàn thể và đảng viên phụ trách địa bàn.
+
+II. PHƯƠNG HƯỚNG, NHIỆM VỤ THÁNG ${nMonth} NĂM ${nYear}
+
+1. Tiếp tục quán triệt và tổ chức thực hiện nghiêm các nghị quyết, chỉ thị của Đảng; các văn bản chỉ đạo của cấp trên.
+2. Tăng cường công tác giáo dục chính trị tư tưởng; phát huy vai trò nêu gương của cán bộ, đảng viên; thực hiện tốt việc học tập và làm theo tư tưởng, đạo đức, phong cách Hồ Chí Minh.
+3. Tiếp tục phối hợp với Ban Công tác Mặt trận và các đoàn thể tuyên truyền, vận động Nhân dân chấp hành tốt các quy định của pháp luật; xây dựng đời sống văn hóa, khu dân cư đoàn kết, văn minh.
+4. Thực hiện tốt công tác quản lý dân cư; thường xuyên cập nhật biến động nhân khẩu; khai thác hiệu quả phần mềm quản lý dân cư phục vụ công tác quản lý tại địa phương.
+5. Tăng cường công tác bảo đảm an ninh trật tự, phòng chống tội phạm, phòng cháy chữa cháy, an toàn giao thông; chủ động nắm chắc tình hình địa bàn.
+6. Tiếp tục thực hiện tốt công tác vệ sinh môi trường; vận động Nhân dân giữ gìn cảnh quan đô thị, không lấn chiếm lòng đường, vỉa hè.
+7. Chuẩn bị tốt các nội dung phục vụ hội nghị Nhân dân, các cuộc họp của tổ dân phố và các nhiệm vụ do Đảng ủy, UBND phường giao.
+8. Tiếp tục làm tốt công tác tạo nguồn phát triển đảng viên; quan tâm bồi dưỡng quần chúng ưu tú.
+
+III. TỔ CHỨC THỰC HIỆN
+Chi bộ phân công từng đồng chí Chi ủy viên và đảng viên phụ trách từng lĩnh vực, từng tổ liên gia; thường xuyên kiểm tra, đôn đốc việc thực hiện các nhiệm vụ được giao.
+Đề nghị toàn thể đảng viên phát huy tinh thần đoàn kết, trách nhiệm, gương mẫu đi đầu trong mọi phong trào, góp phần xây dựng Chi bộ trong sạch, vững mạnh; xây dựng Tổ dân phố ${tdpName} ngày càng văn minh, phát triển.
+
+Nơi nhận:
+- Đảng ủy phường ${wardDisplay.replace('Phường ', '')};
+- Các đồng chí đảng viên Chi bộ;
+- Lưu Chi bộ.`;
+      } else if (query.includes('nghị quyết')) {
         title = `NGHỊ QUYẾT\nHọp Chi bộ Tổ dân phố ${tdpName.toUpperCase()} tháng ${(new Date().getMonth() + 1)}/${new Date().getFullYear()}`;
         
         let targetTopic = 'Lãnh đạo thực hiện nhiệm vụ phát triển kinh tế - xã hội, giữ vững an ninh trật tự địa bàn dân cư';
@@ -1369,7 +1428,7 @@ ${content}
       }
 
       return `
-        <div class="doc-body" style="white-space: pre-wrap; word-wrap: break-word; font-size: 13pt; line-height: 1.7; margin-top: 16px;">${contentLines.join('\n')}</div>
+        <div class="doc-body" style="white-space: pre-wrap; word-wrap: break-word; font-size: 13pt; line-height: 1.45; margin-top: 16px;">${contentLines.join('\n').replace(/\n{3,}/g, '\n\n')}</div>
         ${signatureHtml}
       `;
     };
@@ -1399,7 +1458,7 @@ ${content}
         </table>
         ${renderBodyWithTableSignature(bodyLines)}`;
     } else {
-      // Văn bản Nhà nước: 2 cột tiêu đề
+      // Văn bản Nhà nước: 2 cột tiêu đề (cột trái 40%, cột phải 60% để tránh ngắt dòng)
       const sepIdx = lines.findIndex(l => l.includes('CỘNG HÒA XÃ HỘI CHỦ NGHĨA'));
       const leftLines = sepIdx > 0 ? lines.slice(0, sepIdx).filter(l => l.trim()) : [];
       const rightStartIdx = sepIdx >= 0 ? sepIdx : 0;
@@ -1408,11 +1467,11 @@ ${content}
       headerHtml = `
         <table class="letterhead" cellpadding="0" cellspacing="0">
           <tr>
-            <td class="left-col">
+            <td class="left-col" style="width: 40%;">
               ${leftLines.map((l, i) => `<div class="${i === 0 ? 'org-top' : i === 1 ? 'org-mid' : 'org-bot'}">${l}</div>`).join('')}
             </td>
-            <td class="right-col">
-              <div class="republic-title">${rightLines[0] || ''}</div>
+            <td class="right-col" style="width: 60%;">
+              <div class="republic-title" style="white-space: nowrap;">${rightLines[0] || ''}</div>
               <div class="republic-sub">${rightLines[1] || ''}</div>
               <div class="dash-line">───────────────────────</div>
             </td>
@@ -1435,7 +1494,7 @@ ${content}
     body {
       font-family: "Times New Roman", Times, serif;
       font-size: 13pt;
-      line-height: 1.7;
+      line-height: 1.45;
       color: #000;
       margin: 0;
       padding: 0;
@@ -1447,30 +1506,30 @@ ${content}
       margin-bottom: 8px;
     }
     .left-col {
-      width: 50%;
+      width: 40%;
       vertical-align: top;
       padding-right: 10px;
     }
     .right-col {
-      width: 50%;
+      width: 60%;
       vertical-align: top;
       text-align: center;
       padding-left: 10px;
     }
     .org-top {
       font-weight: bold;
-      font-size: 13pt;
+      font-size: 12pt;
       text-transform: uppercase;
       text-align: center;
     }
     .org-mid {
-      font-size: 12pt;
+      font-size: 11pt;
       font-weight: bold;
       text-transform: uppercase;
       text-align: center;
     }
     .org-bot {
-      font-size: 12pt;
+      font-size: 11pt;
       font-weight: bold;
       text-transform: uppercase;
       text-align: center;
@@ -1478,12 +1537,13 @@ ${content}
     }
     .republic-title {
       font-weight: bold;
-      font-size: 13pt;
+      font-size: 12pt;
       text-align: center;
+      white-space: nowrap;
     }
     .republic-sub {
       font-style: italic;
-      font-size: 13pt;
+      font-size: 12pt;
       text-align: center;
     }
     .dash-line {
@@ -1496,7 +1556,7 @@ ${content}
       white-space: pre-wrap;
       word-wrap: break-word;
       font-size: 13pt;
-      line-height: 1.7;
+      line-height: 1.45;
       margin-top: 16px;
     }
     @media print {

@@ -286,6 +286,7 @@ const Residents = () => {
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'chung');
+  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
@@ -1900,11 +1901,13 @@ const Residents = () => {
               onChange={handleImportCSV} 
             />
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button className="btn btn-secondary btn-print-list" onClick={handlePrint}>
-                <Printer size={16} />
-                In danh sách
-              </button>
-              {categoryFilter === 'longevity' && (
+              {canPrintExport && (
+                <button className="btn btn-secondary btn-print-list" onClick={handlePrint}>
+                  <Printer size={16} />
+                  In danh sách
+                </button>
+              )}
+              {categoryFilter === 'longevity' && canPrintExport && (
                 <button className="btn btn-secondary btn-export-excel" style={{ borderColor: '#eab308', color: '#854d0e', background: '#fef9c3' }} onClick={handleExportLongevityExcel}>
                   <FileDown size={16} style={{ color: '#ca8a04' }} />
                   Xuất Excel Mừng Thọ
@@ -1912,10 +1915,12 @@ const Residents = () => {
               )}
             </div>
           </div>
-          <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
-            <FileDown size={16} />
-            Xuất Excel/CSV
-          </button>
+          {canPrintExport && (
+            <button className="btn btn-secondary btn-export-excel" onClick={handleExportCSV}>
+              <FileDown size={16} />
+              Xuất Excel/CSV
+            </button>
+          )}
           {!isGuest && (
             <button className="btn btn-primary" onClick={handleOpenAdd}>
               <UserPlus size={16} />

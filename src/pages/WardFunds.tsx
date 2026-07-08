@@ -35,6 +35,7 @@ const WardFunds = () => {
   // Cấp quyền sửa cho to_truong, admin, chung
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
     (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'chung');
+  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   
   // State
   const [funds, setFunds] = useState<WardFund[]>([]);
@@ -896,24 +897,26 @@ const WardFunds = () => {
 
         {/* Right Actions */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            onClick={handleExportTemplate}
-            className="btn btn-secondary"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#fff',
-              border: '1.5px solid var(--border)',
-              color: 'var(--text-main)',
-              fontWeight: '700',
-              fontSize: '0.85rem'
-            }}
-          >
-            <Download size={16} /> Tải file mẫu
-          </button>
+          {canPrintExport && (
+            <button
+              onClick={handleExportTemplate}
+              className="btn btn-secondary"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#fff',
+                border: '1.5px solid var(--border)',
+                color: 'var(--text-main)',
+                fontWeight: '700',
+                fontSize: '0.85rem'
+              }}
+            >
+              <Download size={16} /> Tải file mẫu
+            </button>
+          )}
 
           {/* Nhập Excel */}
           {!isGuest && (
@@ -944,24 +947,26 @@ const WardFunds = () => {
             style={{ display: 'none' }} 
           />
 
-          <button
-            onClick={handleExportReport}
-            className="btn btn-success"
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#f0fdf4',
-              border: '1.5px solid #bbf7d0',
-              color: '#16a34a',
-              fontWeight: '700',
-              fontSize: '0.85rem'
-            }}
-          >
-            <FileSpreadsheet size={16} /> Xuất báo cáo
-          </button>
+          {canPrintExport && (
+            <button
+              onClick={handleExportReport}
+              className="btn btn-success"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#f0fdf4',
+                border: '1.5px solid #bbf7d0',
+                color: '#16a34a',
+                fontWeight: '700',
+                fontSize: '0.85rem'
+              }}
+            >
+              <FileSpreadsheet size={16} /> Xuất báo cáo
+            </button>
+          )}
 
           {/* Xóa sạch năm */}
           {!isGuest && funds.length > 0 && (
