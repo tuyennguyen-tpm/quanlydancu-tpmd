@@ -12,11 +12,14 @@ import {
   X,
   CreditCard,
   Printer,
-  UserPlus
+  UserPlus,
+  FileSpreadsheet,
+  Filter
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Household, Resident } from '../types';
+import ExcelJS from 'exceljs';
 
 const formatToDisplayDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -69,12 +72,13 @@ const Households = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [policyFilter, setPolicyFilter] = useState<string>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, policyFilter]);
+  }, [searchTerm, policyFilter, groupFilter]);
   
   // Modals state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -1030,8 +1034,9 @@ const Households = () => {
     const matchesSearch = matchesByHead || matchesByMember;
 
     const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
+    const matchesGroup = groupFilter === 'all' || h.self_management_group === groupFilter;
 
-    return matchesSearch && matchesPolicy;
+    return matchesSearch && matchesPolicy && matchesGroup;
   }).sort((a, b) => {
     // Sắp xếp theo số của Số sổ hộ khẩu (vd: HH000001 -> 1)
     const numA = parseInt(a.household_number.replace(/\D/g, '') || '0', 10);
@@ -1043,6 +1048,201 @@ const Households = () => {
 
   const totalPages = Math.ceil(filteredHouseholds.length / pageSize) || 1;
   const paginatedHouseholds = filteredHouseholds.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // ─── Hàm in danh sách A4 ───
+  const handlePrintList = () => {
+    if (filteredHouseholds.length === 0) {
+      showToast('Không có dữ liệu để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Trình duyệt đang chặn popup. Vui lòng cho phép popup để in!', 'warning');
+      return;
+    }
+    const tdpNameVal = localStorage.getItem('tdp_name') || 'TDP Quảng Giao';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường';
+    const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
+      : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
+      : policyFilter === 'policy_family' ? 'Gia đình chính sách'
+      : 'Tất cả các loại';
+    const groupLabel = groupFilter !== 'all' ? ` – ${groupFilter}` : '';
+    const today = new Date().toLocaleDateString('vi-VN');
+
+    const rows = filteredHouseholds.map((h, idx) => {
+      const headName = getHeadName(h);
+      const members = getHouseholdMembers(h.id);
+      const memberCount = members.length;
+      const pLabel = getPolicyLabel(h.policy_type);
+      const policyBadge = h.policy_type !== 'none'
+        ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${pLabel}</span>`
+        : '';
+      return `<tr style="border-bottom:1px solid #e2e8f0">
+        <td style="padding:7px 8px;text-align:center;color:#64748b">${idx + 1}</td>
+        <td style="padding:7px 8px;font-weight:600">${h.household_number}</td>
+        <td style="padding:7px 8px">${headName}</td>
+        <td style="padding:7px 8px">${h.address}</td>
+        <td style="padding:7px 8px;text-align:center">${memberCount}</td>
+        <td style="padding:7px 8px;text-align:center">${h.self_management_group || '—'}</td>
+        <td style="padding:7px 8px;text-align:center">${policyBadge || '—'}</td>
+        <td style="padding:7px 8px"></td>
+      </tr>`;
+    }).join('');
+
+    const htmlContent = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+    <title>Danh sách hộ dân – ${tdpNameVal}</title>
+    <style>
+      body { font-family: 'Times New Roman', serif; font-size: 13px; margin: 0; padding: 20px; color: #1e293b; }
+      h2 { text-align:center; font-size:15px; margin:0 0 2px; text-transform:uppercase; letter-spacing:1px; }
+      .subtitle { text-align:center; font-size:12px; color:#64748b; margin-bottom:16px; }
+      table { width:100%; border-collapse:collapse; }
+      thead tr { background:#1e3a8a; color:#fff; }
+      thead th { padding:8px 8px; font-size:12px; text-align:center; }
+      tbody tr:nth-child(even) { background:#f8fafc; }
+      .footer { text-align:right; margin-top:24px; font-size:12px; color:#64748b; }
+      @media print {
+        body { padding: 10mm 15mm; }
+        @page { size: A4 landscape; margin: 10mm 15mm; }
+      }
+    </style>
+    </head><body>
+    <h2>Danh sách hộ dân – ${policyLabel}${groupLabel}</h2>
+    <div class="subtitle">${tdpNameVal} – ${wardNameVal} &nbsp;|&nbsp; Ngày in: ${today} &nbsp;|&nbsp; Tổng số: <strong>${filteredHouseholds.length}</strong> hộ</div>
+    <table>
+      <thead><tr>
+        <th style="width:40px">STT</th>
+        <th style="width:100px">Số hộ khẩu</th>
+        <th>Chủ hộ</th>
+        <th>Địa chỉ</th>
+        <th style="width:60px">Số NK</th>
+        <th style="width:100px">Tổ tự quản</th>
+        <th style="width:130px">Diện chính sách</th>
+        <th style="width:120px">Ghi chú</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="footer">${tdpNameVal}, ngày ${today}<br>Tổ trưởng dân phố (Ký, ghi rõ họ tên)</div>
+    <script>window.onload = function() { window.print(); }<\/script>
+    </body></html>`;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  // ─── Hàm xuất Excel danh sách ───
+  const handleExportListExcel = async () => {
+    if (filteredHouseholds.length === 0) {
+      showToast('Không có dữ liệu để xuất!', 'warning');
+      return;
+    }
+    try {
+      const tdpNameVal = localStorage.getItem('tdp_name') || 'TDP';
+      const wardNameVal = localStorage.getItem('ward_name') || 'Phường';
+      const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
+        : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
+        : policyFilter === 'policy_family' ? 'Gia đình chính sách'
+        : 'Tất cả';
+      const groupLabel = groupFilter !== 'all' ? ` - ${groupFilter}` : '';
+
+      const workbook = new ExcelJS.Workbook();
+      const ws = workbook.addWorksheet('Danh sach ho dan');
+
+      // Tiêu đề
+      ws.mergeCells('A1:H1');
+      const titleCell = ws.getCell('A1');
+      titleCell.value = `DANH SÁCH HỘ DÂN – ${policyLabel.toUpperCase()}${groupLabel.toUpperCase()}`;
+      titleCell.font = { name: 'Times New Roman', size: 14, bold: true, color: { argb: 'FF1E3A8A' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(1).height = 30;
+
+      ws.mergeCells('A2:H2');
+      const subCell = ws.getCell('A2');
+      subCell.value = `${tdpNameVal} – ${wardNameVal}  |  Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}  |  Tổng số: ${filteredHouseholds.length} hộ`;
+      subCell.font = { name: 'Times New Roman', size: 11, italic: true, color: { argb: 'FF475569' } };
+      subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(2).height = 22;
+
+      // Header row
+      const headers = ['STT', 'Số hộ khẩu', 'Chủ hộ', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú'];
+      const headerRow = ws.addRow(headers);
+      headerRow.height = 26;
+      headerRow.eachCell(cell => {
+        cell.font = { name: 'Times New Roman', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'thin' }, bottom: { style: 'thin' },
+          left: { style: 'thin' }, right: { style: 'thin' }
+        };
+      });
+
+      // Data rows
+      filteredHouseholds.forEach((h, idx) => {
+        const headName = getHeadName(h);
+        const memberCount = getHouseholdMembers(h.id).length;
+        const pLabel = getPolicyLabel(h.policy_type);
+        const dataRow = ws.addRow([
+          idx + 1,
+          h.household_number,
+          headName,
+          h.address,
+          memberCount,
+          h.self_management_group || '',
+          h.policy_type !== 'none' ? pLabel : '',
+          ''
+        ]);
+        dataRow.height = 22;
+        dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+        dataRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
+        dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
+        dataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+        dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+        dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+        if (h.policy_type !== 'none') {
+          const color = h.policy_type === 'poor' ? 'FFEF4444'
+            : h.policy_type === 'near_poor' ? 'FFF97316'
+            : 'FF8B5CF6';
+          dataRow.getCell(7).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
+        }
+        dataRow.eachCell(cell => {
+          if (!cell.font) cell.font = { name: 'Times New Roman', size: 11 };
+          else cell.font = { ...cell.font, name: 'Times New Roman', size: 11 };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+        });
+        // Tô màu xen kẽ
+        if (idx % 2 === 1) {
+          dataRow.eachCell(cell => {
+            if (!cell.fill || (cell.fill as any).fgColor?.argb === 'FFFFFFFF') {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+            }
+          });
+        }
+      });
+
+      // Column widths
+      ws.columns = [
+        { width: 6 }, { width: 14 }, { width: 26 }, { width: 32 },
+        { width: 12 }, { width: 16 }, { width: 22 }, { width: 20 }
+      ];
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const safePolicy = policyLabel.replace(/ /g, '_');
+      link.download = `DanhSach_HoDan_${safePolicy}_${tdpNameVal}_${new Date().getFullYear()}.xlsx`;
+      link.click();
+      showToast(`Xuất Excel thành công! ${filteredHouseholds.length} hộ.`, 'success');
+    } catch (err) {
+      showToast('Lỗi khi xuất file Excel!', 'danger');
+      console.error(err);
+    }
+  };
 
   const getPolicyLabel = (type: string) => {
     switch (type) {
@@ -1082,7 +1282,7 @@ const Households = () => {
         </div>
       </div>
 
-      <div className="filter-bar">
+      <div className="filter-bar" style={{ flexWrap: 'wrap', gap: '10px' }}>
         <div className="search-box">
           <Search size={20} />
           <input 
@@ -1093,11 +1293,83 @@ const Households = () => {
           />
         </div>
         
-        <div className="filter-tabs">
+        <div className="filter-tabs" style={{ flexWrap: 'wrap' }}>
           <button className={`tab-mini ${policyFilter === 'all' ? 'active' : ''}`} onClick={() => setPolicyFilter('all')}>Tất cả</button>
           <button className={`tab-mini ${policyFilter === 'poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('poor')}>Hộ nghèo</button>
           <button className={`tab-mini ${policyFilter === 'near_poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('near_poor')}>Hộ cận nghèo</button>
           <button className={`tab-mini ${policyFilter === 'policy_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('policy_family')}>Gia đình chính sách</button>
+        </div>
+
+        {/* Lọc theo Tổ & Nút in/xuất */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginLeft: 'auto' }}>
+          {/* Dropdown lọc Tổ */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Filter size={15} style={{ color: 'var(--text-muted)' }} />
+            <select
+              value={groupFilter}
+              onChange={(e) => setGroupFilter(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1.5px solid var(--border)',
+                backgroundColor: groupFilter !== 'all' ? '#eff6ff' : '#fff',
+                color: groupFilter !== 'all' ? '#2563eb' : 'var(--text-main)',
+                fontWeight: groupFilter !== 'all' ? '700' : '500',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                minWidth: '120px'
+              }}
+            >
+              <option value="all">Tất cả Tổ</option>
+              {groups.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Nút In A4 */}
+          <button
+            onClick={handlePrintList}
+            title={`In danh sách${policyFilter !== 'all' ? ' (' + getPolicyLabel(policyFilter) + ')' : ''}${groupFilter !== 'all' ? ' – ' + groupFilter : ''}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              border: '1.5px solid #cbd5e1',
+              backgroundColor: '#fff',
+              color: '#334155',
+              fontWeight: '700',
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Printer size={15} /> In A4
+          </button>
+
+          {/* Nút Xuất Excel */}
+          <button
+            onClick={handleExportListExcel}
+            title={`Xuất Excel danh sách hộ dân`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              border: '1.5px solid #bbf7d0',
+              backgroundColor: '#f0fdf4',
+              color: '#16a34a',
+              fontWeight: '700',
+              fontSize: '0.82rem',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <FileSpreadsheet size={15} /> Xuất Excel
+          </button>
         </div>
       </div>
 
