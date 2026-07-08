@@ -1,4 +1,19 @@
 import { useState, useEffect } from 'react';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
+  HeightRule,
+  TableLayoutType,
+  convertInchesToTwip,
+} from 'docx';
 import { 
   Send, 
   Bot, 
@@ -1255,18 +1270,382 @@ ${content}
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!result) return;
-    const blob = new Blob([result], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+
+    showToast('Đang tạo file Word, vui lòng đợi...', 'success');
+
+    const isPartyDoc = result.includes('ĐẢNG CỘNG SẢN VIỆT NAM') || result.startsWith('ĐẢNG');
+    const isFrontDoc = result.includes('MTTQ') || result.includes('MẶT TRẬN');
+
+    // ─── Cấu hình font và kích thước ───
+    const FONT = 'Times New Roman';
+    const SIZE_TITLE   = 28; // 14pt
+    const SIZE_BODY    = 26; // 13pt
+    const SIZE_HEADER  = 24; // 12pt
+    const SIZE_SMALL   = 22; // 11pt
+
+    const noBorder = {
+      top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    };
+
+    // ─── Helper tạo đoạn văn thông thường ───
+    const makeParagraph = (text: string, options: {
+      bold?: boolean;
+      center?: boolean;
+      right?: boolean;
+      size?: number;
+      underline?: boolean;
+      italic?: boolean;
+      spaceAfter?: number;
+      spaceBefore?: number;
+    } = {}) => {
+      return new Paragraph({
+        alignment: options.center ? AlignmentType.CENTER
+                 : options.right  ? AlignmentType.RIGHT
+                 : AlignmentType.JUSTIFIED,
+        spacing: {
+          after: options.spaceAfter ?? 60,
+          before: options.spaceBefore ?? 0,
+          line: 360,
+        },
+        children: [new TextRun({
+          text,
+          font: FONT,
+          size: options.size ?? SIZE_BODY,
+          bold: options.bold ?? false,
+          italics: options.italic ?? false,
+          underline: options.underline ? {} : undefined,
+        })],
+      });
+    };
+
+    // ─── Helper tạo dòng trống ───
+    const emptyLine = (size = SIZE_BODY) => new Paragraph({
+      spacing: { after: 60, line: 360 },
+      children: [new TextRun({ text: '', font: FONT, size })],
+    });
+
+    const children: (Paragraph | Table)[] = [];
+
+    // ─── Phân tích nội dung văn bản ───
+    const lines = result.split('\n');
+
+    if (isPartyDoc) {
+      // === Văn bản Đảng: tiêu đề bên trái đơn ===
+      const starIdx = lines.findIndex(l => l.trim() === '*');
+      const headerLines = starIdx > 0 ? lines.slice(0, starIdx) : lines.slice(0, 3);
+      const bodyLines = starIdx > 0 ? lines.slice(starIdx + 1) : lines.slice(3);
+
+      // Header Đảng
+      headerLines.forEach((line, i) => {
+        if (!line.trim()) return;
+        children.push(makeParagraph(line.trim(), {
+          bold: true,
+          center: true,
+          size: i === 0 ? SIZE_HEADER : SIZE_SMALL,
+          underline: i === headerLines.length - 1,
+          spaceAfter: 40,
+        }));
+      });
+      children.push(makeParagraph('*', { center: true, bold: true, size: SIZE_TITLE, spaceAfter: 80 }));
+
+      // Body
+      buildBodyParagraphs(bodyLines, children, makeParagraph, emptyLine, FONT, SIZE_BODY, SIZE_TITLE, noBorder, 'party');
+
+    } else {
+      // === Văn bản Nhà nước / Mặt trận: 2 cột tiêu đề ===
+      const sepIdx = lines.findIndex(l => l.includes('CỘNG HÒA XÃ HỘI CHỦ NGHĨA'));
+      const leftLines = sepIdx > 0 ? lines.slice(0, sepIdx).filter(l => l.trim()) : [];
+      const rightLines = sepIdx >= 0 ? lines.slice(sepIdx, sepIdx + 3) : [];
+      const bodyLines = lines.slice(Math.max(sepIdx + 3, 0));
+
+      // Tạo bảng 2 cột tiêu đề
+      const makeHeaderCell = (paragraphs: Paragraph[], widthPct: number) =>
+        new TableCell({
+          width: { size: widthPct, type: WidthType.PERCENTAGE },
+          borders: noBorder,
+          children: paragraphs,
+        });
+
+      const leftCellParas: Paragraph[] = leftLines.map((line, i) =>
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 40, line: 360 },
+          children: [new TextRun({
+            text: line.trim(),
+            font: FONT,
+            size: i === 0 ? SIZE_HEADER : SIZE_SMALL,
+            bold: true,
+            underline: i === leftLines.length - 1 ? {} : undefined,
+          })],
+        })
+      );
+
+      const rightCellParas: Paragraph[] = [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 40, line: 360 },
+          children: [new TextRun({ text: (rightLines[0] || '').trim(), font: FONT, size: SIZE_HEADER, bold: true })],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 40, line: 360 },
+          children: [new TextRun({ text: (rightLines[1] || '').trim(), font: FONT, size: SIZE_HEADER, italics: true })],
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 80, line: 360 },
+          children: [new TextRun({ text: '──────────────────────', font: FONT, size: SIZE_HEADER, bold: true })],
+        }),
+      ];
+
+      children.push(
+        new Table({
+          layout: TableLayoutType.FIXED,
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: noBorder,
+          rows: [new TableRow({
+            children: [
+              makeHeaderCell(leftCellParas, isFrontDoc ? 45 : 40),
+              makeHeaderCell(rightCellParas, isFrontDoc ? 55 : 60),
+            ],
+          })],
+        })
+      );
+
+      // Body
+      buildBodyParagraphs(bodyLines, children, makeParagraph, emptyLine, FONT, SIZE_BODY, SIZE_TITLE, noBorder, isFrontDoc ? 'front' : 'admin');
+    }
+
+    // ─── Tạo Document Word ───
+    const doc = new Document({
+      styles: {
+        default: {
+          document: {
+            run: { font: FONT, size: SIZE_BODY },
+          },
+        },
+      },
+      sections: [{
+        properties: {
+          page: {
+            size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) },
+            margin: {
+              top:    convertInchesToTwip(0.98),  // 2.5cm
+              bottom: convertInchesToTwip(0.79),  // 2cm
+              left:   convertInchesToTwip(1.18),  // 3cm lề trái hành chính
+              right:  convertInchesToTwip(0.79),  // 2cm
+            },
+          },
+        },
+        children,
+      }],
+    });
+
+    const buffer = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(buffer);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `van_ban_soan_thao_${Date.now()}.txt`;
+    link.download = `van_ban_${Date.now()}.docx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Tải văn bản (.txt) thành công!', 'success');
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    showToast('Tải xuống file Word (.docx) thành công!', 'success');
   };
+
+  // ─── Hàm phụ trợ xây dựng body văn bản thành các Paragraph Word ───
+  function buildBodyParagraphs(
+    bodyLines: string[],
+    children: (Paragraph | Table)[],
+    makeParagraph: (text: string, opts?: any) => Paragraph,
+    emptyLine: (size?: number) => Paragraph,
+    FONT: string,
+    SIZE_BODY: number,
+    SIZE_TITLE: number,
+    noBorder: any,
+    docType: 'party' | 'front' | 'admin'
+  ) {
+    // Phát hiện phần chữ ký (tìm ngược từ cuối)
+    let sigStartIdx = -1;
+    let isDoubleSignature = false;
+    for (let i = bodyLines.length - 1; i >= Math.max(0, bodyLines.length - 18); i--) {
+      const line = bodyLines[i].trim();
+      if (!line) continue;
+      if (line.includes('THƯ KÝ') && (line.includes('TỔ TRƯỞNG') || line.includes('BÍ THƯ') || line.includes('TRƯỞNG BAN'))) {
+        sigStartIdx = i; isDoubleSignature = true; break;
+      }
+      if ((line.includes('ngày') && line.includes('tháng') && line.includes('năm') && line.includes(','))) {
+        let hasTitle = false;
+        for (let j = i + 1; j < bodyLines.length; j++) {
+          const lb = bodyLines[j].toUpperCase();
+          if (lb.includes('TỔ TRƯỞNG') || lb.includes('BÍ THƯ') || lb.includes('TRƯỞNG BAN') || lb.includes('T/M')) {
+            hasTitle = true; break;
+          }
+        }
+        if (hasTitle) { sigStartIdx = i; break; }
+      }
+    }
+
+    const contentLines = sigStartIdx !== -1 ? bodyLines.slice(0, sigStartIdx) : bodyLines;
+    const sigLines = sigStartIdx !== -1 ? bodyLines.slice(sigStartIdx) : [];
+
+    // Xây dựng phần nội dung
+    contentLines.forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) { children.push(emptyLine()); return; }
+
+      // Tiêu đề văn bản (BÁO CÁO, THÔNG BÁO, BIÊN BẢN, v.v.)
+      if (/^(BÁO CÁO|THÔNG BÁO|BIÊN BẢN|NGHỊ QUYẾT|TỜ TRÌNH|GIẤY MỜI|KẾ HOẠCH|MẪU|NỘI DUNG|QUYẾT ĐỊNH)/.test(trimmed.toUpperCase())) {
+        children.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 80, before: 80, line: 360 },
+          children: [new TextRun({ text: trimmed, font: FONT, size: SIZE_TITLE, bold: true })],
+        }));
+        return;
+      }
+
+      // Dòng mục lớn (I., II., III. ...)
+      if (/^[IVX]+\./.test(trimmed)) {
+        children.push(new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 60, before: 60, line: 360 },
+          children: [new TextRun({ text: trimmed, font: FONT, size: SIZE_BODY, bold: true })],
+        }));
+        return;
+      }
+
+      // Dòng thứ tự 1. 2. 3.
+      if (/^\d+\.\s/.test(trimmed)) {
+        children.push(new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          indent: { firstLine: 360 },
+          spacing: { after: 60, line: 360 },
+          children: [new TextRun({ text: trimmed, font: FONT, size: SIZE_BODY })],
+        }));
+        return;
+      }
+
+      // Dòng gạch đầu dòng -
+      if (trimmed.startsWith('-') || trimmed.startsWith('*') || trimmed.startsWith('•')) {
+        children.push(new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          indent: { left: 360 },
+          spacing: { after: 60, line: 360 },
+          children: [new TextRun({ text: trimmed, font: FONT, size: SIZE_BODY })],
+        }));
+        return;
+      }
+
+      // Dòng Kính gửi
+      if (trimmed.startsWith('Kính gửi') || trimmed.startsWith('Kính thưa')) {
+        children.push(new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 80, line: 360 },
+          children: [new TextRun({ text: trimmed, font: FONT, size: SIZE_BODY, italics: true })],
+        }));
+        return;
+      }
+
+      // Nơi nhận
+      if (trimmed.startsWith('Nơi nhận:')) {
+        children.push(new Paragraph({
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 60, before: 80, line: 360 },
+          children: [new TextRun({ text: trimmed, font: FONT, size: 22, bold: true, italics: true })],
+        }));
+        return;
+      }
+
+      // Mặc định: đoạn văn thường
+      children.push(new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        indent: { firstLine: trimmed.startsWith('  ') || line.startsWith('  ') ? 0 : 360 },
+        spacing: { after: 60, line: 360 },
+        children: [new TextRun({ text: trimmed, font: FONT, size: SIZE_BODY })],
+      }));
+    });
+
+    if (sigLines.length === 0) return;
+
+    // Phần chữ ký
+    children.push(emptyLine());
+    children.push(emptyLine());
+
+    if (isDoubleSignature) {
+      // Biên bản: 2 cột chữ ký
+      const sigClean = sigLines.filter(l => l.trim());
+      const half = Math.ceil(sigClean.length / 2);
+      const leftSigs = sigClean.slice(0, half);
+      const rightSigs = sigClean.slice(half);
+
+      const noBorderCell = (paras: Paragraph[]) => new TableCell({
+        width: { size: 50, type: WidthType.PERCENTAGE },
+        borders: noBorder,
+        children: paras,
+      });
+
+      const makeSignaturePara = (text: string, isName = false) => new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: isName ? 60 : 40, before: isName ? 500 : 0, line: 360 },
+        children: [new TextRun({
+          text: text.trim(),
+          font: FONT,
+          size: isName ? SIZE_BODY : 22,
+          bold: isName || /^[A-ZĐÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸ]+$/.test(text.trim()),
+          italics: text.trim().startsWith('(') && text.trim().endsWith(')'),
+        })],
+      });
+
+      const leftName = leftSigs.length > 0 ? leftSigs[leftSigs.length - 1].trim() : '';
+      const rightName = rightSigs.length > 0 ? rightSigs[rightSigs.length - 1].trim() : '';
+
+      const leftParas = leftSigs.map((l, i) => makeSignaturePara(l, i === leftSigs.length - 1 && leftName && !leftName.startsWith('(') && !leftName.toUpperCase().includes('TRƯ')));
+      const rightParas = rightSigs.map((l, i) => makeSignaturePara(l, i === rightSigs.length - 1 && rightName && !rightName.startsWith('(')));
+
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: noBorder,
+        rows: [new TableRow({ children: [noBorderCell(leftParas), noBorderCell(rightParas)] })],
+      }));
+    } else {
+      // 1 chữ ký bên phải
+      const sigClean = sigLines.filter(l => l.trim());
+      const rightSigParas = sigClean.map((l, i) => {
+        const txt = l.trim();
+        const isDate = txt.includes('ngày') && txt.includes('tháng');
+        const isTitle = txt.toUpperCase().includes('TỔ TRƯỞNG') || txt.toUpperCase().includes('BÍ THƯ') || txt.toUpperCase().includes('TRƯỞNG BAN') || txt.includes('T/M');
+        const isNote = txt.startsWith('(') && txt.endsWith(')');
+        const isName = !isDate && !isTitle && !isNote && i === sigClean.length - 1;
+        return new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 40, before: isName ? 500 : 0, line: 360 },
+          children: [new TextRun({
+            text: txt,
+            font: FONT,
+            size: isName ? SIZE_BODY : 22,
+            bold: isTitle || isName,
+            italics: isDate || isNote,
+          })],
+        });
+      });
+
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: noBorder,
+        rows: [new TableRow({
+          children: [
+            new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: noBorder, children: [emptyLine()] }),
+            new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: noBorder, children: rightSigParas }),
+          ],
+        })],
+      }));
+    }
+  }
 
   const handlePrint = () => {
     if (!result) return;
@@ -1849,7 +2228,7 @@ ${content}
                   <button className="icon-btn-sm" onClick={handlePrint} title="In văn bản (A4)">
                     <Printer size={18} />
                   </button>
-                  <button className="icon-btn-sm" onClick={handleDownload} title="Tải xuống tệp .txt">
+                  <button className="icon-btn-sm" onClick={handleDownload} title="Tải xuống tệp Word (.docx)">
                     <Download size={18} />
                   </button>
                 </div>
