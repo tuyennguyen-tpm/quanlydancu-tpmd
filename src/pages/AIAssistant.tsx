@@ -501,6 +501,216 @@ Cuộc thăm hỏi đã tạo ra không khí ấm áp, thể hiện tinh thần 
     }
 
 
+    // 11. Tờ trình xin hỗ trợ kinh phí (Tổ trưởng)
+    if (query.includes('tờ trình xin hỗ trợ kinh phí') || query.includes('hỗ trợ kinh phí') || query.includes('xin kinh phí')) {
+      return `TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}
+Số: ..... /TTr-TDP
+---
+
+TỜ TRÌNH
+Về việc xin hỗ trợ kinh phí sửa chữa, nâng cấp cơ sở vật chất Tổ dân phố
+
+Kính gửi: Ủy ban nhân dân ${wardDisplay}.
+
+Căn cứ tình hình thực tế và nhu cầu sinh hoạt của nhân dân trên địa bàn Tổ dân phố ${tdpName}, Ban điều hành Tổ dân phố kính trình UBND phường xem xét và hỗ trợ kinh phí như sau:
+
+I. SỰ CẦN THIẾT THỰC HIỆN:
+Hiện nay, Nhà văn hóa Tổ dân phố ${tdpName} (hoặc tuyến đường ngõ .....) đã xuống cấp nghiêm trọng, cụ thể:
+- Phần mái bị dột nước khi trời mưa, tường bong tróc, trang thiết bị bàn ghế thiếu thốn.
+- Ảnh hưởng trực tiếp đến chất lượng sinh hoạt cộng đồng của hơn ${households.length} hộ dân trên địa bàn.
+
+II. NỘI DUNG VÀ DỰ TOÁN KINH PHÍ:
+1. Nội dung sửa chữa dự kiến: Sửa mái tôn, sơn lại tường, mua thêm 50 bộ ghế ngồi.
+2. Tổng kinh phí dự toán: ..... đồng (Bằng chữ: .....).
+3. Nguồn kinh phí:
+- Nhân dân đóng góp tự nguyện: ..... đồng.
+- Kính trình UBND phường hỗ trợ: ..... đồng.
+
+Ban điều hành TDP ${tdpName} rất mong nhận được sự quan tâm, tạo điều kiện giúp đỡ của UBND phường để bà con sớm có nơi sinh hoạt ổn định.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              TỔ TRƯỞNG DÂN PHỐ
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderName}`;
+    }
+
+    // 12. Giấy mời họp Ban điều hành TDP (Tổ trưởng)
+    if (query.includes('giấy mời họp ban điều hành') || query.includes('mời họp ban điều hành') || query.includes('giấy mời họp tdp')) {
+      return `TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}
+Số: ..... /GM-TDP
+---
+
+GIẤY MỜI
+Tham dự cuộc họp Ban điều hành Tổ dân phố mở rộng
+
+Ban điều hành Tổ dân phố ${tdpName} trân trọng kính mời:
+- Các đồng chí trong Ban điều hành TDP (Tổ trưởng, Tổ phó).
+- Các đồng chí Trưởng chi hội đoàn thể (Phụ nữ, Cựu chiến binh, Đoàn thanh niên, Người cao tuổi).
+- Các đồng chí Tổ trưởng Tổ tự quản dân cư.
+
+Đến tham dự cuộc họp định kỳ triển khai nhiệm vụ trọng tâm:
+
+1. Nội dung cuộc họp:
+- Đánh giá kết quả công tác quản lý dân cư, thu nộp các loại quỹ tháng vừa qua.
+- Thống nhất kế hoạch triển khai phong trào thi đua mới và giải quyết một số kiến nghị của bà con nhân dân.
+
+2. Thời gian: ..... giờ ..... phút, ngày ..... tháng ..... năm ${new Date().getFullYear()}.
+3. Địa điểm: Nhà văn hóa Tổ dân phố ${tdpName}.
+
+Kính mong các đồng chí sắp xếp thời gian tham dự đầy đủ, đúng giờ để cuộc họp đạt kết quả tốt.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              TỔ TRƯỞNG DÂN PHỐ
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderName}`;
+    }
+
+    // 13. Báo cáo thu nộp Đảng phí (Chi bộ)
+    if (query.includes('thu nộp đảng phí') || query.includes('báo cáo đảng phí') || query.includes('báo cáo thu nộp đảng phí')) {
+      const secName = localStorage.getItem('party_secretary_name') || '...............';
+      return `ĐẢNG CỘNG SẢN VIỆT NAM
+ĐẢNG BỘ ${wardDisplay.toUpperCase()}
+CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+*
+
+BÁO CÁO
+Tình hình thu và trích nộp Đảng phí của Chi bộ tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}
+
+Kính gửi: Đảng ủy ${wardDisplay}.
+
+Ban Chi ủy Chi bộ Tổ dân phố ${tdpName} báo cáo tình hình thu nộp Đảng phí như sau:
+
+I. SỐ LIỆU TỔNG HỢP ĐẢNG VIÊN:
+- Tổng số đảng viên: ${partyMembers.length} đồng chí.
+- Số đảng viên thuộc diện đóng đảng phí: ..... đồng chí.
+- Số đảng viên miễn đóng đảng phí (miễn sinh hoạt do già yếu): ..... đồng chí.
+
+II. KẾT QUẢ THU NỘP ĐẢNG PHÍ:
+- Tổng số tiền thu đảng phí: ..... đồng (Bằng chữ: .....).
+- Tỷ lệ trích nộp về Đảng ủy cấp trên (.....%): ..... đồng.
+- Tỷ lệ giữ lại chi hoạt động Chi bộ (.....%): ..... đồng.
+
+III. ĐÁNH GIÁ CHUNG:
+100% đảng viên trong Chi bộ nghiêm túc đóng đảng phí hàng tháng đầy đủ theo quy định của Trung ương, không có tình trạng chậm trễ.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              T/M CHI BỘ
+                              BÍ THƯ
+
+
+                              ${secName}`;
+    }
+
+    // 14. Quyết định phân công đảng viên giúp đỡ quần chúng/đảng viên dự bị (Chi bộ)
+    if (query.includes('phân công đảng viên') || query.includes('quyết định phân công') || query.includes('giúp đỡ đảng viên dự bị')) {
+      const secName = localStorage.getItem('party_secretary_name') || '...............';
+      return `ĐẢNG CỘNG SẢN VIỆT NAM
+ĐẢNG BỘ ${wardDisplay.toUpperCase()}
+CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+*
+Số: ..... -QĐ/CB
+
+QUYẾT ĐỊNH
+Phân công đảng viên chính thức theo dõi, giúp đỡ đảng viên dự bị
+
+- Căn cứ Điều lệ Đảng Cộng sản Việt Nam;
+- Căn cứ Nghị quyết họp Chi bộ ngày ..... tháng ..... năm ${new Date().getFullYear()} về công tác đảng viên;
+- Xét năng lực và quá trình công tác của đảng viên.
+
+CHI ỦY CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()} QUYẾT ĐỊNH:
+
+Điều 1. Phân công đồng chí ..... (Đảng viên chính thức) chịu trách nhiệm theo dõi, giúp đỡ đồng chí ..... (Đảng viên dự bị) trong quá trình phấn đấu, rèn luyện.
+
+Điều 2. Đồng chí đảng viên chính thức được phân công có trách nhiệm đôn đốc, hướng dẫn đồng chí dự bị hoàn thành tốt các nhiệm vụ được giao, giữ vững tư tưởng chính trị và lối sống gương mẫu.
+
+Điều 3. Quyết định này có hiệu lực kể từ ngày ký. Chi ủy và các đồng chí có tên chịu trách nhiệm thi hành quyết định này.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              T/M CHI BỘ
+                              BÍ THƯ
+
+
+                              ${secName}`;
+    }
+
+    // 15. Kế hoạch Ngày hội Đại đoàn kết (Mặt trận)
+    if (query.includes('kế hoạch ngày hội đại đoàn kết') || query.includes('kế hoạch tổ chức đại đoàn kết') || query.includes('kế hoạch đại đoàn kết')) {
+      return `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
+BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+KẾ HOẠCH
+Tổ chức Ngày hội Đại đoàn kết toàn dân tộc năm ${new Date().getFullYear()}
+
+Nhân kỷ niệm truyền thống Mặt trận Dân tộc Thống nhất Việt Nam (18/11), Ban công tác Mặt trận Tổ dân phố ${tdpName} xây dựng kế hoạch như sau:
+
+I. MỤC ĐÍCH, YÊU CẦU:
+1. Tuyên truyền giáo dục lòng yêu nước, truyền thống đoàn kết toàn dân tộc.
+2. Đánh giá kết quả thực hiện cuộc vận động "Toàn dân đoàn kết xây dựng đời sống văn hóa ở khu dân cư".
+3. Tạo không khí vui tươi, phấn khởi, thắt chặt tình nghĩa xóm giềng.
+
+II. NỘI DUNG VÀ THỜI GIAN:
+1. Phần Lễ (Báo cáo tổng kết cuộc vận động, biểu dương hộ gia đình tiêu biểu).
+2. Phần Hội (Giao lưu văn nghệ, thể dục thể thao, bữa cơm đoàn kết).
+3. Thời gian thực hiện: Ngày 18 tháng 11 năm ${new Date().getFullYear()}.
+4. Địa điểm: Nhà văn hóa Tổ dân phố ${tdpName}.
+
+III. PHÂN CÔNG THỰC HIỆN:
+- Tổ trưởng TDP phối hợp chuẩn bị khánh tiết, loa đài và cơ sở vật chất.
+- Chi hội phụ nữ phụ trách công tác chuẩn bị văn nghệ và hậu cần.
+- Chi hội cựu chiến binh và Đoàn thanh niên phụ trách bảo đảm trật tự an ninh.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderDisplay.replace(/^(Ông|Bà)\s+/i, '')}`;
+    }
+
+    // 16. Tờ trình đề nghị khen thưởng Gia đình văn hóa (Mặt trận)
+    if (query.includes('đề nghị gia đình văn hóa') || query.includes('khen thưởng gia đình văn hóa') || query.includes('đề nghị khen thưởng gia đình')) {
+      return `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
+BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
+Số: ..... /TTr-MT
+---
+
+TỜ TRÌNH
+Về việc đề nghị công nhận và khen thưởng danh hiệu "Gia đình văn hóa tiêu biểu"
+
+Kính gửi: UBND phường và Thường trực Ủy ban MTTQ Việt Nam ${wardDisplay}.
+
+Căn cứ kết quả bình xét Gia đình văn hóa cuối năm của Tổ dân phố ${tdpName}, Ban công tác Mặt trận kính trình cấp trên xem xét, công nhận các danh hiệu khen thưởng như sau:
+
+I. KẾT QUẢ BÌNH XÉT GIA ĐÌNH VĂN HÓA:
+- Tổng số hộ gia đình tham gia bình xét: ${households.length} hộ.
+- Số hộ đạt danh hiệu "Gia đình văn hóa": ..... hộ (đạt tỷ lệ .....%).
+- Số hộ đạt danh hiệu "Gia đình văn hóa tiêu biểu xuất sắc": ..... hộ.
+
+II. ĐỀ NGHỊ KHEN THƯỞNG:
+Đề nghị UBND phường khen thưởng cho các hộ gia đình tiêu biểu sau:
+1. Hộ gia đình ông/bà: ..... (Địa chỉ: .....)
+2. Hộ gia đình ông/bà: ..... (Địa chỉ: .....)
+3. Hộ gia đình ông/bà: ..... (Địa chỉ: .....)
+
+Kính trình UBND và UBMTTQ phường xem xét phê duyệt.
+
+                              ${tdpName}, ngày ${new Date().getDate().toString().padStart(2,'0')} tháng ${(new Date().getMonth()+1).toString().padStart(2,'0')} năm ${new Date().getFullYear()}
+                              TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
+                              (Ký, ghi rõ họ tên)
+
+
+                              ${leaderDisplay.replace(/^(Ông|Bà)\s+/i, '')}`;
+    }
+
+
     const isPlanVoluntary = query.includes('kế hoạch vận động') || (query.includes('kế hoạch') && (query.includes('vận động') || query.includes('đóng góp') || query.includes('tự nguyện')));
     const isMeetingVoluntary = (query.includes('hội nghị nhân dân') || query.includes('nội dung họp')) && (query.includes('đóng góp') || query.includes('vận động') || query.includes('tự nguyện'));
 
@@ -1328,6 +1538,8 @@ ${content}
       { title: 'Thư ngỏ vận động quỹ', icon: '✉️', prompt: 'Viết thư ngỏ kêu gọi toàn thể nhân dân đóng góp ủng hộ quỹ Vì người nghèo năm 2026.' },
       { title: 'Biên bản kiểm tra hộ khẩu', icon: '🏠', prompt: 'Soạn biên bản kiểm tra hộ khẩu rà soát dân cư định kỳ năm 2026.' },
       { title: 'Báo cáo ANTT', icon: '🔐', prompt: `Soạn báo cáo an ninh trật tự tháng ${new Date().getMonth() + 1} của Tổ dân phố ${currentTdpName} gửi Công an phường.` },
+      { title: 'Tờ trình xin hỗ trợ kinh phí', icon: '📝', prompt: `Soạn tờ trình gửi UBND phường xin hỗ trợ kinh phí sửa chữa Nhà văn hóa Tổ dân phố ${currentTdpName}.` },
+      { title: 'Giấy mời họp Ban điều hành', icon: '✉️', prompt: `Viết giấy mời họp Ban điều hành Tổ dân phố ${currentTdpName} mở rộng triển khai công tác tháng.` },
     ],
     party: [
       { title: 'Nghị quyết Chi bộ', icon: '⚖️', prompt: `Soạn Nghị quyết cuộc họp Chi bộ Tổ dân phố ${currentTdpName} tháng này lãnh đạo công tác an ninh trật tự.` },
@@ -1336,6 +1548,8 @@ ${content}
       { title: 'Kế hoạch học tập NQ', icon: '📚', prompt: `Soạn kế hoạch học tập nghị quyết Chi bộ Tổ dân phố ${currentTdpName} tháng ${new Date().getMonth() + 1}.` },
       { title: 'Danh sách đảng viên tự kiểm', icon: '✅', prompt: `Soạn mẫu đảng viên tự kiểm điểm cuối năm của Chi bộ Tổ dân phố ${currentTdpName}.` },
       { title: 'Báo cáo thi đua khen thưởng', icon: '🏆', prompt: `Viết báo cáo thi đua khen thưởng đề nghị công nhận danh hiệu đảng viên của Chi bộ Tổ dân phố ${currentTdpName}.` },
+      { title: 'Báo cáo thu nộp Đảng phí', icon: '💵', prompt: `Viết báo cáo tình hình thu và trích nộp Đảng phí của Chi bộ Tổ dân phố ${currentTdpName} tháng này.` },
+      { title: 'Quyết định phân công đảng viên', icon: '🤝', prompt: `Soạn quyết định phân công đảng viên chính thức chịu trách nhiệm giúp đỡ đảng viên dự bị của Chi bộ Tổ dân phố ${currentTdpName}.` },
     ],
     front: [
       { title: 'Báo cáo Đại đoàn kết', icon: '🤝', prompt: 'Soạn báo cáo kết quả tổ chức Ngày hội Đại đoàn kết toàn dân tộc của Ban công tác Mặt trận.' },
@@ -1343,6 +1557,8 @@ ${content}
       { title: 'Thông báo Ngày hội ĐĐK', icon: '📢', prompt: `Soạn thông báo ngày hội Đại đoàn kết 18/11 của Ban công tác Mặt trận Tổ dân phố ${currentTdpName}.` },
       { title: 'Biên bản họp Mặt trận', icon: '📋', prompt: `Soạn biên bản họp Ban công tác Mặt trận Tổ dân phố ${currentTdpName} tháng ${new Date().getMonth() + 1}.` },
       { title: 'Báo cáo thăm hỏi hộ nghèo', icon: '🎁', prompt: `Soạn báo cáo kết quả thăm hỏi trao quà hộ nghèo và hộ chính sách của Tổ dân phố ${currentTdpName}.` },
+      { title: 'Kế hoạch Ngày hội ĐĐK', icon: '📋', prompt: `Soạn kế hoạch chi tiết tổ chức Ngày hội Đại đoàn kết toàn dân tộc ngày 18/11 của Tổ dân phố ${currentTdpName}.` },
+      { title: 'Tờ trình đề nghị Gia đình VH', icon: '📝', prompt: `Soạn tờ trình đề nghị công nhận danh hiệu Gia đình văn hóa tiêu biểu của Tổ dân phố ${currentTdpName} gửi Ủy ban MTTQ phường.` },
     ]
   };
 
