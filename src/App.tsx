@@ -248,6 +248,29 @@ const App = () => {
     return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
   });
 
+  // State cho chữ ký cán bộ
+  const DEFAULT_OFFICIALS = [
+    { id: 'bi_thu',   title: 'Bí thư Chi bộ',       name: '', signatureUrl: '' },
+    { id: 'to_truong', title: 'Tổ trưởng dân phố', name: '', signatureUrl: '' },
+    { id: 'to_pho',   title: 'Tổ phó dân phố',   name: '', signatureUrl: '' },
+    { id: 'mat_tran', title: 'Trưởng ban Mặt trận', name: '', signatureUrl: '' },
+    { id: 'thu_ky',   title: 'Thư ký',               name: '', signatureUrl: '' },
+  ];
+  const [officialSignatures, setOfficialSignatures] = useState<{ id: string; title: string; name: string; signatureUrl: string }[]>(() => {
+    const saved = localStorage.getItem('official_signatures');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Merge with defaults to ensure all entries exist
+        return DEFAULT_OFFICIALS.map(def => {
+          const found = parsed.find((p: any) => p.id === def.id);
+          return found ? { ...def, ...found } : def;
+        });
+      } catch { return DEFAULT_OFFICIALS; }
+    }
+    return DEFAULT_OFFICIALS;
+  });
+
   // Password change states
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -790,7 +813,39 @@ const App = () => {
     const savedGroups = localStorage.getItem('tdp_groups_config');
     setGroupsConfig(savedGroups ? JSON.parse(savedGroups) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']);
 
+    // Load official signatures
+    const savedSigs = localStorage.getItem('official_signatures');
+    if (savedSigs) {
+      try {
+        const parsed = JSON.parse(savedSigs);
+        setOfficialSignatures(prev => prev.map(def => {
+          const found = parsed.find((p: any) => p.id === def.id);
+          return found ? { ...def, ...found } : def;
+        }));
+      } catch {}
+    }
+
     setSettingsOpen(true);
+  };
+
+  // Handler upload chữ ký cho từng chức danh
+  const handleSignatureUpload = (id: string, file: File) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Chữ ký tối đa 2MB!', type: 'warning' } }));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      setOfficialSignatures(prev => prev.map(o => o.id === id ? { ...o, signatureUrl: url } : o));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handler cập nhật tên cán bộ
+  const handleOfficialNameChange = (id: string, name: string) => {
+    setOfficialSignatures(prev => prev.map(o => o.id === id ? { ...o, name } : o));
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -879,6 +934,10 @@ const App = () => {
     }
     localStorage.setItem('tdp_groups_config', JSON.stringify(cleanedGroups));
     window.dispatchEvent(new CustomEvent('tdp-groups-changed'));
+
+    // Lưu chữ ký & tên cán bộ
+    localStorage.setItem('official_signatures', JSON.stringify(officialSignatures));
+    window.dispatchEvent(new CustomEvent('official-signatures-changed'));
     
     // Lưu phiên bản mới nhất
     const newVersion = latestAppVersionInput.trim() || APP_VERSION;
@@ -1819,6 +1878,145 @@ const App = () => {
                       Chưa cấu hình Cụm/Tổ nào. Hãy bấm "Thêm Cụm/Tổ" để tạo mới.
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* ─── Phần 1bc: Chữ ký & Thông tin cán bộ ký văn bản ─── */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.02))',
+                border: '1.5px solid rgba(139,92,246,0.22)',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginTop: '12px'
+              }}>
+                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
+                  ✍️ Chữ ký & Họ tên cán bộ ký văn bản
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '4px', lineHeight: '1.5' }}>
+                  Nhập họ tên và tải chữ ký của từng chức danh. Khi in văn bản, hệ thống sẽ tự động điền tên và chữ ký tương ứng.
+                </div>
+
+                {/* Bảng chữ ký */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {officialSignatures.map((official) => (
+                    <div key={official.id} style={{
+                      display: 'grid',
+                      gridTemplateColumns: '130px 1fr auto',
+                      gap: '10px',
+                      alignItems: 'center',
+                      background: 'rgba(255,255,255,0.6)',
+                      borderRadius: '10px',
+                      padding: '10px 12px',
+                      border: '1px solid rgba(139,92,246,0.12)'
+                    }}>
+                      {/* Chức danh */}
+                      <div style={{
+                        fontWeight: '600',
+                        fontSize: '0.82rem',
+                        color: '#4c1d95',
+                        lineHeight: '1.3'
+                      }}>
+                        {official.title}
+                      </div>
+
+                      {/* Họ tên */}
+                      <input
+                        type="text"
+                        placeholder={`Họ và tên ${official.title}...`}
+                        value={official.name}
+                        onChange={(e) => handleOfficialNameChange(official.id, e.target.value)}
+                        maxLength={60}
+                        style={{
+                          padding: '7px 10px',
+                          borderRadius: '7px',
+                          border: '1px solid rgba(139,92,246,0.25)',
+                          fontSize: '0.88rem',
+                          background: 'white',
+                          outline: 'none',
+                          width: '100%'
+                        }}
+                      />
+
+                      {/* Chữ ký upload & preview */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        {official.signatureUrl ? (
+                          <div style={{ position: 'relative', display: 'inline-flex' }}>
+                            <img
+                              src={official.signatureUrl}
+                              alt={`Chữ ký ${official.title}`}
+                              style={{
+                                height: '44px',
+                                maxWidth: '100px',
+                                objectFit: 'contain',
+                                border: '1px solid rgba(139,92,246,0.2)',
+                                borderRadius: '6px',
+                                background: 'white',
+                                padding: '2px'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setOfficialSignatures(prev => prev.map(o => o.id === official.id ? { ...o, signatureUrl: '' } : o))}
+                              style={{
+                                position: 'absolute',
+                                top: '-6px',
+                                right: '-6px',
+                                background: '#ef4444',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '18px',
+                                height: '18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                color: 'white',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                lineHeight: 1
+                              }}
+                              title="Xóa chữ ký"
+                            >✕</button>
+                          </div>
+                        ) : (
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '6px 12px',
+                            background: 'rgba(139,92,246,0.08)',
+                            border: '1.5px dashed rgba(139,92,246,0.35)',
+                            borderRadius: '7px',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            color: '#7c3aed',
+                            fontWeight: '600',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s'
+                          }}>
+                            <Upload size={13} />
+                            Tải chữ ký
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleSignatureUpload(official.id, file);
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                  * Tải ảnh chữ ký nền trong suốt (PNG) để hiển thị đẹp hơn. Tối đa 2MB mỗi ảnh.
                 </div>
               </div>
 
