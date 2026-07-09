@@ -677,7 +677,12 @@ const Households = () => {
     const headName = getHeadName(h);
     const tdpName = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
     const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
-    const leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+    } catch { /* ignore */ }
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {

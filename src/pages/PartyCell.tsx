@@ -639,9 +639,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   });
   const [residentSearch, setResidentSearch] = useState('');
   const [showResidentDrop, setShowResidentDrop] = useState(false);
-  const [partySecretaryName, setPartySecretaryName] = useState(
-    localStorage.getItem('party_secretary_name') || ''
-  );
+  const [partySecretaryName, setPartySecretaryName] = useState(() => {
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const biThu = sigs.find((s: {id:string;name:string}) => s.id === 'bi_thu');
+      if (biThu?.name?.trim()) return biThu.name.trim();
+    } catch { /* ignore */ }
+    return localStorage.getItem('party_secretary_name') || '';
+  });
 
   useEffect(() => {
     if (!localStorage.getItem('party_secretary_name') && members.length > 0) {

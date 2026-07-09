@@ -742,7 +742,7 @@ Ngày hội đã tạo không khí phấn khởi, đoàn kết, nâng cao vai tr
                                            (Ký, ghi rõ họ tên)
 
 
-                                           {leaderName}`
+                                           {matTranName}`
   },
   {
     id: 'front_bao_cao_quy',
@@ -773,7 +773,7 @@ Dành một phần kinh phí hỗ trợ các hộ gia đình có hoàn cảnh đ
                                            (Ký, ghi rõ họ tên)
 
 
-                                           {leaderName}`
+                                           {matTranName}`
   },
   {
     id: 'front_thong_bao_dai_doan_ket',
@@ -811,7 +811,7 @@ Kính mong toàn thể nhân dân sắp xếp thời gian, tham gia đầy đủ
                                            (Ký, ghi rõ họ tên)
 
 
-                                           {leaderName}`
+                                           {matTranName}`
   },
   {
     id: 'front_bien_ban_hop',
@@ -848,7 +848,7 @@ Cuộc họp kết thúc vào lúc ..... giờ cùng ngày. Biên bản được
    (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
 
 
-                                           {leaderName}`
+                                           {matTranName}`
   },
   {
     id: 'front_tham_hoi_ngheo',
@@ -883,7 +883,7 @@ Cuộc thăm hỏi đã tạo ra không khí ấm áp, thể hiện tinh thần 
                                            (Ký, ghi rõ họ tên)
 
 
-                                           {leaderName}`
+                                           {matTranName}`
   },
   {
     id: 'front_ke_hoa_dai_doan_ket',
@@ -917,7 +917,7 @@ III. PHÂN CÔNG THỰC HIỆN:
                                            (Ký, ghi rõ họ tên)
 
 
-                                           {leaderName}`
+                                           {matTranName}`
   },
   {
     id: 'front_to_trinh_gia_dinh_vh',
@@ -950,7 +950,7 @@ Kính trình UBND và UBMTTQ phường xem xét phê duyệt.
                                            (Ký, ghi rõ họ tên)
 
 
-                                           {leaderName}`
+                                           {matTranName}`
   }
 ];
 
@@ -1010,6 +1010,21 @@ const AIAssistant = () => {
     const leaderName = localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến';
     const partySecretaryName = localStorage.getItem('party_secretary_name') || '';
 
+    // Đọc chữ ký cán bộ từ cài đặt hệ thống
+    let officialSigs: { id: string; name: string }[] = [];
+    try {
+      const savedSigs = localStorage.getItem('official_signatures');
+      if (savedSigs) officialSigs = JSON.parse(savedSigs);
+    } catch { /* ignore */ }
+    const getOfficialName = (id: string, fallback = '') => {
+      const found = officialSigs.find(s => s.id === id);
+      return found?.name?.trim() || fallback;
+    };
+    const toTruongName = getOfficialName('to_truong', leaderName);
+    const biThuName = getOfficialName('bi_thu', partySecretaryName);
+    const matTranName = getOfficialName('mat_tran', leaderName);
+    const thuKyName = getOfficialName('thu_ky', '');
+
     // Fetch live stats
     const [households, residents, complaints, records, partyMembers] = await Promise.all([
       db.getHouseholds(),
@@ -1031,7 +1046,7 @@ const AIAssistant = () => {
     const tdpHeader = tdpUpper.startsWith('TỔ DÂN PHỐ') || tdpUpper.startsWith('TDP') ? tdpUpper : `TỔ DÂN PHỐ ${tdpUpper}`;
     const tdpDisplay = tdpName.toLowerCase().startsWith('tổ dân phố') || tdpName.toLowerCase().startsWith('tdp') ? tdpName : `Tổ dân phố ${tdpName}`;
     const wardDisplay = wardName.toLowerCase().startsWith('phường') || wardName.toLowerCase().startsWith('xã') || wardName.toLowerCase().startsWith('thị trấn') ? wardName : `Phường ${wardName}`;
-    const leaderDisplay = leaderName.toLowerCase().startsWith('ông') || leaderName.toLowerCase().startsWith('bà') ? leaderName : `Ông ${leaderName}`;
+    const leaderDisplay = leaderName.toLowerCase().startsWith('ông') || leaderName.toLowerCase().startsWith('bà') ? leaderName : `Ông ${matTranName}`;
 
     // Tìm template phù hợp
     let matchedTemplate: AITemplate | undefined;
@@ -1122,8 +1137,8 @@ Yêu cầu bà con nhân dân lưu ý và phối hợp thực hiện nghiêm tú
     docText = docText
       .replace(/{tenTDP}/g, tdpName)
       .replace(/{tenPhuong}/g, wardDisplay)
-      .replace(/{tenToTruong}/g, leaderName)
-      .replace(/{tenBiThu}/g, partySecretaryName || '(Ký, ghi rõ họ tên)')
+      .replace(/{tenToTruong}/g, toTruongName)
+      .replace(/{tenBiThu}/g, biThuName || '(Ký, ghi rõ họ tên)')
       .replace(/{thangNay}/g, String(cMonth))
       .replace(/{thangToi}/g, String(nMonth))
       .replace(/{namNay}/g, String(cYear))
@@ -1148,7 +1163,10 @@ Yêu cầu bà con nhân dân lưu ý và phối hợp thực hiện nghiêm tú
       .replace(/{wardDisplay}/g, wardDisplay)
       .replace(/{tdpHeader}/g, tdpHeader)
       .replace(/{leaderDisplay}/g, leaderDisplay)
-      .replace(/{leaderName}/g, leaderName)
+      .replace(/{leaderName}/g, toTruongName)
+      .replace(/{partySecretaryName}/g, biThuName || '(Ký, ghi rõ họ tên)')
+      .replace(/{matTranName}/g, matTranName || '(Ký, ghi rõ họ tên)')
+      .replace(/{thuKyName}/g, thuKyName || '(Ký, ghi rõ họ tên)')
       .replace(/{noiDungTuDo}/g, userPrompt);
 
     // Trích xuất tiêu đề từ văn bản
