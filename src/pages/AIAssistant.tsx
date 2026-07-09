@@ -2565,14 +2565,14 @@ ${content}
 
         .ai-grid {
           display: grid;
-          grid-template-columns: 1.1fr 1fr;
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
           gap: 24px;
           flex: 1;
         }
 
         .template-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 12px;
           margin-bottom: 20px;
         }
@@ -2735,8 +2735,16 @@ ${content}
           to { transform: rotate(360deg); }
         }
 
-        @media (max-width: 1024px) {
-          .ai-grid { grid-template-columns: 1fr; }
+        @media (max-width: 1200px) {
+          .ai-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 600px) {
+          .template-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>
