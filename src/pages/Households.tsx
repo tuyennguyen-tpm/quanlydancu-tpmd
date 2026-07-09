@@ -98,6 +98,7 @@ const Households = () => {
   // Add Member Modal state
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [targetHouseholdForMember, setTargetHouseholdForMember] = useState<Household | null>(null);
+  const [editingMember, setEditingMember] = useState<Resident | null>(null);
   
   // Add Member form fields
   const [mFullName, setMFullName] = useState('');
@@ -945,6 +946,7 @@ const Households = () => {
 
   const handleOpenAddMember = (h: Household) => {
     setTargetHouseholdForMember(h);
+    setEditingMember(null);
     setMFullName('');
     setMGender('male');
     setMDob('');
@@ -955,6 +957,24 @@ const Households = () => {
     setMStatus('resident');
     setMPob('');
     setMNotes('');
+    setIsAddMemberOpen(true);
+  };
+
+  const handleOpenEditMember = (member: Resident) => {
+    const hh = households.find(h => h.id === member.household_id);
+    if (!hh) return;
+    setTargetHouseholdForMember(hh);
+    setEditingMember(member);
+    setMFullName(member.full_name);
+    setMGender(member.gender);
+    setMDob(member.dob ? formatToDisplayDate(member.dob) : '');
+    setMCccd(member.cccd || '');
+    setMPhone(member.phone || '');
+    setMOccupation(member.occupation || '');
+    setMRelationship(member.relationship_with_head || 'Thành viên');
+    setMStatus(member.status);
+    setMPob(member.pob || '');
+    setMNotes(member.notes || '');
     setIsAddMemberOpen(true);
   };
 
@@ -973,8 +993,8 @@ const Households = () => {
 
     const dbMDob = formatToDbDate(mDob);
 
-    const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
-      id: generateUUID(),
+    const payload: Resident = {
+      id: editingMember ? editingMember.id : generateUUID(),
       household_id: targetHouseholdForMember.id,
       full_name: mFullName.trim(),
       gender: mGender,
@@ -988,7 +1008,7 @@ const Households = () => {
       status: mStatus,
       pob: mPob.trim(),
       notes: mNotes.trim(),
-      created_at: new Date().toISOString()
+      created_at: editingMember ? (editingMember.created_at || new Date().toISOString()) : new Date().toISOString()
     };
 
     try {
@@ -999,14 +1019,22 @@ const Households = () => {
           ...targetHouseholdForMember,
           head_of_household_id: saved.id
         });
+      } else {
+        if (editingMember && editingMember.id === targetHouseholdForMember.head_of_household_id && editingMember.is_head && mRelationship !== 'Chủ hộ') {
+          await db.saveHousehold({
+            ...targetHouseholdForMember,
+            head_of_household_id: null
+          });
+        }
       }
 
-      showToast('Thêm thành viên mới thành công!', 'success');
+      showToast(editingMember ? 'Cập nhật thông tin thành viên thành công!' : 'Thêm thành viên mới thành công!', 'success');
       setIsAddMemberOpen(false);
+      setEditingMember(null);
       loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
     } catch (e) {
-      showToast('Lỗi khi thêm thành viên!', 'danger');
+      showToast(editingMember ? 'Lỗi khi cập nhật thành viên!' : 'Lỗi khi thêm thành viên!', 'danger');
     }
   };
 
@@ -1724,7 +1752,7 @@ const Households = () => {
       {viewingMembersHousehold && (
         <div className="modal-overlay">
           <div className="modal-content large">
-            <div className="modal-header">
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2>Thành viên hộ: {getHeadName(viewingMembersHousehold)}</h2>
                 <p style={{fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px'}}>
@@ -1733,7 +1761,19 @@ const Households = () => {
                   {viewingMembersHousehold.fire_safety_group && ` | 🔥 ${viewingMembersHousehold.fire_safety_group}`}
                 </p>
               </div>
-              <button className="close-btn" onClick={() => setViewingMembersHousehold(null)}><X size={24} /></button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {!isGuest && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => handleOpenAddMember(viewingMembersHousehold)}
+                    style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', height: 'fit-content' }}
+                  >
+                    <Plus size={15} /> Thêm nhân khẩu
+                  </button>
+                )}
+                <button className="close-btn" onClick={() => setViewingMembersHousehold(null)}><X size={24} /></button>
+              </div>
             </div>
             
             <div className="members-modal-body">
@@ -1789,6 +1829,14 @@ const Households = () => {
                         {!isGuest && (
                           <td>
                             <div style={{ display: 'flex', gap: '8px' }}>
+                              <button 
+                                className="action-btn-sm edit" 
+                                onClick={() => handleOpenEditMember(member)}
+                                title="Sửa thông tin nhân khẩu"
+                                style={{ backgroundColor: '#fff7ed', color: '#c2410c', borderColor: '#fdba74' }}
+                              >
+                                Sửa
+                              </button>
                               <button 
                                 className="action-btn-sm transfer" 
                                 onClick={() => {
@@ -2046,12 +2094,12 @@ const Households = () => {
           <div className="modal-content">
             <div className="modal-header">
               <div>
-                <h2>Thêm thành viên mới</h2>
+                <h2>{editingMember ? 'Chỉnh sửa thành viên' : 'Thêm thành viên mới'}</h2>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                   Hộ gia đình: <strong>{getHeadName(targetHouseholdForMember)}</strong> | Sổ: {targetHouseholdForMember.household_number}
                 </p>
               </div>
-              <button className="close-btn" onClick={() => setIsAddMemberOpen(false)}><X size={24} /></button>
+              <button className="close-btn" onClick={() => { setIsAddMemberOpen(false); setEditingMember(null); }}><X size={24} /></button>
             </div>
             <form onSubmit={handleAddMemberSubmit} className="modal-form">
               <div className="form-group">
@@ -2172,8 +2220,8 @@ const Households = () => {
               </div>
 
               <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setIsAddMemberOpen(false)}>Hủy bỏ</button>
-                <button type="submit" className="btn btn-primary">Thêm thành viên</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setIsAddMemberOpen(false); setEditingMember(null); }}>Hủy bỏ</button>
+                <button type="submit" className="btn btn-primary">{editingMember ? 'Cập nhật thành viên' : 'Thêm thành viên'}</button>
               </div>
             </form>
           </div>
