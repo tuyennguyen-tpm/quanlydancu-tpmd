@@ -35,7 +35,17 @@ import {
   RotateCcw,
   X,
   ChevronRight,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  List,
+  Type,
+  Minus,
+  Save
 } from 'lucide-react';
 import { db, partyDb } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -964,6 +974,12 @@ const AIAssistant = () => {
   const [docSigUrls, setDocSigUrls] = useState<{
     toTruong: string; biThu: string; matTran: string; thuKy: string; docType: string;
   }>({ toTruong: '', biThu: '', matTran: '', thuKy: '', docType: 'admin' });
+
+  // ── Word Editor Modal state ──
+  const [isWordEditorOpen, setIsWordEditorOpen] = useState(false);
+  const [wordEditorTitle, setWordEditorTitle] = useState('Văn bản mới');
+  const [wordEditorFontSize, setWordEditorFontSize] = useState('13');
+  const [wordEditorDocType, setWordEditorDocType] = useState<'admin'|'party'|'front'>('admin');
 
   // Phân quyền vai trò
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
@@ -2269,6 +2285,27 @@ ${strippedContent}
           <p>Hỗ trợ soạn thảo thông báo họp dân, biên bản và báo cáo chuyên nghiệp cực nhanh bằng ngôn ngữ hành chính chuẩn.</p>
         </div>
 
+        {/* Nút Soạn thảo Word A4 */}
+        <button
+          onClick={() => setIsWordEditorOpen(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '10px 16px',
+            background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+            border: 'none', color: 'white',
+            borderRadius: '24px', fontWeight: '700',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+            transition: 'all 0.2s', fontSize: '0.9rem',
+            marginTop: '12px'
+          }}
+          onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(37,99,235,0.45)'; }}
+          onMouseOut={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.35)'; }}
+        >
+          <FileText size={16} />
+          <span>Soạn thảo Word A4</span>
+        </button>
+
         {/* Nút Cài đặt mẫu dành riêng cho Admin */}
         {currentRole === 'admin' && (
           <button 
@@ -2949,7 +2986,383 @@ ${strippedContent}
           }
         }
       `}</style>
+
+      {/* ═══════════════════════════════════════════════
+           MODAL SOẠN THẢO WORD A4
+          ═══════════════════════════════════════════════ */}
+      {isWordEditorOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'stretch', justifyContent: 'center',
+          zIndex: 10000, padding: '0', animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            background: '#1e293b', width: '100%', maxWidth: '100vw',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden'
+          }}>
+
+            {/* ── Thanh tiêu đề ── */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 20px', background: '#1e3a5f',
+              borderBottom: '1px solid rgba(255,255,255,0.08)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  background: 'rgba(255,255,255,0.08)', borderRadius: '8px',
+                  padding: '4px 10px'
+                }}>
+                  <FileText size={16} color="#60a5fa" />
+                  <input
+                    value={wordEditorTitle}
+                    onChange={e => setWordEditorTitle(e.target.value)}
+                    style={{
+                      background: 'transparent', border: 'none', outline: 'none',
+                      color: 'white', fontWeight: '600', fontSize: '0.95rem',
+                      width: '260px'
+                    }}
+                    placeholder="Tên văn bản..."
+                  />
+                </div>
+
+                {/* Chọn loại văn bản */}
+                <select
+                  value={wordEditorDocType}
+                  onChange={e => setWordEditorDocType(e.target.value as 'admin'|'party'|'front')}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+                    color: 'white', borderRadius: '8px', padding: '4px 10px',
+                    fontSize: '0.82rem', cursor: 'pointer'
+                  }}
+                >
+                  <option value="admin" style={{color:'#000'}}>📋 Văn bản TDP</option>
+                  <option value="party" style={{color:'#000'}}>⭐ Văn bản Chi bộ</option>
+                  <option value="front" style={{color:'#000'}}>🤝 Văn bản Mặt trận</option>
+                </select>
+
+                {/* Cỡ chữ */}
+                <select
+                  value={wordEditorFontSize}
+                  onChange={e => {
+                    setWordEditorFontSize(e.target.value);
+                    document.execCommand('fontSize', false, '7');
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount) {
+                      const spans = document.querySelectorAll('#word-editor font[size="7"]');
+                      spans.forEach((s: any) => {
+                        s.removeAttribute('size');
+                        s.style.fontSize = e.target.value + 'pt';
+                      });
+                    }
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+                    color: 'white', borderRadius: '8px', padding: '4px 8px',
+                    fontSize: '0.82rem', cursor: 'pointer', width: '70px'
+                  }}
+                >
+                  {['10','11','12','13','14','16','18','20','24','28'].map(s => (
+                    <option key={s} value={s} style={{color:'#000'}}>{s}pt</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* In */}
+                <button
+                  onClick={() => {
+                    const editorEl = document.getElementById('word-editor');
+                    if (!editorEl) return;
+                    const pw = window.open('', '_blank');
+                    if (!pw) return;
+                    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+                    const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+                    const wardDisplay = wardName.toLowerCase().startsWith('phường') ? wardName : `Phường ${wardName}`;
+                    const tdpHeader = `TỔ DÂN PHỐ ${tdpName.toUpperCase()} - ${wardDisplay.toUpperCase()}`;
+
+                    let headerBlock = '';
+                    if (wordEditorDocType === 'party') {
+                      headerBlock = `<div style="text-align:center;font-weight:bold;font-size:12pt;text-transform:uppercase;margin-bottom:4px">ĐẢNG CỘNG SẢN VIỆT NAM</div>
+                        <div style="text-align:center;font-weight:bold;font-size:11pt;text-transform:uppercase">ĐẢNG BỘ ${wardDisplay.toUpperCase()}</div>
+                        <div style="text-align:center;font-weight:bold;font-size:11pt;text-transform:uppercase;text-decoration:underline">CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}</div>
+                        <div style="text-align:center;font-weight:bold;font-size:16pt;margin:4px 0 12px">*</div>`;
+                    } else if (wordEditorDocType === 'front') {
+                      headerBlock = `<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr>
+                        <td style="width:45%;text-align:center;vertical-align:top;font-size:11pt;font-weight:bold;text-transform:uppercase">
+                          ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}<br/>
+                          <span style="text-decoration:underline">BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}</span>
+                        </td>
+                        <td style="width:55%;text-align:center;vertical-align:top">
+                          <div style="font-weight:bold;font-size:12pt">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                          <div style="font-style:italic;font-size:12pt">Độc lập - Tự do - Hạnh phúc</div>
+                          <div style="font-weight:bold;font-size:14pt">───────────────────</div>
+                        </td></tr></table>`;
+                    } else {
+                      headerBlock = `<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr>
+                        <td style="width:45%;text-align:center;vertical-align:top;font-size:11pt;font-weight:bold;text-transform:uppercase">
+                          <span style="text-decoration:underline">${tdpHeader}</span>
+                        </td>
+                        <td style="width:55%;text-align:center;vertical-align:top">
+                          <div style="font-weight:bold;font-size:12pt">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                          <div style="font-style:italic;font-size:12pt">Độc lập - Tự do - Hạnh phúc</div>
+                          <div style="font-weight:bold;font-size:14pt">───────────────────</div>
+                        </td></tr></table>`;
+                    }
+
+                    pw.document.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+                      <style>
+                        @page { size: A4 portrait; margin: 0; }
+                        body { font-family: "Times New Roman", serif; font-size: 13pt; line-height: 1.5; color: #000;
+                               margin: 20mm 20mm 20mm 30mm; background: #fff; }
+                        @media print { body { -webkit-print-color-adjust: exact; } }
+                      </style></head><body>
+                      ${headerBlock}
+                      ${editorEl.innerHTML}
+                      <script>window.onload=()=>{window.print();}<\/script>
+                    </body></html>`);
+                    pw.document.close();
+                  }}
+                  title="In văn bản (A4)"
+                  style={{
+                    display:'flex', alignItems:'center', gap:'5px',
+                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'white', borderRadius: '8px', padding: '6px 12px',
+                    fontSize: '0.82rem', cursor: 'pointer', fontWeight: '600'
+                  }}
+                >
+                  <Printer size={14} /> In A4
+                </button>
+
+                {/* Tải Word */}
+                <button
+                  onClick={async () => {
+                    const editorEl = document.getElementById('word-editor');
+                    if (!editorEl) return;
+                    showToast('Đang tạo file Word...', 'success');
+                    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+                    const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+                    const wardDisplay = wardName.toLowerCase().startsWith('phường') ? wardName : `Phường ${wardName}`;
+                    const FONT = 'Times New Roman';
+                    const noBorder = {
+                      top: {style:BorderStyle.NONE,size:0,color:'FFFFFF'},
+                      bottom:{style:BorderStyle.NONE,size:0,color:'FFFFFF'},
+                      left:{style:BorderStyle.NONE,size:0,color:'FFFFFF'},
+                      right:{style:BorderStyle.NONE,size:0,color:'FFFFFF'},
+                    };
+                    const bodyParas: Paragraph[] = editorEl.innerText.split('\n').map(line => {
+                      const t = line.trim();
+                      return new Paragraph({
+                        alignment: AlignmentType.JUSTIFIED,
+                        spacing: { after: 60, line: 360 },
+                        children: [new TextRun({ text: t, font: FONT, size: 26 })],
+                      });
+                    });
+                    const doc = new Document({
+                      sections: [{
+                        properties: {
+                          page: { margin: { top: 1134, bottom: 1134, left: 1701, right: 1134 } }
+                        },
+                        children: bodyParas
+                      }]
+                    });
+                    const blob = await Packer.toBlob(doc);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = `${wordEditorTitle || 'van_ban'}.docx`;
+                    document.body.appendChild(a); a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 3000);
+                    showToast('Tải xuống file Word thành công!', 'success');
+                  }}
+                  title="Tải xuống (.docx)"
+                  style={{
+                    display:'flex', alignItems:'center', gap:'5px',
+                    background: 'rgba(99,102,241,0.8)', border: 'none',
+                    color: 'white', borderRadius: '8px', padding: '6px 12px',
+                    fontSize: '0.82rem', cursor: 'pointer', fontWeight: '600'
+                  }}
+                >
+                  <Download size={14} /> Tải Word
+                </button>
+
+                <button onClick={() => setIsWordEditorOpen(false)} style={{
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                  color: 'white', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer'
+                }}>
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Thanh công cụ định dạng ── */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap',
+              padding: '8px 16px', background: '#f1f5f9',
+              borderBottom: '1px solid #e2e8f0'
+            }}>
+              {/* Font family */}
+              <select
+                onChange={e => document.execCommand('fontName', false, e.target.value)}
+                style={{
+                  border: '1px solid #cbd5e1', borderRadius: '6px',
+                  padding: '4px 8px', fontSize: '0.8rem', cursor: 'pointer',
+                  background: 'white', marginRight: '4px'
+                }}
+              >
+                {['Times New Roman','Arial','Calibri','Tahoma','Verdana'].map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+
+              {/* Separator */}
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 4px' }} />
+
+              {/* Bold, Italic, Underline */}
+              {[
+                { icon: <Bold size={14}/>, cmd: 'bold', title: 'In đậm (Ctrl+B)' },
+                { icon: <Italic size={14}/>, cmd: 'italic', title: 'In nghiêng (Ctrl+I)' },
+                { icon: <Underline size={14}/>, cmd: 'underline', title: 'Gạch chân (Ctrl+U)' },
+              ].map(({icon, cmd, title}) => (
+                <button key={cmd} title={title}
+                  onMouseDown={e => { e.preventDefault(); document.execCommand(cmd, false); }}
+                  style={{
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    width: '30px', height: '30px', border: '1px solid #e2e8f0',
+                    borderRadius: '6px', background: 'white', cursor: 'pointer',
+                    transition: 'all 0.15s', color: '#334155'
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.background='#eff6ff'; e.currentTarget.style.borderColor='#93c5fd'; }}
+                  onMouseOut={e => { e.currentTarget.style.background='white'; e.currentTarget.style.borderColor='#e2e8f0'; }}
+                >{icon}</button>
+              ))}
+
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 4px' }} />
+
+              {/* Căn lề */}
+              {[
+                { icon: <AlignLeft size={14}/>, cmd: 'justifyLeft', title: 'Căn trái' },
+                { icon: <AlignCenter size={14}/>, cmd: 'justifyCenter', title: 'Căn giữa' },
+                { icon: <AlignRight size={14}/>, cmd: 'justifyRight', title: 'Căn phải' },
+                { icon: <span style={{fontWeight:'bold',fontSize:'11px'}}>≡</span>, cmd: 'justifyFull', title: 'Căn đều hai bên' },
+              ].map(({icon, cmd, title}) => (
+                <button key={cmd} title={title}
+                  onMouseDown={e => { e.preventDefault(); document.execCommand(cmd, false); }}
+                  style={{
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    width: '30px', height: '30px', border: '1px solid #e2e8f0',
+                    borderRadius: '6px', background: 'white', cursor: 'pointer',
+                    transition: 'all 0.15s', color: '#334155'
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.background='#eff6ff'; e.currentTarget.style.borderColor='#93c5fd'; }}
+                  onMouseOut={e => { e.currentTarget.style.background='white'; e.currentTarget.style.borderColor='#e2e8f0'; }}
+                >{icon}</button>
+              ))}
+
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 4px' }} />
+
+              {/* Danh sách */}
+              <button title="Danh sách có thứ tự"
+                onMouseDown={e => { e.preventDefault(); document.execCommand('insertOrderedList', false); }}
+                style={{ display:'flex',alignItems:'center',justifyContent:'center', width:'30px',height:'30px', border:'1px solid #e2e8f0', borderRadius:'6px',background:'white',cursor:'pointer',color:'#334155' }}
+                onMouseOver={e => { e.currentTarget.style.background='#eff6ff'; }}
+                onMouseOut={e => { e.currentTarget.style.background='white'; }}
+              ><List size={14} /></button>
+              <button title="Danh sách không thứ tự"
+                onMouseDown={e => { e.preventDefault(); document.execCommand('insertUnorderedList', false); }}
+                style={{ display:'flex',alignItems:'center',justifyContent:'center', width:'30px',height:'30px', border:'1px solid #e2e8f0', borderRadius:'6px',background:'white',cursor:'pointer',color:'#334155' }}
+                onMouseOver={e => { e.currentTarget.style.background='#eff6ff'; }}
+                onMouseOut={e => { e.currentTarget.style.background='white'; }}
+              ><Minus size={14} /></button>
+
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 4px' }} />
+
+              {/* Màu chữ */}
+              <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+                <Type size={13} color="#64748b" />
+                <input type="color" defaultValue="#000000" title="Màu chữ"
+                  onChange={e => document.execCommand('foreColor', false, e.target.value)}
+                  style={{ width:'26px', height:'26px', border:'1px solid #e2e8f0', borderRadius:'4px', padding:'1px', cursor:'pointer' }}
+                />
+              </div>
+
+              {/* Màu nền */}
+              <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+                <span style={{fontSize:'12px', color:'#64748b', fontWeight:'bold'}}>BG</span>
+                <input type="color" defaultValue="#ffffff" title="Màu nền chữ"
+                  onChange={e => document.execCommand('hiliteColor', false, e.target.value)}
+                  style={{ width:'26px', height:'26px', border:'1px solid #e2e8f0', borderRadius:'4px', padding:'1px', cursor:'pointer' }}
+                />
+              </div>
+
+              <div style={{ width: '1px', height: '24px', background: '#cbd5e1', margin: '0 4px' }} />
+
+              {/* Cỡ tiêu đề */}
+              {[
+                { label: 'H1', size: '2em', cmd: () => document.execCommand('formatBlock', false, 'h1') },
+                { label: 'H2', size: '1.5em', cmd: () => document.execCommand('formatBlock', false, 'h2') },
+                { label: 'Thường', size: '', cmd: () => document.execCommand('formatBlock', false, 'p') },
+              ].map(({label, cmd}) => (
+                <button key={label} title={`Định dạng ${label}`}
+                  onMouseDown={e => { e.preventDefault(); cmd(); }}
+                  style={{
+                    padding:'3px 8px', border:'1px solid #e2e8f0', borderRadius:'6px',
+                    background:'white', cursor:'pointer', fontSize:'0.75rem',
+                    fontWeight: label !== 'Thường' ? 'bold' : 'normal', color:'#334155',
+                    transition:'all 0.15s'
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.background='#eff6ff'; }}
+                  onMouseOut={e => { e.currentTarget.style.background='white'; }}
+                >{label}</button>
+              ))}
+
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                  💡 Ctrl+B: đậm · Ctrl+I: nghiêng · Ctrl+U: gạch chân
+                </span>
+              </div>
+            </div>
+
+            {/* ── Khu vực soạn thảo (giả lập trang A4) ── */}
+            <div style={{
+              flex: 1, overflow: 'auto', background: '#94a3b8',
+              display: 'flex', justifyContent: 'center', padding: '24px 20px'
+            }}>
+              <div
+                id="word-editor"
+                contentEditable
+                suppressContentEditableWarning
+                style={{
+                  width: '210mm', minHeight: '297mm',
+                  background: 'white', boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+                  padding: '20mm 20mm 20mm 30mm',
+                  fontFamily: '"Times New Roman", Times, serif',
+                  fontSize: `${wordEditorFontSize}pt`,
+                  lineHeight: 1.5, color: '#000',
+                  outline: 'none',
+                  position: 'relative'
+                }}
+                onFocus={e => { e.currentTarget.style.outline = 'none'; }}
+                dangerouslySetInnerHTML={{__html:
+                  '<p style="text-align:center"><b>TIÊU ĐỀ VĂN BẢN</b></p>' +
+                  '<p style="text-align:center"><i>V/v: ...</i></p>' +
+                  '<p></p>' +
+                  '<p>Kính gửi: ...</p>' +
+                  '<p></p>' +
+                  '<p style="text-indent:2em">Nội dung văn bản...</p>' +
+                  '<p></p>' +
+                  '<p style="text-align:right"><i>Quảng Giao, ngày &nbsp; tháng &nbsp; năm 2026</i></p>' +
+                  '<p style="text-align:center"><b>TỔ TRƯỞNG DÂN PHỐ</b></p>' +
+                  '<p style="text-align:center; margin-top:60px"><b>(Họ và tên)</b></p>'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 };
 
