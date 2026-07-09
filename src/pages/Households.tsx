@@ -276,9 +276,20 @@ const Households = () => {
 
   const getHeadName = (h: Household) => {
     const head = residents.find(r => r.id === h.head_of_household_id);
-    if (head) return head.full_name;
+    if (head) {
+      if (head.status === 'deceased') {
+        return `${head.full_name} (Đã mất)`;
+      }
+      return head.full_name;
+    }
     const fallbackHead = residents.find(r => r.household_id === h.id && r.is_head);
-    return fallbackHead ? fallbackHead.full_name : 'Chưa xác định';
+    if (fallbackHead) {
+      if (fallbackHead.status === 'deceased') {
+        return `${fallbackHead.full_name} (Đã mất)`;
+      }
+      return fallbackHead.full_name;
+    }
+    return 'Chưa xác định';
   };
 
   const handleOpenAdd = () => {
@@ -601,11 +612,8 @@ const Households = () => {
 
       const hh = households.find(h => h.id === member.household_id);
       if (hh && hh.head_of_household_id === member.id) {
-        // Xóa chủ hộ cũ
-        await db.saveHousehold({
-          ...hh,
-          head_of_household_id: null
-        });
+        // Không xóa ngay lập tức head_of_household_id của hộ về null nữa để tránh hiển thị "Chưa xác định"
+        // Hộ vẫn giữ liên kết với chủ hộ cũ (trạng thái hiển thị sẽ kèm "(Đã mất)")
 
         // Tìm người thay thế phù hợp nhất: ưu tiên Vợ/Chồng > Con lớn tuổi nhất
         const otherMembers = residents.filter(
@@ -632,7 +640,7 @@ const Households = () => {
 
         if (candidate) {
           // Hiển thị modal gợi ý chọn chủ hộ mới
-          setSuggestedNewHead({ household: { ...hh, head_of_household_id: null }, candidate });
+          setSuggestedNewHead({ household: hh, candidate });
         }
       }
 
