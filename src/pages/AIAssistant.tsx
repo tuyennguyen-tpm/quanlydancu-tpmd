@@ -1857,7 +1857,7 @@ ${content}
   <style>
     @page {
       size: A4 portrait;
-      margin: 20mm 20mm 20mm 30mm;
+      margin: 0;
     }
     * { box-sizing: border-box; }
     body {
@@ -1865,7 +1865,7 @@ ${content}
       font-size: 13pt;
       line-height: 1.45;
       color: #000;
-      margin: 0;
+      margin: 20mm 20mm 20mm 30mm;
       padding: 0;
       background: #fff;
     }

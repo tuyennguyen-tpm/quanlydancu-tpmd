@@ -1373,8 +1373,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             .footer-date { font-style: italic; margin-bottom: 5px; }
             .footer-role { font-weight: bold; margin-bottom: 60px; }
             @media print {
-              body { padding: 0; }
-              @page { size: A4 portrait; margin: 1.5cm 1cm 1.5cm 1.5cm; }
+              @page { size: A4 portrait; margin: 0; }
+              body { margin: 1.5cm 1cm 1.5cm 1.5cm; padding: 0; }
             }
           </style>
         </head>

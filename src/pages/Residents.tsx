@@ -1087,9 +1087,10 @@ const Residents = () => {
           @media print {
             @page {
               size: A4 landscape;
-              margin: 12mm 8mm 12mm 8mm;
+              margin: 0;
             }
             body {
+              margin: 12mm 8mm 12mm 8mm;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }

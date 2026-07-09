@@ -716,9 +716,10 @@ const Households = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 15mm 15mm 15mm 15mm;
+              margin: 0;
             }
             body {
+              margin: 15mm 15mm 15mm 15mm;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -1140,7 +1141,7 @@ const Households = () => {
     const htmlContent = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
     <title>Danh sách hộ dân – ${tdpNameVal}</title>
     <style>
-      body { font-family: 'Times New Roman', serif; font-size: 13px; margin: 0; padding: 20px; color: #1e293b; }
+      body { font-family: 'Times New Roman', serif; font-size: 13px; margin: 20px; color: #1e293b; }
       h2 { text-align:center; font-size:15px; margin:0 0 2px; text-transform:uppercase; letter-spacing:1px; }
       .subtitle { text-align:center; font-size:12px; color:#64748b; margin-bottom:16px; }
       table { width:100%; border-collapse:collapse; }
@@ -1149,8 +1150,8 @@ const Households = () => {
       tbody tr:nth-child(even) { background:#f8fafc; }
       .footer { text-align:right; margin-top:24px; font-size:12px; color:#64748b; }
       @media print {
-        body { padding: 10mm 15mm; }
-        @page { size: A4 landscape; margin: 10mm 15mm; }
+        @page { size: A4 landscape; margin: 0; }
+        body { margin: 10mm 15mm; }
       }
     </style>
     </head><body>
