@@ -590,6 +590,21 @@ const PartyCell: React.FC = () => {
           display: block; 
           opacity: 0.5; 
         }
+        .badge-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+        @media (max-width: 900px) {
+          .badge-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 600px) {
+          .badge-grid {
+            grid-template-columns: 1fr;
+          }
+        }
       `}</style>
     </div>
   );
@@ -607,6 +622,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PartyMember | null>(null);
+  const [badgeSectionOpen, setBadgeSectionOpen] = useState(false);
 
 
 
@@ -1334,7 +1350,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Danh sach Dang vien - Chi bo To dan pho Quang Giao</title>
+          <title></title>
           <style>
             body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.4; padding: 25px; color: #000; }
             .header-table { width: 100%; border: none; margin-bottom: 25px; border-collapse: collapse; }
@@ -1426,17 +1442,77 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     <>
       {/* Cảnh báo Huy hiệu Đảng */}
       {badgeNominees.length > 0 && (
-        <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.82rem', color: '#fef08a', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🎖️</span>
-          <span>
-            <strong>Đề nghị nhận Huy hiệu Đảng năm {currentYear}:</strong>{' '}
-            {badgeNominees.map((n, idx) => (
-              <span key={idx}>
-                <strong>{n.name}</strong> (đủ {n.age} năm tuổi Đảng)
-                {idx < badgeNominees.length - 1 ? ' • ' : ''}
+        <div style={{
+          background: 'linear-gradient(135deg, #fff5f5 0%, #fee2e2 100%)', // premium soft red gradient for high contrast
+          border: '1.5px solid rgba(239, 68, 68, 0.25)',
+          borderRadius: '12px',
+          padding: '14px 20px',
+          marginBottom: '20px',
+          fontSize: '0.88rem',
+          color: '#991b1b', // dark crimson red for AAA readability
+          boxShadow: '0 4px 6px -1px rgba(220, 38, 38, 0.05)'
+        }}>
+          <div 
+            onClick={() => setBadgeSectionOpen(!badgeSectionOpen)}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              cursor: 'pointer',
+              fontWeight: '700',
+              userSelect: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.3rem' }}>🎖️</span>
+              <span>
+                Đề nghị nhận Huy hiệu Đảng năm {currentYear}: <span style={{ color: '#dc2626', fontWeight: '800' }}>Có {badgeNominees.length} đồng chí đủ tiêu chuẩn</span>
               </span>
-            ))}
-          </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontSize: '0.85rem' }}>
+              <span>{badgeSectionOpen ? 'Thu nhỏ' : 'Xem chi tiết'}</span>
+              <ChevronDown 
+                size={16} 
+                style={{ 
+                  transform: badgeSectionOpen ? 'rotate(180deg)' : 'rotate(0deg)', 
+                  transition: 'transform 0.25s' 
+                }} 
+              />
+            </div>
+          </div>
+
+          {badgeSectionOpen && (
+            <div style={{ 
+              marginTop: '14px', 
+              paddingTop: '14px', 
+              borderTop: '1px solid rgba(239, 68, 68, 0.15)',
+              animation: 'fadeIn 0.2s ease'
+            }}>
+              <div className="badge-grid">
+                {badgeNominees.map((n, idx) => (
+                  <div 
+                    key={idx} 
+                    style={{
+                      background: 'white',
+                      border: '1px solid rgba(239, 68, 68, 0.15)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    <span style={{ color: '#dc2626', fontWeight: 'bold' }}>•</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: '750', color: '#1e293b' }}>{n.name}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#475569' }}>Đủ {n.age} năm tuổi Đảng</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

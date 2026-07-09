@@ -1084,7 +1084,7 @@ const Residents = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>In danh sách nhân khẩu - ${tdpName}</title>
+        <title></title>
         <meta charset="utf-8" />
         <style>
           @media print {

@@ -1853,7 +1853,7 @@ ${content}
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Văn bản hành chính</title>
+  <title></title>
   <style>
     @page {
       size: A4 portrait;
