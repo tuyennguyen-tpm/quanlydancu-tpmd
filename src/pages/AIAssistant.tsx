@@ -1604,8 +1604,8 @@ ${content}
       const leftName = leftSigs.length > 0 ? leftSigs[leftSigs.length - 1].trim() : '';
       const rightName = rightSigs.length > 0 ? rightSigs[rightSigs.length - 1].trim() : '';
 
-      const leftParas = leftSigs.map((l, i) => makeSignaturePara(l, i === leftSigs.length - 1 && leftName && !leftName.startsWith('(') && !leftName.toUpperCase().includes('TRƯ')));
-      const rightParas = rightSigs.map((l, i) => makeSignaturePara(l, i === rightSigs.length - 1 && rightName && !rightName.startsWith('(')));
+      const leftParas = leftSigs.map((l, i) => makeSignaturePara(l, i === leftSigs.length - 1 && leftName !== '' && !leftName.startsWith('(') && !leftName.toUpperCase().includes('TRƯ')));
+      const rightParas = rightSigs.map((l, i) => makeSignaturePara(l, i === rightSigs.length - 1 && rightName !== '' && !rightName.startsWith('(')));
 
       children.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
