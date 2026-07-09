@@ -1001,7 +1001,7 @@ const Households = () => {
 
     const dbMDob = formatToDbDate(mDob);
 
-    const payload: Resident = {
+    const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
       id: editingMember ? editingMember.id : generateUUID(),
       household_id: targetHouseholdForMember.id,
       full_name: mFullName.trim(),
