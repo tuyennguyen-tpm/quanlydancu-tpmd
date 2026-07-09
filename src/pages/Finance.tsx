@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, 
   Search, 
@@ -645,7 +645,7 @@ const Finance = () => {
 
   const balance = totalIncome - totalExpense;
 
-  const filteredRecords = records.filter(r => {
+  const filteredRecords = useMemo(() => records.filter(r => {
     // Ẩn các bản ghi tự động đồng bộ từ việc đóng quỹ của các hộ dân
     if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
       return false;
@@ -655,7 +655,7 @@ const Finance = () => {
                           r.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           r.recorded_by.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesType && matchesSearch;
-  });
+  }), [records, activeType, searchTerm]);
 
   const formatCurrency = (amt: number) => {
     if (amt === undefined || amt === null || isNaN(amt)) return '0';
@@ -673,7 +673,7 @@ const Finance = () => {
     return new Intl.NumberFormat('vi-VN').format(parseInt(clean));
   };
 
-  const filteredHouseholdsForFunds = households.filter(hh => {
+  const filteredHouseholdsForFunds = useMemo(() => households.filter(hh => {
     const headName = getHouseholdHeadName(hh).toLowerCase();
     const address = (hh.address || '').toLowerCase();
     const householdNumber = (hh.household_number || '').toLowerCase();
@@ -691,7 +691,7 @@ const Finance = () => {
       return totalPaid === 0;
     }
     return true;
-  });
+  }), [households, householdFunds, fundSearchTerm, fundYear, fundFilterStatus]);
 
   return (
     <div className="finance-container">

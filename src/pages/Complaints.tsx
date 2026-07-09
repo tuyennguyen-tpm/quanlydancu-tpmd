@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   MessageSquare, 
   Clock, 
@@ -138,18 +138,18 @@ const Complaints = () => {
   };
 
   // Filter and Search
-  const filteredComplaints = complaints.filter(c => {
+  const filteredComplaints = useMemo(() => complaints.filter(c => {
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     const matchesSearch = c.resident_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           c.content.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
-  });
+  }), [complaints, statusFilter, searchTerm]);
 
-  const sortedComplaints = [...filteredComplaints].sort((a, b) => {
+  const sortedComplaints = useMemo(() => [...filteredComplaints].sort((a, b) => {
     const dateA = new Date(a.created_at || a.date).getTime();
     const dateB = new Date(b.created_at || b.date).getTime();
     return dateB - dateA;
-  });
+  }), [filteredComplaints]);
 
   const getStatusLabel = (s: string) => {
     switch (s) {

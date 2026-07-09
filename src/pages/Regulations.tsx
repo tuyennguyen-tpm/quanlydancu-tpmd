@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   BookOpen, 
   Scale, 
@@ -333,10 +333,10 @@ const Regulations = () => {
     showToast('Chuẩn bị bản in thành công!', 'success');
   };
 
-  const filteredArticles = articles.filter(a => 
+  const filteredArticles = useMemo<Article[]>(() => articles.filter((a: Article) => 
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
     a.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ), [articles, searchQuery]);
 
   const colorMap: Record<string, { bg: string; text: string; border: string }> = {
     blue:   { bg: 'rgba(59,130,246,0.08)',  text: '#2563eb', border: 'rgba(59,130,246,0.25)' },

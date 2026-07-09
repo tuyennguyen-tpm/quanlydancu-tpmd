@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Home, 
   Search, 
@@ -1034,7 +1034,7 @@ const Households = () => {
     return matched ? matched.full_name : null;
   };
 
-  const filteredHouseholds = households.filter(h => {
+  const filteredHouseholds = useMemo(() => households.filter(h => {
     const headName = getHeadName(h).toLowerCase();
     const addr = h.address.toLowerCase();
     const num = h.household_number.toLowerCase();
@@ -1056,7 +1056,7 @@ const Households = () => {
     if (numA !== numB) return numA - numB;
     // Fallback nếu trùng số
     return a.id.localeCompare(b.id);
-  });
+  }), [households, residents, searchTerm, policyFilter, groupFilter]);
 
   const totalPages = Math.ceil(filteredHouseholds.length / pageSize) || 1;
   const paginatedHouseholds = filteredHouseholds.slice((currentPage - 1) * pageSize, currentPage * pageSize);

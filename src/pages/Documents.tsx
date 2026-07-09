@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FileText, Download, Eye, Search, FileDown, X, Plus } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -96,9 +96,9 @@ const Documents = () => {
     }
   };
 
-  const filteredDocs = docs.filter(d => 
+  const filteredDocs = useMemo(() => docs.filter(d => 
     d.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [docs, searchTerm]);
 
   const getDocTypeLabel = (t: string) => {
     switch (t) {

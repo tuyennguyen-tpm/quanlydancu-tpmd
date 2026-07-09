@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import React from 'react';
 import { 
   Search, 
@@ -1726,7 +1726,7 @@ const Residents = () => {
   };
 
   // Filters calculation
-  const filteredResidents = residents.filter(r => {
+  const filteredResidents = useMemo(() => residents.filter(r => {
     // Search query matches
     const name = r.full_name.toLowerCase();
     const cccdCode = (r.cccd || '').toLowerCase();
@@ -1846,7 +1846,7 @@ const Residents = () => {
     const timeA = new Date(a.created_at || 0).getTime();
     const timeB = new Date(b.created_at || 0).getTime();
     return timeA - timeB;
-  });
+  }), [residents, households, searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
 
   const totalPages = Math.ceil(filteredResidents.length / pageSize) || 1;
   const paginatedResidents = filteredResidents.slice((currentPage - 1) * pageSize, currentPage * pageSize);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, 
   Download, 
@@ -108,7 +108,7 @@ const WardFunds = () => {
   };
 
   // Filtered List
-  const filteredFunds = funds.filter(f => {
+  const filteredFunds = useMemo(() => funds.filter(f => {
     const matchesSearch = 
       f.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (f.address && f.address.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -127,7 +127,7 @@ const WardFunds = () => {
       });
     }
     return true;
-  });
+  }), [funds, searchTerm, filterStatus, activeFunds]);
 
   // Calculate Statistics dynamically
   const fundStats = activeFunds.map(fund => {
