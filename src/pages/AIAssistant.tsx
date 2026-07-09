@@ -1187,7 +1187,26 @@ Yêu cầu bà con nhân dân lưu ý và phối hợp thực hiện nghiêm tú
       }
     }
 
-    const partySecretaryDisplay = partySecretaryName.trim() || '(Ký, ghi rõ họ tên)';
+    const partySecretaryDisplay = biThuName.trim() || '(Ký, ghi rõ họ tên)';
+
+    // Xoá chữ ký đã có sẵn trong content từ template (tránh trùng lặp)
+    const stripContentSignature = (text: string): string => {
+      const lines = text.split('\n');
+      for (let i = lines.length - 1; i >= Math.max(0, lines.length - 25); i--) {
+        const t = lines[i].trim().toUpperCase();
+        if (
+          t.includes('TỔ TRƯỞNG DÂN PHỐ') ||
+          t.includes('T/M CHI BỘ') ||
+          t.includes('BÍ THƯ CHI BỘ') ||
+          t.includes('TRƯỞNG BAN CÔNG TÁC MẶT TRẬN') ||
+          (t.includes('THƯ') && t.includes('KÝ') && (t.includes('TỔ TRƯỞNG') || t.includes('BÍ THƯ') || t.includes('TRƯỞNG BAN')))
+        ) {
+          return lines.slice(0, i).join('\n').trimEnd();
+        }
+      }
+      return text.trimEnd();
+    };
+    const strippedContent = stripContentSignature(content);
 
     // Bọc trong khung in chuẩn
     let finalDocument = '';
@@ -1199,7 +1218,7 @@ CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
 
 ${title}
 
-${content}
+${strippedContent}
 
                               ${tdpName}, ${dateStr}
                               T/M CHI BỘ
@@ -1217,14 +1236,14 @@ BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
 
 ${title}
 
-${content}
+${strippedContent}
 
                               ${tdpName}, ${dateStr}
                               TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
                               (Ký, ghi rõ họ tên)
 
 
-                              ${leaderDisplay.replace(/^(Ông|Bà)\s+/i, '')}`;
+                              ${matTranName || '(Ký, ghi rõ họ tên)'}`;
     } else {
       finalDocument = `${tdpHeader} - ${wardDisplay.toUpperCase()}
 
@@ -1234,14 +1253,14 @@ ${content}
 
 ${title}
 
-${content}
+${strippedContent}
 
                               ${tdpName}, ${dateStr}
                               TỔ TRƯỞNG DÂN PHỐ
                               (Ký, ghi rõ họ tên)
 
 
-                              ${leaderDisplay.replace(/^(Ông|Bà)\s+/i, '')}`;
+                              ${toTruongName || '(Ký, ghi rõ họ tên)'}`;
     }
 
     return finalDocument;
