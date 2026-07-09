@@ -4,6 +4,7 @@ import {
   Packer,
   Paragraph,
   TextRun,
+  ImageRun,
   AlignmentType,
   Table,
   TableRow,
@@ -959,6 +960,10 @@ const AIAssistant = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  // Lưu ảnh chữ ký của văn bản đang hiển thị: { toTruong, biThu, matTran, thuKy }
+  const [docSigUrls, setDocSigUrls] = useState<{
+    toTruong: string; biThu: string; matTran: string; thuKy: string; docType: string;
+  }>({ toTruong: '', biThu: '', matTran: '', thuKy: '', docType: 'admin' });
 
   // Phân quyền vai trò
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
@@ -1011,7 +1016,7 @@ const AIAssistant = () => {
     const partySecretaryName = localStorage.getItem('party_secretary_name') || '';
 
     // Đọc chữ ký cán bộ từ cài đặt hệ thống
-    let officialSigs: { id: string; name: string }[] = [];
+    let officialSigs: { id: string; name: string; signatureUrl?: string }[] = [];
     try {
       const savedSigs = localStorage.getItem('official_signatures');
       if (savedSigs) officialSigs = JSON.parse(savedSigs);
@@ -1020,10 +1025,20 @@ const AIAssistant = () => {
       const found = officialSigs.find(s => s.id === id);
       return found?.name?.trim() || fallback;
     };
+    const getOfficialSigUrl = (id: string): string => {
+      const found = officialSigs.find(s => s.id === id);
+      return found?.signatureUrl?.trim() || '';
+    };
     const toTruongName = getOfficialName('to_truong', leaderName);
     const biThuName = getOfficialName('bi_thu', partySecretaryName);
     const matTranName = getOfficialName('mat_tran', leaderName);
     const thuKyName = getOfficialName('thu_ky', '');
+    // Ảnh chữ ký (base64 data URL)
+    const toTruongSigUrl = getOfficialSigUrl('to_truong');
+    const biThuSigUrl = getOfficialSigUrl('bi_thu');
+    const matTranSigUrl = getOfficialSigUrl('mat_tran');
+    const thuKySigUrl = getOfficialSigUrl('thu_ky');
+
 
     // Fetch live stats
     const [households, residents, complaints, records, partyMembers] = await Promise.all([
@@ -1210,8 +1225,28 @@ Yêu cầu bà con nhân dân lưu ý và phối hợp thực hiện nghiêm tú
 
     // Bọc trong khung in chuẩn
     let finalDocument = '';
+    const isBienBan = title.trim().toUpperCase().startsWith('BIÊN BẢN');
+    const thuKyDisplay = thuKyName.trim() || '(Ký, ghi rõ họ tên)';
+
     if (docType === 'party') {
-      finalDocument = `ĐẢNG CỘNG SẢN VIỆT NAM
+      if (isBienBan) {
+        finalDocument = `ĐẢNG CỘNG SẢN VIỆT NAM
+ĐẢNG BỘ ${wardDisplay.toUpperCase()}
+CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+*
+
+${title}
+
+${strippedContent}
+
+                              ${tdpName}, ${dateStr}
+     THƯ KÝ GHI BIÊN BẢN                    BÍ THƯ CHI BỘ
+   (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
+
+
+   ${thuKyDisplay}                              ${partySecretaryDisplay}`;
+      } else {
+        finalDocument = `ĐẢNG CỘNG SẢN VIỆT NAM
 ĐẢNG BỘ ${wardDisplay.toUpperCase()}
 CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}
 *
@@ -1226,8 +1261,28 @@ ${strippedContent}
 
 
                               ${partySecretaryDisplay}`;
+      }
     } else if (docType === 'front') {
-      finalDocument = `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
+      if (isBienBan) {
+        finalDocument = `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
+BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+${title}
+
+${strippedContent}
+
+                              ${tdpName}, ${dateStr}
+     THƯ KÝ GHI BIÊN BẢN               TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
+   (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
+
+
+   ${thuKyDisplay}                              ${matTranName || '(Ký, ghi rõ họ tên)'}`;
+      } else {
+        finalDocument = `ỦY BAN MTTQ VN ${wardDisplay.toUpperCase()}
 BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}
 
                               CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
@@ -1240,12 +1295,30 @@ ${strippedContent}
 
                               ${tdpName}, ${dateStr}
                               TRƯỞNG BAN CÔNG TÁC MẶT TRẬN
-                              (Ký, ghi rõ họ tên)
 
 
                               ${matTranName || '(Ký, ghi rõ họ tên)'}`;
+      }
     } else {
-      finalDocument = `${tdpHeader} - ${wardDisplay.toUpperCase()}
+      if (isBienBan) {
+        finalDocument = `${tdpHeader} - ${wardDisplay.toUpperCase()}
+
+                              CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                              Độc lập - Tự do - Hạnh phúc
+                              ───────────────────────────
+
+${title}
+
+${strippedContent}
+
+                              ${tdpName}, ${dateStr}
+     THƯ KÝ GHI BIÊN BẢN                    TỔ TRƯỞNG DÂN PHỐ
+   (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
+
+
+   ${thuKyDisplay}                              ${toTruongName || '(Ký, ghi rõ họ tên)'}`;
+      } else {
+        finalDocument = `${tdpHeader} - ${wardDisplay.toUpperCase()}
 
                               CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
                               Độc lập - Tự do - Hạnh phúc
@@ -1257,13 +1330,22 @@ ${strippedContent}
 
                               ${tdpName}, ${dateStr}
                               TỔ TRƯỞNG DÂN PHỐ
-                              (Ký, ghi rõ họ tên)
 
 
                               ${toTruongName || '(Ký, ghi rõ họ tên)'}`;
+      }
     }
 
-    return finalDocument;
+    return {
+      text: finalDocument,
+      docType,
+      sigUrls: {
+        toTruong: toTruongSigUrl,
+        biThu: biThuSigUrl,
+        matTran: matTranSigUrl,
+        thuKy: thuKySigUrl,
+      }
+    };
   };
 
   const typeText = (text: string) => {
@@ -1288,9 +1370,10 @@ ${strippedContent}
     setIsCopied(false);
     setResult(null);
     setTimeout(async () => {
-      const doc = await generateDocument(pText, templateId);
+      const generated = await generateDocument(pText, templateId);
       setIsGenerating(false);
-      typeText(doc);
+      setDocSigUrls({ ...generated.sigUrls, docType: generated.docType });
+      typeText(generated.text);
     }, 1200);
   };
 
@@ -1620,7 +1703,7 @@ ${strippedContent}
       const leftSigs = sigClean.slice(0, half);
       const rightSigs = sigClean.slice(half);
 
-      const noBorderCell = (paras: Paragraph[]) => new TableCell({
+      const noBorderCell = (paras: (Paragraph)[]) => new TableCell({
         width: { size: 50, type: WidthType.PERCENTAGE },
         borders: noBorder,
         children: paras,
@@ -1628,7 +1711,7 @@ ${strippedContent}
 
       const makeSignaturePara = (text: string, isName = false) => new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: isName ? 60 : 40, before: isName ? 500 : 0, line: 360 },
+        spacing: { after: isName ? 60 : 40, before: isName ? 0 : 0, line: 360 },
         children: [new TextRun({
           text: text.trim(),
           font: FONT,
@@ -1638,11 +1721,50 @@ ${strippedContent}
         })],
       });
 
+      // Helper tạo paragraph chứa ảnh chữ ký
+      const makeSigImagePara = (dataUrl: string): Paragraph | null => {
+        if (!dataUrl) return null;
+        try {
+          const base64 = dataUrl.split(',')[1];
+          if (!base64) return null;
+          const binary = atob(base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let b = 0; b < binary.length; b++) bytes[b] = binary.charCodeAt(b);
+          return new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 20, before: 320, line: 360 },
+            children: [new ImageRun({
+              data: bytes.buffer,
+              transformation: { width: 100, height: 45 },
+              type: dataUrl.startsWith('data:image/png') ? 'png' : 'jpg',
+            })],
+          });
+        } catch { return null; }
+      };
+
       const leftName = leftSigs.length > 0 ? leftSigs[leftSigs.length - 1].trim() : '';
       const rightName = rightSigs.length > 0 ? rightSigs[rightSigs.length - 1].trim() : '';
 
-      const leftParas = leftSigs.map((l, i) => makeSignaturePara(l, i === leftSigs.length - 1 && leftName !== '' && !leftName.startsWith('(') && !leftName.toUpperCase().includes('TRƯ')));
-      const rightParas = rightSigs.map((l, i) => makeSignaturePara(l, i === rightSigs.length - 1 && rightName !== '' && !rightName.startsWith('(')));
+      const leftParas: Paragraph[] = [];
+      leftSigs.forEach((l, i) => {
+        const isLast = i === leftSigs.length - 1 && leftName !== '' && !leftName.startsWith('(') && !leftName.toUpperCase().includes('TRƯ');
+        if (isLast) {
+          const imgP = makeSigImagePara(docSigUrls.thuKy); // Thư ký
+          if (imgP) leftParas.push(imgP);
+        }
+        leftParas.push(makeSignaturePara(l, isLast));
+      });
+
+      const rightParas: Paragraph[] = [];
+      rightSigs.forEach((l, i) => {
+        const isLast = i === rightSigs.length - 1 && rightName !== '' && !rightName.startsWith('(');
+        if (isLast) {
+          const rightWordSigUrl = docType === 'party' ? docSigUrls.biThu : docType === 'front' ? docSigUrls.matTran : docSigUrls.toTruong;
+          const imgP = makeSigImagePara(rightWordSigUrl);
+          if (imgP) rightParas.push(imgP);
+        }
+        rightParas.push(makeSignaturePara(l, isLast));
+      });
 
       children.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1652,15 +1774,44 @@ ${strippedContent}
     } else {
       // 1 chữ ký bên phải
       const sigClean = sigLines.filter(l => l.trim());
-      const rightSigParas = sigClean.map((l, i) => {
+      const rightSigParas: Paragraph[] = [];
+
+      // Helper tạo paragraph ảnh chữ ký (dùng inline trong Word)
+      const makeSigImgParaInline = (dataUrl: string): Paragraph | null => {
+        if (!dataUrl) return null;
+        try {
+          const base64 = dataUrl.split(',')[1];
+          if (!base64) return null;
+          const binary = atob(base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let b = 0; b < binary.length; b++) bytes[b] = binary.charCodeAt(b);
+          return new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 20, before: 300, line: 360 },
+            children: [new ImageRun({
+              data: bytes.buffer,
+              transformation: { width: 100, height: 45 },
+              type: dataUrl.startsWith('data:image/png') ? 'png' : 'jpg',
+            })],
+          });
+        } catch { return null; }
+      };
+
+      sigClean.forEach((l, i) => {
         const txt = l.trim();
         const isDate = txt.includes('ngày') && txt.includes('tháng');
         const isTitle = txt.toUpperCase().includes('TỔ TRƯỞNG') || txt.toUpperCase().includes('BÍ THƯ') || txt.toUpperCase().includes('TRƯỞNG BAN') || txt.includes('T/M');
         const isNote = txt.startsWith('(') && txt.endsWith(')');
         const isName = !isDate && !isTitle && !isNote && i === sigClean.length - 1;
-        return new Paragraph({
+
+        if (isName) {
+          const rightWordSigUrl2 = docSigUrls.docType === 'party' ? docSigUrls.biThu : docSigUrls.docType === 'front' ? docSigUrls.matTran : docSigUrls.toTruong;
+          const imgP = makeSigImgParaInline(rightWordSigUrl2);
+          if (imgP) rightSigParas.push(imgP);
+        }
+        rightSigParas.push(new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { after: 40, before: isName ? 500 : 0, line: 360 },
+          spacing: { after: 40, before: 0, line: 360 },
           children: [new TextRun({
             text: txt,
             font: FONT,
@@ -1668,7 +1819,7 @@ ${strippedContent}
             bold: isTitle || isName,
             italics: isDate || isNote,
           })],
-        });
+        }));
       });
 
       children.push(new Table({
@@ -1684,6 +1835,7 @@ ${strippedContent}
     }
   }
 
+
   const handlePrint = () => {
     if (!result) return;
 
@@ -1692,6 +1844,16 @@ ${strippedContent}
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép mở popup trên trình duyệt!', 'danger');
       return;
     }
+
+    // ─── Hàm tạo HTML ảnh chữ ký (dùng chung) ───
+    const sigImgHtml = (url: string) =>
+      url ? `<img src="${url}" alt="Chữ ký" style="height:55px;max-width:130px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
+
+    // Xác định ảnh chữ ký cho từng vị trí dựa vào loại văn bản
+    const isPartyDoc2 = docSigUrls.docType === 'party';
+    const isFrontDoc2 = docSigUrls.docType === 'front';
+    const rightSigImg  = isPartyDoc2 ? sigImgHtml(docSigUrls.biThu) : (isFrontDoc2 ? sigImgHtml(docSigUrls.matTran) : sigImgHtml(docSigUrls.toTruong));
+    const leftSigImg   = sigImgHtml(docSigUrls.thuKy);
 
     // Hàm phụ trợ xử lý chữ ký thông minh dạng bảng
     const renderBodyWithTableSignature = (bodyLines: string[]) => {
@@ -1790,7 +1952,8 @@ ${strippedContent}
                   const isName = idx === leftColParts.length - 1 && !isInstruction && !isTitle;
                   if (isTitle) return `<div class="sig-title" style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
                   if (isInstruction) return `<div class="sig-instruction" style="font-style: italic; font-size: 12pt; margin-top: 2px;">${text}</div>`;
-                  return `<div class="sig-name" style="${isName ? 'font-weight: bold; margin-top: 65px; font-size: 13pt;' : ''}">${text}</div>`;
+                  if (isName) return `${leftSigImg}<div class="sig-name" style="font-weight: bold; font-size: 13pt;">${text}</div>`;
+                  return `<div class="sig-name">${text}</div>`;
                 }).join('')}
               </td>
               <td style="width: 50%; text-align: center; vertical-align: top; font-family: 'Times New Roman', Times, serif; font-size: 13pt;">
@@ -1801,7 +1964,8 @@ ${strippedContent}
                   const isName = idx === rightColParts.length - 1 && !isInstruction && !isTitle;
                   if (isTitle) return `<div class="sig-title" style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
                   if (isInstruction) return `<div class="sig-instruction" style="font-style: italic; font-size: 12pt; margin-top: 2px;">${text}</div>`;
-                  return `<div class="sig-name" style="${isName ? 'font-weight: bold; margin-top: 65px; font-size: 13pt;' : ''}">${text}</div>`;
+                  if (isName) return `${rightSigImg}<div class="sig-name" style="font-weight: bold; font-size: 13pt;">${text}</div>`;
+                  return `<div class="sig-name">${text}</div>`;
                 }).join('')}
               </td>
             </tr>
@@ -1825,7 +1989,8 @@ ${strippedContent}
                   if (isDate) return `<div class="sig-date" style="font-style: italic; margin-bottom: 5px;">${text}</div>`;
                   if (isTitle) return `<div class="sig-title" style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
                   if (isInstruction) return `<div class="sig-instruction" style="font-style: italic; font-size: 12pt; margin-top: 2px;">${text}</div>`;
-                  return `<div class="sig-name" style="${isName ? 'font-weight: bold; margin-top: 65px; font-size: 13pt;' : ''}">${text}</div>`;
+                  if (isName) return `${rightSigImg}<div class="sig-name" style="font-weight: bold; font-size: 13pt;">${text}</div>`;
+                  return `<div class="sig-name">${text}</div>`;
                 }).join('')}
               </td>
             </tr>
