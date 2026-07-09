@@ -87,7 +87,7 @@ Hôm nay, vào lúc 19 giờ 30 phút, ngày 15 tháng 06 năm {namNay}, tại N
 
 I. THÀNH PHẦN THAM DỰ:
 1. Chủ trì cuộc họp: {tenToTruong} — Tổ trưởng dân phố.
-2. Thư ký ghi biên bản: Bà Lê Thị Dung.
+2. Thư ký ghi biên bản: {thuKyName}.
 3. Số lượng đại biểu tham dự: Đại diện của {tongHoDan} hộ gia đình.
 
 II. NỘI DUNG CUỘC HỌP:
@@ -101,11 +101,11 @@ II. NỘI DUNG CUỘC HỌP:
 
 Cuộc họp kết thúc vào lúc 21 giờ 30 phút cùng ngày, biên bản đã được thông qua trước toàn thể cuộc họp.
 
-     THƯ GHI BIÊN BẢN                      TỔ TRƯỞNG DÂN PHỐ
+     THƯ KÝ GHI BIÊN BẢN                    TỔ TRƯỞNG DÂN PHỐ
    (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
 
 
-                                           {leaderName}`
+   {thuKyName}                              {leaderName}`
   },
   {
     id: 'to_truong_bao_cao',
@@ -257,7 +257,7 @@ Tình trạng quản lý hộ khẩu cơ bản ổn định. Biên bản đã đ
    (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
 
 
-                                           {leaderName}`
+   {thuKyName}                              {leaderName}`
   },
   {
     id: 'to_truong_bao_cao_antt',
@@ -826,8 +826,8 @@ Tổ dân phố {tenTDP} — Tháng {thangNay}/{namNay}
 Hôm nay, vào lúc ..... giờ, ngày ..... tháng ..... năm {namNay}, tại Nhà văn hóa {tdpDisplay}.
 
 I. THÀNH PHẦN THAM DỰ:
-- Chủ trì: {leaderDisplay} — Trưởng Ban công tác Mặt trận.
-- Thư ký: .....
+- Chủ trì: {matTranName} — Trưởng Ban công tác Mặt trận.
+- Thư ký: {thuKyName}.
 - Thành viên Ban công tác Mặt trận có mặt: ..... / ..... thành viên.
 
 II. NỘI DUNG CUỘC HỌP:
@@ -848,7 +848,7 @@ Cuộc họp kết thúc vào lúc ..... giờ cùng ngày. Biên bản được
    (Ký và ghi rõ họ tên)                  (Ký và ghi rõ họ tên)
 
 
-                                           {matTranName}`
+   {thuKyName}                              {matTranName}`
   },
   {
     id: 'front_tham_hoi_ngheo',
@@ -1046,7 +1046,7 @@ const AIAssistant = () => {
     const tdpHeader = tdpUpper.startsWith('TỔ DÂN PHỐ') || tdpUpper.startsWith('TDP') ? tdpUpper : `TỔ DÂN PHỐ ${tdpUpper}`;
     const tdpDisplay = tdpName.toLowerCase().startsWith('tổ dân phố') || tdpName.toLowerCase().startsWith('tdp') ? tdpName : `Tổ dân phố ${tdpName}`;
     const wardDisplay = wardName.toLowerCase().startsWith('phường') || wardName.toLowerCase().startsWith('xã') || wardName.toLowerCase().startsWith('thị trấn') ? wardName : `Phường ${wardName}`;
-    const leaderDisplay = leaderName.toLowerCase().startsWith('ông') || leaderName.toLowerCase().startsWith('bà') ? leaderName : `Ông ${matTranName}`;
+    const leaderDisplay = leaderName.toLowerCase().startsWith('ông') || leaderName.toLowerCase().startsWith('bà') ? leaderName : `Ông ${toTruongName}`;
 
     // Tìm template phù hợp
     let matchedTemplate: AITemplate | undefined;
