@@ -250,13 +250,9 @@ const Residents = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearchTerm(searchInput);
-    }, 350);
+    }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  useEffect(() => {
-    setSearchInput(searchTerm);
-  }, [searchTerm]);
 
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military' | 'longevity'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
@@ -458,6 +454,7 @@ const Residents = () => {
       const residentId = customEvent.detail;
       const matched = residents.find(r => r.id === residentId);
       if (matched) {
+        setSearchInput(matched.full_name);
         setSearchTerm(matched.full_name);
         setCategoryFilter('all');
         

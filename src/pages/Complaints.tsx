@@ -29,7 +29,14 @@ const Complaints = () => {
   }, []);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'resolved'>('all');
+
+  // Debounce searchInput -> searchTerm
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // Modals state
   const [isNewComplaintOpen, setIsNewComplaintOpen] = useState(false);
@@ -200,8 +207,8 @@ const Complaints = () => {
            <input 
              type="text" 
              placeholder="Tìm theo tên người gửi, nội dung..." 
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
+             value={searchInput}
+             onChange={(e) => setSearchInput(e.target.value)}
            />
          </div>
          <div className="filter-group">

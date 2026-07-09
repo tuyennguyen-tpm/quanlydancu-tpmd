@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   BookOpen, 
   Scale, 
@@ -42,8 +42,15 @@ interface OfficialRole {
 const Regulations = () => {
   const [activeSubTab, setActiveSubTab] = useState<'duties' | 'circulars' | 'roles'>('duties');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [expandedArticle, setExpandedArticle] = useState<string | null>('art-1');
   const [expandedRole, setExpandedRole] = useState<string | null>('role-1');
+
+  // Debounce searchInput -> searchQuery
+  useEffect(() => {
+    const t = setTimeout(() => setSearchQuery(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const duties = [
     {
@@ -474,7 +481,7 @@ const Regulations = () => {
           <div className="circulars-section">
             <div className="circulars-search">
               <Search size={18} />
-              <input type="text" placeholder="Tìm kiếm điều khoản thông tư..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <input type="text" placeholder="Tìm kiếm điều khoản thông tư..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
             </div>
             <div className="articles-accordion">
               {filteredArticles.map(a => {

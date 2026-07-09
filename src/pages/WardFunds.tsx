@@ -41,8 +41,15 @@ const WardFunds = () => {
   const [funds, setFunds] = useState<WardFund[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid_all' | 'unpaid_any'>('all');
+
+  // Debounce searchInput -> searchTerm
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   
   // Cấu hình quỹ của Phường động
   const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);
@@ -862,8 +869,8 @@ const WardFunds = () => {
             <input
               type="text"
               placeholder="Tìm theo tên người dân, địa chỉ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               style={{
                 width: '100%',
                 padding: '8px 12px 8px 36px',

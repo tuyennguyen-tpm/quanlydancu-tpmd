@@ -620,6 +620,13 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+
+  // Debounce searchInput -> search (debouncedSearch)
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PartyMember | null>(null);
   const [badgeSectionOpen, setBadgeSectionOpen] = useState(false);
@@ -1285,7 +1292,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     return currentYear - yr;
   };
 
-  const filtered = members.filter(m => {
+  const filtered = useMemo(() => members.filter(m => {
     const matchesSearch = m.full_name.toLowerCase().includes(search.toLowerCase()) ||
                           (m.party_code || '').includes(search);
     if (!matchesSearch) return false;
@@ -1294,7 +1301,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     const age = getPartyAge(m);
     const milestones = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120];
     return milestones.includes(age);
-  });
+  }), [members, search, filterMilestones]);
 
   const stats = {
     total: members.filter(m => m.status !== 'deceased').length,
@@ -1579,7 +1586,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="party-search" style={{ minWidth: 260 }}>
             <Search size={15} className="party-search-icon" />
-            <input placeholder="Tìm kiếm tên, số thẻ..." value={search} onChange={e => setSearch(e.target.value)} />
+            <input placeholder="Tìm kiếm tên, số thẻ..." value={searchInput} onChange={e => setSearchInput(e.target.value)} />
           </div>
           
           <button 

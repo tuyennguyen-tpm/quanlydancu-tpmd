@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Search, 
@@ -36,8 +36,15 @@ const Finance = () => {
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
+
+  // Debounce searchInput -> searchTerm
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // Form states
   const [type, setType] = useState<'income' | 'expense'>('income');
@@ -54,7 +61,14 @@ const Finance = () => {
   const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
   const [fundYear, setFundYear] = useState<number>(new Date().getFullYear());
   const [fundSearchTerm, setFundSearchTerm] = useState('');
+  const [fundSearchInput, setFundSearchInput] = useState('');
   const [fundFilterStatus, setFundFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+
+  // Debounce fundSearchInput -> fundSearchTerm
+  useEffect(() => {
+    const t = setTimeout(() => setFundSearchTerm(fundSearchInput), 300);
+    return () => clearTimeout(t);
+  }, [fundSearchInput]);
 
   // Form đóng quỹ hộ dân
   const [editingFund, setEditingFund] = useState<{ householdId: string, fundName: string } | null>(null);
@@ -839,8 +853,8 @@ const Finance = () => {
                   <input 
                     type="text" 
                     placeholder="Tìm nội dung, danh mục..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
                 <button className="date-filter"><Calendar size={16} /> Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</button>
@@ -1025,8 +1039,8 @@ const Finance = () => {
                   <input
                     type="text"
                     placeholder="Tìm theo tên chủ hộ, địa chỉ..."
-                    value={fundSearchTerm}
-                    onChange={(e) => setFundSearchTerm(e.target.value)}
+                    value={fundSearchInput}
+                    onChange={(e) => setFundSearchInput(e.target.value)}
                     style={{
                       padding: '8px 12px 8px 38px',
                       borderRadius: '8px',
@@ -1036,10 +1050,10 @@ const Finance = () => {
                       fontSize: '0.9rem'
                     }}
                   />
-                  {fundSearchTerm && (
+                  {fundSearchInput && (
                     <button
                       type="button"
-                      onClick={() => setFundSearchTerm('')}
+                      onClick={() => { setFundSearchInput(''); setFundSearchTerm(''); }}
                       style={{
                         position: 'absolute',
                         right: '12px',

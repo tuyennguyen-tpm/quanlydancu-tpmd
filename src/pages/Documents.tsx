@@ -18,8 +18,15 @@ const Documents = () => {
   }, []);
   const [docs, setDocs] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+
+  // Debounce searchInput -> searchTerm
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -187,8 +194,8 @@ Ban điều hành Tổ dân phố ${tdpName}.
          <input 
            type="text" 
            placeholder="Tìm kiếm theo tiêu đề văn bản..." 
-           value={searchTerm}
-           onChange={(e) => setSearchTerm(e.target.value)}
+           value={searchInput}
+           onChange={(e) => setSearchInput(e.target.value)}
          />
       </div>
 
