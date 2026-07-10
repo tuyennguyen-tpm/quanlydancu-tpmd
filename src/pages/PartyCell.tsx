@@ -1238,12 +1238,26 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           const zone = (parseInt(columns[offset + 9]) || 3) as any;
           const notesStr = columns[offset + 10] || '';
 
-          const cleanFullName = fullName.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
-          const cleanPartyCode = partyCode.trim();
-          const matched = currentMembers.find(m => 
-            (cleanPartyCode && m.party_code === cleanPartyCode) || 
-            (m.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanFullName)
-          );
+          // Chuẩn hóa tên loại bỏ ký tự tàng hình và Unicode NFC chuẩn
+          const cleanNameStr = (str: string) => {
+            return (str || '')
+              .normalize('NFC')
+              .replace(/[\u200B-\u200D\uFEFF]/g, '')
+              .toLowerCase()
+              .replace(/\s+/g, ' ')
+              .trim();
+          };
+
+          const cleanFullName = cleanNameStr(fullName);
+          const cleanPartyCode = partyCode.trim().replace(/[-\s]/g, '').toLowerCase();
+
+          const matched = currentMembers.find(m => {
+            const dbPartyCode = (m.party_code || '').trim().replace(/[-\s]/g, '').toLowerCase();
+            if (cleanPartyCode && dbPartyCode) {
+              if (cleanPartyCode === dbPartyCode) return true;
+            }
+            return cleanNameStr(m.full_name) === cleanFullName;
+          });
 
           // Auto-link to resident_id if not present
           let rId = matched?.resident_id || null;

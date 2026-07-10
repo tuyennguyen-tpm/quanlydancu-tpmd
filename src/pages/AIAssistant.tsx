@@ -2551,87 +2551,87 @@ ${strippedContent}
 
   return (
     <div className="ai-container">
-      <div className="ai-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="ai-header" style={{ display: 'block', marginBottom: '16px' }}>
         <div>
           <div className="ai-badge">
             <Sparkles size={16} />
             <span>Trợ lý AI Tổ dân phố</span>
           </div>
           <h1>Trợ lý Văn bản AI</h1>
-          <p>Hỗ trợ soạn thảo thông báo họp dân, biên bản và báo cáo chuyên nghiệp cực nhanh bằng ngôn ngữ hành chính chuẩn.</p>
+          <p style={{ margin: '6px 0 0 0' }}>Hỗ trợ soạn thảo thông báo họp dân, biên bản và báo cáo chuyên nghiệp cực nhanh bằng ngôn ngữ hành chính chuẩn.</p>
         </div>
+      </div>
 
-        {/* Nhóm nút chức năng phía trên bên phải */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '12px', flexWrap: 'wrap' }}>
-          {/* Nút Soạn thảo Word A4 */}
-          <button
-            onClick={handleOpenWordEditor}
+      {/* Nhóm nút chức năng nằm ở khu vực dưới tiêu đề */}
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        {/* Nút Soạn thảo Word A4 */}
+        <button
+          onClick={handleOpenWordEditor}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+            border: 'none', color: 'white',
+            borderRadius: '30px', fontWeight: '700',
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)',
+            transition: 'all 0.2s ease', fontSize: '0.88rem',
+            outline: 'none'
+          }}
+          onMouseOver={e => { 
+            e.currentTarget.style.transform = 'translateY(-2px)'; 
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.45)'; 
+            e.currentTarget.style.filter = 'brightness(1.05)';
+          }}
+          onMouseOut={e => { 
+            e.currentTarget.style.transform = ''; 
+            e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.3)'; 
+            e.currentTarget.style.filter = '';
+          }}
+          onMouseDown={e => { e.currentTarget.style.transform = 'translateY(1px)'; }}
+          onMouseUp={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+        >
+          <FileText size={16} />
+          <span>Soạn thảo Word A4</span>
+        </button>
+
+        {/* Nút Cài đặt mẫu dành riêng cho Admin */}
+        {currentRole === 'admin' && (
+          <button 
+            onClick={() => setIsManagerOpen(true)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
               padding: '10px 20px',
-              background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-              border: 'none', color: 'white',
-              borderRadius: '30px', fontWeight: '700',
+              background: 'rgba(255, 255, 255, 0.9)',
+              border: '1.5px solid #7c3aed',
+              color: '#7c3aed',
+              borderRadius: '30px',
+              fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)',
-              transition: 'all 0.2s ease', fontSize: '0.88rem',
+              boxShadow: '0 4px 12px rgba(124, 58, 237, 0.08)',
+              transition: 'all 0.2s ease',
+              fontSize: '0.88rem',
               outline: 'none'
             }}
-            onMouseOver={e => { 
-              e.currentTarget.style.transform = 'translateY(-2px)'; 
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.45)'; 
-              e.currentTarget.style.filter = 'brightness(1.05)';
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(124, 58, 237, 0.18)';
+              e.currentTarget.style.background = 'rgba(124, 58, 237, 0.05)';
             }}
-            onMouseOut={e => { 
-              e.currentTarget.style.transform = ''; 
-              e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.3)'; 
-              e.currentTarget.style.filter = '';
+            onMouseOut={e => {
+              e.currentTarget.style.transform = '';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.08)';
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
             }}
             onMouseDown={e => { e.currentTarget.style.transform = 'translateY(1px)'; }}
             onMouseUp={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
           >
-            <FileText size={16} />
-            <span>Soạn thảo Word A4</span>
+            <Settings size={16} />
+            <span>Cài đặt mẫu văn bản</span>
           </button>
-
-          {/* Nút Cài đặt mẫu dành riêng cho Admin */}
-          {currentRole === 'admin' && (
-            <button 
-              onClick={() => setIsManagerOpen(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 20px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                border: '1.5px solid #7c3aed',
-                color: '#7c3aed',
-                borderRadius: '30px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.08)',
-                transition: 'all 0.2s ease',
-                fontSize: '0.88rem',
-                outline: 'none'
-              }}
-              onMouseOver={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(124, 58, 237, 0.18)';
-                e.currentTarget.style.background = 'rgba(124, 58, 237, 0.05)';
-              }}
-              onMouseOut={e => {
-                e.currentTarget.style.transform = '';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.08)';
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
-              }}
-              onMouseDown={e => { e.currentTarget.style.transform = 'translateY(1px)'; }}
-              onMouseUp={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
-            >
-              <Settings size={16} />
-              <span>Cài đặt mẫu văn bản</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="ai-grid">
