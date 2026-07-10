@@ -980,6 +980,7 @@ const AIAssistant = () => {
   const [wordEditorTitle, setWordEditorTitle] = useState('Văn bản mới');
   const [wordEditorFontSize, setWordEditorFontSize] = useState('13');
   const [wordEditorDocType, setWordEditorDocType] = useState<'admin'|'party'|'front'>('admin');
+  const [wordEditorHtml, setWordEditorHtml] = useState('');
 
   // Phân quyền vai trò
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
@@ -1362,6 +1363,247 @@ ${strippedContent}
         thuKy: thuKySigUrl,
       }
     };
+  };
+
+  const getBodyAndSignaturesOnly = (text: string): string => {
+    const lines = text.split('\n');
+    
+    // Find separator for Party docs
+    const starIdx = lines.findIndex(l => l.trim() === '*');
+    if (starIdx !== -1) {
+      return lines.slice(starIdx + 1).join('\n').trim();
+    }
+    
+    // Find separator for State/Front docs
+    const sepIdx = lines.findIndex(l => l.includes('───') || l.includes('___'));
+    if (sepIdx !== -1) {
+      return lines.slice(sepIdx + 1).join('\n').trim();
+    }
+    
+    const congHoaIdx = lines.findIndex(l => l.includes('CỘNG HÒA XÃ HỘI'));
+    if (congHoaIdx !== -1) {
+      return lines.slice(congHoaIdx + 3).join('\n').trim();
+    }
+    
+    return text.trim();
+  };
+
+  const convertResultToEditorHtml = (rawText: string) => {
+    if (!rawText) return '';
+    
+    const isPartyDoc = rawText.includes('ĐẢNG CỘNG SẢN VIỆT NAM') || rawText.includes('CHI BỘ');
+    const isFrontDoc = rawText.includes('MTTQ') || rawText.includes('MẶT TRẬN');
+    const docType: 'party' | 'front' | 'admin' = isPartyDoc ? 'party' : (isFrontDoc ? 'front' : 'admin');
+    
+    const textWithoutHeaders = getBodyAndSignaturesOnly(rawText);
+    
+    let officialSigs: { id: string; name: string; signatureUrl?: string }[] = [];
+    try {
+      const savedSigs = localStorage.getItem('official_signatures');
+      if (savedSigs) officialSigs = JSON.parse(savedSigs);
+    } catch { /* ignore */ }
+
+    const getOfficialSigUrl = (id: string): string => {
+      const found = officialSigs.find(s => s.id === id);
+      return found?.signatureUrl?.trim() || '';
+    };
+
+    const toTruongSigUrl = getOfficialSigUrl('to_truong');
+    const biThuSigUrl = getOfficialSigUrl('bi_thu');
+    const matTranSigUrl = getOfficialSigUrl('mat_tran');
+    const thuKySigUrl = getOfficialSigUrl('thu_ky');
+
+    const sigImgHtml = (url: string) =>
+      url ? `<img src="${url}" alt="Chữ ký" style="height:50px;max-width:120px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
+
+    const rightSigImg = docType === 'party' ? sigImgHtml(biThuSigUrl) : (docType === 'front' ? sigImgHtml(matTranSigUrl) : sigImgHtml(toTruongSigUrl));
+    const leftSigImg = sigImgHtml(thuKySigUrl);
+
+    const bodyLines = textWithoutHeaders.split('\n');
+    let sigStartIndex = -1;
+    let isDoubleSignature = false;
+
+    for (let i = bodyLines.length - 1; i >= Math.max(0, bodyLines.length - 15); i--) {
+      const line = bodyLines[i].trim();
+      if (!line) continue;
+      if (line.includes('THƯ KÝ') && (line.includes('TỔ TRƯỞNG') || line.includes('BÍ THƯ') || line.includes('TRƯỞNG BAN') || line.includes('CHI BỘ') || line.includes('TM') || line.includes('T/M'))) {
+        sigStartIndex = i;
+        isDoubleSignature = true;
+        break;
+      }
+      if (line.match(/ngày\s+\d+\s+tháng\s+\d+\s+năm\s+\d+/) || (line.includes('ngày') && line.includes('tháng') && line.includes('năm') && line.includes(','))) {
+        let hasLeaderTitleBelow = false;
+        for (let j = i + 1; j < bodyLines.length; j++) {
+          const lBelow = bodyLines[j].toUpperCase();
+          if (lBelow.includes('TỔ TRƯỞNG') || lBelow.includes('BÍ THƯ') || lBelow.includes('TRƯỞNG BAN') || lBelow.includes('CHI BỘ') || lBelow.includes('TM') || lBelow.includes('T/M')) {
+            hasLeaderTitleBelow = true;
+            break;
+          }
+        }
+        if (hasLeaderTitleBelow) {
+          sigStartIndex = i;
+          isDoubleSignature = false;
+          break;
+        }
+      }
+    }
+
+    let contentLines = bodyLines;
+    let sigLines: string[] = [];
+    if (sigStartIndex !== -1) {
+      contentLines = bodyLines.slice(0, sigStartIndex);
+      sigLines = bodyLines.slice(sigStartIndex);
+    }
+
+    let htmlResult = contentLines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '<p><br></p>';
+      
+      const upper = trimmed.toUpperCase();
+      const isCentered = 
+        upper.startsWith('BÁO CÁO') ||
+        upper.startsWith('THÔNG BÁO') ||
+        upper.startsWith('BIÊN BẢN') ||
+        upper.startsWith('NGHỊ QUYẾT') ||
+        upper.startsWith('TỜ TRÌNH') ||
+        upper.startsWith('GIẤY MỜI') ||
+        upper.startsWith('KẾ HOẠCH') ||
+        upper.startsWith('QUYẾT ĐỊNH');
+        
+      const isBold = isCentered || /^[IVX]+\./.test(trimmed);
+      const isItalic = trimmed.startsWith('Kính gửi') || trimmed.startsWith('Kính thưa') || (trimmed.startsWith('(') && trimmed.endsWith(')'));
+      
+      let style = isCentered ? 'text-align: center;' : 'text-align: justify; text-indent: 2em;';
+      let innerText = trimmed;
+      if (isBold) innerText = `<b>${innerText}</b>`;
+      if (isItalic) innerText = `<i>${innerText}</i>`;
+      
+      return `<p style="${style}">${innerText}</p>`;
+    }).join('');
+
+    if (sigLines.length > 0) {
+      let signatureHtml = '';
+      if (isDoubleSignature) {
+        const leftColParts: string[] = [];
+        const rightColParts: string[] = [];
+
+        sigLines.forEach(line => {
+          if (!line.trim()) return;
+          const mid = Math.floor(line.length / 2);
+          let cutPoint = mid;
+          const spacePattern = /\s{3,}/g;
+          let match;
+          let bestSpaceIdx = -1;
+          let minDiff = Infinity;
+          while ((match = spacePattern.exec(line)) !== null) {
+            const idx = match.index;
+            const diff = Math.abs(idx - mid);
+            if (diff < minDiff) {
+              minDiff = diff;
+              bestSpaceIdx = idx;
+            }
+          }
+          if (bestSpaceIdx !== -1) {
+            cutPoint = bestSpaceIdx;
+          } else if (line.includes('  ')) {
+            const spacesIdx = line.indexOf('  ', Math.floor(line.length / 4));
+            if (spacesIdx !== -1) cutPoint = spacesIdx;
+          }
+
+          const leftPart = line.substring(0, cutPoint).trim();
+          const rightPart = line.substring(cutPoint).trim();
+
+          leftColParts.push(leftPart);
+          rightColParts.push(rightPart);
+        });
+
+        signatureHtml = `
+          <table class="signature-table" style="width: 100%; border-collapse: collapse; margin-top: 30px; page-break-inside: avoid;">
+            <tr>
+              <td style="width: 50%; text-align: center; vertical-align: top; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
+                ${leftColParts.map((text, idx) => {
+                  if (!text) return '<div style="height: 1.2em;"></div>';
+                  const isTitle = idx === 0 || text.includes('THƯ KÝ');
+                  const isInstruction = text.startsWith('(') && text.endsWith(')');
+                  const isName = idx === leftColParts.length - 1 && !isInstruction && !isTitle;
+                  if (isTitle) return `<div style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
+                  if (isInstruction) return `<div style="font-style: italic; font-size: 11pt; margin-top: 2px;">${text}</div>`;
+                  if (isName) return `${leftSigImg}<div style="font-weight: bold; font-size: 12pt;">${text}</div>`;
+                  return `<div>${text}</div>`;
+                }).join('')}
+              </td>
+              <td style="width: 50%; text-align: center; vertical-align: top; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
+                ${rightColParts.map((text, idx) => {
+                  if (!text) return '<div style="height: 1.2em;"></div>';
+                  const isTitle = idx === 0 || text.includes('TỔ TRƯỞNG') || text.includes('BÍ THƯ') || text.includes('TRƯỞNG BAN');
+                  const isInstruction = text.startsWith('(') && text.endsWith(')');
+                  const isName = idx === rightColParts.length - 1 && !isInstruction && !isTitle;
+                  if (isTitle) return `<div style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
+                  if (isInstruction) return `<div style="font-style: italic; font-size: 11pt; margin-top: 2px;">${text}</div>`;
+                  if (isName) return `${rightSigImg}<div style="font-weight: bold; font-size: 12pt;">${text}</div>`;
+                  return `<div>${text}</div>`;
+                }).join('')}
+              </td>
+            </tr>
+          </table>
+        `;
+      } else {
+        const cleanedSigLines = sigLines.map(line => line.trim()).filter(Boolean);
+        signatureHtml = `
+          <table class="signature-table" style="width: 100%; border-collapse: collapse; margin-top: 30px; page-break-inside: avoid;">
+            <tr>
+              <td style="width: 50%; border: none;"></td>
+              <td style="width: 50%; text-align: center; vertical-align: top; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
+                ${cleanedSigLines.map((text, idx) => {
+                  const isDate = text.includes('ngày') && text.includes('tháng') && text.includes('năm');
+                  const isTitle = text.includes('TỔ TRƯỞNG') || text.includes('BÍ THƯ') || text.includes('TRƯỞNG BAN') || text.includes('T/M') || text.includes('TM');
+                  const isInstruction = text.startsWith('(') && text.endsWith(')');
+                  const isName = idx === cleanedSigLines.length - 1 && !isInstruction && !isTitle && !isDate;
+
+                  if (isDate) return `<div style="font-style: italic; margin-bottom: 5px;">${text}</div>`;
+                  if (isTitle) return `<div style="font-weight: bold; text-transform: uppercase;">${text}</div>`;
+                  if (isInstruction) return `<div style="font-style: italic; font-size: 11pt; margin-top: 2px;">${text}</div>`;
+                  if (isName) return `${rightSigImg}<div style="font-weight: bold; font-size: 12pt;">${text}</div>`;
+                  return `<div>${text}</div>`;
+                }).join('')}
+              </td>
+            </tr>
+          </table>
+        `;
+      }
+      htmlResult += signatureHtml;
+    }
+
+    return htmlResult;
+  };
+
+  const handleOpenWordEditor = () => {
+    let docType: 'party' | 'front' | 'admin' = 'admin';
+    if (result) {
+      const isPartyDoc = result.includes('ĐẢNG CỘNG SẢN VIỆT NAM') || result.includes('CHI BỘ');
+      const isFrontDoc = result.includes('MTTQ') || result.includes('MẶT TRẬN');
+      docType = isPartyDoc ? 'party' : (isFrontDoc ? 'front' : 'admin');
+    }
+    setWordEditorDocType(docType);
+
+    if (result) {
+      const formattedHtml = convertResultToEditorHtml(result);
+      setWordEditorHtml(formattedHtml);
+    } else {
+      setWordEditorHtml(
+        '<p style="text-align:center"><b>TIÊU ĐỀ VĂN BẢN</b></p>' +
+        '<p style="text-align:center"><i>V/v: ...</i></p>' +
+        '<p></p>' +
+        '<p>Kính gửi: ...</p>' +
+        '<p></p>' +
+        '<p style="text-indent:2em">Nội dung văn bản...</p>' +
+        '<p></p>' +
+        '<p style="text-align:right"><i>Quảng Giao, ngày &nbsp; tháng &nbsp; năm 2026</i></p>' +
+        '<p style="text-align:center"><b>TỔ TRƯỞNG DÂN PHỐ</b></p>' +
+        '<p style="text-align:center; margin-top:60px"><b>(Họ và tên)</b></p>'
+      );
+    }
+    setIsWordEditorOpen(true);
   };
 
   const typeText = (text: string) => {
@@ -2321,7 +2563,7 @@ ${strippedContent}
 
         {/* Nút Soạn thảo Word A4 */}
         <button
-          onClick={() => setIsWordEditorOpen(true)}
+          onClick={handleOpenWordEditor}
           style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '10px 16px',
@@ -2497,6 +2739,9 @@ ${strippedContent}
                 <div className="result-btns">
                   <button className="icon-btn-sm" onClick={handleCopy} title="Sao chép">
                     {isCopied ? <ClipboardCheck size={18} style={{color: 'var(--success)'}} /> : <Copy size={18} />}
+                  </button>
+                  <button className="icon-btn-sm" onClick={handleOpenWordEditor} title="Biên tập trực quan A4 (Soạn thảo)">
+                    <FileText size={18} />
                   </button>
                   <button className="icon-btn-sm" onClick={handlePrint} title="In văn bản (A4)">
                     <Printer size={18} />
@@ -3378,18 +3623,7 @@ ${strippedContent}
                   position: 'relative'
                 }}
                 onFocus={e => { e.currentTarget.style.outline = 'none'; }}
-                dangerouslySetInnerHTML={{__html:
-                  '<p style="text-align:center"><b>TIÊU ĐỀ VĂN BẢN</b></p>' +
-                  '<p style="text-align:center"><i>V/v: ...</i></p>' +
-                  '<p></p>' +
-                  '<p>Kính gửi: ...</p>' +
-                  '<p></p>' +
-                  '<p style="text-indent:2em">Nội dung văn bản...</p>' +
-                  '<p></p>' +
-                  '<p style="text-align:right"><i>Quảng Giao, ngày &nbsp; tháng &nbsp; năm 2026</i></p>' +
-                  '<p style="text-align:center"><b>TỔ TRƯỞNG DÂN PHỐ</b></p>' +
-                  '<p style="text-align:center; margin-top:60px"><b>(Họ và tên)</b></p>'
-                }}
+                dangerouslySetInnerHTML={{__html: wordEditorHtml}}
               />
             </div>
           </div>
