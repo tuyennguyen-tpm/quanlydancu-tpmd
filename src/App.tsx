@@ -3,7 +3,7 @@ import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, party
 import { askGemini } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
-import Bảng điều khiển from './pages/Bảng điều khiển';
+import Dashboard from './pages/Dashboard';
 import AIAssistant from './pages/AIAssistant';
 import CitizenMap from './pages/CitizenMap';
 import Finance from './pages/Finance';
@@ -1230,7 +1230,7 @@ const App = () => {
 
     switch (activeTab) {
       case 'Bảng điều khiển':
-        return <Bảng điều khiển />;
+        return <Dashboard />;
       case 'households':
         return <Households />;
       case 'residents':
@@ -1370,7 +1370,7 @@ const App = () => {
             )}
           </div>
           <div className="logo-text" style={{ color: 'white', display: 'flex', flexDirection: 'column' }}>
-            <span className="app-name" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.3px', lineHeight: 1.2 }}>QL Tổ dân phố</span>
+            <span className="app-name" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.3px', lineHeight: 1.2 }}>QL Thôn/Tổ dân phố</span>
             <span className="app-sub" style={{ fontSize: '10.5px', opacity: 0.75, marginTop: '2px' }}>{tdpName} – {wardName}</span>
           </div>
           {window.innerWidth <= 768 && (

@@ -351,7 +351,7 @@ const Dashboard = () => {
       {/* PAGE TITLE BAR */}
       <div className="page-title-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>Tổng quan – Dashboard</h1>
+          <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>Tổng quan – Bảng điều khiển</h1>
           <div className="subtitle" style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>Dữ liệu cập nhật lần cuối: {lastUpdateTime}</div>
         </div>
         <div className="page-actions" style={{ display: 'flex', gap: '8px' }}>
