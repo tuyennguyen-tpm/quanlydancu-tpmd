@@ -15,21 +15,26 @@ const CCBElderly = () => {
       const residents = await db.getResidents();
       const activeResidents = residents.filter(r => r.status !== 'deceased');
 
-      // Seniors: age >= 60
+      // Seniors: association_membership contains 'nct' or age >= 60
       const seniorList = activeResidents.filter(r => {
+        const isNctMember = r.association_membership && r.association_membership.split(',').includes('nct');
+        if (isNctMember) return true;
+        
         if (!r.dob) return false;
         const birthYear = parseInt(r.dob.substring(0, 4));
         return (currentYear - birthYear) >= 60;
       });
 
-      // Veterans (CCB): occupation or notes contains CCB/Cựu chiến binh
+      // Veterans (CCB): association_membership contains 'ccb' or occupation/notes contains CCB/Cựu chiến binh
       const veteranList = activeResidents.filter(r => {
+        const isCcbMember = r.association_membership && r.association_membership.split(',').includes('ccb');
+        if (isCcbMember) return true;
+
         const occ = (r.occupation || '').toLowerCase();
         const notes = (r.notes || '').toLowerCase();
         const name = r.full_name.toLowerCase();
         return occ.includes('ccb') || occ.includes('cựu chiến') || occ.includes('bộ đội') ||
                notes.includes('ccb') || notes.includes('cựu chiến') ||
-               // Fallback seeds for demo purposes
                name.includes('nguyễn kim tuyến') || name.includes('văn cường');
       });
 
