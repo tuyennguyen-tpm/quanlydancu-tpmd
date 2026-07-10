@@ -3,7 +3,8 @@ import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, party
 import { askGemini } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
-import Dashboard from './pages/Dashboard';
+import 
+Bảng điều khiển from './pages/Bảng điều khiển';
 import AIAssistant from './pages/AIAssistant';
 import CitizenMap from './pages/CitizenMap';
 import Finance from './pages/Finance';
@@ -137,7 +138,7 @@ const App = () => {
 
 
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('Bảng điều khiển');
   const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'demo');
 
   useEffect(() => {
@@ -228,7 +229,7 @@ const App = () => {
     
     // Auto redirect if active tab is restricted in new role
     if ((role === 'mat_tran' || role === 'demo' || role === 'chung') && ['party-cell', 'meetings-party'].includes(activeTab)) {
-      setActiveTab('dashboard');
+      setActiveTab('Bảng điều khiển');
     }
     
     const toastMsg = role === 'demo'
@@ -899,7 +900,7 @@ const App = () => {
     const newName = tdpNameInput.trim() || 'Tiến Quảng Giao';
     localStorage.setItem('tdp_name', newName);
     setTdpName(newName);
-    // Thông báo cho các trang khác (Dashboard...) cập nhật tên ngay lập tức
+    // Thông báo cho các trang khác (Bảng điều khiển...) cập nhật tên ngay lập tức
     window.dispatchEvent(new CustomEvent('tdp-name-changed'));
     
     // Lưu tên Phường
@@ -1229,8 +1230,8 @@ const App = () => {
   const renderContent = () => {
 
     switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard />;
+      case 'Bảng điều khiển':
+        return <Bảng điều khiển />;
       case 'households':
         return <Households />;
       case 'residents':
@@ -1285,7 +1286,7 @@ const App = () => {
   };
 
   const menuItems = [
-    { id: 'dashboard', icon: PieChart, label: 'Dashboard', group: 'Tổng quan' },
+    { id: 'Bảng điều khiển', icon: PieChart, label: 'Bảng điều khiển', group: 'Tổng quan' },
     { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount },
     { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount },
     { id: 'residents-temp', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6 },
@@ -2324,7 +2325,7 @@ const App = () => {
                 </div>
                 <div style={{ marginTop: '10px', fontSize: '0.78rem', color: '#64748b', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span><strong>Lưu ý CSDL:</strong> Nếu để trống, hệ thống dùng bộ nhớ cục bộ (LocalStorage).</span>
-                  <span><strong>Lưu ý Google Auth:</strong> Vui lòng cấu hình URL Redirect trong Supabase Dashboard là <code>{window.location.origin}</code> để đăng nhập Google OAuth hoạt động chính xác.</span>
+                  <span><strong>Lưu ý Google Auth:</strong> Vui lòng cấu hình URL Redirect trong Supabase Bảng điều khiển là <code>{window.location.origin}</code> để đăng nhập Google OAuth hoạt động chính xác.</span>
                 </div>
               </div>
 
@@ -2422,7 +2423,7 @@ const App = () => {
                 Vui lòng làm theo các bước dưới đây để bổ sung cấu trúc bảng vào cơ sở dữ liệu Supabase của bạn:
               </p>
               <ol style={{ fontSize: '0.85rem', color: '#cbd5e1', paddingLeft: '20px', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <li>Truy cập vào trang quản trị <strong><a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Supabase Dashboard</a></strong>.</li>
+                <li>Truy cập vào trang quản trị <strong><a href="https://supabase.com/Bảng điều khiển" target="_blank" rel="noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Supabase Bảng điều khiển</a></strong>.</li>
                 <li>Mở dự án của bạn, chọn mục <strong>SQL Editor</strong> ở thanh menu bên trái.</li>
                 <li>Nhấn <strong>New Query</strong>, dán toàn bộ đoạn mã SQL dưới đây vào khung soạn thảo.</li>
                 <li>Nhấn nút <strong>Run</strong> để chạy lệnh tạo bảng. Sau đó quay lại ứng dụng này và tải lại trang.</li>
