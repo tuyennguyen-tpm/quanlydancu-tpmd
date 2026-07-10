@@ -3,8 +3,7 @@ import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, party
 import { askGemini } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
-import 
-Bảng điều khiển from './pages/Bảng điều khiển';
+import Bảng điều khiển from './pages/Bảng điều khiển';
 import AIAssistant from './pages/AIAssistant';
 import CitizenMap from './pages/CitizenMap';
 import Finance from './pages/Finance';
