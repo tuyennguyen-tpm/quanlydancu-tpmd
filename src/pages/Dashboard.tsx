@@ -6,6 +6,47 @@ const Dashboard = () => {
   const currentYear = new Date().getFullYear();
   const currentYearStr = String(currentYear);
 
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getGreetingDetails = (date: Date) => {
+    const hours = date.getHours();
+    const day = date.getDay();
+    const dayNames = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const monthNames = [
+      'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+      'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
+    ];
+    
+    let greeting = 'Chào buổi tối!';
+    let emoji = '🌙';
+    let wish = 'Chúc bạn một buổi tối thư giãn thoải mái và ấm áp bên gia đình!';
+    
+    if (hours < 12) {
+      greeting = 'Chào buổi sáng!';
+      emoji = '☀️';
+      wish = 'Chúc bạn một ngày mới tràn đầy năng lượng và làm việc hiệu quả!';
+    } else if (hours < 18) {
+      greeting = 'Chào buổi chiều!';
+      emoji = '☀️';
+      wish = 'Chúc bạn một buổi chiều làm việc tập trung và gặt hái nhiều thành công!';
+    }
+
+    const timeText = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+    const dateText = `${dayNames[day]}, 10 Tháng 7, ${date.getFullYear()}`; // Lock 10 Tháng 7, 2026 to match image exactly or let it dynamic
+    const dynamicDateText = `${dayNames[day]}, ${date.getDate()} ${monthNames[date.getMonth()]} năm ${date.getFullYear()}`;
+
+    return { greeting, emoji, wish, timeText, dateText: dynamicDateText };
+  };
+
+  const { greeting, emoji, wish, timeText, dateText } = getGreetingDetails(currentDateTime);
+
   const [stats, setStats] = useState({
     totalHouseholds: 0,
     totalResidents: 0,
@@ -348,24 +389,54 @@ const Dashboard = () => {
   return (
     <div className="content" style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, animation: 'fadeIn 0.5s ease-out' }}>
       
-      {/* PAGE TITLE BAR */}
-      <div className="page-title-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      {/* Greeting Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, #eff6ff, #f0fdf4)',
+        border: '1.5px solid #bfdbfe',
+        borderRadius: '16px',
+        padding: '20px 24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '16px',
+        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
+      }}>
         <div style={{ textAlign: 'left' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>Tổng quan – Bảng điều khiển</h1>
-          <div className="subtitle" style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>Dữ liệu cập nhật lần cuối: {lastUpdateTime}</div>
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0284c7', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {greeting} {emoji}
+          </h2>
+          <p style={{ fontSize: '13px', fontWeight: '500', color: '#64748b', margin: '0 0 6px 0' }}>
+            Hệ thống quản lý thông tin dân cư Tổ dân phố <span style={{ color: '#2563eb', fontWeight: '700' }}>{tdpName}</span>
+          </p>
+          <p style={{ fontSize: '12.5px', color: '#16a34a', fontWeight: '700', margin: 0 }}>
+            {wish}
+          </p>
         </div>
-        <div className="page-actions" style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn-outline" onClick={handleExportReport}>
-            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
-            Xuất báo cáo
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '32px', fontWeight: '800', color: '#1d4ed8', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+            {timeText}
+          </div>
+          <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#64748b', marginTop: '4px' }}>
+            {dateText}
+          </div>
+        </div>
+      </div>
+
+      {/* PAGE ACTIONS BAR */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginRight: 'auto', alignSelf: 'center', fontWeight: '500' }}>
+          Dữ liệu cập nhật lần cuối: {lastUpdateTime}
+        </div>
+        <button className="btn-outline" onClick={handleExportReport} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem' }}>
+          <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+          Xuất báo cáo tổng hợp
+        </button>
+        {!isGuest && (
+          <button className="btn-primary" onClick={() => handleQuickAction('households')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '0.82rem' }}>
+            <svg width="13" height="13" fill="none" stroke="white" viewBox="0 0 24 24" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            Thêm mới
           </button>
-          {!isGuest && (
-            <button className="btn-primary" onClick={() => handleQuickAction('households')}>
-              <svg width="13" height="13" fill="none" stroke="white" viewBox="0 0 24 24" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              Thêm mới
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* ROW 1: 6 STATS CARDS */}

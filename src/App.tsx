@@ -1517,35 +1517,60 @@ const App = () => {
           </div>
         </div>
         
-        <header className="header">
+        <header className="main-header">
           <div className="header-left">
             {!isSidebarOpen && (
               <button onClick={() => setSidebarOpen(true)} className="menu-toggle" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px', marginRight: '8px' }}>
                 <Menu size={24} />
               </button>
             )}
-            <div className="breadcrumb-gov">
-              <span>Tổ dân phố {tdpName}</span>
-              <span className="sep">›</span>
-              <span className="current" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{menuItems.find(i => i.id === activeTab)?.label}</span>
-            </div>
+            {activeTab === 'Bảng điều khiển' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap' }}>Bảng điều khiển</h1>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: '#eff6ff',
+                  border: '1.5px solid #bfdbfe',
+                  borderRadius: '20px',
+                  padding: '4px 12px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: '#1e40af',
+                  whiteSpace: 'nowrap'
+                }}>
+                  📞 SĐT: Bí thư: Ông Tuấn: 0944597577 - TB CTMT: Ông Quyết: 1234567890
+                </div>
+              </div>
+            ) : (
+              <div className="breadcrumb-gov">
+                <span>Tổ dân phố {tdpName}</span>
+                <span className="sep">›</span>
+                <span className="current" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{menuItems.find(i => i.id === activeTab)?.label}</span>
+              </div>
+            )}
           </div>
 
           <div className="header-right">
-            <div className="header-weather">
-              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke-width="2"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke-width="2"/></svg>
-              <span>32°C – Nắng</span>
-            </div>
-            
-            {(() => {
-              const { dayName, dateStr, timeStr } = formatVietnameseDateTime(currentDateTime);
-              return (
-                <div className="header-datetime">
-                  <div className="date">{dayName}, {dateStr}</div>
-                  <div className="time">{timeStr} ICT</div>
+            {activeTab !== 'Bảng điều khiển' && (
+              <>
+                <div className="header-weather">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke-width="2"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke-width="2"/></svg>
+                  <span>32°C – Nắng</span>
                 </div>
-              );
-            })()}
+                
+                {(() => {
+                  const { dayName, dateStr, timeStr } = formatVietnameseDateTime(currentDateTime);
+                  return (
+                    <div className="header-datetime">
+                      <div className="date">{dayName}, {dateStr}</div>
+                      <div className="time">{timeStr} ICT</div>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
 
             <div className="search-box">
               <Search size={14} />
