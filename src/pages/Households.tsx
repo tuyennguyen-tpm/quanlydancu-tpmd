@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { 
   Home, 
   Search, 
@@ -70,15 +70,8 @@ const isValidDate = (dateStr: string) => {
 const Households = () => {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchTerm(searchInput);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const searchTerm = useDeferredValue(searchInput);
 
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
@@ -241,7 +234,7 @@ const Households = () => {
       const matched = households.find(h => h.id === hhId);
       if (matched) {
         const ownerName = getHeadName(matched);
-        setSearchTerm(ownerName);
+        setSearchInput(ownerName);
         setPolicyFilter('all');
         
         setTimeout(() => {

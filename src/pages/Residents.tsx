@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import React from 'react';
 import { 
   Search, 
@@ -244,15 +244,9 @@ const SearchableHouseholdSelect = ({ households, residents, value, onChange }: {
 const Residents = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearchTerm(searchInput);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const searchTerm = useDeferredValue(searchInput);
+
 
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military' | 'longevity'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
@@ -455,7 +449,6 @@ const Residents = () => {
       const matched = residents.find(r => r.id === residentId);
       if (matched) {
         setSearchInput(matched.full_name);
-        setSearchTerm(matched.full_name);
         setCategoryFilter('all');
         
         setTimeout(() => {

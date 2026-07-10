@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { 
   Plus, 
   Search, 
@@ -35,16 +35,10 @@ const Finance = () => {
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDeferredValue(searchInput);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
-
-  // Debounce searchInput -> searchTerm
-  useEffect(() => {
-    const t = setTimeout(() => setSearchTerm(searchInput), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
 
   // Form states
   const [type, setType] = useState<'income' | 'expense'>('income');

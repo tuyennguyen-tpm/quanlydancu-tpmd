@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from 'react';
 import ExcelJS from 'exceljs';
 import { partyDb, generateUUID } from '../services/db';
 import type { PartyMember, PartyMeeting, PartyEvaluation, PartyFee } from '../services/db';
@@ -620,15 +620,10 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const search = useDeferredValue(searchInput);
   const [selectedPartyGroup, setSelectedPartyGroup] = useState<string>('all');
 
-  // Debounce searchInput -> search (debouncedSearch)
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(searchInput), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PartyMember | null>(null);
   const [badgeSectionOpen, setBadgeSectionOpen] = useState(false);

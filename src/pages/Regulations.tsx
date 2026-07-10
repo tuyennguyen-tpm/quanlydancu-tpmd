@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { 
   BookOpen, 
   Scale, 
@@ -41,16 +41,10 @@ interface OfficialRole {
 
 const Regulations = () => {
   const [activeSubTab, setActiveSubTab] = useState<'duties' | 'circulars' | 'roles'>('duties');
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const searchQuery = useDeferredValue(searchInput);
   const [expandedArticle, setExpandedArticle] = useState<string | null>('art-1');
   const [expandedRole, setExpandedRole] = useState<string | null>('role-1');
-
-  // Debounce searchInput -> searchQuery
-  useEffect(() => {
-    const t = setTimeout(() => setSearchQuery(searchInput), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
 
   const duties = [
     {

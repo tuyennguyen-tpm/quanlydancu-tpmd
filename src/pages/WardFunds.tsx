@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { 
   Search, 
   Download, 
@@ -40,16 +40,11 @@ const WardFunds = () => {
   // State
   const [funds, setFunds] = useState<WardFund[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
-  const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDeferredValue(searchInput);
   const [isLoading, setIsLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid_all' | 'unpaid_any'>('all');
 
-  // Debounce searchInput -> searchTerm
-  useEffect(() => {
-    const t = setTimeout(() => setSearchTerm(searchInput), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
   
   // Cấu hình quỹ của Phường động
   const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { FileText, Download, Eye, Search, FileDown, X, Plus } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -17,16 +17,10 @@ const Documents = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
   const [docs, setDocs] = useState<Document[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDeferredValue(searchInput);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
-
-  // Debounce searchInput -> searchTerm
-  useEffect(() => {
-    const t = setTimeout(() => setSearchTerm(searchInput), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
 
   // Form states
   const [title, setTitle] = useState('');

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { 
   MessageSquare, 
   Clock, 
@@ -28,15 +28,10 @@ const Complaints = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDeferredValue(searchInput);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'resolved'>('all');
 
-  // Debounce searchInput -> searchTerm
-  useEffect(() => {
-    const t = setTimeout(() => setSearchTerm(searchInput), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
 
   // Modals state
   const [isNewComplaintOpen, setIsNewComplaintOpen] = useState(false);
