@@ -2563,7 +2563,7 @@ ${strippedContent}
       </div>
 
       {/* Nhóm nút chức năng nằm ở khu vực dưới tiêu đề */}
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', justifyContent: 'flex-end', marginTop: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
         {/* Nút Soạn thảo Word A4 */}
         <button
           onClick={handleOpenWordEditor}
