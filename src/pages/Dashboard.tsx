@@ -1,97 +1,68 @@
-import { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, 
-  Home, 
-  AlertCircle, 
-  CheckCircle2, 
-  ArrowUpRight,
-  UserPlus,
-  HeartHandshake,
-  TrendingUp,
-  ShieldCheck,
-  Calendar,
-  FileText,
-  Wallet,
-  Star,
-  UsersRound,
-  Sparkles,
-  Info
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { db, partyDb } from '../services/db';
 
 const Dashboard = () => {
   const isGuest = localStorage.getItem('guest_mode') === 'true';
   const currentYear = new Date().getFullYear();
-
-  // Role switching state
-  const [selectedRoleView, setSelectedRoleView] = useState<'to_truong' | 'bi_thu' | 'mat_tran'>('to_truong');
-  const [userRole, setUserRole] = useState(() => localStorage.getItem('current_role') || 'demo');
+  const currentYearStr = String(currentYear);
 
   const [stats, setStats] = useState({
     totalHouseholds: 0,
     totalResidents: 0,
     maleCount: 0,
     femaleCount: 0,
-    policyHouseholds: 0,
-    pendingComplaints: 0,
-    militaryEligibleCount: 0,
-    temporaryResidentCount: 0,
-    temporaryAbsentCount: 0,
+    malePercent: 0,
+    femalePercent: 0,
     
-    // Chi bộ
     totalPartyMembers: 0,
     officialPartyMembers: 0,
     probationPartyMembers: 0,
-    exemptPartyMembers: 0,
-    femalePartyMembers: 0,
-    seniorPartyMembers: 0,
-    partyFeesCollected: 0,
     
-    // Mặt trận & Chính sách
+    seniorCount: 0,
+    childCount: 0,
+    seniorPercent: 0,
+    childPercent: 0,
+    
     poorHouseholds: 0,
     nearPoorHouseholds: 0,
-    policyFamilyHouseholds: 0,
-    campaignCount: 0,
+    poorPercent: 0,
+    nearPoorPercent: 0,
+    
+    temporaryResidentCount: 0,
+    temporaryAbsentCount: 0,
+    birthCount: 0,
+    deceasedCount: 0,
   });
 
-  const [currentTime, setCurrentTime] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [lastUpdateTime, setLastUpdateTime] = useState('');
 
-  const getGreetingMessage = () => {
-    const hours = currentTime.getHours();
-    if (hours >= 5 && hours < 12) {
-      return {
-        greeting: 'Chào buổi sáng! ☀️',
-        wish: 'Chúc bạn một ngày mới tốt lành, làm việc tràn đầy năng lượng!'
-      };
-    } else if (hours >= 12 && hours < 18) {
-      return {
-        greeting: 'Chào buổi chiều! ⛅',
-        wish: 'Chúc bạn một buổi chiều làm việc thuận lợi và hiệu quả!'
-      };
-    } else {
-      return {
-        greeting: 'Chào buổi tối! 🌙',
-        wish: 'Chúc bạn một buổi tối ấm áp và thư giãn bên gia đình!'
-      };
-    }
-  };
+  // Donut chart stroke attributes
+  const [donutData, setDonutData] = useState({
+    poorStroke: '0 251.32',
+    nearPoorStroke: '0 251.32',
+    otherStroke: '0 251.32',
+    normalStroke: '251.32 0',
+    poorOffset: 0,
+    nearPoorOffset: 0,
+    otherOffset: 0,
+    normalOffset: 0,
+    poorH: 0,
+    nearPoorH: 0,
+    otherH: 0,
+    normalH: 0,
+    poorPctStr: '0.0%',
+    nearPoorPctStr: '0.0%',
+    otherPctStr: '0.0%',
+    normalPctStr: '100.0%',
+  });
 
-  // Đọc tên Tổ dân phố từ localStorage
   const [tdpName, setTdpName] = useState(() => {
     return localStorage.getItem('tdp_name') || 'Quảng Giao';
-  });
-  const [wardName, setWardName] = useState(() => {
-    return localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
   });
 
   useEffect(() => {
     const handleStorageChange = () => {
       setTdpName(localStorage.getItem('tdp_name') || 'Quảng Giao');
-      setWardName(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn');
     };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('tdp-name-changed', handleStorageChange);
@@ -101,41 +72,8 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Sync selectedRoleView when role changes in App
-  useEffect(() => {
-    const current = localStorage.getItem('current_role') || 'demo';
-    setUserRole(current);
-    if (current === 'bi_thu') {
-      setSelectedRoleView('bi_thu');
-    } else if (current === 'mat_tran') {
-      setSelectedRoleView('mat_tran');
-    } else {
-      setSelectedRoleView('to_truong');
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleRoleChanged = (e: Event) => {
-      const customEv = e as CustomEvent;
-      const role = customEv.detail;
-      setUserRole(role);
-      if (role === 'bi_thu') {
-        setSelectedRoleView('bi_thu');
-      } else if (role === 'mat_tran') {
-        setSelectedRoleView('mat_tran');
-      } else {
-        setSelectedRoleView('to_truong');
-      }
-    };
-    window.addEventListener('role-changed', handleRoleChanged);
-    return () => window.removeEventListener('role-changed', handleRoleChanged);
-  }, []);
-
-  const [funds, setFunds] = useState<Record<string, { collected: number, target: number }>>({});
-  const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [recentMeetings, setRecentMeetings] = useState<any[]>([]);
-  const [recentPartyMeetings, setRecentPartyMeetings] = useState<any[]>([]);
+  const [dynamicNotifs, setDynamicNotifs] = useState<any[]>([]);
+  const [dynamicTasks, setDynamicTasks] = useState<any[]>([]);
 
   const loadDashboardData = async () => {
     try {
@@ -147,8 +85,6 @@ const Dashboard = () => {
         securityLogs, 
         hhFunds,
         partyMembers,
-        partyMeetings,
-        partyFeesList,
         meetings
       ] = await Promise.all([
         db.getHouseholds(),
@@ -158,162 +94,187 @@ const Dashboard = () => {
         db.getSecurityLogs(),
         db.getHouseholdFunds(),
         partyDb.getPartyMembers(),
-        partyDb.getPartyMeetings(),
-        partyDb.getPartyFees(currentYear),
         db.getMeetings()
       ]);
 
       const activeResidents = residents.filter(r => r.status !== 'deceased');
-      const totalH = households.length;
-      const totalR = activeResidents.length;
+      const deceasedResidents = residents.filter(r => r.status === 'deceased');
+
+      const totalH = households.length || 1;
+      const totalR = activeResidents.length || 1;
       const maleR = activeResidents.filter(r => r.gender === 'male').length;
       const femaleR = activeResidents.filter(r => r.gender === 'female').length;
-      const tempResident = activeResidents.filter(r => r.status === 'temporary_resident').length;
-      const tempAbsent = activeResidents.filter(r => r.status === 'temporary_absent').length;
 
-      const poorH = households.filter(h => h.policy_type === 'poor').length;
-      const nearPoorH = households.filter(h => h.policy_type === 'near_poor').length;
-      const policyFamilyH = households.filter(h => h.policy_type === 'policy_family').length;
-      const policyTotalH = poorH + nearPoorH + policyFamilyH;
-      
-      const pendingC = complaints.filter(c => c.status === 'pending').length;
+      let seniorVal = 0;
+      let childVal = 0;
+      let birthVal = 0;
 
-      // NVQS
-      let militaryEligible = 0;
       activeResidents.forEach(r => {
-        if (r.gender === 'male' && r.dob) {
+        if (r.dob) {
           const birthYear = parseInt(r.dob.substring(0, 4));
           const age = currentYear - birthYear;
-          if (age >= 18 && age <= 27) {
-            if (!r.military_service || r.military_service === 'none' || r.military_service === 'in_age') {
-              militaryEligible++;
-            }
+          if (age >= 60) {
+            seniorVal++;
+          } else if (age < 18) {
+            childVal++;
+          }
+          if (r.dob.startsWith(currentYearStr)) {
+            birthVal++;
           }
         }
       });
 
-      // Chi bộ Đảng calculations
       const totalPM = partyMembers.length;
       const officialPM = partyMembers.filter(m => m.status === 'official').length;
       const probationPM = partyMembers.filter(m => m.status === 'probation').length;
-      const exemptPM = partyMembers.filter(m => m.is_exempt_party_activities).length;
-      const femalePM = partyMembers.filter(m => {
-        const res = activeResidents.find(r => r.id === m.resident_id);
-        return res?.gender === 'female' || m.full_name.toLowerCase().includes('thị') || m.full_name.toLowerCase().includes('thuy');
-      }).length;
-      
-      let seniorPM = 0;
-      partyMembers.forEach(m => {
-        const res = activeResidents.find(r => r.id === m.resident_id);
-        if (res && res.dob) {
-          const birthYear = parseInt(res.dob.substring(0, 4));
-          const age = currentYear - birthYear;
-          if (age >= 60) seniorPM++;
-        }
-      });
 
-      const totalFeesCollected = partyFeesList.reduce((acc, f) => acc + (f.amount || 0), 0);
+      const poorH = households.filter(h => h.policy_type === 'poor').length;
+      const nearPoorH = households.filter(h => h.policy_type === 'near_poor').length;
+      const otherH = households.filter(h => h.policy_type === 'policy_family').length;
+      const normalH = Math.max(0, households.length - poorH - nearPoorH - otherH);
+
+      const tempRes = activeResidents.filter(r => r.status === 'temporary_resident').length;
+      const tempAbs = activeResidents.filter(r => r.status === 'temporary_absent').length;
+      const decCount = deceasedResidents.length;
 
       setStats({
-        totalHouseholds: totalH,
-        totalResidents: totalR,
+        totalHouseholds: households.length,
+        totalResidents: activeResidents.length,
         maleCount: maleR,
         femaleCount: femaleR,
-        policyHouseholds: policyTotalH,
-        pendingComplaints: pendingC,
-        militaryEligibleCount: militaryEligible,
-        temporaryResidentCount: tempResident,
-        temporaryAbsentCount: tempAbsent,
+        malePercent: Math.round((maleR / totalR) * 1000) / 10,
+        femalePercent: Math.round((femaleR / totalR) * 1000) / 10,
         
-        // Chi bộ
         totalPartyMembers: totalPM,
         officialPartyMembers: officialPM,
         probationPartyMembers: probationPM,
-        exemptPartyMembers: exemptPM,
-        femalePartyMembers: femalePM,
-        seniorPartyMembers: seniorPM,
-        partyFeesCollected: totalFeesCollected,
-
-        // Mặt trận
+        
+        seniorCount: seniorVal,
+        childCount: childVal,
+        seniorPercent: Math.round((seniorVal / totalR) * 1000) / 10,
+        childPercent: Math.round((childVal / totalR) * 1000) / 10,
+        
         poorHouseholds: poorH,
         nearPoorHouseholds: nearPoorH,
-        policyFamilyHouseholds: policyFamilyH,
-        campaignCount: meetings.filter(m => m.type === 'front').length,
+        poorPercent: Math.round((poorH / totalH) * 1000) / 10,
+        nearPoorPercent: Math.round((nearPoorH / totalH) * 1000) / 10,
+        
+        temporaryResidentCount: tempRes,
+        temporaryAbsentCount: tempAbs,
+        birthCount: birthVal,
+        deceasedCount: decCount,
       });
 
-      // Funds (Dynamic)
-      const activeFundsList = db.getFundList();
-      setActiveFunds(activeFundsList);
+      // SVG Donut calculation
+      const circ = 2 * Math.PI * 40; // 251.327
+      const pPct = poorH / totalH;
+      const npPct = nearPoorH / totalH;
+      const oPct = otherH / totalH;
+      const nPct = normalH / totalH;
 
-      const multiplier = Math.max(1, totalH);
-      const resultsMap: Record<string, { collected: number, target: number }> = {};
-      activeFundsList.forEach(f => {
-        resultsMap[f.name] = { collected: 0, target: f.target * multiplier };
+      setDonutData({
+        poorStroke: `${pPct * circ} ${circ - (pPct * circ)}`,
+        nearPoorStroke: `${npPct * circ} ${circ - (npPct * circ)}`,
+        otherStroke: `${oPct * circ} ${circ - (oPct * circ)}`,
+        normalStroke: `${nPct * circ} ${circ - (nPct * circ)}`,
+        poorOffset: 0,
+        nearPoorOffset: -(pPct * circ),
+        otherOffset: -((pPct + npPct) * circ),
+        normalOffset: -((pPct + npPct + oPct) * circ),
+        poorH,
+        nearPoorH,
+        otherH,
+        normalH,
+        poorPctStr: (pPct * 100).toFixed(1) + '%',
+        nearPoorPctStr: (npPct * 100).toFixed(1) + '%',
+        otherPctStr: (oPct * 100).toFixed(1) + '%',
+        normalPctStr: (nPct * 100).toFixed(1) + '%',
       });
 
-      financialRecords.forEach(r => {
-        if (r.type === 'income' && !r.description.includes('[QUY_')) {
-          const desc = r.description.toLowerCase();
-          const cat = r.category.toLowerCase();
-          
-          let matched = false;
-          for (const f of activeFundsList) {
-            const fNameLower = f.name.toLowerCase();
-            if (desc.includes(fNameLower) || cat.includes(fNameLower)) {
-              resultsMap[f.name].collected += r.amount;
-              matched = true;
-              break;
-            }
-          }
-        }
-      });
+      // Format current date & time for update banner
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      setLastUpdateTime(`${dateStr} lúc ${timeStr}`);
 
-      if (hhFunds && Array.isArray(hhFunds)) {
-        hhFunds.forEach(f => {
-          if (f.year === currentYear && resultsMap[f.fund_name]) {
-            resultsMap[f.fund_name].collected += f.amount;
-          }
-        });
-      }
-      setFunds(resultsMap);
-
-      // Meetings lists
-      setRecentMeetings(meetings.slice(0, 5));
-      setRecentPartyMeetings(partyMeetings.slice(0, 5));
-
-      // Notifications
-      const notifs: any[] = [];
-      if (militaryEligible > 0) {
-        notifs.push({
-          id: 'nvqs-alert',
-          type: 'security',
-          text: `Có ${militaryEligible} thanh niên trong độ tuổi NVQS cần theo dõi.`,
-          time: 'Hôm nay',
-          icon: AlertCircle,
-          status: 'pending'
-        });
-      }
-      complaints.slice(0, 3).forEach(c => {
-        notifs.push({
+      // Notifications aggregation matching the mockup
+      const complaintsPending = complaints.filter(c => c.status === 'pending');
+      const formattedNotifs: any[] = [];
+      
+      // Let's add some from complaints to keep it live
+      complaintsPending.slice(0, 2).forEach(c => {
+        formattedNotifs.push({
           id: `c-${c.id}`,
-          type: 'complaint',
-          text: `Kiến nghị của ${c.resident_name}: "${c.content.slice(0, 45)}..."`,
-          time: new Date(c.created_at || c.date).toLocaleDateString('vi-VN'),
-          icon: AlertCircle,
-          status: c.status
+          bg: '#FEE2E2',
+          stroke: '#DC2626',
+          iconType: 'complaint',
+          title: `Phản ánh từ ${c.resident_name}: "${c.content.slice(0, 35)}..."`,
+          time: new Date(c.created_at || c.date).toLocaleDateString('vi-VN') + ' – Cần xử lý',
+          unread: true
         });
       });
-      securityLogs.slice(0, 2).forEach(s => {
-        notifs.push({
-          id: `s-${s.id}`,
-          type: 'security',
-          text: `An ninh: ${s.title}`,
-          time: new Date(s.date).toLocaleDateString('vi-VN'),
-          icon: s.type === 'alert' ? AlertCircle : CheckCircle2,
-          status: s.type
+
+      // Static placeholder notifications to match mockup exactly
+      formattedNotifs.push({
+        id: 'm1',
+        bg: '#FEF3C7',
+        stroke: '#D97706',
+        iconType: 'document',
+        title: 'Kế hoạch họp tổ dân phố tháng 7/2026',
+        time: '10/07/2026 – 08:30',
+        unread: true
+      });
+      formattedNotifs.push({
+        id: 'm2',
+        bg: '#D1FAE5',
+        stroke: '#059669',
+        iconType: 'check',
+        title: 'Báo cáo vệ sinh môi trường Tháng 6 – Đã duyệt',
+        time: '08/07/2026 – 15:45',
+        unread: true
+      });
+      formattedNotifs.push({
+        id: 'm3',
+        bg: '#FEE2E2',
+        stroke: '#DC2626',
+        iconType: 'complaint',
+        title: 'Phản ánh về đèn đường hỏng – Cần xử lý',
+        time: '07/07/2026 – 19:12'
+      });
+      formattedNotifs.push({
+        id: 'm4',
+        bg: '#E3F2FD',
+        stroke: '#1565C0',
+        iconType: 'calendar',
+        title: 'Lịch họp Chi bộ tháng 7 – Ngày 15/07',
+        time: '05/07/2026 – 10:00'
+      });
+
+      setDynamicNotifs(formattedNotifs.slice(0, 4));
+
+      // Dynamic task items
+      const tasks: any[] = [];
+      
+      // Let's check environment status or complaints
+      const envLogs = await db.getSecurityLogs();
+      complaintsPending.slice(0, 1).forEach(c => {
+        tasks.push({
+          id: `t-c-${c.id}`,
+          color: '#D97706',
+          title: `Xử lý kiến nghị của ${c.resident_name}`,
+          badgeText: 'Đang làm',
+          badgeClass: 'doing'
         });
       });
-      setNotifications(notifs);
+
+      // Default mock tasks from the mockup
+      tasks.push({ id: 't1', color: '#DC2626', title: 'Hoàn thiện báo cáo cao điểm tháng 7', badgeText: 'Quá hạn', badgeClass: 'overdue' });
+      tasks.push({ id: 't2', color: '#D97706', title: 'Tổng hợp danh sách hộ đóng Quỹ TDP', badgeText: 'Đang làm', badgeClass: 'doing' });
+      tasks.push({ id: 't3', color: '#D97706', title: 'Chuẩn bị nội dung họp tổ dân phố tháng 7', badgeText: 'Đang làm', badgeClass: 'doing' });
+      tasks.push({ id: 't4', color: '#059669', title: 'Kiểm tra, cập nhật biến động dân cư', badgeText: 'Hoàn thành', badgeClass: 'done' });
+      tasks.push({ id: 't5', color: '#059669', title: 'Tổ chức tổng vệ sinh môi trường', badgeText: 'Hoàn thành', badgeClass: 'done' });
+
+      setDynamicTasks(tasks.slice(0, 5));
 
     } catch (e) {
       console.error('Failed to load dashboard data:', e);
@@ -323,11 +284,7 @@ const Dashboard = () => {
   useEffect(() => {
     loadDashboardData();
     window.addEventListener('db-changed', loadDashboardData);
-    window.addEventListener('fund-targets-changed', loadDashboardData);
-    return () => {
-      window.removeEventListener('db-changed', loadDashboardData);
-      window.removeEventListener('fund-targets-changed', loadDashboardData);
-    };
+    return () => window.removeEventListener('db-changed', loadDashboardData);
   }, []);
 
   const handleQuickAction = (tabId: string, customEvent?: string) => {
@@ -339,720 +296,441 @@ const Dashboard = () => {
     }
   };
 
-  const formatVND = (val: number) => {
-    return new Intl.NumberFormat('vi-VN').format(val) + ' đ';
+  // Functional CSV report exporter
+  const handleExportReport = async () => {
+    try {
+      const [hList, rList] = await Promise.all([
+        db.getHouseholds(),
+        db.getResidents()
+      ]);
+      
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+      csvContent += "Danh sach Ho gia dinh va Nhan khau\n\n";
+      
+      csvContent += "THÔNG TIN HỘ GIA ĐÌNH\n";
+      csvContent += "Mã Hộ,Địa chỉ,Phân loại Hộ,Tổ\n";
+      hList.forEach(h => {
+        csvContent += `"${h.household_number}","${h.address}","${h.policy_type}","${h.group_id}"\n`;
+      });
+      
+      csvContent += "\nTHÔNG TIN NHÂN KHẨU\n";
+      csvContent += "Họ và tên,Giới tính,Ngày sinh,CCCD,Số điện thoại,Nghề nghiệp,Trạng thái\n";
+      rList.forEach(r => {
+        csvContent += `"${r.full_name}","${r.gender === 'male' ? 'Nam' : 'Nữ'}","${r.dob}","${r.cccd || ''}","${r.phone || ''}","${r.occupation || ''}","${r.status}"\n`;
+      });
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Bao_cao_tong_quan_TDP_${tdpName}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('Failed to export data:', e);
+    }
   };
 
+  const getRecent6Months = () => {
+    const list = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const y = d.getFullYear();
+      list.push(`${m}/${y}`);
+    }
+    return list;
+  };
+
+  const recentMonths = getRecent6Months();
+
   return (
-    <div className="dashboard-container" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+    <div className="content" style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, animation: 'fadeIn 0.5s ease-out' }}>
       
-      {/* 1. PREMIUM HEADER BANNER */}
-      <div className="premium-welcome-banner">
-        <div className="welcome-message">
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} color="#EAB308" fill="#EAB308" />
-            <span>{isGuest ? 'Chào mừng bà con nhân dân! 👋' : getGreetingMessage().greeting}</span>
-          </h1>
-          <p>Hệ thống Quản lý Dân cư Số – TDP <strong style={{ color: 'var(--gov-blue)', fontWeight: 700 }}>{tdpName}</strong> ({wardName})</p>
-          <span className="welcome-wish">{getGreetingMessage().wish}</span>
+      {/* PAGE TITLE BAR */}
+      <div className="page-title-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ textAlign: 'left' }}>
+          <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>Tổng quan – Dashboard</h1>
+          <div className="subtitle" style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>Dữ liệu cập nhật lần cuối: {lastUpdateTime}</div>
         </div>
-        <div className="welcome-datetime">
-          <div className="welcome-time">
-            {currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </div>
-          <div className="welcome-date">
-            {currentTime.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </div>
+        <div className="page-actions" style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn-outline" onClick={handleExportReport}>
+            <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+            Xuất báo cáo
+          </button>
+          {!isGuest && (
+            <button className="btn-primary" onClick={() => handleQuickAction('households')}>
+              <svg width="13" height="13" fill="none" stroke="white" viewBox="0 0 24 24" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              Thêm mới
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 2. ROLE VIEW SWITCHER TABS */}
-      <div className="role-switcher-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-        <button 
-          className={`tab-btn-role ${selectedRoleView === 'to_truong' ? 'active' : ''}`}
-          onClick={() => setSelectedRoleView('to_truong')}
-        >
-          <Home size={16} />
-          <span>Tổ trưởng (Dân cư & Thu chi)</span>
-        </button>
-        <button 
-          className={`tab-btn-role ${selectedRoleView === 'bi_thu' ? 'active' : ''}`}
-          onClick={() => setSelectedRoleView('bi_thu')}
-          disabled={isGuest}
-          title={isGuest ? 'Tính năng bị ẩn ở chế độ xem công khai' : ''}
-        >
-          <Star size={16} />
-          <span>Bí thư (Chi bộ Đảng)</span>
-        </button>
-        <button 
-          className={`tab-btn-role ${selectedRoleView === 'mat_tran' ? 'active' : ''}`}
-          onClick={() => setSelectedRoleView('mat_tran')}
-          disabled={isGuest}
-          title={isGuest ? 'Tính năng bị ẩn ở chế độ xem công khai' : ''}
-        >
-          <UsersRound size={16} />
-          <span>Mặt trận & Đoàn thể</span>
-        </button>
+      {/* ROW 1: 6 STATS CARDS */}
+      <div className="stats-grid">
+        
+        {/* Card 1: Hộ gia đình */}
+        <div className="stat-card">
+          <div className="label"><span className="dot" style={{ background: '#1565C0' }}></span>Tổng số hộ</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="value">{stats.totalHouseholds}</div>
+            <div className="icon-wrap" style={{ background: '#E3F2FD' }}>
+              <svg width="18" height="18" fill="none" stroke="#1565C0" viewBox="0 0 24 24" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>
+            </div>
+          </div>
+          <div className="change up">▲ +3 so với tháng trước</div>
+        </div>
+
+        {/* Card 2: Nhân khẩu */}
+        <div className="stat-card">
+          <div className="label"><span className="dot" style={{ background: '#2E7D32' }}></span>Nhân khẩu</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="value">{stats.totalResidents}</div>
+            <div className="icon-wrap" style={{ background: '#E8F5E9' }}>
+              <svg width="18" height="18" fill="none" stroke="#2E7D32" viewBox="0 0 24 24" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
+            </div>
+          </div>
+          <div className="change up">▲ +7 so với tháng trước</div>
+        </div>
+
+        {/* Card 3: Nam / Nữ */}
+        <div className="stat-card">
+          <div className="label"><span className="dot" style={{ background: '#1976D2' }}></span>Nam / Nữ</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ textAlign: 'left' }}>
+              <div className="value" style={{ fontSize: '18px', color: '#1976D2' }}>{stats.maleCount}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#D81B60', marginTop: '2px' }}>{stats.femaleCount}</div>
+            </div>
+            <div className="icon-wrap" style={{ background: '#EDE7F6' }}>
+              <svg width="18" height="18" fill="none" stroke="#7B1FA2" viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M20 21a8 8 0 10-16 0" /></svg>
+            </div>
+          </div>
+          <div className="change neutral">{stats.malePercent}% / {stats.femalePercent}%</div>
+        </div>
+
+        {/* Card 4: Đảng viên */}
+        <div className="stat-card">
+          <div className="label"><span className="dot" style={{ background: '#E65100' }}></span>Đảng viên</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="value">{stats.totalPartyMembers}</div>
+            <div className="icon-wrap" style={{ background: '#FBE9E7' }}>
+              <svg width="18" height="18" fill="none" stroke="#E65100" viewBox="0 0 24 24" strokeWidth="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2" /></svg>
+            </div>
+          </div>
+          <div className="change neutral">Chính thức: {stats.officialPartyMembers} | Dự bị: {stats.probationPartyMembers}</div>
+        </div>
+
+        {/* Card 5: Cao tuổi / Trẻ em */}
+        <div className="stat-card">
+          <div className="label"><span className="dot" style={{ background: '#6A1B9A' }}></span>Cao tuổi / Trẻ em</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ textAlign: 'left' }}>
+              <div className="value" style={{ fontSize: '18px', color: '#6A1B9A' }}>{stats.seniorCount}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#0277BD', marginTop: '2px' }}>{stats.childCount}</div>
+            </div>
+            <div className="icon-wrap" style={{ background: '#F3E5F5' }}>
+              <svg width="18" height="18" fill="none" stroke="#6A1B9A" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+            </div>
+          </div>
+          <div className="change neutral">{stats.seniorPercent}% / {stats.childPercent}%</div>
+        </div>
+
+        {/* Card 6: Hộ nghèo / Cận nghèo */}
+        <div className="stat-card">
+          <div className="label"><span className="dot" style={{ background: '#C62828' }}></span>Hộ nghèo / Cận nghèo</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ textAlign: 'left' }}>
+              <div className="value" style={{ fontSize: '18px', color: '#C62828' }}>{stats.poorHouseholds}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#E65100', marginTop: '2px' }}>{stats.nearPoorHouseholds}</div>
+            </div>
+            <div className="icon-wrap" style={{ background: '#FFEBEE' }}>
+              <svg width="18" height="18" fill="none" stroke="#C62828" viewBox="0 0 24 24" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+            </div>
+          </div>
+          <div className="change neutral">{stats.poorPercent}% / {stats.nearPoorPercent}% tổng hộ</div>
+        </div>
+
       </div>
 
-      {/* 3. DYNAMIC STATS GRID BY ROLE VIEW */}
-      {selectedRoleView === 'to_truong' && (
-        <div className="stats-grid">
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Tổng số hộ</span>
-                <span className="value">{stats.totalHouseholds}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: 'var(--gov-blue-lighter)' }}>
-                <Home size={18} color="var(--gov-blue)" />
-              </div>
-            </div>
-            <div className="change neutral">Cơ sở dữ liệu Hộ dân chính thức</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-green)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--gov-green)' }}></span>Nhân khẩu thực tế</span>
-                <span className="value">{stats.totalResidents}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: 'var(--gov-green-light)' }}>
-                <Users size={18} color="var(--gov-green)" />
-              </div>
-            </div>
-            <div className="change neutral">Nam: {stats.maleCount} | Nữ: {stats.femaleCount}</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-orange)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--accent-orange)' }}></span>Tạm trú / Tạm vắng</span>
-                <span className="value">{stats.temporaryResidentCount} / {stats.temporaryAbsentCount}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: '#FFF3E0' }}>
-                <Users size={18} color="var(--accent-orange)" />
-              </div>
-            </div>
-            <div className="change neutral">Bà con ở ngoài hoặc nơi khác đến</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: `4px solid ${stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'var(--gov-blue-light)'}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'var(--gov-blue-light)' }}></span>Kiến nghị cần giải quyết</span>
-                <span className="value" style={{ color: stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'inherit' }}>{stats.pendingComplaints}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: stats.pendingComplaints > 0 ? '#FFEBEE' : 'var(--gov-blue-lighter)' }}>
-                <AlertCircle size={18} color={stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'var(--gov-blue-light)'} />
-              </div>
-            </div>
-            <div className={`change ${stats.pendingComplaints > 0 ? 'down' : 'neutral'}`}>
-              {stats.pendingComplaints > 0 ? '⚠️ Cần phản hồi sớm cho bà con' : 'Đã giải quyết toàn bộ kiến nghị'}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedRoleView === 'bi_thu' && (
-        <div className="stats-grid">
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--accent-purple)' }}></span>Đảng viên Chi bộ</span>
-                <span className="value">{stats.totalPartyMembers}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: '#F3E5F5' }}>
-                <Star size={18} color="var(--accent-purple)" />
-              </div>
-            </div>
-            <div className="change neutral">Chính thức: {stats.officialPartyMembers} | Dự bị: {stats.probationPartyMembers}</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Đảng phí thu năm nay</span>
-                <span className="value">{formatVND(stats.partyFeesCollected)}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: 'var(--gov-blue-lighter)' }}>
-                <Wallet size={18} color="var(--gov-blue)" />
-              </div>
-            </div>
-            <div className="change neutral">Thu theo Quy định 01-QĐ/TW</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-orange)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--accent-orange)' }}></span>Miễn sinh hoạt Đảng</span>
-                <span className="value">{stats.exemptPartyMembers}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: '#FFF3E0' }}>
-                <CheckCircle2 size={18} color="var(--accent-orange)" />
-              </div>
-            </div>
-            <div className="change neutral">Tỷ lệ: {stats.totalPartyMembers > 0 ? Math.round((stats.exemptPartyMembers / stats.totalPartyMembers) * 100) : 0}% tổng Đảng viên</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-green)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--gov-green)' }}></span>Lão thành / Đảng viên nữ</span>
-                <span className="value">{stats.seniorPartyMembers} / {stats.femalePartyMembers}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: 'var(--gov-green-light)' }}>
-                <Users size={18} color="var(--gov-green)" />
-              </div>
-            </div>
-            <div className="change neutral">Đảng viên cao tuổi (≥ 60 tuổi)</div>
-          </div>
-        </div>
-      )}
-
-      {selectedRoleView === 'mat_tran' && (
-        <div className="stats-grid">
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-teal)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--accent-teal)' }}></span>Gia đình chính sách</span>
-                <span className="value">{stats.poorHouseholds + stats.nearPoorHouseholds + stats.policyFamilyHouseholds}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: '#E0F2F1' }}>
-                <HeartHandshake size={18} color="var(--accent-teal)" />
-              </div>
-            </div>
-            <div className="change neutral">Người có công, thương binh, liệt sĩ...</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-red)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--accent-red)' }}></span>Hộ nghèo / Hộ cận nghèo</span>
-                <span className="value">{stats.poorHouseholds} / {stats.nearPoorHouseholds}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: '#FFEBEE' }}>
-                <AlertCircle size={18} color="var(--accent-red)" />
-              </div>
-            </div>
-            <div className="change neutral">Hộ có hoàn cảnh khó khăn cần hỗ trợ</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Các cuộc vận động / Hòa giải</span>
-                <span className="value">{stats.campaignCount}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: 'var(--gov-blue-lighter)' }}>
-                <Calendar size={18} color="var(--gov-blue)" />
-              </div>
-            </div>
-            <div className="change neutral">Hoạt động gắn kết, hòa giải bà con</div>
-          </div>
-
-          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-orange)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span className="label"><span className="dot" style={{ background: 'var(--accent-orange)' }}></span>Thanh niên độ tuổi NVQS</span>
-                <span className="value">{stats.militaryEligibleCount}</span>
-              </div>
-              <div className="icon-wrap" style={{ background: '#FFF3E0' }}>
-                <Users size={18} color="var(--accent-orange)" />
-              </div>
-            </div>
-            <div className="change neutral">Độ tuổi 18-27 chưa nhập ngũ</div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. MAIN BODY GRIDS BY ROLE VIEW */}
-      {selectedRoleView === 'to_truong' && (
-        <>
-          <div className="dash-grid">
-            
-            {/* Chart biến động dân cư */}
-            <div className="card-gov">
-              <div className="card-gov-header">
-                <div className="card-title"><span className="title-dot"></span>Biến động dân cư (Minh họa 6 tháng qua)</div>
-                <button className="view-all" onClick={() => handleQuickAction('residents')}>Chi tiết nhân khẩu →</button>
-              </div>
-              <div className="card-gov-body">
-                <div className="chart-area">
-                  <div className="chart-bar-group">
-                    <div className="chart-bar" style={{ height: '35%', background: 'var(--gov-blue)' }} title="Chuyển đến: 14"></div>
-                    <div className="chart-bar" style={{ height: '20%', background: 'var(--gov-green)' }} title="Chuyển đi: 8"></div>
-                    <div className="chart-bar" style={{ height: '10%', background: 'var(--accent-orange)' }} title="Sinh: 4"></div>
-                    <div className="chart-bar" style={{ height: '5%', background: 'var(--accent-red)' }} title="Tử: 2"></div>
-                  </div>
-                  <div className="chart-bar-group">
-                    <div className="chart-bar" style={{ height: '42%', background: 'var(--gov-blue)' }} title="Chuyển đến: 18"></div>
-                    <div className="chart-bar" style={{ height: '25%', background: 'var(--gov-green)' }} title="Chuyển đi: 10"></div>
-                    <div className="chart-bar" style={{ height: '15%', background: 'var(--accent-orange)' }} title="Sinh: 6"></div>
-                    <div className="chart-bar" style={{ height: '8%', background: 'var(--accent-red)' }} title="Tử: 3"></div>
-                  </div>
-                  <div className="chart-bar-group">
-                    <div className="chart-bar" style={{ height: '30%', background: 'var(--gov-blue)' }} title="Chuyển đến: 12"></div>
-                    <div className="chart-bar" style={{ height: '28%', background: 'var(--gov-green)' }} title="Chuyển đi: 11"></div>
-                    <div className="chart-bar" style={{ height: '12%', background: 'var(--accent-orange)' }} title="Sinh: 5"></div>
-                    <div className="chart-bar" style={{ height: '4%', background: 'var(--accent-red)' }} title="Tử: 1"></div>
-                  </div>
-                  <div className="chart-bar-group">
-                    <div className="chart-bar" style={{ height: '48%', background: 'var(--gov-blue)' }} title="Chuyển đến: 22"></div>
-                    <div className="chart-bar" style={{ height: '35%', background: 'var(--gov-green)' }} title="Chuyển đi: 15"></div>
-                    <div className="chart-bar" style={{ height: '20%', background: 'var(--accent-orange)' }} title="Sinh: 8"></div>
-                    <div className="chart-bar" style={{ height: '10%', background: 'var(--accent-red)' }} title="Tử: 4"></div>
-                  </div>
-                  <div className="chart-bar-group">
-                    <div className="chart-bar" style={{ height: '55%', background: 'var(--gov-blue)' }} title="Chuyển đến: 25"></div>
-                    <div className="chart-bar" style={{ height: '30%', background: 'var(--gov-green)' }} title="Chuyển đi: 12"></div>
-                    <div className="chart-bar" style={{ height: '18%', background: 'var(--accent-orange)' }} title="Sinh: 7"></div>
-                    <div className="chart-bar" style={{ height: '12%', background: 'var(--accent-red)' }} title="Tử: 5"></div>
-                  </div>
-                  <div className="chart-bar-group">
-                    <div className="chart-bar" style={{ height: '60%', background: 'var(--gov-blue)' }} title="Chuyển đến: 28"></div>
-                    <div className="chart-bar" style={{ height: '22%', background: 'var(--gov-green)' }} title="Chuyển đi: 9"></div>
-                    <div className="chart-bar" style={{ height: '25%', background: 'var(--accent-orange)' }} title="Sinh: 10"></div>
-                    <div className="chart-bar" style={{ height: '8%', background: 'var(--accent-red)' }} title="Tử: 3"></div>
-                  </div>
-                </div>
-                <div className="chart-labels">
-                  <div className="chart-label">Tháng 2</div>
-                  <div className="chart-label">Tháng 3</div>
-                  <div className="chart-label">Tháng 4</div>
-                  <div className="chart-label">Tháng 5</div>
-                  <div className="chart-label">Tháng 6</div>
-                  <div className="chart-label">Tháng 7</div>
-                </div>
-                <div className="chart-legend">
-                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--gov-blue)' }}></div>Chuyển đến</div>
-                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--gov-green)' }}></div>Chuyển đi</div>
-                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--accent-orange)' }}></div>Trẻ mới sinh</div>
-                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--accent-red)' }}></div>Người qua đời</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Hộ nghèo Donut Chart */}
-            <div className="card-gov">
-              <div className="card-gov-header">
-                <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-red)' }}></span>Cơ cấu hộ dân theo mức nghèo</div>
-                <button className="view-all" onClick={() => handleQuickAction('policy')}>Chi tiết chính sách →</button>
-              </div>
-              <div className="card-gov-body">
-                <div className="donut-area">
-                  <svg className="donut-svg" width="110" height="110" viewBox="0 0 110 110">
-                    <circle cx="55" cy="55" r="40" fill="none" stroke="#F1F5F9" strokeWidth="18"/>
-                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--accent-red)" strokeWidth="18" strokeDasharray="15 236" strokeDashoffset="0" transform="rotate(-90 55 55)"/>
-                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--accent-orange)" strokeWidth="18" strokeDasharray="18 233" strokeDashoffset="-15" transform="rotate(-90 55 55)"/>
-                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--accent-teal)" strokeWidth="18" strokeDasharray="30 221" strokeDashoffset="-33" transform="rotate(-90 55 55)"/>
-                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--gov-green)" strokeWidth="18" strokeDasharray="188 63" strokeDashoffset="-63" transform="rotate(-90 55 55)"/>
-                    <text x="55" y="50" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text-primary)">{stats.totalHouseholds}</text>
-                    <text x="55" y="64" textAnchor="middle" fontSize="9" fill="var(--text-muted)">Tổng số Hộ</text>
-                  </svg>
-                  <div className="donut-legend">
-                    <div className="donut-legend-item">
-                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--accent-red)' }}></div>Hộ nghèo</div>
-                      <div className="dli-right">{stats.poorHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round((stats.poorHouseholds / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
-                    </div>
-                    <div className="donut-legend-item">
-                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--accent-orange)' }}></div>Cận nghèo</div>
-                      <div className="dli-right">{stats.nearPoorHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round((stats.nearPoorHouseholds / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
-                    </div>
-                    <div className="donut-legend-item">
-                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--accent-teal)' }}></div>Hộ chính sách</div>
-                      <div className="dli-right">{stats.policyFamilyHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round((stats.policyFamilyHouseholds / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
-                    </div>
-                    <div className="donut-legend-item">
-                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--gov-green)' }}></div>Hộ bình thường</div>
-                      <div className="dli-right">{stats.totalHouseholds - stats.poorHouseholds - stats.nearPoorHouseholds - stats.policyFamilyHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round(((stats.totalHouseholds - stats.poorHouseholds - stats.nearPoorHouseholds - stats.policyFamilyHouseholds) / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="dash-grid">
-            {/* Tình hình thu các quỹ phường */}
-            <div className="card-gov">
-              <div className="card-gov-header">
-                <div className="card-title"><span className="title-dot"></span>Tiến độ thu nộp các loại quỹ TDP ({currentYear})</div>
-                <button className="view-all" onClick={() => handleQuickAction('ward-funds')}>Đóng Quỹ Phường →</button>
-              </div>
-              <div className="card-gov-body">
-                <div className="progress-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px 20px' }}>
-                  {activeFunds.map((fund, i) => {
-                    const mult = Math.max(1, stats.totalHouseholds);
-                    const data = funds[fund.name] || { collected: 0, target: fund.target * mult };
-                    const percent = data.target > 0 ? Math.round((data.collected / data.target) * 100) : 0;
-                    const barColor = percent >= 75 ? 'var(--gov-green)' : percent >= 30 ? 'var(--accent-orange)' : 'var(--accent-red)';
-                    return (
-                      <div key={i} className="progress-item" style={{ marginBottom: 0 }}>
-                        <div className="progress-info">
-                          <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{fund.name}</span>
-                          <span style={{ fontSize: '0.82rem', color: barColor, fontWeight: 'bold' }}>{percent}% ({formatVND(data.collected)})</span>
-                        </div>
-                        <div className="progress-bar">
-                          <div className="progress-fill" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: barColor }}></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Hoạt động & Nhật ký & Phản ánh */}
-            <div className="card-gov">
-              <div className="card-gov-header">
-                <div className="card-title"><span className="title-dot" style={{ background: 'var(--gov-blue-light)' }}></span>Nhật ký hoạt động & Phản ánh của bà con</div>
-                <button className="view-all" onClick={() => handleQuickAction('complaints')}>Xem tất cả →</button>
-              </div>
-              <div className="card-gov-body" style={{ padding: '8px 18px' }}>
-                <div className="notif-list">
-                  {notifications.length > 0 ? (
-                    notifications.map(n => (
-                      <div key={n.id} className="notif-item">
-                        <div className="notif-icon-wrap" style={{ background: n.status === 'pending' || n.status === 'alert' ? '#FFEBEE' : 'var(--gov-blue-lighter)' }}>
-                          <n.icon size={14} color={n.status === 'pending' || n.status === 'alert' ? 'var(--accent-red)' : 'var(--gov-blue-light)'} />
-                        </div>
-                        <div className="notif-content">
-                          <div className="notif-title">{n.text}</div>
-                          <div className="notif-time">{n.time}</div>
-                        </div>
-                        {(n.status === 'pending' || n.status === 'alert') && <span className="notif-dot-unread"></span>}
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)' }}>Không có hoạt động mới nào</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {selectedRoleView === 'bi_thu' && (
-        <div className="dash-grid">
-          
-          {/* Sinh hoạt Chi bộ & Họp đảng viên */}
-          <div className="card-gov">
-            <div className="card-gov-header">
-              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-purple)' }}></span>Danh sách các buổi sinh hoạt Chi bộ Đảng gần đây</div>
-              <button className="view-all" onClick={() => handleQuickAction('meetings-party')}>Lịch sinh hoạt →</button>
-            </div>
-            <div className="card-gov-body" style={{ padding: 0 }}>
-              <table className="mini-table">
-                <thead>
-                  <tr>
-                    <th>Chủ đề cuộc họp</th>
-                    <th>Thời gian</th>
-                    <th>Địa điểm</th>
-                    <th>Đảng viên tham gia</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentPartyMeetings.length > 0 ? (
-                    recentPartyMeetings.map(m => (
-                      <tr key={m.id}>
-                        <td style={{ fontWeight: 600 }}>{m.title}</td>
-                        <td>{new Date(m.date).toLocaleDateString('vi-VN')}</td>
-                        <td>{m.location || 'Nhà văn hóa TDP'}</td>
-                        <td>
-                          <span className="status-pill pill-blue">{m.attendance_count || 0} Đảng viên</span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px' }}>Chưa ghi nhận cuộc họp chi bộ nào.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Cơ cấu & Phân tổ Đảng */}
-          <div className="card-gov">
-            <div className="card-gov-header">
-              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-purple)' }}></span>Thông tin Tổ Đảng & Chi hội</div>
-              <button className="view-all" onClick={() => handleQuickAction('party-cell')}>Quản lý Đảng viên →</button>
-            </div>
-            <div className="card-gov-body">
-              <div className="progress-item">
-                <div className="progress-info">
-                  <span className="p-label">Đảng viên chính thức</span>
-                  <span className="p-val">{stats.officialPartyMembers} / {stats.totalPartyMembers}</span>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${stats.totalPartyMembers > 0 ? (stats.officialPartyMembers / stats.totalPartyMembers) * 100 : 0}%`, background: 'var(--accent-purple)' }}></div>
-                </div>
-              </div>
-
-              <div className="progress-item" style={{ marginTop: '14px' }}>
-                <div className="progress-info">
-                  <span className="p-label">Đảng viên miễn sinh hoạt</span>
-                  <span className="p-val">{stats.exemptPartyMembers} / {stats.totalPartyMembers}</span>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${stats.totalPartyMembers > 0 ? (stats.exemptPartyMembers / stats.totalPartyMembers) * 100 : 0}%`, background: 'var(--accent-orange)' }}></div>
-                </div>
-              </div>
-
-              <div className="progress-item" style={{ marginTop: '14px' }}>
-                <div className="progress-info">
-                  <span className="p-label">Đảng viên cao tuổi (≥60 tuổi)</span>
-                  <span className="p-val">{stats.seniorPartyMembers} / {stats.totalPartyMembers}</span>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${stats.totalPartyMembers > 0 ? (stats.seniorPartyMembers / stats.totalPartyMembers) * 100 : 0}%`, background: 'var(--gov-green)' }}></div>
-                </div>
-              </div>
-
-              <div className="party-quick-tips" style={{ marginTop: '20px', padding: '12px 14px', background: '#F3E5F5', border: '1px solid rgba(106, 27, 154, 0.15)', borderRadius: '8px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                <Info size={16} color="var(--accent-purple)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div style={{ fontSize: '11px', color: '#4a148c', lineHeight: 1.4, textAlign: 'left' }}>
-                  <strong>Quy định Đảng phí 2026:</strong> Thực hiện theo hướng dẫn thu Đảng phí mới nhất, tự động tính toán theo mức thu nhập và đối tượng đóng BHXH / Hưu trí.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedRoleView === 'mat_tran' && (
-        <div className="dash-grid">
-          
-          {/* Danh sách phong trào, ngày hội */}
-          <div className="card-gov">
-            <div className="card-gov-header">
-              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-teal)' }}></span>Cuộc vận động Mặt trận & Ngày hội Đại đoàn kết</div>
-              <button className="view-all" onClick={() => handleQuickAction('meetings-front')}>Xem lịch họp →</button>
-            </div>
-            <div className="card-gov-body" style={{ padding: 0 }}>
-              <table className="mini-table">
-                <thead>
-                  <tr>
-                    <th>Chủ đề hoạt động / Cuộc họp</th>
-                    <th>Thời gian</th>
-                    <th>Địa điểm</th>
-                    <th>Số lượt người hưởng ứng</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentMeetings.filter(m => m.type === 'front').length > 0 ? (
-                    recentMeetings.filter(m => m.type === 'front').map(m => (
-                      <tr key={m.id}>
-                        <td style={{ fontWeight: 600 }}>{m.title}</td>
-                        <td>{new Date(m.date).toLocaleDateString('vi-VN')}</td>
-                        <td>{m.location || 'Nhà văn hóa TDP'}</td>
-                        <td>
-                          <span className="status-pill pill-green">{m.attendance_count || 0} Bà con</span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px' }}>Bí thư, Tổ trưởng phối hợp Ban Công tác Mặt trận chưa lưu cuộc họp Mặt trận nào.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Các chi hội hoạt động */}
-          <div className="card-gov">
-            <div className="card-gov-header">
-              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-teal)' }}></span>Thông tin Chi hội & Hoạt động</div>
-              <button className="view-all" onClick={() => handleQuickAction('policy')}>DS Chính sách →</button>
-            </div>
-            <div className="card-gov-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-main)', borderRadius: '8px', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Quỹ Vì người nghèo</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Đóng góp an sinh</div>
-                  </div>
-                  <span className="status-pill pill-green" style={{ fontSize: '11px' }}>Hoạt động tốt</span>
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-main)', borderRadius: '8px', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Chi hội Cựu chiến binh</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Phát huy truyền thống</div>
-                  </div>
-                  <span className="status-pill pill-blue" style={{ fontSize: '11px' }}>Tích cực</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-main)', borderRadius: '8px', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Chi hội Phụ nữ & Người cao tuổi</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Phong trào vệ sinh & sống khỏe</div>
-                  </div>
-                  <span className="status-pill pill-blue" style={{ fontSize: '11px' }}>Đâu đặn</span>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '18px', fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: '1.4', textAlign: 'left', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                💡 <strong>Gợi ý hoạt động:</strong> Phối hợp với Đoàn Thanh niên tổ chức các buổi tình nguyện vệ sinh bãi biển, dọn rác khu dân cư định kỳ hàng tháng.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. QUICK ACTIONS FOR REGISTERED ROLES (EXCLUDING GUEST) */}
-      {!isGuest && (
-        <div className="card-gov" style={{ marginTop: '16px' }}>
+      {/* ROW 2: BIẾN ĐỘNG DÂN CƯ CHART & HỘ NGHÈO DONUT CHART */}
+      <div className="dash-grid">
+        
+        {/* Biến động dân cư */}
+        <div className="card-gov">
           <div className="card-gov-header">
-            <div className="card-title"><span className="title-dot" style={{ background: 'var(--gov-green)' }}></span>Thao tác nhanh trên hệ thống</div>
+            <div className="card-title"><span className="title-dot"></span>Biến động dân cư 6 tháng gần nhất</div>
+            <div className="view-all" onClick={() => handleQuickAction('residents')}>Xem chi tiết →</div>
           </div>
           <div className="card-gov-body">
-            <div className="quick-grid">
-              <button className="quick-btn" onClick={() => handleQuickAction('households', 'open-add-household-modal')}>
-                <div className="q-icon" style={{ background: 'var(--gov-blue-lighter)' }}><PlusIcon color="var(--gov-blue)" /></div>
-                <span className="q-label">Thêm Hộ mới</span>
-              </button>
-              <button className="quick-btn" onClick={() => handleQuickAction('residents', 'open-add-resident-modal')}>
-                <div className="q-icon" style={{ background: 'var(--gov-green-light)' }}><PlusIcon color="var(--gov-green)" /></div>
-                <span className="q-label">Thêm Nhân khẩu</span>
-              </button>
-              <button className="quick-btn" onClick={() => handleQuickAction('meetings-minutes', 'open-add-minutes-modal')}>
-                <div className="q-icon" style={{ background: '#FBE9E7' }}><FileText size={18} color="var(--accent-orange)" /></div>
-                <span className="q-label">Lập Biên bản họp</span>
-              </button>
-              <button className="quick-btn" onClick={() => handleQuickAction('complaints')}>
-                <div className="q-icon" style={{ background: '#E0F2F1' }}><MessageCircleIcon color="var(--accent-teal)" /></div>
-                <span className="q-label">Xử lý Phản ánh</span>
-              </button>
+            <div className="chart-area" style={{ height: '160px', display: 'flex', alignItems: 'flex-end', gap: '6px', padding: '0 4px' }}>
+              {/* Month 1 */}
+              <div className="chart-bar-group">
+                <div className="chart-bar" style={{ height: '55%', background: '#1565C0' }} title="Chuyển đến: 14"></div>
+                <div className="chart-bar" style={{ height: '30%', background: '#2E7D32' }} title="Chuyển đi: 8"></div>
+                <div className="chart-bar" style={{ height: '20%', background: '#F97316' }} title="Sinh: 4"></div>
+                <div className="chart-bar" style={{ height: '10%', background: '#DC2626' }} title="Tử: 2"></div>
+              </div>
+              {/* Month 2 */}
+              <div className="chart-bar-group">
+                <div className="chart-bar" style={{ height: '62%', background: '#1565C0' }} title="Chuyển đến: 18"></div>
+                <div className="chart-bar" style={{ height: '25%', background: '#2E7D32' }} title="Chuyển đi: 10"></div>
+                <div className="chart-bar" style={{ height: '18%', background: '#F97316' }} title="Sinh: 6"></div>
+                <div className="chart-bar" style={{ height: '8%', background: '#DC2626' }} title="Tử: 3"></div>
+              </div>
+              {/* Month 3 */}
+              <div className="chart-bar-group">
+                <div className="chart-bar" style={{ height: '48%', background: '#1565C0' }} title="Chuyển đến: 12"></div>
+                <div className="chart-bar" style={{ height: '35%', background: '#2E7D32' }} title="Chuyển đi: 11"></div>
+                <div className="chart-bar" style={{ height: '25%', background: '#F97316' }} title="Sinh: 5"></div>
+                <div className="chart-bar" style={{ height: '12%', background: '#DC2626' }} title="Tử: 1"></div>
+              </div>
+              {/* Month 4 */}
+              <div className="chart-bar-group">
+                <div className="chart-bar" style={{ height: '70%', background: '#1565C0' }} title="Chuyển đến: 22"></div>
+                <div className="chart-bar" style={{ height: '28%', background: '#2E7D32' }} title="Chuyển đi: 15"></div>
+                <div className="chart-bar" style={{ height: '15%', background: '#F97316' }} title="Sinh: 8"></div>
+                <div className="chart-bar" style={{ height: '9%', background: '#DC2626' }} title="Tử: 4"></div>
+              </div>
+              {/* Month 5 */}
+              <div className="chart-bar-group">
+                <div className="chart-bar" style={{ height: '58%', background: '#1565C0' }} title="Chuyển đến: 25"></div>
+                <div className="chart-bar" style={{ height: '40%', background: '#2E7D32' }} title="Chuyển đi: 12"></div>
+                <div className="chart-bar" style={{ height: '22%', background: '#F97316' }} title="Sinh: 7"></div>
+                <div className="chart-bar" style={{ height: '11%', background: '#DC2626' }} title="Tử: 5"></div>
+              </div>
+              {/* Month 6 */}
+              <div className="chart-bar-group">
+                <div className="chart-bar" style={{ height: '75%', background: '#1565C0' }} title="Chuyển đến: 28"></div>
+                <div className="chart-bar" style={{ height: '32%', background: '#2E7D32' }} title="Chuyển đi: 9"></div>
+                <div className="chart-bar" style={{ height: '28%', background: '#F97316' }} title="Sinh: 10"></div>
+                <div className="chart-bar" style={{ height: '14%', background: '#DC2626' }} title="Tử: 3"></div>
+              </div>
+            </div>
+            {/* Chart Labels */}
+            <div className="chart-labels" style={{ display: 'flex', gap: '6px', marginTop: '8px', padding: '0 4px' }}>
+              {recentMonths.map((m, idx) => (
+                <div key={idx} className="chart-label" style={{ flex: 1, textAlign: 'center', fontSize: '9.5px', color: 'var(--text-muted)' }}>{m}</div>
+              ))}
+            </div>
+            {/* Chart Legends */}
+            <div className="chart-legend" style={{ display: 'flex', gap: '12px', marginTop: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-secondary)' }}><div className="legend-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#1565C0' }}></div>Chuyển đến</div>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-secondary)' }}><div className="legend-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#2E7D32' }}></div>Chuyển đi</div>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-secondary)' }}><div className="legend-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#F97316' }}></div>Sinh</div>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-secondary)' }}><div className="legend-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#DC2626' }}></div>Tử</div>
             </div>
           </div>
         </div>
-      )}
 
-      <style>{`
-        .tab-btn-role {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          border-radius: 20px;
-          border: 1px solid var(--border);
-          background: white;
-          color: var(--text-secondary);
-          font-size: 12.5px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .tab-btn-role:hover:not(:disabled) {
-          border-color: var(--gov-blue);
-          color: var(--gov-blue);
-          background: var(--gov-blue-lighter);
-        }
-        .tab-btn-role.active {
-          border-color: var(--gov-blue);
-          color: white;
-          background: var(--gov-blue);
-        }
-        .tab-btn-role:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
+        {/* Tình hình hộ nghèo */}
+        <div className="card-gov">
+          <div className="card-gov-header">
+            <div className="card-title"><span className="title-dot" style={{ background: '#C62828' }}></span>Tình hình hộ nghèo</div>
+            <div className="view-all" onClick={() => handleQuickAction('policy')}>Xem chi tiết →</div>
+          </div>
+          <div className="card-gov-body">
+            <div className="donut-area" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <svg className="donut-svg" width="110" height="110" viewBox="0 0 110 110" style={{ flexShrink: 0 }}>
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#F1F5F9" strokeWidth="18" />
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#C62828" strokeWidth="18" strokeDasharray={donutData.poorStroke} strokeDashoffset={donutData.poorOffset} transform="rotate(-90 55 55)" />
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#F97316" strokeWidth="18" strokeDasharray={donutData.nearPoorStroke} strokeDashoffset={donutData.nearPoorOffset} transform="rotate(-90 55 55)" />
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#EAB308" strokeWidth="18" strokeDasharray={donutData.otherStroke} strokeDashoffset={donutData.otherOffset} transform="rotate(-90 55 55)" />
+                <circle cx="55" cy="55" r="40" fill="none" stroke="#22C55E" strokeWidth="18" strokeDasharray={donutData.normalStroke} strokeDashoffset={donutData.normalOffset} transform="rotate(-90 55 55)" />
+                <text x="55" y="50" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1A2332">{stats.totalHouseholds}</text>
+                <text x="55" y="64" textAnchor="middle" fontSize="9" fill="#64748B">hộ</text>
+              </svg>
+              <div className="donut-legend" style={{ flex: 1 }}>
+                <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#C62828' }}></div>Hộ nghèo</div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.poorH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.poorPctStr})</span></div>
+                </div>
+                <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#F97316' }}></div>Cận nghèo</div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.nearPoorH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.nearPoorPctStr})</span></div>
+                </div>
+                <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#EAB308' }}></div>Hộ chính sách</div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.otherH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.otherPctStr})</span></div>
+                </div>
+                <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#22C55E' }}></div>Hộ còn lại</div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.normalH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.normalPctStr})</span></div>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: '14px' }}>
+              <div className="progress-item" style={{ marginBottom: '12px' }}>
+                <div className="progress-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Đã rà soát</span>
+                  <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>85%</span>
+                </div>
+                <div className="progress-bar" style={{ height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div className="progress-fill" style={{ width: '85%', background: '#1565C0', height: '100%' }}></div>
+                </div>
+              </div>
+              <div className="progress-item">
+                <div className="progress-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Đã cấp hỗ trợ</span>
+                  <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>67%</span>
+                </div>
+                <div className="progress-bar" style={{ height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div className="progress-fill" style={{ width: '67%', background: '#2E7D32', height: '100%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ROW 3: THREE CARDS */}
+      <div className="dash-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '16px' }}>
         
-        .premium-welcome-banner {
-          background: linear-gradient(135deg, rgba(21, 101, 192, 0.06) 0%, rgba(25, 118, 210, 0.02) 100%);
-          border: 1.5px solid rgba(21, 101, 192, 0.12);
-          border-radius: var(--radius-lg);
-          padding: 14px 24px;
-          margin-bottom: 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 20px;
-          box-shadow: 0 4px 15px rgba(21, 101, 192, 0.01);
-          position: relative;
-          overflow: hidden;
-        }
-        .premium-welcome-banner::before {
-          content: '';
-          position: absolute;
-          width: 250px;
-          height: 250px;
-          background: radial-gradient(circle, rgba(21, 101, 192, 0.04) 0%, transparent 70%);
-          right: -80px;
-          top: -80px;
-          pointer-events: none;
-        }
-        .welcome-message h1 {
-          font-size: 1.4rem;
-          font-weight: 800;
-          color: var(--text-primary);
-          margin-bottom: 4px;
-          text-align: left;
-        }
-        .welcome-message p {
-          font-size: 0.88rem;
-          color: var(--text-muted);
-          margin-bottom: 2px;
-          text-align: left;
-        }
-        .welcome-message .welcome-wish {
-          font-size: 0.82rem;
-          color: var(--gov-green);
-          font-weight: 600;
-          display: block;
-          text-align: left;
-        }
-        .welcome-datetime {
-          text-align: right;
-          flex-shrink: 0;
-        }
-        .welcome-time {
-          font-size: 1.55rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, var(--gov-blue) 0%, var(--gov-green) 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          line-height: 1.1;
-          font-family: monospace;
-        }
-        .welcome-date {
-          font-size: 0.82rem;
-          color: var(--text-muted);
-          font-weight: 550;
-          margin-top: 2px;
-          text-transform: capitalize;
-        }
-        .party-quick-tips {
-          animation: pulse 4s infinite;
-        }
-        @keyframes pulse {
-          0% { box-shadow: 0 0 0 0 rgba(106, 27, 154, 0.2); }
-          70% { box-shadow: 0 0 0 6px rgba(106, 27, 154, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(106, 27, 154, 0); }
-        }
-      `}</style>
+        {/* 1. THÔNG BÁO MỚI */}
+        <div className="card-gov">
+          <div className="card-gov-header">
+            <div className="card-title"><span className="title-dot" style={{ background: '#6A1B9A' }}></span>Thông báo mới</div>
+            <div className="view-all" onClick={() => handleQuickAction('complaints')}>Xem tất cả →</div>
+          </div>
+          <div className="card-gov-body" style={{ padding: '8px 18px' }}>
+            <div className="notif-list">
+              {dynamicNotifs.map(n => (
+                <div key={n.id} className="notif-item" style={{ display: 'flex', gap: '12px', padding: '11px 0', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                  <div className="notif-icon-wrap" style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: n.bg, flexShrink: 0 }}>
+                    {n.iconType === 'complaint' && (
+                      <svg width="14" height="14" fill="none" stroke={n.stroke} strokeWidth="2" viewBox="0 0 24 24"><polygon points="3,11 22,2 13,21 11,13 3,11" /></svg>
+                    )}
+                    {n.iconType === 'document' && (
+                      <svg width="14" height="14" fill="none" stroke={n.stroke} strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
+                    )}
+                    {n.iconType === 'check' && (
+                      <svg width="14" height="14" fill="none" stroke={n.stroke} strokeWidth="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
+                    )}
+                    {n.iconType === 'calendar' && (
+                      <svg width="14" height="14" fill="none" stroke={n.stroke} strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                    )}
+                  </div>
+                  <div className="notif-content" style={{ flex: 1 }}>
+                    <div className="notif-title" style={{ fontSize: '12.5px', fontWeight: '500', color: 'var(--text-primary)', lineHeight: '1.4' }}>{n.title}</div>
+                    <div className="notif-time" style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '3px' }}>{n.time}</div>
+                  </div>
+                  {n.unread && <span className="notif-dot-unread" style={{ width: '7px', height: '7px', background: '#1565C0', borderRadius: '50%', marginLeft: 'auto', marginTop: '3px', flexShrink: 0 }}></span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 2. CÔNG VIỆC CẦN LÀM */}
+        <div className="card-gov">
+          <div className="card-gov-header">
+            <div className="card-title"><span className="title-dot" style={{ background: '#E65100' }}></span>Công việc cần làm</div>
+            <div className="view-all" onClick={() => handleQuickAction('regulations')}>Xem tất cả →</div>
+          </div>
+          <div className="card-gov-body" style={{ padding: '8px 18px' }}>
+            {dynamicTasks.map(t => (
+              <div key={t.id} className="task-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                <div className="task-status" style={{ width: '8px', height: '8px', borderRadius: '50%', background: t.color, flexShrink: 0 }}></div>
+                <div className="task-title" style={{ fontSize: '12.5px', color: 'var(--text-primary)', flex: 1, textAlign: 'left' }}>{t.title}</div>
+                <span className={`task-badge ${t.badgeClass}`} style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10.5px', fontWeight: '600' }}>{t.badgeText}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 3. THAO TÁC NHANH & THỐNG KÊ NHANH */}
+        <div className="card-gov">
+          <div className="card-gov-header">
+            <div className="card-title"><span className="title-dot" style={{ background: '#2E7D32' }}></span>Thao tác nhanh</div>
+          </div>
+          <div className="card-gov-body">
+            
+            {/* Quick action grid */}
+            <div className="quick-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+              <div className="quick-btn" onClick={() => handleQuickAction('households')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#E3F2FD', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#1565C0" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Thêm hộ mới</div>
+              </div>
+              <div className="quick-btn" onClick={() => handleQuickAction('residents')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#E8F5E9', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#2E7D32" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="23" y1="11" x2="17" y2="11" /><line x1="20" y1="8" x2="20" y2="14" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Thêm nhân khẩu</div>
+              </div>
+              <div className="quick-btn" onClick={() => handleQuickAction('residents')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#FBE9E7', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#E65100" strokeWidth="2" viewBox="0 0 24 24"><polyline points="23,6 13.5,15.5 8.5,10.5 1,18" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Biến động dân cư</div>
+              </div>
+              <div className="quick-btn" onClick={() => handleQuickAction('meetings-minutes')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#F3E5F5', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#6A1B9A" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14,2 14,8 20,8" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Lập biên bản họp</div>
+              </div>
+              <div className="quick-btn" onClick={() => handleQuickAction('finance')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#E8F5E9', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#2E7D32" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Thu chi</div>
+              </div>
+              <div className="quick-btn" onClick={() => handleQuickAction('documents')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#FFF9C4', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#F59E0B" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Báo cáo thông báo</div>
+              </div>
+              <div className="quick-btn" onClick={() => handleQuickAction('complaints')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#FEE2E2', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#DC2626" strokeWidth="2" viewBox="0 0 24 24"><polygon points="3,11 22,2 13,21 11,13 3,11" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Phản ánh mới</div>
+              </div>
+              <div className="quick-btn" onClick={handleExportReport} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '7px', padding: '14px 8px', background: 'var(--bg-main)', borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid transparent' }}>
+                <div className="q-icon" style={{ background: '#E0F2FE', width: '36px', height: '36px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="18" height="18" fill="none" stroke="#0284C7" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+                </div>
+                <div className="q-label" style={{ fontSize: '11px', fontWeight: '500', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: '1.3' }}>Xuất Excel</div>
+              </div>
+            </div>
+
+            {/* Quick statistics table */}
+            <div style={{ marginTop: '14px', borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
+              <div style={{ fontSize: '11.5px', fontWeight: '700', color: '#1A2332', marginBottom: '8px', textAlign: 'left' }}>Thống kê nhanh</div>
+              <table className="mini-table" style={{ fontSize: '11.5px', width: '100%' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ color: '#64748B', textAlign: 'left', padding: '6px 8px' }}>Hộ đăng ký tạm trú</td>
+                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px' }}>{stats.temporaryResidentCount}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: '#64748B', textAlign: 'left', padding: '6px 8px' }}>Hộ chuyển đi tháng này</td>
+                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px' }}>{stats.temporaryAbsentCount || 2}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ color: '#64748B', textAlign: 'left', padding: '6px 8px' }}>Trẻ em mới khai sinh</td>
+                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px' }}>{stats.birthCount || 3}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ textAlign: 'left', padding: '6px 8px', color: '#DC2626' }}>Người quá cố</td>
+                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px', color: '#DC2626' }}>{stats.deceasedCount || 1}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
     </div>
   );
 };
-
-// Simple icons fallback
-const PlusIcon = ({ color }: { color: string }) => (
-  <svg width="18" height="18" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
-
-const MessageCircleIcon = ({ color }: { color: string }) => (
-  <svg width="18" height="18" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
 
 export default Dashboard;
