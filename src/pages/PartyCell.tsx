@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs';
 import { partyDb, generateUUID } from '../services/db';
 import type { PartyMember, PartyMeeting, PartyEvaluation, PartyFee } from '../services/db';
 import { db } from '../services/db';
-import type { Resident } from '../types';
+import type { Resident, Household } from '../types';
 import { showToast } from '../utils/toast';
 import {
   Star, Users, Calendar, BarChart2, DollarSign, Plus, Pencil, Trash2,
@@ -618,9 +618,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   const [members, setMembers] = useState<PartyMember[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [selectedPartyGroup, setSelectedPartyGroup] = useState<string>('all');
 
   // Debounce searchInput -> search (debouncedSearch)
   useEffect(() => {
@@ -660,7 +662,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [m, r] = await Promise.all([partyDb.getPartyMembers(), db.getResidents()]);
+      const [m, r, h] = await Promise.all([
+        partyDb.getPartyMembers(), 
+        db.getResidents(),
+        db.getHouseholds()
+      ]);
       
       // 1. Clean in-memory instantly (takes < 1ms)
       const corrupted: PartyMember[] = [];
@@ -677,6 +683,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       setMembers(cleanedMembers);
       setResidents(r);
+      setHouseholds(h);
       setLoading(false);
 
       // 2. Background cleanup in database (sequential, non-blocking to UI)
@@ -830,14 +837,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       const worksheet = workbook.addWorksheet('Danh sách đảng viên');
 
       // Title header rows (for premium look)
-      worksheet.mergeCells('A1:L1');
+      worksheet.mergeCells('A1:M1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = `DANH SÁCH ĐẢNG VIÊN CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`;
       titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF991B1B' } };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(1).height = 35;
 
-      worksheet.mergeCells('A2:L2');
+      worksheet.mergeCells('A2:M2');
       const subCell = worksheet.getCell('A2');
       subCell.value = `Thời gian xuất bản: ${new Date().toLocaleDateString('vi-VN')} - Tổng cộng: ${filtered.length} đảng viên`;
       subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
@@ -850,7 +857,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Headers definition
       const headers = [
-        "STT", "Họ và tên", "Ngày tháng năm sinh", "Số thẻ Đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
+        "STT", "Họ và tên", "Ngày tháng năm sinh", "Số thẻ Đảng", "Tên cơ sở đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
         "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
       ];
       
@@ -896,6 +903,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           m.full_name,
           dobStr,
           m.party_code || '',
+          `Chi bộ Tổ dân phố ${tdpName}`,
           POSITION_LABEL[m.position] || m.position,
           m.probation_date ? fmtDate(m.probation_date) : '',
           m.join_date ? fmtDate(m.join_date) : '',
@@ -926,14 +934,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           // Alignments
           if (colNumber === 1) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          } else if (colNumber === 2 || colNumber === 10 || colNumber === 12) {
-            cell.alignment = { vertical: 'middle', horizontal: colNumber === 10 ? 'right' : 'left' };
+          } else if (colNumber === 2 || colNumber === 5 || colNumber === 11 || colNumber === 13) {
+            cell.alignment = { vertical: 'middle', horizontal: colNumber === 11 ? 'right' : 'left' };
           } else {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
 
           // Format numbers
-          if (colNumber === 10) {
+          if (colNumber === 11) {
             cell.numFmt = '#,##0';
           }
           if (colNumber === 4) {
@@ -953,7 +961,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Auto-fit columns
       worksheet.columns.forEach((column, colIdx) => {
-        if (colIdx > 11) return;
+        if (colIdx > 12) return;
         let maxLen = colIdx === 0 ? 6 : 12;
         column.values?.forEach((v, rowIdx) => {
           if (rowIdx <= 4) return;
@@ -1310,17 +1318,40 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     if (isNaN(yr)) return 0;
     return currentYear - yr;
   };
+  const getMemberPartyGroup = useCallback((m: PartyMember): string => {
+    const res = residents.find(r => r.id === m.resident_id);
+    if (!res) return 'Chưa phân tổ';
+    const hh = households.find(h => h.id === res.household_id);
+    if (!hh || !hh.self_management_group?.trim()) return 'Chưa phân tổ';
+    return hh.self_management_group.trim();
+  }, [residents, households]);
+
+  const uniquePartyGroups = useMemo(() => {
+    const groups = new Set<string>();
+    members.forEach(m => {
+      groups.add(getMemberPartyGroup(m));
+    });
+    return Array.from(groups).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [members, getMemberPartyGroup]);
 
   const filtered = useMemo(() => members.filter(m => {
     const matchesSearch = m.full_name.toLowerCase().includes(search.toLowerCase()) ||
                           (m.party_code || '').includes(search);
     if (!matchesSearch) return false;
 
-    if (!filterMilestones) return true;
-    const age = getPartyAge(m);
-    const milestones = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120];
-    return milestones.includes(age);
-  }), [members, search, filterMilestones]);
+    if (filterMilestones) {
+      const age = getPartyAge(m);
+      const milestones = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120];
+      if (!milestones.includes(age)) return false;
+    }
+
+    if (selectedPartyGroup !== 'all') {
+      const group = getMemberPartyGroup(m);
+      if (group !== selectedPartyGroup) return false;
+    }
+
+    return true;
+  }), [members, search, filterMilestones, selectedPartyGroup, getMemberPartyGroup]);
 
   const stats = {
     total: members.filter(m => m.status !== 'deceased').length,
@@ -1641,6 +1672,35 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           >
             🎖️ {filterMilestones ? 'Đang lọc Huy hiệu (30 - 120 năm)' : 'Lọc Huy hiệu (30 - 120 năm)'}
           </button>
+
+          {/* Bộ lọc Tổ đảng */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '38px' }}>
+            <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>Tổ đảng:</span>
+            <select
+              value={selectedPartyGroup}
+              onChange={e => setSelectedPartyGroup(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: selectedPartyGroup !== 'all' ? '1px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.15)',
+                background: selectedPartyGroup !== 'all' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(15, 23, 42, 0.6)',
+                color: selectedPartyGroup !== 'all' ? '#93c5fd' : '#f8fafc',
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                height: '38px',
+                outline: 'none',
+                transition: 'all 0.2s ease-in-out'
+              }}
+            >
+              <option value="all" style={{ backgroundColor: '#1e293b', color: '#f8fafc' }}>Tất cả các tổ</option>
+              {uniquePartyGroups.map(g => (
+                <option key={g} value={g} style={{ backgroundColor: '#1e293b', color: '#f8fafc' }}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
