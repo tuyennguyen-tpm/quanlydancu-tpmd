@@ -1412,6 +1412,16 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         const yr = new Date(dateStr).getFullYear();
         if (!isNaN(yr)) tuoiDangStr = `${currentYear - yr} năm`;
       }
+
+      // Tự động tính lùi 1 năm từ ngày chính thức nếu ngày kết nạp bị trống
+      let probationDateStr = fmtDate(m.probation_date);
+      if (probationDateStr === '—' && m.join_date) {
+        const joinDt = new Date(m.join_date);
+        if (!isNaN(joinDt.getTime())) {
+          joinDt.setFullYear(joinDt.getFullYear() - 1);
+          probationDateStr = fmtDate(joinDt.toISOString().slice(0, 10));
+        }
+      }
       
       return `
         <tr>
@@ -1419,7 +1429,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           <td style="border: 1px solid #000; padding: 6px;"><strong>${m.full_name}</strong></td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${m.party_code || '—'}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${getMemberPartyGroup(m)}</td>
-          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${fmtDate(m.probation_date)}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${probationDateStr}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${fmtDate(m.join_date)}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${STATUS_LABEL[m.status] || m.status}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${tuoiDangStr}</td>
