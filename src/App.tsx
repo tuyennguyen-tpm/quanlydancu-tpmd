@@ -1328,7 +1328,7 @@ const App = () => {
     { id: 'youth-union', icon: Zap, label: 'Đoàn Thanh niên', group: 'Tổ chức - Đoàn thể' },
     { id: 'documents', icon: FileText, label: 'Văn bản', group: 'Điều hành' },
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
-    { id: 'regulations', icon: Check, label: 'Công việc', group: 'Điều hành', badge: 3, badgeColor: '#f97316' },
+    { id: 'regulations', icon: Check, label: 'Quy định & Nhiệm vụ', group: 'Điều hành', badge: 3, badgeColor: '#f97316' },
     { id: 'finance', icon: Wallet, label: 'Thu chi', group: 'Tài chính' },
     { id: 'ward-funds', icon: Wallet, label: 'Quỹ nộp phường', group: 'Tài chính' },
     { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount, badgeColor: '#ef4444' },
@@ -1336,7 +1336,10 @@ const App = () => {
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
   ].filter(item => {
     if (isGuestMode) {
-      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds'].includes(item.id);
+      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'settings'].includes(item.id);
+    }
+    if (item.id === 'settings') {
+      return userRole === 'to_truong' || userRole === 'admin';
     }
     return true;
   });
