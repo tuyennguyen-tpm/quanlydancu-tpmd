@@ -1655,11 +1655,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             style={{
               padding: '6px 16px',
               borderRadius: '8px',
-              border: filterMilestones ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
-              background: filterMilestones ? 'rgba(239, 68, 68, 0.25)' : 'rgba(15, 23, 42, 0.6)',
-              color: filterMilestones ? '#fca5a5' : '#f8fafc',
+              border: filterMilestones ? '1.5px solid #dc2626' : '1.5px solid #cbd5e1',
+              background: filterMilestones ? '#ef4444' : '#ffffff',
+              color: filterMilestones ? '#ffffff' : '#1e293b',
               fontSize: '0.85rem',
-              fontWeight: '600',
+              fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -1675,27 +1675,27 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
           {/* Bộ lọc Tổ đảng */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '38px' }}>
-            <span style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '600' }}>Tổ đảng:</span>
+            <span style={{ fontSize: '0.85rem', color: '#1e293b', fontWeight: 'bold' }}>Tổ đảng:</span>
             <select
               value={selectedPartyGroup}
               onChange={e => setSelectedPartyGroup(e.target.value)}
               style={{
                 padding: '6px 12px',
                 borderRadius: '8px',
-                border: selectedPartyGroup !== 'all' ? '1px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.15)',
-                background: selectedPartyGroup !== 'all' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(15, 23, 42, 0.6)',
-                color: selectedPartyGroup !== 'all' ? '#93c5fd' : '#f8fafc',
+                border: selectedPartyGroup !== 'all' ? '1.5px solid #1d4ed8' : '1.5px solid #cbd5e1',
+                background: selectedPartyGroup !== 'all' ? '#2563eb' : '#ffffff',
+                color: selectedPartyGroup !== 'all' ? '#ffffff' : '#1e293b',
                 fontSize: '0.85rem',
-                fontWeight: '600',
+                fontWeight: '700',
                 cursor: 'pointer',
                 height: '38px',
                 outline: 'none',
                 transition: 'all 0.2s ease-in-out'
               }}
             >
-              <option value="all" style={{ backgroundColor: '#1e293b', color: '#f8fafc' }}>Tất cả các tổ</option>
+              <option value="all" style={{ backgroundColor: '#ffffff', color: '#1e293b' }}>Tất cả các tổ</option>
               {uniquePartyGroups.map(g => (
-                <option key={g} value={g} style={{ backgroundColor: '#1e293b', color: '#f8fafc' }}>
+                <option key={g} value={g} style={{ backgroundColor: '#ffffff', color: '#1e293b' }}>
                   {g}
                 </option>
               ))}
