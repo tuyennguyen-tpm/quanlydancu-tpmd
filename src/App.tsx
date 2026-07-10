@@ -83,8 +83,7 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge, badgeColor }: NavI
     <Icon size={18} style={{ flexShrink: 0, opacity: active ? 1 : 0.85 }} />
     <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
     {badge !== undefined && badge > 0 && (
-      <span style={{
-        marginLeft: 'auto',
+      <span className="badge" style={{
         background: badgeColor || '#22c55e',
         color: 'white',
         fontSize: '12px',

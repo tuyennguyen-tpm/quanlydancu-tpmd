@@ -84,8 +84,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px 9px 16px;
+  padding: 9px 40px 9px 16px;
   margin: 1px 4px;
+  width: calc(100% - 8px);
+  box-sizing: border-box;
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.85);
   font-size: 14.5px;
@@ -112,6 +114,15 @@
   background-color: rgba(255, 255, 255, 0.15);
   color: white;
   font-weight: 700;
+}
+
+.nav-item .badge {
+  position: absolute !important;
+  right: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+  z-index: 10;
 }
 
 .badge {
