@@ -1305,7 +1305,7 @@ const App = () => {
   const menuItems = [
     { id: 'Bảng điều khiển', icon: PieChart, label: 'Bảng điều khiển', group: 'Tổng quan' },
     { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount, badgeColor: '#22c55e' },
-    { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount, badgeColor: '#3b82f6' },
+    { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount, badgeColor: '#22c55e' },
     { id: 'residents-temp', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6, badgeColor: '#f97316' },
     { id: 'residents-changes', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
     { id: 'policy', icon: ShieldCheck, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
@@ -1323,7 +1323,7 @@ const App = () => {
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
   ].filter(item => {
     if (isGuestMode) {
-      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'women-association', 'ccb-elderly'].includes(item.id);
+      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds'].includes(item.id);
     }
     return true;
   });
@@ -1433,6 +1433,7 @@ const App = () => {
                       }
                     }}
                     badge={item.badge}
+                    badgeColor={item.badgeColor}
                   />
                 ))}
               </div>

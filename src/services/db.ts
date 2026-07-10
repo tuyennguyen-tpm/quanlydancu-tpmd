@@ -1390,9 +1390,11 @@ export const db = {
     };
     if (supabase) {
       try {
+        const uId = await getSessionUserId();
+        const payload = { ...fullFund, user_id: uId };
         const { data, error } = await supabase
           .from('ward_funds')
-          .upsert(fullFund)
+          .upsert(payload)
           .select()
           .single();
         if (error) throw error;
@@ -1414,9 +1416,11 @@ export const db = {
   saveWardFundsBatch: async (funds: WardFund[]): Promise<boolean> => {
     if (supabase) {
       try {
+        const uId = await getSessionUserId();
+        const payload = funds.map(f => ({ ...f, user_id: uId }));
         const { error } = await supabase
           .from('ward_funds')
-          .upsert(funds);
+          .upsert(payload);
         if (error) throw error;
         return true;
       } catch (e) {
