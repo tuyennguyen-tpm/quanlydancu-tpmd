@@ -869,7 +869,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Headers definition
       const headers = [
-        "STT", "Họ và tên", "Ngày tháng năm sinh", "Số thẻ Đảng", "Tên cơ sở đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
+        "STT", "Họ và tên", "Ngày tháng năm sinh", "Số thẻ Đảng", "Tổ đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
         "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
       ];
       
@@ -915,7 +915,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           m.full_name,
           dobStr,
           m.party_code || '',
-          `Chi bộ Tổ dân phố ${tdpName}`,
+          getMemberPartyGroup(m),
           POSITION_LABEL[m.position] || m.position,
           m.probation_date ? fmtDate(m.probation_date) : '',
           m.join_date ? fmtDate(m.join_date) : '',
