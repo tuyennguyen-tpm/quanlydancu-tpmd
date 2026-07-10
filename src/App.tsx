@@ -1317,7 +1317,7 @@ const App = () => {
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
     { id: 'regulations', icon: Check, label: 'Công việc', group: 'Điều hành', badge: 3, badgeColor: '#f97316' },
     { id: 'finance', icon: Wallet, label: 'Thu chi', group: 'Tài chính' },
-    { id: 'ward-funds', icon: Wallet, label: 'Quỹ cộng đồng', group: 'Tài chính' },
+    { id: 'ward-funds', icon: Wallet, label: 'Quỹ phường', group: 'Tài chính' },
     { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount, badgeColor: '#ef4444' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
@@ -1426,7 +1426,7 @@ const App = () => {
                     active={activeTab === item.id}
                     onClick={() => {
                       if (item.id === 'settings') {
-                        setSettingsOpen(true);
+                        handleOpenSettings();
                       } else {
                         setActiveTab(item.id);
                         if (window.innerWidth <= 768) setSidebarOpen(false);
