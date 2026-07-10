@@ -27,6 +27,9 @@ import {
   Home, 
   UserCircle, 
   ShieldCheck, 
+  Shield,
+  UserPlus,
+  MapPin,
   MessageSquare, 
   Leaf, 
   Wallet, 
@@ -84,9 +87,9 @@ const NavItem = ({ icon: Icon, label, active, onClick, badge, badgeColor }: NavI
         marginLeft: 'auto',
         background: badgeColor || '#22c55e',
         color: 'white',
-        fontSize: '10px',
-        fontWeight: 700,
-        padding: '1px 6px',
+        fontSize: '12px',
+        fontWeight: 800,
+        padding: '2px 8px',
         borderRadius: '20px',
         minWidth: '18px',
         textAlign: 'center',
@@ -972,11 +975,11 @@ const App = () => {
     await db.saveFundList(mappedFunds);
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
 
-    // Kiểm tra tính hợp lệ của các loại quỹ Phường
+    // Kiểm tra tính hợp lệ của các loại quỹ nộp Phường
     const hasEmptyWardFundName = wardFundsConfig.some(f => !f.name.trim());
     if (hasEmptyWardFundName) {
       window.dispatchEvent(new CustomEvent('show-toast', { 
-        detail: { message: `Tên các loại quỹ Phường không được bỏ trống!`, type: 'warning' } 
+        detail: { message: `Tên các loại quỹ nộp Phường không được bỏ trống!`, type: 'warning' } 
       }));
       return;
     }
@@ -1307,18 +1310,18 @@ const App = () => {
     { id: 'Bảng điều khiển', icon: PieChart, label: 'Bảng điều khiển', group: 'Tổng quan' },
     { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount, badgeColor: '#22c55e' },
     { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount, badgeColor: '#22c55e' },
-    { id: 'residents-temp', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6, badgeColor: '#f97316' },
+    { id: 'residents-temp', icon: MapPin, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6, badgeColor: '#f97316' },
     { id: 'residents-changes', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
-    { id: 'policy', icon: ShieldCheck, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
+    { id: 'policy', icon: Shield, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
     { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount || 27, badgeColor: '#ef4444' },
-    { id: 'meetings-front', icon: UsersRound, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
+    { id: 'meetings-front', icon: UserPlus, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
     { id: 'women-association', icon: Heart, label: 'Hội Phụ nữ', group: 'Tổ chức - Đoàn thể' },
     { id: 'ccb-elderly', icon: UserCircle, label: 'CCB – Người cao tuổi', group: 'Tổ chức - Đoàn thể' },
     { id: 'documents', icon: FileText, label: 'Văn bản', group: 'Điều hành' },
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
     { id: 'regulations', icon: Check, label: 'Công việc', group: 'Điều hành', badge: 3, badgeColor: '#f97316' },
     { id: 'finance', icon: Wallet, label: 'Thu chi', group: 'Tài chính' },
-    { id: 'ward-funds', icon: Wallet, label: 'Quỹ phường', group: 'Tài chính' },
+    { id: 'ward-funds', icon: Wallet, label: 'Quỹ nộp phường', group: 'Tài chính' },
     { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount, badgeColor: '#ef4444' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
@@ -1887,7 +1890,7 @@ const App = () => {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                    🎯 Danh mục Quỹ Phường giao & Chỉ tiêu (VNĐ/Người)
+                    🎯 Danh mục Quỹ nộp Phường giao & Chỉ tiêu (VNĐ/Người)
                   </div>
                   <button
                     type="button"
@@ -1895,7 +1898,7 @@ const App = () => {
                     className="btn btn-primary"
                     style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', height: 'fit-content', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
                   >
-                    <Plus size={14} /> Thêm Quỹ Phường
+                    <Plus size={14} /> Thêm Quỹ nộp Phường
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1903,7 +1906,7 @@ const App = () => {
                     <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <input
                         type="text"
-                        placeholder="Tên quỹ Phường (Ví dụ: Quỹ phòng chống thiên tai)"
+                        placeholder="Tên quỹ nộp Phường (Ví dụ: Quỹ phòng chống thiên tai)"
                         value={fund.name}
                         onChange={(e) => handleWardFundConfigChange(idx, 'name', e.target.value)}
                         style={{ flex: 3, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
@@ -1942,7 +1945,7 @@ const App = () => {
                   ))}
                   {wardFundsConfig.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                      Chưa cấu hình loại quỹ Phường nào. Hãy bấm "Thêm Quỹ Phường" để tạo mới.
+                      Chưa cấu hình loại quỹ nộp Phường nào. Hãy bấm "Thêm Quỹ nộp Phường" để tạo mới.
                     </div>
                   )}
                 </div>
