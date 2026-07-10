@@ -12,7 +12,8 @@ import {
   AlertTriangle,
   FileSpreadsheet,
   RefreshCw,
-  Coins
+  Coins,
+  Printer
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -763,6 +764,248 @@ const WardFunds = () => {
     }
   };
 
+  const handlePrintList = () => {
+    if (filteredFunds.length === 0) {
+      showToast('Danh sách trống, không thể in!', 'warning');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+    const wardName = localStorage.getItem('ward_name') || 'Phường Quảng Giao';
+    const leaderName = localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến';
+    const leaderSigUrl = localStorage.getItem('leader_sig_url') || '';
+
+    const rowsHtml = filteredFunds.map((item, index) => {
+      const fundContributions = activeFunds.map(fund => {
+        const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+        return `<td style="text-align: right;">${formatCurrency(contrib.actual)} / ${formatCurrency(contrib.expected)}</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="text-align: center;">${index + 1}</td>
+          <td style="font-weight: bold;">${item.full_name}</td>
+          <td style="text-align: center;">${item.dob || '-'}</td>
+          <td>${item.address || '-'}</td>
+          ${fundContributions}
+          <td>${item.note || ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const fundsHeaderCols = activeFunds.map(fund => `<th style="width: 15%;">${fund.name} (đ)</th>`).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Danh sách đóng góp Quỹ Phường Năm ${selectedYear}</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 landscape;
+              margin: 0;
+            }
+            body {
+              margin: 12mm 8mm 12mm 8mm;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12px;
+            line-height: 1.3;
+            color: #000;
+            margin: 0;
+            padding: 10px;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .org-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+          }
+          .motto {
+            text-align: center;
+            font-size: 12px;
+          }
+          .motto-main {
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .motto-sub {
+            font-weight: bold;
+          }
+          .line-separator {
+            width: 80px;
+            height: 1px;
+            background-color: #000;
+            margin: 4px auto 0 auto;
+          }
+          .line-separator-long {
+            width: 150px;
+            height: 1px;
+            background-color: #000;
+            margin: 4px auto 0 auto;
+          }
+          .doc-title-container {
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 15px;
+          }
+          .doc-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 5px 0;
+          }
+          .doc-subtitle {
+            font-style: italic;
+            font-size: 12px;
+            margin: 0;
+          }
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+          }
+          .data-table th, .data-table td {
+            border: 1px solid #000;
+            padding: 6px 6px;
+            font-size: 11px;
+            vertical-align: middle;
+          }
+          .data-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+            text-transform: uppercase;
+          }
+          .signature-section {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            page-break-inside: avoid;
+          }
+          .signature-section td {
+            border: none;
+            text-align: center;
+            width: 50%;
+            font-size: 12px;
+            vertical-align: top;
+          }
+          .signature-title {
+            font-weight: bold;
+            margin-bottom: 60px;
+          }
+          .signature-name {
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="width: 45%;">
+              <div class="org-title">
+                ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}<br/>
+                TỔ DÂN PHỐ ${tdpName.toUpperCase()}
+                <div class="line-separator"></div>
+              </div>
+            </td>
+            <td style="width: 10%;">&nbsp;</td>
+            <td style="width: 45%;">
+              <div class="motto">
+                <div class="motto-main">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div class="motto-sub">Độc lập - Tự do - Hạnh phúc</div>
+                <div class="line-separator-long"></div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="doc-title-container">
+          <h1 class="doc-title">DANH SÁCH THEO DÕI ĐÓNG GÓP QUỸ PHƯỜNG NĂM ${selectedYear}</h1>
+          <p class="doc-subtitle">Tổ dân phố: ${tdpName} ${groupFilter !== 'all' ? `| Tổ: ${groupFilter}` : ''} | Trạng thái: ${filterStatus === 'paid_all' ? 'Đã nộp đủ' : filterStatus === 'unpaid_any' ? 'Chưa nộp đủ' : 'Tất cả'}</p>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 4%;">STT</th>
+              <th style="width: 18%;">Họ và tên</th>
+              <th style="width: 8%;">Năm sinh</th>
+              <th style="width: 25%;">Địa chỉ</th>
+              ${fundsHeaderCols}
+              <th style="width: 15%;">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 30px; page-break-inside: avoid;">
+          <tr>
+            <td style="width: 50%; border: none;"></td>
+            <td style="width: 50%; border: none; text-align: center; font-style: italic; font-size: 12px;">
+              ${wardName.replace(/Phường\s+/gi, '') || 'Sầm Sơn'}, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}
+            </td>
+          </tr>
+        </table>
+
+        <table class="signature-section" style="width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside: avoid;">
+          <tr>
+            <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
+              <div class="signature-title" style="font-weight: bold;">NGƯỜI LẬP BIỂU</div>
+              <div style="height: 80px;"></div>
+              <div class="signature-name" style="font-weight: normal; font-style: italic; font-size: 12px; color: #000;">(Ký, ghi rõ họ tên)</div>
+            </td>
+            <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
+              <div class="signature-title" style="font-weight: bold;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
+              <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 70px; max-height: 80px; object-fit: contain;" />` : ''}
+              </div>
+              <div class="signature-name" style="font-weight: bold;">${leaderName}</div>
+            </td>
+          </tr>
+        </table>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <div style={{ 
       animation: 'fadeIn 0.25s ease-out',
@@ -1062,6 +1305,27 @@ const WardFunds = () => {
             </button>
           )}
 
+          {canPrintExport && (
+            <button
+              onClick={handlePrintList}
+              className="btn btn-secondary"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#fff',
+                border: '1.5px solid var(--border)',
+                color: 'var(--text-main)',
+                fontWeight: '700',
+                fontSize: '0.85rem'
+              }}
+            >
+              <Printer size={16} /> In danh sách
+            </button>
+          )}
+
           {/* Xóa sạch năm */}
           {!isGuest && funds.length > 0 && (
             <button
@@ -1141,16 +1405,17 @@ const WardFunds = () => {
             <table className="data-table" style={{ width: '100%', minWidth: `${600 + activeFunds.length * 200}px`, borderCollapse: 'collapse', margin: 0 }}>
               <thead>
                 <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
-                  <th style={{ width: '50px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>STT</th>
-                  <th style={{ width: '220px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Người phải nộp</th>
-                  <th style={{ width: '90px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Năm sinh</th>
-                  <th style={{ width: '200px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Địa chỉ</th>
+                  <th style={{ width: '60px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>STT</th>
+                  <th style={{ width: '220px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Người phải nộp</th>
+                  <th style={{ width: '90px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Năm sinh</th>
+                  <th style={{ width: '240px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Địa chỉ</th>
                   
                   {activeFunds.map(fund => {
                     const isPCTT = fund.name.includes('thiên tai');
                     return (
                       <th key={fund.name} style={{ 
-                        width: '200px', 
+                        width: '180px', 
+                        padding: '12px 10px',
                         textAlign: 'center', 
                         position: 'sticky', 
                         top: 0, 
@@ -1163,20 +1428,20 @@ const WardFunds = () => {
                     );
                   })}
                   
-                  <th style={{ width: '180px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Ghi chú</th>
-                  {!isGuest && <th style={{ width: '90px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Thao tác</th>}
+                  <th style={{ width: '200px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Ghi chú</th>
+                  {!isGuest && <th style={{ width: '110px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Thao tác</th>}
                 </tr>
               </thead>
               <tbody>
                 {filteredFunds.map((item, idx) => {
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                      <td>
+                      <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ padding: '12px 10px' }}>
                         <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{item.full_name}</div>
                       </td>
-                      <td style={{ textAlign: 'center' }}>{item.dob || '—'}</td>
-                      <td>{item.address || '—'}</td>
+                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>{item.dob || '—'}</td>
+                      <td style={{ padding: '12px 10px' }}>{item.address || '—'}</td>
                       
                       {activeFunds.map(fund => {
                         const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
@@ -1184,7 +1449,7 @@ const WardFunds = () => {
                         const hasPartial = contrib.actual > 0 && contrib.actual < contrib.expected;
                         
                         return (
-                          <td key={fund.name} style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                          <td key={fund.name} style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle' }}>
                             <div style={{ 
                               display: 'inline-block',
                               padding: '6px 12px',
@@ -1206,9 +1471,9 @@ const WardFunds = () => {
                         );
                       })}
                       
-                      <td>{item.note || '—'}</td>
+                      <td style={{ padding: '12px 10px' }}>{item.note || '—'}</td>
                       {!isGuest && (
-                        <td>
+                        <td style={{ padding: '12px 10px' }}>
                           <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
                             <button
                               onClick={() => handleQuickPay(item)}
