@@ -685,7 +685,11 @@ const Residents = () => {
 
   // Export to Excel/CSV Functionality
   const handleExportCSV = async () => {
-    if (filteredResidents.length === 0) {
+    const exportList = showDeceased 
+      ? filteredResidents 
+      : filteredResidents.filter(r => r.status !== 'deceased');
+
+    if (exportList.length === 0) {
       showToast('Không có dữ liệu để xuất!', 'warning');
       return;
     }
@@ -700,7 +704,7 @@ const Residents = () => {
       'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
     ];
 
-    const rows = filteredResidents.map(r => {
+    const rows = exportList.map(r => {
       const hh = households.find(h => h.id === r.household_id);
       const hhNum = hh ? hh.household_number : '';
       
@@ -751,7 +755,7 @@ const Residents = () => {
       // Thêm các dòng dữ liệu và thiết lập kiểu dáng
       rows.forEach((row, rowIndex) => {
         const addedRow = worksheet.addRow(row);
-        const resident = filteredResidents[rowIndex];
+        const resident = exportList[rowIndex];
 
         // Nếu là chủ hộ, tô màu nền xanh lá nhạt và chữ xanh đậm
         if (resident.is_head) {
@@ -986,7 +990,11 @@ const Residents = () => {
 
   // Print function
   const handlePrint = () => {
-    if (filteredResidents.length === 0) {
+    const printList = showDeceased 
+      ? filteredResidents 
+      : filteredResidents.filter(r => r.status !== 'deceased');
+
+    if (printList.length === 0) {
       showToast('Không có dữ liệu để in!', 'warning');
       return;
     }
@@ -1043,7 +1051,7 @@ const Residents = () => {
       return;
     }
 
-    const rowsHtml = filteredResidents.map((r, index) => {
+    const rowsHtml = printList.map((r, index) => {
       const formattedDob = r.dob ? formatToDisplayDate(r.dob) : '';
       
       if (isLongevity) {
@@ -1782,7 +1790,14 @@ const Residents = () => {
     if (showDeceased) {
       matchesDeceased = r.status === 'deceased';
     } else {
-      matchesDeceased = r.status !== 'deceased';
+      // Nếu không chọn "Chỉ hiện người đã mất":
+      // - Nếu có từ khóa tìm kiếm hoặc lọc theo hộ gia đình cụ thể, cho phép hiển thị cả người đã mất
+      // - Ngược lại (mặc định), ẩn người đã mất khỏi bảng tổng nhân khẩu
+      if (searchTerm.trim() !== '' || householdFilter !== 'all') {
+        matchesDeceased = true;
+      } else {
+        matchesDeceased = r.status !== 'deceased';
+      }
     }
 
     // Group filter matches

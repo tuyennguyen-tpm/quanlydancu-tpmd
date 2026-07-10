@@ -114,7 +114,7 @@ const Policies = () => {
   };
 
   // Live Stats calculations
-  const seniorCount = residents.filter(r => getAge(r.dob) >= 80).length;
+  const seniorCount = residents.filter(r => r.status !== 'deceased' && getAge(r.dob) >= 80).length;
   const poorCount = households.filter(h => h.policy_type === 'poor').length;
   const nearPoorCount = households.filter(h => h.policy_type === 'near_poor').length;
   const policyFamilyCount = households.filter(h => h.policy_type === 'policy_family').length;

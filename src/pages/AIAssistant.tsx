@@ -1177,7 +1177,7 @@ Yêu cầu bà con nhân dân lưu ý và phối hợp thực hiện nghiêm tú
       .replace(/{namToi}/g, String(nYear))
       .replace(/{ngayThangNam}/g, dateStr)
       .replace(/{tongHoDan}/g, String(households.length))
-      .replace(/{tongNhanKhau}/g, String(residents.length))
+      .replace(/{tongNhanKhau}/g, String(residents.filter(r => r.status !== 'deceased').length))
       .replace(/{tongDangVien}/g, String(partyMembers.length))
       .replace(/{dangVienChinhThuc}/g, String(partyMembers.filter(m => m.status === 'official').length))
       .replace(/{dangVienDuBi}/g, String(partyMembers.filter(m => m.status === 'probation').length))
