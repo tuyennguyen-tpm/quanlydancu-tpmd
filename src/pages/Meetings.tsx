@@ -418,57 +418,27 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
           {!isGuest && (type !== 'front' || activeFrontTab !== 'committee') && (
             <div style={{ display: 'flex', gap: '12px' }}>
               <button 
+                type="button"
                 className="btn btn-secondary" 
                 onClick={() => handleCreateMinutes(undefined, type)}
                 style={{ 
-                  padding: '8px 16px', 
-                  borderRadius: '8px', 
                   display: 'inline-flex', 
                   alignItems: 'center', 
                   gap: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  height: 'auto',
-                  minHeight: '36px',
-                  border: '2px solid var(--border)',
-                  background: 'white',
-                  color: 'var(--text-main)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
+                  fontWeight: '600'
                 }}
               >
                 <FileText size={16} /> Tạo biên bản
               </button>
               <button 
+                type="button"
                 className="btn btn-primary" 
                 onClick={() => setIsFormOpen(true)}
                 style={{ 
-                  padding: '8px 16px', 
-                  borderRadius: '8px', 
                   display: 'inline-flex', 
                   alignItems: 'center', 
                   gap: '6px',
-                  background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-                  boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-                  color: 'white',
-                  border: 'none',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  height: 'auto',
-                  minHeight: '36px'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 14px rgba(37, 99, 235, 0.35)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(37, 99, 235, 0.25)';
+                  fontWeight: '600'
                 }}
               >
                 <Plus size={16} /> Tạo cuộc họp mới
