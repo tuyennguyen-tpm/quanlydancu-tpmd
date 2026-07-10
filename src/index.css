@@ -149,9 +149,15 @@ p { font-size: 1.1rem; line-height: 1.6; } /* Larger font for readability */
 /* Quick statistics grid and cards */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   margin-bottom: 20px;
+}
+
+@media (min-width: 992px) {
+  .stats-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
 }
 
 .stat-card {
