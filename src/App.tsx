@@ -1226,6 +1226,7 @@ const App = () => {
       localStorage.removeItem('offline_mode');
       localStorage.removeItem('guest_mode');
       localStorage.removeItem('guest_tenant_id');
+      localStorage.removeItem('is_public_guest');
       setOfflineMode(false);
       setGuestMode(false);
       
@@ -1345,6 +1346,7 @@ const App = () => {
           }} 
           onGuestMode={() => {
             localStorage.setItem('guest_mode', 'true');
+            localStorage.setItem('is_public_guest', 'true');
             setGuestMode(true);
             const ev = new CustomEvent('show-toast', { detail: { message: 'Đang đăng nhập chế độ Đọc công khai...', type: 'info' } });
             window.dispatchEvent(ev);
@@ -1443,7 +1445,7 @@ const App = () => {
 
         <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {/* Role Switcher */}
-          {!isGuestMode && (
+          {!localStorage.getItem('is_public_guest') && (
             <div className="role-switcher-container" style={{
               padding: '0 0 10px 0',
               borderBottom: '1px solid rgba(255, 255, 255, 0.08)',

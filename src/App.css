@@ -84,11 +84,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 16px;
+  padding: 9px 20px 9px 16px;
   margin: 1px 8px;
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 400;
   position: relative;
   cursor: pointer;
