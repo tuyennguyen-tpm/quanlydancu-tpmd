@@ -66,16 +66,34 @@ interface NavItemProps {
   active?: boolean;
   onClick: () => void;
   badge?: number;
+  badgeColor?: string;
 }
 
-const NavItem = ({ icon: Icon, label, active, onClick, badge }: NavItemProps) => (
-  <button 
+const formatBadgeNum = (n: number) =>
+  n >= 1000 ? new Intl.NumberFormat('vi-VN').format(n) : String(n);
+
+const NavItem = ({ icon: Icon, label, active, onClick, badge, badgeColor }: NavItemProps) => (
+  <button
     className={`nav-item ${active ? 'active' : ''}`}
     onClick={onClick}
   >
-    <Icon size={20} />
-    <span>{label}</span>
-    {badge !== undefined && badge > 0 && <span className="badge">{badge}</span>}
+    <Icon size={18} style={{ flexShrink: 0, opacity: active ? 1 : 0.85 }} />
+    <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
+    {badge !== undefined && badge > 0 && (
+      <span style={{
+        marginLeft: 'auto',
+        background: badgeColor || '#22c55e',
+        color: 'white',
+        fontSize: '10px',
+        fontWeight: 700,
+        padding: '1px 6px',
+        borderRadius: '20px',
+        minWidth: '18px',
+        textAlign: 'center',
+        lineHeight: '16px',
+        flexShrink: 0
+      }}>{formatBadgeNum(badge)}</span>
+    )}
   </button>
 );
 
@@ -1286,21 +1304,21 @@ const App = () => {
 
   const menuItems = [
     { id: 'Bảng điều khiển', icon: PieChart, label: 'Bảng điều khiển', group: 'Tổng quan' },
-    { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount },
-    { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount },
-    { id: 'residents-temp', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6 },
+    { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount, badgeColor: '#22c55e' },
+    { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount, badgeColor: '#3b82f6' },
+    { id: 'residents-temp', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6, badgeColor: '#f97316' },
     { id: 'residents-changes', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
     { id: 'policy', icon: ShieldCheck, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
-    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount || 27 },
+    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount || 27, badgeColor: '#ef4444' },
     { id: 'meetings-front', icon: UsersRound, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
     { id: 'women-association', icon: Heart, label: 'Hội Phụ nữ', group: 'Tổ chức - Đoàn thể' },
     { id: 'ccb-elderly', icon: UserCircle, label: 'CCB – Người cao tuổi', group: 'Tổ chức - Đoàn thể' },
     { id: 'documents', icon: FileText, label: 'Văn bản', group: 'Điều hành' },
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
-    { id: 'regulations', icon: Check, label: 'Công việc', group: 'Điều hành', badge: 3 },
+    { id: 'regulations', icon: Check, label: 'Công việc', group: 'Điều hành', badge: 3, badgeColor: '#f97316' },
     { id: 'finance', icon: Wallet, label: 'Thu chi', group: 'Tài chính' },
     { id: 'ward-funds', icon: Wallet, label: 'Quỹ cộng đồng', group: 'Tài chính' },
-    { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount },
+    { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount, badgeColor: '#ef4444' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
   ].filter(item => {
