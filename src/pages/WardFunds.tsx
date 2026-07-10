@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import type { WardFund } from '../types';
+import type { WardFund, Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
 
 const WardFunds = () => {
@@ -44,6 +44,13 @@ const WardFunds = () => {
   const searchTerm = useDeferredValue(searchInput);
   const [isLoading, setIsLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid_all' | 'unpaid_any'>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
+  const [groups, setGroups] = useState<string[]>(() => {
+    const saved = localStorage.getItem('tdp_groups_config');
+    return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+  });
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
 
   
   // Cấu hình quỹ của Phường động
@@ -78,10 +85,34 @@ const WardFunds = () => {
     }
   };
 
+  const loadResidentsAndHouseholds = async () => {
+    try {
+      const resList = await db.getResidents();
+      const hhList = await db.getHouseholds();
+      setResidents(resList);
+      setHouseholds(hhList);
+    } catch (e) {
+      console.error('Failed to load residents/households in WardFunds', e);
+    }
+  };
+
   useEffect(() => {
     loadActiveFunds();
+    loadResidentsAndHouseholds();
     window.addEventListener('ward-fund-targets-changed', loadActiveFunds);
-    return () => window.removeEventListener('ward-fund-targets-changed', loadActiveFunds);
+    window.addEventListener('db-changed', loadResidentsAndHouseholds);
+    
+    const handleGroupsChange = () => {
+      const saved = localStorage.getItem('tdp_groups_config');
+      setGroups(saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']);
+    };
+    window.addEventListener('tdp-groups-changed', handleGroupsChange);
+
+    return () => {
+      window.removeEventListener('ward-fund-targets-changed', loadActiveFunds);
+      window.removeEventListener('db-changed', loadResidentsAndHouseholds);
+      window.removeEventListener('tdp-groups-changed', handleGroupsChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -102,6 +133,38 @@ const WardFunds = () => {
     return parseInt(clean).toLocaleString('vi-VN');
   };
 
+  // Helper to resolve group/tổ of a fund record
+  const getGroupOfFundRecord = (f: WardFund) => {
+    // 1. Cross-reference with database residents
+    const matchedResident = residents.find(r => 
+      r.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase() &&
+      (r.dob && f.dob ? r.dob.includes(f.dob) || f.dob.includes(r.dob) : true)
+    );
+    if (matchedResident) {
+      const hh = households.find(h => h.id === matchedResident.household_id);
+      if (hh && hh.self_management_group) {
+        return hh.self_management_group.trim();
+      }
+    }
+    
+    // 2. Scan address text for group keywords
+    const addr = (f.address || '').toLowerCase();
+    for (const g of groups) {
+      const gLower = g.toLowerCase();
+      if (addr.includes(gLower)) {
+        return g;
+      }
+      const numMatch = g.match(/\d+/);
+      if (numMatch) {
+        const num = numMatch[0];
+        if (addr.includes(`tổ ${num}`) || addr.includes(`tổ: ${num}`) || addr.includes(`tổ tự quản ${num}`) || addr.includes(`tổ tự quản số ${num}`)) {
+          return g;
+        }
+      }
+    }
+    return '';
+  };
+
   // Filtered List
   const filteredFunds = useMemo(() => funds.filter(f => {
     const matchesSearch = 
@@ -110,19 +173,28 @@ const WardFunds = () => {
     
     if (!matchesSearch) return false;
 
+    let matchesStatus = true;
     if (filterStatus === 'paid_all') {
-      return activeFunds.every(fund => {
+      matchesStatus = activeFunds.every(fund => {
         const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
         return contrib.actual >= contrib.expected;
       });
     } else if (filterStatus === 'unpaid_any') {
-      return activeFunds.some(fund => {
+      matchesStatus = activeFunds.some(fund => {
         const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
         return contrib.actual < contrib.expected;
       });
     }
+    if (!matchesStatus) return false;
+
+    // Filter group
+    if (groupFilter !== 'all') {
+      const fundGroup = getGroupOfFundRecord(f);
+      if (fundGroup !== groupFilter) return false;
+    }
+
     return true;
-  }), [funds, searchTerm, filterStatus, activeFunds]);
+  }), [funds, searchTerm, filterStatus, activeFunds, groupFilter, residents, households, groups]);
 
   // Calculate Statistics dynamically
   const fundStats = activeFunds.map(fund => {
@@ -894,6 +966,26 @@ const WardFunds = () => {
             <option value="all">Tất cả trạng thái</option>
             <option value="paid_all">Đã nộp đủ các quỹ</option>
             <option value="unpaid_any">Chưa nộp đủ ít nhất 1 quỹ</option>
+          </select>
+
+          {/* Bộ lọc Tổ tự quản */}
+          <select
+            value={groupFilter}
+            onChange={(e) => setGroupFilter(e.target.value)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1.5px solid var(--border)',
+              backgroundColor: '#fff',
+              fontSize: '0.88rem',
+              color: 'var(--text-main)',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="all">Tất cả các tổ</option>
+            {groups.map(g => (
+              <option key={g} value={g}>{g}</option>
+            ))}
           </select>
         </div>
 
