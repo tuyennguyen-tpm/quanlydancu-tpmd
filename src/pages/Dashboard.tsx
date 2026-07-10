@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Users, 
   Home, 
@@ -8,36 +8,50 @@ import {
   UserPlus,
   HeartHandshake,
   TrendingUp,
-  TrendingDown
+  ShieldCheck,
+  Calendar,
+  FileText,
+  Wallet,
+  Star,
+  UsersRound,
+  Sparkles,
+  Info
 } from 'lucide-react';
-import { db } from '../services/db';
-
-
-
-const StatCard = ({ title, value, subtext, icon: Icon, color, trend }: any) => (
-  <div className={`stat-card border-${color}`}>
-    <div className="stat-card-left">
-      <span className="stat-card-title">{title}</span>
-      <h2 className="stat-card-value">{value}</h2>
-      <div className="stat-card-trend">
-        {trend && <span className="trend-badge"><ArrowUpRight size={14} /> {trend}</span>}
-        <span className="stat-card-subtext">{subtext}</span>
-      </div>
-    </div>
-    <div className={`stat-card-icon ${color}`}>
-      <Icon size={24} />
-    </div>
-  </div>
-);
+import { db, partyDb } from '../services/db';
 
 const Dashboard = () => {
   const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const currentYear = new Date().getFullYear();
+
+  // Role switching state
+  const [selectedRoleView, setSelectedRoleView] = useState<'to_truong' | 'bi_thu' | 'mat_tran'>('to_truong');
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('current_role') || 'demo');
+
   const [stats, setStats] = useState({
     totalHouseholds: 0,
     totalResidents: 0,
+    maleCount: 0,
+    femaleCount: 0,
     policyHouseholds: 0,
     pendingComplaints: 0,
     militaryEligibleCount: 0,
+    temporaryResidentCount: 0,
+    temporaryAbsentCount: 0,
+    
+    // Chi bộ
+    totalPartyMembers: 0,
+    officialPartyMembers: 0,
+    probationPartyMembers: 0,
+    exemptPartyMembers: 0,
+    femalePartyMembers: 0,
+    seniorPartyMembers: 0,
+    partyFeesCollected: 0,
+    
+    // Mặt trận & Chính sách
+    poorHouseholds: 0,
+    nearPoorHouseholds: 0,
+    policyFamilyHouseholds: 0,
+    campaignCount: 0,
   });
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -51,33 +65,35 @@ const Dashboard = () => {
     if (hours >= 5 && hours < 12) {
       return {
         greeting: 'Chào buổi sáng! ☀️',
-        wish: 'Chúc bạn một ngày mới tốt lành, tràn đầy năng lượng và làm việc hiệu quả!'
+        wish: 'Chúc bạn một ngày mới tốt lành, làm việc tràn đầy năng lượng!'
       };
     } else if (hours >= 12 && hours < 18) {
       return {
         greeting: 'Chào buổi chiều! ⛅',
-        wish: 'Chúc bạn một buổi chiều làm việc thuận lợi và gặt hái nhiều niềm vui!'
+        wish: 'Chúc bạn một buổi chiều làm việc thuận lợi và hiệu quả!'
       };
     } else {
       return {
         greeting: 'Chào buổi tối! 🌙',
-        wish: 'Chúc bạn một buổi tối thư giãn thoải mái và ấm áp bên gia đình!'
+        wish: 'Chúc bạn một buổi tối ấm áp và thư giãn bên gia đình!'
       };
     }
   };
 
-  // Đọc tên Tổ dân phố từ localStorage (có thể được sửa từ phần Cấu hình)
+  // Đọc tên Tổ dân phố từ localStorage
   const [tdpName, setTdpName] = useState(() => {
-    return localStorage.getItem('tdp_name') || 'Tiến Quảng Giao';
+    return localStorage.getItem('tdp_name') || 'Quảng Giao';
+  });
+  const [wardName, setWardName] = useState(() => {
+    return localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
   });
 
-  // Lắng nghe khi người dùng lưu tên mới từ Settings (không cần reload trang)
   useEffect(() => {
     const handleStorageChange = () => {
-      setTdpName(localStorage.getItem('tdp_name') || 'Tiến Quảng Giao');
+      setTdpName(localStorage.getItem('tdp_name') || 'Quảng Giao');
+      setWardName(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn');
     };
     window.addEventListener('storage', handleStorageChange);
-    // Lắng nghe cả custom event khi lưu cấu hình trong cùng tab
     window.addEventListener('tdp-name-changed', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -85,32 +101,84 @@ const Dashboard = () => {
     };
   }, []);
 
-  const [funds, setFunds] = useState<Record<string, { collected: number, target: number }>>({});
-  const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);
-
-  const [notifications, setNotifications] = useState<any[]>([]);
+  // Sync selectedRoleView when role changes in App
+  useEffect(() => {
+    const current = localStorage.getItem('current_role') || 'demo';
+    setUserRole(current);
+    if (current === 'bi_thu') {
+      setSelectedRoleView('bi_thu');
+    } else if (current === 'mat_tran') {
+      setSelectedRoleView('mat_tran');
+    } else {
+      setSelectedRoleView('to_truong');
+    }
+  }, []);
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      // 1. Load basic entities
-      const [households, residents, complaints, financialRecords, securityLogs, hhFunds] = await Promise.all([
+    const handleRoleChanged = (e: Event) => {
+      const customEv = e as CustomEvent;
+      const role = customEv.detail;
+      setUserRole(role);
+      if (role === 'bi_thu') {
+        setSelectedRoleView('bi_thu');
+      } else if (role === 'mat_tran') {
+        setSelectedRoleView('mat_tran');
+      } else {
+        setSelectedRoleView('to_truong');
+      }
+    };
+    window.addEventListener('role-changed', handleRoleChanged);
+    return () => window.removeEventListener('role-changed', handleRoleChanged);
+  }, []);
+
+  const [funds, setFunds] = useState<Record<string, { collected: number, target: number }>>({});
+  const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [recentMeetings, setRecentMeetings] = useState<any[]>([]);
+  const [recentPartyMeetings, setRecentPartyMeetings] = useState<any[]>([]);
+
+  const loadDashboardData = async () => {
+    try {
+      const [
+        households, 
+        residents, 
+        complaints, 
+        financialRecords, 
+        securityLogs, 
+        hhFunds,
+        partyMembers,
+        partyMeetings,
+        partyFeesList,
+        meetings
+      ] = await Promise.all([
         db.getHouseholds(),
         db.getResidents(),
         db.getComplaints(),
         db.getFinancialRecords(),
         db.getSecurityLogs(),
-        db.getHouseholdFunds()
+        db.getHouseholdFunds(),
+        partyDb.getPartyMembers(),
+        partyDb.getPartyMeetings(),
+        partyDb.getPartyFees(currentYear),
+        db.getMeetings()
       ]);
 
-      // 2. Calculate Stats (Loại trừ người đã mất khỏi số liệu dân số thực tế)
       const activeResidents = residents.filter(r => r.status !== 'deceased');
       const totalH = households.length;
       const totalR = activeResidents.length;
-      const policyH = households.filter(h => h.policy_type && h.policy_type !== 'none').length;
+      const maleR = activeResidents.filter(r => r.gender === 'male').length;
+      const femaleR = activeResidents.filter(r => r.gender === 'female').length;
+      const tempResident = activeResidents.filter(r => r.status === 'temporary_resident').length;
+      const tempAbsent = activeResidents.filter(r => r.status === 'temporary_absent').length;
+
+      const poorH = households.filter(h => h.policy_type === 'poor').length;
+      const nearPoorH = households.filter(h => h.policy_type === 'near_poor').length;
+      const policyFamilyH = households.filter(h => h.policy_type === 'policy_family').length;
+      const policyTotalH = poorH + nearPoorH + policyFamilyH;
+      
       const pendingC = complaints.filter(c => c.status === 'pending').length;
 
-      // Tính số thanh niên nam 18-27 tuổi chưa nhập ngũ
-      const currentYear = new Date().getFullYear();
+      // NVQS
       let militaryEligible = 0;
       activeResidents.forEach(r => {
         if (r.gender === 'male' && r.dob) {
@@ -124,79 +192,82 @@ const Dashboard = () => {
         }
       });
 
+      // Chi bộ Đảng calculations
+      const totalPM = partyMembers.length;
+      const officialPM = partyMembers.filter(m => m.status === 'official').length;
+      const probationPM = partyMembers.filter(m => m.status === 'probation').length;
+      const exemptPM = partyMembers.filter(m => m.is_exempt_party_activities).length;
+      const femalePM = partyMembers.filter(m => {
+        const res = activeResidents.find(r => r.id === m.resident_id);
+        return res?.gender === 'female' || m.full_name.toLowerCase().includes('thị') || m.full_name.toLowerCase().includes('thuy');
+      }).length;
+      
+      let seniorPM = 0;
+      partyMembers.forEach(m => {
+        const res = activeResidents.find(r => r.id === m.resident_id);
+        if (res && res.dob) {
+          const birthYear = parseInt(res.dob.substring(0, 4));
+          const age = currentYear - birthYear;
+          if (age >= 60) seniorPM++;
+        }
+      });
+
+      const totalFeesCollected = partyFeesList.reduce((acc, f) => acc + (f.amount || 0), 0);
+
       setStats({
         totalHouseholds: totalH,
         totalResidents: totalR,
-        policyHouseholds: policyH,
+        maleCount: maleR,
+        femaleCount: femaleR,
+        policyHouseholds: policyTotalH,
         pendingComplaints: pendingC,
         militaryEligibleCount: militaryEligible,
+        temporaryResidentCount: tempResident,
+        temporaryAbsentCount: tempAbsent,
+        
+        // Chi bộ
+        totalPartyMembers: totalPM,
+        officialPartyMembers: officialPM,
+        probationPartyMembers: probationPM,
+        exemptPartyMembers: exemptPM,
+        femalePartyMembers: femalePM,
+        seniorPartyMembers: seniorPM,
+        partyFeesCollected: totalFeesCollected,
+
+        // Mặt trận
+        poorHouseholds: poorH,
+        nearPoorHouseholds: nearPoorH,
+        policyFamilyHouseholds: policyFamilyH,
+        campaignCount: meetings.filter(m => m.type === 'front').length,
       });
 
-      // 3. Calculate Funds (Dynamic)
+      // Funds (Dynamic)
       const activeFundsList = db.getFundList();
       setActiveFunds(activeFundsList);
 
       const multiplier = Math.max(1, totalH);
       const resultsMap: Record<string, { collected: number, target: number }> = {};
-      
       activeFundsList.forEach(f => {
-        resultsMap[f.name] = {
-          collected: 0,
-          target: f.target * multiplier
-        };
+        resultsMap[f.name] = { collected: 0, target: f.target * multiplier };
       });
 
-      // Sum from general ledger
       financialRecords.forEach(r => {
         if (r.type === 'income' && !r.description.includes('[QUY_')) {
           const desc = r.description.toLowerCase();
           const cat = r.category.toLowerCase();
           
           let matched = false;
-          // Shorthand checks for default funds to ensure backward compatibility
-          if (resultsMap['Quỹ Vì người nghèo'] && (desc.includes('nghèo') || cat.includes('nghèo'))) {
-            resultsMap['Quỹ Vì người nghèo'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Phí vệ sinh môi trường'] && (desc.includes('vệ sinh') || cat.includes('vệ sinh'))) {
-            resultsMap['Phí vệ sinh môi trường'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Quỹ Đền ơn đáp nghĩa'] && (desc.includes('nghĩa') || desc.includes('đền ơn') || cat.includes('nghĩa') || cat.includes('đền ơn'))) {
-            resultsMap['Quỹ Đền ơn đáp nghĩa'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Quỹ Khuyến học'] && (desc.includes('khuyến học') || cat.includes('khuyến học'))) {
-            resultsMap['Quỹ Khuyến học'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Quỹ an sinh xã hội'] && (desc.includes('an sinh') || cat.includes('an sinh'))) {
-            resultsMap['Quỹ an sinh xã hội'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Quỹ văn hóa - thể thao'] && (desc.includes('văn hóa') || cat.includes('văn hóa') || desc.includes('thể thao') || cat.includes('thể thao'))) {
-            resultsMap['Quỹ văn hóa - thể thao'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Điện, nước, internet, bảo vệ Nhà văn hóa'] && (desc.includes('điện') || desc.includes('nước') || desc.includes('nhà văn hóa'))) {
-            resultsMap['Điện, nước, internet, bảo vệ Nhà văn hóa'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Quỹ sinh hoạt đám hiếu'] && (desc.includes('hiếu') || desc.includes('hỷ'))) {
-            resultsMap['Quỹ sinh hoạt đám hiếu'].collected += r.amount;
-            matched = true;
-          } else if (resultsMap['Quỹ Chăm sóc người cao tuổi'] && (desc.includes('cao tuổi') || cat.includes('cao tuổi'))) {
-            resultsMap['Quỹ Chăm sóc người cao tuổi'].collected += r.amount;
-            matched = true;
-          }
-          
-          if (!matched) {
-            // General substring match for any other custom funds
-            for (const f of activeFundsList) {
-              const fNameLower = f.name.toLowerCase();
-              if (desc.includes(fNameLower) || cat.includes(fNameLower)) {
-                resultsMap[f.name].collected += r.amount;
-                break;
-              }
+          for (const f of activeFundsList) {
+            const fNameLower = f.name.toLowerCase();
+            if (desc.includes(fNameLower) || cat.includes(fNameLower)) {
+              resultsMap[f.name].collected += r.amount;
+              matched = true;
+              break;
             }
           }
         }
       });
 
-      // Cộng thêm số liệu thực tế thu được từ bảng đóng quỹ của các hộ dân trong năm hiện tại
       if (hhFunds && Array.isArray(hhFunds)) {
         hhFunds.forEach(f => {
           if (f.year === currentYear && resultsMap[f.fund_name]) {
@@ -204,37 +275,34 @@ const Dashboard = () => {
           }
         });
       }
-
       setFunds(resultsMap);
 
-      // 4. Aggregate Notifications
-      const notifs: any[] = [];
+      // Meetings lists
+      setRecentMeetings(meetings.slice(0, 5));
+      setRecentPartyMeetings(partyMeetings.slice(0, 5));
 
-      // Thông báo NVQS
+      // Notifications
+      const notifs: any[] = [];
       if (militaryEligible > 0) {
         notifs.push({
-          id: `nvqs-alert`,
+          id: 'nvqs-alert',
           type: 'security',
-          text: `Có ${militaryEligible} nam thanh niên trong độ tuổi NVQS (18-27) chưa nhập ngũ.`,
-          time: new Date().toLocaleDateString('vi-VN'),
+          text: `Có ${militaryEligible} thanh niên trong độ tuổi NVQS cần theo dõi.`,
+          time: 'Hôm nay',
           icon: AlertCircle,
           status: 'pending'
         });
       }
-
-      // Add recent complaints
       complaints.slice(0, 3).forEach(c => {
         notifs.push({
           id: `c-${c.id}`,
           type: 'complaint',
-          text: `Hộ bà/ông ${c.resident_name} phản ánh: "${c.content.length > 50 ? c.content.slice(0, 50) + '...' : c.content}"`,
-          time: new Date(c.created_at || c.date).toLocaleDateString('vi-VN') + ' - ' + (c.status === 'pending' ? 'Chưa xử lý' : 'Đang xử lý'),
+          text: `Kiến nghị của ${c.resident_name}: "${c.content.slice(0, 45)}..."`,
+          time: new Date(c.created_at || c.date).toLocaleDateString('vi-VN'),
           icon: AlertCircle,
           status: c.status
         });
       });
-
-      // Add recent security alerts
       securityLogs.slice(0, 2).forEach(s => {
         notifs.push({
           id: `s-${s.id}`,
@@ -245,11 +313,14 @@ const Dashboard = () => {
           status: s.type
         });
       });
-
-      // Sort notifications (simulated order, complaints first, then security)
       setNotifications(notifs);
-    };
 
+    } catch (e) {
+      console.error('Failed to load dashboard data:', e);
+    }
+  };
+
+  useEffect(() => {
     loadDashboardData();
     window.addEventListener('db-changed', loadDashboardData);
     window.addEventListener('fund-targets-changed', loadDashboardData);
@@ -259,28 +330,30 @@ const Dashboard = () => {
     };
   }, []);
 
-  const handleAddResidentClick = () => {
-    window.dispatchEvent(new CustomEvent('change-tab', { detail: 'residents' }));
-    // Wait brief moment and open modal
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('open-add-resident-modal'));
-    }, 100);
-  };
-
-  const handleViewFinanceClick = () => {
-    window.dispatchEvent(new CustomEvent('change-tab', { detail: 'finance' }));
+  const handleQuickAction = (tabId: string, customEvent?: string) => {
+    window.dispatchEvent(new CustomEvent('change-tab', { detail: tabId }));
+    if (customEvent) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent(customEvent));
+      }, 100);
+    }
   };
 
   const formatVND = (val: number) => {
-    return new Intl.NumberFormat('vi-VN').format(val) + 'đ';
+    return new Intl.NumberFormat('vi-VN').format(val) + ' đ';
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container" style={{ animation: 'fadeIn 0.5s ease-out' }}>
+      
+      {/* 1. PREMIUM HEADER BANNER */}
       <div className="premium-welcome-banner">
         <div className="welcome-message">
-          <h1>{isGuest ? 'Chào mừng bà con nhân dân! 👋' : getGreetingMessage().greeting}</h1>
-          <p>Hệ thống quản lý thông tin dân cư Tổ dân phố <strong style={{color: 'var(--primary)'}}>{tdpName}</strong></p>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles size={20} color="#EAB308" fill="#EAB308" />
+            <span>{isGuest ? 'Chào mừng bà con nhân dân! 👋' : getGreetingMessage().greeting}</span>
+          </h1>
+          <p>Hệ thống Quản lý Dân cư Số – TDP <strong style={{ color: 'var(--gov-blue)', fontWeight: 700 }}>{tdpName}</strong> ({wardName})</p>
           <span className="welcome-wish">{getGreetingMessage().wish}</span>
         </div>
         <div className="welcome-datetime">
@@ -293,114 +366,607 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        <button className="btn btn-secondary" onClick={handleViewFinanceClick}>
-          {isGuest ? 'Xem chi tiết thu chi' : 'Quản lý thu chi'}
+      {/* 2. ROLE VIEW SWITCHER TABS */}
+      <div className="role-switcher-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+        <button 
+          className={`tab-btn-role ${selectedRoleView === 'to_truong' ? 'active' : ''}`}
+          onClick={() => setSelectedRoleView('to_truong')}
+        >
+          <Home size={16} />
+          <span>Tổ trưởng (Dân cư & Thu chi)</span>
         </button>
-        {!isGuest && (
-          <button className="btn btn-primary" onClick={handleAddResidentClick}>
-            <UserPlus size={18} />
-            Thêm nhân khẩu mới
-          </button>
-        )}
+        <button 
+          className={`tab-btn-role ${selectedRoleView === 'bi_thu' ? 'active' : ''}`}
+          onClick={() => setSelectedRoleView('bi_thu')}
+          disabled={isGuest}
+          title={isGuest ? 'Tính năng bị ẩn ở chế độ xem công khai' : ''}
+        >
+          <Star size={16} />
+          <span>Bí thư (Chi bộ Đảng)</span>
+        </button>
+        <button 
+          className={`tab-btn-role ${selectedRoleView === 'mat_tran' ? 'active' : ''}`}
+          onClick={() => setSelectedRoleView('mat_tran')}
+          disabled={isGuest}
+          title={isGuest ? 'Tính năng bị ẩn ở chế độ xem công khai' : ''}
+        >
+          <UsersRound size={16} />
+          <span>Mặt trận & Đoàn thể</span>
+        </button>
       </div>
 
-      <div className="stats-grid">
-        <StatCard 
-          title="Tổng số hộ dân" 
-          value={new Intl.NumberFormat('vi-VN').format(stats.totalHouseholds)} 
-          subtext="Danh sách hộ đăng ký cư trú" 
-          icon={Home} 
-          color="blue"
-        />
-        <StatCard 
-          title="Tổng nhân khẩu" 
-          value={new Intl.NumberFormat('vi-VN').format(stats.totalResidents)} 
-          subtext="Nhân khẩu thực tế trong tổ" 
-          icon={Users} 
-          color="indigo"
-        />
-        <StatCard 
-          title="Hộ chính sách & nghèo" 
-          value={new Intl.NumberFormat('vi-VN').format(stats.policyHouseholds)} 
-          subtext="Hộ cận nghèo, nghèo & chính sách" 
-          icon={HeartHandshake} 
-          color="orange"
-        />
-        <StatCard 
-          title="Phản ánh chưa xử lý" 
-          value={new Intl.NumberFormat('vi-VN').format(stats.pendingComplaints)} 
-          subtext="Yêu cầu cần phản hồi sớm" 
-          icon={AlertCircle} 
-          color={stats.pendingComplaints > 0 ? "red" : "blue"}
-        />
-      </div>
-
-      <div className="dashboard-charts">
-        <div className="chart-item main-chart">
-          <div className="chart-header">
-            <h3>Tình hình thu nộp các loại quỹ TDP</h3>
-            <span className="view-all" onClick={handleViewFinanceClick}>Xem chi tiết</span>
+      {/* 3. DYNAMIC STATS GRID BY ROLE VIEW */}
+      {selectedRoleView === 'to_truong' && (
+        <div className="stats-grid">
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Tổng số hộ</span>
+                <span className="value">{stats.totalHouseholds}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: 'var(--gov-blue-lighter)' }}>
+                <Home size={18} color="var(--gov-blue)" />
+              </div>
+            </div>
+            <div className="change neutral">Cơ sở dữ liệu Hộ dân chính thức</div>
           </div>
-          <div className="chart-placeholder">
-             <div className="progress-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px 24px' }}>
-                {activeFunds.map((fund, i) => {
-                  const multiplier = Math.max(1, stats.totalHouseholds);
-                  const data = funds[fund.name] || { collected: 0, target: fund.target * multiplier };
-                  const percent = data.target > 0 ? Math.round((data.collected / data.target) * 100) : 0;
-                  const barColor = percent >= 75 ? '#10b981' : percent >= 30 ? '#f59e0b' : '#ef4444';
-                  return (
-                    <div key={i} className="progress-item" style={{ marginBottom: 0 }}>
-                      <div className="progress-info">
-                        <span style={{ fontWeight: '600', fontSize: '0.88rem' }}>{fund.name}</span>
-                        <span style={{ fontSize: '0.85rem', color: barColor, fontWeight: 'bold' }}>{percent}% ({formatVND(data.collected)} / {formatVND(data.target)})</span>
-                      </div>
-                      <div className="progress-bar-bg">
-                        <div className="progress-bar-fill" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: barColor }}></div>
-                      </div>
-                    </div>
-                  );
-                })}
-             </div>
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-green)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--gov-green)' }}></span>Nhân khẩu thực tế</span>
+                <span className="value">{stats.totalResidents}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: 'var(--gov-green-light)' }}>
+                <Users size={18} color="var(--gov-green)" />
+              </div>
+            </div>
+            <div className="change neutral">Nam: {stats.maleCount} | Nữ: {stats.femaleCount}</div>
+          </div>
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-orange)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--accent-orange)' }}></span>Tạm trú / Tạm vắng</span>
+                <span className="value">{stats.temporaryResidentCount} / {stats.temporaryAbsentCount}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: '#FFF3E0' }}>
+                <Users size={18} color="var(--accent-orange)" />
+              </div>
+            </div>
+            <div className="change neutral">Bà con ở ngoài hoặc nơi khác đến</div>
+          </div>
+
+          <div className="stat-card" style={{ borderLeft: `4px solid ${stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'var(--gov-blue-light)'}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'var(--gov-blue-light)' }}></span>Kiến nghị cần giải quyết</span>
+                <span className="value" style={{ color: stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'inherit' }}>{stats.pendingComplaints}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: stats.pendingComplaints > 0 ? '#FFEBEE' : 'var(--gov-blue-lighter)' }}>
+                <AlertCircle size={18} color={stats.pendingComplaints > 0 ? 'var(--accent-red)' : 'var(--gov-blue-light)'} />
+              </div>
+            </div>
+            <div className={`change ${stats.pendingComplaints > 0 ? 'down' : 'neutral'}`}>
+              {stats.pendingComplaints > 0 ? '⚠️ Cần phản hồi sớm cho bà con' : 'Đã giải quyết toàn bộ kiến nghị'}
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="chart-item side-list">
-          <div className="chart-header">
-            <h3>Nhật ký hoạt động & Phản ánh</h3>
+      {selectedRoleView === 'bi_thu' && (
+        <div className="stats-grid">
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--accent-purple)' }}></span>Đảng viên Chi bộ</span>
+                <span className="value">{stats.totalPartyMembers}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: '#F3E5F5' }}>
+                <Star size={18} color="var(--accent-purple)" />
+              </div>
+            </div>
+            <div className="change neutral">Chính thức: {stats.officialPartyMembers} | Dự bị: {stats.probationPartyMembers}</div>
           </div>
-          <div className="notification-list">
-             {notifications.length > 0 ? (
-               notifications.map((n) => (
-                 <div key={n.id} className="notif-item">
-                    <div className={`notif-icon ${n.status === 'pending' || n.status === 'alert' ? 'red' : ''}`}><n.icon size={16} /></div>
-                    <div className="notif-content">
-                      <p>{n.text}</p>
-                      <span>{n.time}</span>
-                    </div>
-                 </div>
-               ))
-             ) : (
-               <div style={{textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)'}}>Không có hoạt động mới nào</div>
-             )}
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Đảng phí thu năm nay</span>
+                <span className="value">{formatVND(stats.partyFeesCollected)}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: 'var(--gov-blue-lighter)' }}>
+                <Wallet size={18} color="var(--gov-blue)" />
+              </div>
+            </div>
+            <div className="change neutral">Thu theo Quy định 01-QĐ/TW</div>
+          </div>
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-orange)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--accent-orange)' }}></span>Miễn sinh hoạt Đảng</span>
+                <span className="value">{stats.exemptPartyMembers}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: '#FFF3E0' }}>
+                <CheckCircle2 size={18} color="var(--accent-orange)" />
+              </div>
+            </div>
+            <div className="change neutral">Tỷ lệ: {stats.totalPartyMembers > 0 ? Math.round((stats.exemptPartyMembers / stats.totalPartyMembers) * 100) : 0}% tổng Đảng viên</div>
+          </div>
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-green)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--gov-green)' }}></span>Lão thành / Đảng viên nữ</span>
+                <span className="value">{stats.seniorPartyMembers} / {stats.femalePartyMembers}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: 'var(--gov-green-light)' }}>
+                <Users size={18} color="var(--gov-green)" />
+              </div>
+            </div>
+            <div className="change neutral">Đảng viên cao tuổi (≥ 60 tuổi)</div>
           </div>
         </div>
-      </div>
+      )}
+
+      {selectedRoleView === 'mat_tran' && (
+        <div className="stats-grid">
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-teal)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--accent-teal)' }}></span>Gia đình chính sách</span>
+                <span className="value">{stats.poorHouseholds + stats.nearPoorHouseholds + stats.policyFamilyHouseholds}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: '#E0F2F1' }}>
+                <HeartHandshake size={18} color="var(--accent-teal)" />
+              </div>
+            </div>
+            <div className="change neutral">Người có công, thương binh, liệt sĩ...</div>
+          </div>
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-red)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--accent-red)' }}></span>Hộ nghèo / Hộ cận nghèo</span>
+                <span className="value">{stats.poorHouseholds} / {stats.nearPoorHouseholds}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: '#FFEBEE' }}>
+                <AlertCircle size={18} color="var(--accent-red)" />
+              </div>
+            </div>
+            <div className="change neutral">Hộ có hoàn cảnh khó khăn cần hỗ trợ</div>
+          </div>
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Các cuộc vận động / Hòa giải</span>
+                <span className="value">{stats.campaignCount}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: 'var(--gov-blue-lighter)' }}>
+                <Calendar size={18} color="var(--gov-blue)" />
+              </div>
+            </div>
+            <div className="change neutral">Hoạt động gắn kết, hòa giải bà con</div>
+          </div>
+
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-orange)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span className="label"><span className="dot" style={{ background: 'var(--accent-orange)' }}></span>Thanh niên độ tuổi NVQS</span>
+                <span className="value">{stats.militaryEligibleCount}</span>
+              </div>
+              <div className="icon-wrap" style={{ background: '#FFF3E0' }}>
+                <Users size={18} color="var(--accent-orange)" />
+              </div>
+            </div>
+            <div className="change neutral">Độ tuổi 18-27 chưa nhập ngũ</div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. MAIN BODY GRIDS BY ROLE VIEW */}
+      {selectedRoleView === 'to_truong' && (
+        <>
+          <div className="dash-grid">
+            
+            {/* Chart biến động dân cư */}
+            <div className="card-gov">
+              <div className="card-gov-header">
+                <div className="card-title"><span className="title-dot"></span>Biến động dân cư (Minh họa 6 tháng qua)</div>
+                <button className="view-all" onClick={() => handleQuickAction('residents')}>Chi tiết nhân khẩu →</button>
+              </div>
+              <div className="card-gov-body">
+                <div className="chart-area">
+                  <div className="chart-bar-group">
+                    <div className="chart-bar" style={{ height: '35%', background: 'var(--gov-blue)' }} title="Chuyển đến: 14"></div>
+                    <div className="chart-bar" style={{ height: '20%', background: 'var(--gov-green)' }} title="Chuyển đi: 8"></div>
+                    <div className="chart-bar" style={{ height: '10%', background: 'var(--accent-orange)' }} title="Sinh: 4"></div>
+                    <div className="chart-bar" style={{ height: '5%', background: 'var(--accent-red)' }} title="Tử: 2"></div>
+                  </div>
+                  <div className="chart-bar-group">
+                    <div className="chart-bar" style={{ height: '42%', background: 'var(--gov-blue)' }} title="Chuyển đến: 18"></div>
+                    <div className="chart-bar" style={{ height: '25%', background: 'var(--gov-green)' }} title="Chuyển đi: 10"></div>
+                    <div className="chart-bar" style={{ height: '15%', background: 'var(--accent-orange)' }} title="Sinh: 6"></div>
+                    <div className="chart-bar" style={{ height: '8%', background: 'var(--accent-red)' }} title="Tử: 3"></div>
+                  </div>
+                  <div className="chart-bar-group">
+                    <div className="chart-bar" style={{ height: '30%', background: 'var(--gov-blue)' }} title="Chuyển đến: 12"></div>
+                    <div className="chart-bar" style={{ height: '28%', background: 'var(--gov-green)' }} title="Chuyển đi: 11"></div>
+                    <div className="chart-bar" style={{ height: '12%', background: 'var(--accent-orange)' }} title="Sinh: 5"></div>
+                    <div className="chart-bar" style={{ height: '4%', background: 'var(--accent-red)' }} title="Tử: 1"></div>
+                  </div>
+                  <div className="chart-bar-group">
+                    <div className="chart-bar" style={{ height: '48%', background: 'var(--gov-blue)' }} title="Chuyển đến: 22"></div>
+                    <div className="chart-bar" style={{ height: '35%', background: 'var(--gov-green)' }} title="Chuyển đi: 15"></div>
+                    <div className="chart-bar" style={{ height: '20%', background: 'var(--accent-orange)' }} title="Sinh: 8"></div>
+                    <div className="chart-bar" style={{ height: '10%', background: 'var(--accent-red)' }} title="Tử: 4"></div>
+                  </div>
+                  <div className="chart-bar-group">
+                    <div className="chart-bar" style={{ height: '55%', background: 'var(--gov-blue)' }} title="Chuyển đến: 25"></div>
+                    <div className="chart-bar" style={{ height: '30%', background: 'var(--gov-green)' }} title="Chuyển đi: 12"></div>
+                    <div className="chart-bar" style={{ height: '18%', background: 'var(--accent-orange)' }} title="Sinh: 7"></div>
+                    <div className="chart-bar" style={{ height: '12%', background: 'var(--accent-red)' }} title="Tử: 5"></div>
+                  </div>
+                  <div className="chart-bar-group">
+                    <div className="chart-bar" style={{ height: '60%', background: 'var(--gov-blue)' }} title="Chuyển đến: 28"></div>
+                    <div className="chart-bar" style={{ height: '22%', background: 'var(--gov-green)' }} title="Chuyển đi: 9"></div>
+                    <div className="chart-bar" style={{ height: '25%', background: 'var(--accent-orange)' }} title="Sinh: 10"></div>
+                    <div className="chart-bar" style={{ height: '8%', background: 'var(--accent-red)' }} title="Tử: 3"></div>
+                  </div>
+                </div>
+                <div className="chart-labels">
+                  <div className="chart-label">Tháng 2</div>
+                  <div className="chart-label">Tháng 3</div>
+                  <div className="chart-label">Tháng 4</div>
+                  <div className="chart-label">Tháng 5</div>
+                  <div className="chart-label">Tháng 6</div>
+                  <div className="chart-label">Tháng 7</div>
+                </div>
+                <div className="chart-legend">
+                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--gov-blue)' }}></div>Chuyển đến</div>
+                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--gov-green)' }}></div>Chuyển đi</div>
+                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--accent-orange)' }}></div>Trẻ mới sinh</div>
+                  <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--accent-red)' }}></div>Người qua đời</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hộ nghèo Donut Chart */}
+            <div className="card-gov">
+              <div className="card-gov-header">
+                <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-red)' }}></span>Cơ cấu hộ dân theo mức nghèo</div>
+                <button className="view-all" onClick={() => handleQuickAction('policy')}>Chi tiết chính sách →</button>
+              </div>
+              <div className="card-gov-body">
+                <div className="donut-area">
+                  <svg className="donut-svg" width="110" height="110" viewBox="0 0 110 110">
+                    <circle cx="55" cy="55" r="40" fill="none" stroke="#F1F5F9" strokeWidth="18"/>
+                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--accent-red)" strokeWidth="18" strokeDasharray="15 236" strokeDashoffset="0" transform="rotate(-90 55 55)"/>
+                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--accent-orange)" strokeWidth="18" strokeDasharray="18 233" strokeDashoffset="-15" transform="rotate(-90 55 55)"/>
+                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--accent-teal)" strokeWidth="18" strokeDasharray="30 221" strokeDashoffset="-33" transform="rotate(-90 55 55)"/>
+                    <circle cx="55" cy="55" r="40" fill="none" stroke="var(--gov-green)" strokeWidth="18" strokeDasharray="188 63" strokeDashoffset="-63" transform="rotate(-90 55 55)"/>
+                    <text x="55" y="50" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--text-primary)">{stats.totalHouseholds}</text>
+                    <text x="55" y="64" textAnchor="middle" fontSize="9" fill="var(--text-muted)">Tổng số Hộ</text>
+                  </svg>
+                  <div className="donut-legend">
+                    <div className="donut-legend-item">
+                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--accent-red)' }}></div>Hộ nghèo</div>
+                      <div className="dli-right">{stats.poorHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round((stats.poorHouseholds / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
+                    </div>
+                    <div className="donut-legend-item">
+                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--accent-orange)' }}></div>Cận nghèo</div>
+                      <div className="dli-right">{stats.nearPoorHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round((stats.nearPoorHouseholds / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
+                    </div>
+                    <div className="donut-legend-item">
+                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--accent-teal)' }}></div>Hộ chính sách</div>
+                      <div className="dli-right">{stats.policyFamilyHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round((stats.policyFamilyHouseholds / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
+                    </div>
+                    <div className="donut-legend-item">
+                      <div className="dli-left"><div className="dli-dot" style={{ background: 'var(--gov-green)' }}></div>Hộ bình thường</div>
+                      <div className="dli-right">{stats.totalHouseholds - stats.poorHouseholds - stats.nearPoorHouseholds - stats.policyFamilyHouseholds} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--text-muted)' }}>({stats.totalHouseholds > 0 ? Math.round(((stats.totalHouseholds - stats.poorHouseholds - stats.nearPoorHouseholds - stats.policyFamilyHouseholds) / stats.totalHouseholds) * 1000) / 10 : 0}%)</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="dash-grid">
+            {/* Tình hình thu các quỹ phường */}
+            <div className="card-gov">
+              <div className="card-gov-header">
+                <div className="card-title"><span className="title-dot"></span>Tiến độ thu nộp các loại quỹ TDP ({currentYear})</div>
+                <button className="view-all" onClick={() => handleQuickAction('ward-funds')}>Đóng Quỹ Phường →</button>
+              </div>
+              <div className="card-gov-body">
+                <div className="progress-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '14px 20px' }}>
+                  {activeFunds.map((fund, i) => {
+                    const mult = Math.max(1, stats.totalHouseholds);
+                    const data = funds[fund.name] || { collected: 0, target: fund.target * mult };
+                    const percent = data.target > 0 ? Math.round((data.collected / data.target) * 100) : 0;
+                    const barColor = percent >= 75 ? 'var(--gov-green)' : percent >= 30 ? 'var(--accent-orange)' : 'var(--accent-red)';
+                    return (
+                      <div key={i} className="progress-item" style={{ marginBottom: 0 }}>
+                        <div className="progress-info">
+                          <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{fund.name}</span>
+                          <span style={{ fontSize: '0.82rem', color: barColor, fontWeight: 'bold' }}>{percent}% ({formatVND(data.collected)})</span>
+                        </div>
+                        <div className="progress-bar">
+                          <div className="progress-fill" style={{ width: `${Math.min(100, percent)}%`, backgroundColor: barColor }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Hoạt động & Nhật ký & Phản ánh */}
+            <div className="card-gov">
+              <div className="card-gov-header">
+                <div className="card-title"><span className="title-dot" style={{ background: 'var(--gov-blue-light)' }}></span>Nhật ký hoạt động & Phản ánh của bà con</div>
+                <button className="view-all" onClick={() => handleQuickAction('complaints')}>Xem tất cả →</button>
+              </div>
+              <div className="card-gov-body" style={{ padding: '8px 18px' }}>
+                <div className="notif-list">
+                  {notifications.length > 0 ? (
+                    notifications.map(n => (
+                      <div key={n.id} className="notif-item">
+                        <div className="notif-icon-wrap" style={{ background: n.status === 'pending' || n.status === 'alert' ? '#FFEBEE' : 'var(--gov-blue-lighter)' }}>
+                          <n.icon size={14} color={n.status === 'pending' || n.status === 'alert' ? 'var(--accent-red)' : 'var(--gov-blue-light)'} />
+                        </div>
+                        <div className="notif-content">
+                          <div className="notif-title">{n.text}</div>
+                          <div className="notif-time">{n.time}</div>
+                        </div>
+                        {(n.status === 'pending' || n.status === 'alert') && <span className="notif-dot-unread"></span>}
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)' }}>Không có hoạt động mới nào</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {selectedRoleView === 'bi_thu' && (
+        <div className="dash-grid">
+          
+          {/* Sinh hoạt Chi bộ & Họp đảng viên */}
+          <div className="card-gov">
+            <div className="card-gov-header">
+              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-purple)' }}></span>Danh sách các buổi sinh hoạt Chi bộ Đảng gần đây</div>
+              <button className="view-all" onClick={() => handleQuickAction('meetings-party')}>Lịch sinh hoạt →</button>
+            </div>
+            <div className="card-gov-body" style={{ padding: 0 }}>
+              <table className="mini-table">
+                <thead>
+                  <tr>
+                    <th>Chủ đề cuộc họp</th>
+                    <th>Thời gian</th>
+                    <th>Địa điểm</th>
+                    <th>Đảng viên tham gia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPartyMeetings.length > 0 ? (
+                    recentPartyMeetings.map(m => (
+                      <tr key={m.id}>
+                        <td style={{ fontWeight: 600 }}>{m.title}</td>
+                        <td>{new Date(m.date).toLocaleDateString('vi-VN')}</td>
+                        <td>{m.location || 'Nhà văn hóa TDP'}</td>
+                        <td>
+                          <span className="status-pill pill-blue">{m.attendance_count || 0} Đảng viên</span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px' }}>Chưa ghi nhận cuộc họp chi bộ nào.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Cơ cấu & Phân tổ Đảng */}
+          <div className="card-gov">
+            <div className="card-gov-header">
+              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-purple)' }}></span>Thông tin Tổ Đảng & Chi hội</div>
+              <button className="view-all" onClick={() => handleQuickAction('party-cell')}>Quản lý Đảng viên →</button>
+            </div>
+            <div className="card-gov-body">
+              <div className="progress-item">
+                <div className="progress-info">
+                  <span className="p-label">Đảng viên chính thức</span>
+                  <span className="p-val">{stats.officialPartyMembers} / {stats.totalPartyMembers}</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${stats.totalPartyMembers > 0 ? (stats.officialPartyMembers / stats.totalPartyMembers) * 100 : 0}%`, background: 'var(--accent-purple)' }}></div>
+                </div>
+              </div>
+
+              <div className="progress-item" style={{ marginTop: '14px' }}>
+                <div className="progress-info">
+                  <span className="p-label">Đảng viên miễn sinh hoạt</span>
+                  <span className="p-val">{stats.exemptPartyMembers} / {stats.totalPartyMembers}</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${stats.totalPartyMembers > 0 ? (stats.exemptPartyMembers / stats.totalPartyMembers) * 100 : 0}%`, background: 'var(--accent-orange)' }}></div>
+                </div>
+              </div>
+
+              <div className="progress-item" style={{ marginTop: '14px' }}>
+                <div className="progress-info">
+                  <span className="p-label">Đảng viên cao tuổi (≥60 tuổi)</span>
+                  <span className="p-val">{stats.seniorPartyMembers} / {stats.totalPartyMembers}</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${stats.totalPartyMembers > 0 ? (stats.seniorPartyMembers / stats.totalPartyMembers) * 100 : 0}%`, background: 'var(--gov-green)' }}></div>
+                </div>
+              </div>
+
+              <div className="party-quick-tips" style={{ marginTop: '20px', padding: '12px 14px', background: '#F3E5F5', border: '1px solid rgba(106, 27, 154, 0.15)', borderRadius: '8px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <Info size={16} color="var(--accent-purple)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '11px', color: '#4a148c', lineHeight: 1.4, textAlign: 'left' }}>
+                  <strong>Quy định Đảng phí 2026:</strong> Thực hiện theo hướng dẫn thu Đảng phí mới nhất, tự động tính toán theo mức thu nhập và đối tượng đóng BHXH / Hưu trí.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedRoleView === 'mat_tran' && (
+        <div className="dash-grid">
+          
+          {/* Danh sách phong trào, ngày hội */}
+          <div className="card-gov">
+            <div className="card-gov-header">
+              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-teal)' }}></span>Cuộc vận động Mặt trận & Ngày hội Đại đoàn kết</div>
+              <button className="view-all" onClick={() => handleQuickAction('meetings-front')}>Xem lịch họp →</button>
+            </div>
+            <div className="card-gov-body" style={{ padding: 0 }}>
+              <table className="mini-table">
+                <thead>
+                  <tr>
+                    <th>Chủ đề hoạt động / Cuộc họp</th>
+                    <th>Thời gian</th>
+                    <th>Địa điểm</th>
+                    <th>Số lượt người hưởng ứng</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentMeetings.filter(m => m.type === 'front').length > 0 ? (
+                    recentMeetings.filter(m => m.type === 'front').map(m => (
+                      <tr key={m.id}>
+                        <td style={{ fontWeight: 600 }}>{m.title}</td>
+                        <td>{new Date(m.date).toLocaleDateString('vi-VN')}</td>
+                        <td>{m.location || 'Nhà văn hóa TDP'}</td>
+                        <td>
+                          <span className="status-pill pill-green">{m.attendance_count || 0} Bà con</span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '16px' }}>Bí thư, Tổ trưởng phối hợp Ban Công tác Mặt trận chưa lưu cuộc họp Mặt trận nào.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Các chi hội hoạt động */}
+          <div className="card-gov">
+            <div className="card-gov-header">
+              <div className="card-title"><span className="title-dot" style={{ background: 'var(--accent-teal)' }}></span>Thông tin Chi hội & Hoạt động</div>
+              <button className="view-all" onClick={() => handleQuickAction('policy')}>DS Chính sách →</button>
+            </div>
+            <div className="card-gov-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-main)', borderRadius: '8px', alignItems: 'center' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Quỹ Vì người nghèo</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Đóng góp an sinh</div>
+                  </div>
+                  <span className="status-pill pill-green" style={{ fontSize: '11px' }}>Hoạt động tốt</span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-main)', borderRadius: '8px', alignItems: 'center' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Chi hội Cựu chiến binh</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Phát huy truyền thống</div>
+                  </div>
+                  <span className="status-pill pill-blue" style={{ fontSize: '11px' }}>Tích cực</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-main)', borderRadius: '8px', alignItems: 'center' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Chi hội Phụ nữ & Người cao tuổi</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Phong trào vệ sinh & sống khỏe</div>
+                  </div>
+                  <span className="status-pill pill-blue" style={{ fontSize: '11px' }}>Đâu đặn</span>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '18px', fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: '1.4', textAlign: 'left', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                💡 <strong>Gợi ý hoạt động:</strong> Phối hợp với Đoàn Thanh niên tổ chức các buổi tình nguyện vệ sinh bãi biển, dọn rác khu dân cư định kỳ hàng tháng.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. QUICK ACTIONS FOR REGISTERED ROLES (EXCLUDING GUEST) */}
+      {!isGuest && (
+        <div className="card-gov" style={{ marginTop: '16px' }}>
+          <div className="card-gov-header">
+            <div className="card-title"><span className="title-dot" style={{ background: 'var(--gov-green)' }}></span>Thao tác nhanh trên hệ thống</div>
+          </div>
+          <div className="card-gov-body">
+            <div className="quick-grid">
+              <button className="quick-btn" onClick={() => handleQuickAction('households', 'open-add-household-modal')}>
+                <div className="q-icon" style={{ background: 'var(--gov-blue-lighter)' }}><PlusIcon color="var(--gov-blue)" /></div>
+                <span className="q-label">Thêm Hộ mới</span>
+              </button>
+              <button className="quick-btn" onClick={() => handleQuickAction('residents', 'open-add-resident-modal')}>
+                <div className="q-icon" style={{ background: 'var(--gov-green-light)' }}><PlusIcon color="var(--gov-green)" /></div>
+                <span className="q-label">Thêm Nhân khẩu</span>
+              </button>
+              <button className="quick-btn" onClick={() => handleQuickAction('meetings-minutes', 'open-add-minutes-modal')}>
+                <div className="q-icon" style={{ background: '#FBE9E7' }}><FileText size={18} color="var(--accent-orange)" /></div>
+                <span className="q-label">Lập Biên bản họp</span>
+              </button>
+              <button className="quick-btn" onClick={() => handleQuickAction('complaints')}>
+                <div className="q-icon" style={{ background: '#E0F2F1' }}><MessageCircleIcon color="var(--accent-teal)" /></div>
+                <span className="q-label">Xử lý Phản ánh</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
-        .dashboard-container {
-          width: 100%;
-          animation: fadeIn 0.5s ease-out;
+        .tab-btn-role {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          background: white;
+          color: var(--text-secondary);
+          font-size: 12.5px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
         }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+        .tab-btn-role:hover:not(:disabled) {
+          border-color: var(--gov-blue);
+          color: var(--gov-blue);
+          background: var(--gov-blue-lighter);
         }
-
+        .tab-btn-role.active {
+          border-color: var(--gov-blue);
+          color: white;
+          background: var(--gov-blue);
+        }
+        .tab-btn-role:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        
         .premium-welcome-banner {
-          background: linear-gradient(135deg, rgba(37, 99, 235, 0.06) 0%, rgba(59, 130, 246, 0.02) 100%);
-          border: 1.5px solid rgba(37, 99, 235, 0.12);
+          background: linear-gradient(135deg, rgba(21, 101, 192, 0.06) 0%, rgba(25, 118, 210, 0.02) 100%);
+          border: 1.5px solid rgba(21, 101, 192, 0.12);
           border-radius: var(--radius-lg);
           padding: 14px 24px;
           margin-bottom: 16px;
@@ -408,7 +974,7 @@ const Dashboard = () => {
           justify-content: space-between;
           align-items: center;
           gap: 20px;
-          box-shadow: 0 4px 15px rgba(37, 99, 235, 0.01);
+          box-shadow: 0 4px 15px rgba(21, 101, 192, 0.01);
           position: relative;
           overflow: hidden;
         }
@@ -417,28 +983,30 @@ const Dashboard = () => {
           position: absolute;
           width: 250px;
           height: 250px;
-          background: radial-gradient(circle, rgba(37, 99, 235, 0.04) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(21, 101, 192, 0.04) 0%, transparent 70%);
           right: -80px;
           top: -80px;
           pointer-events: none;
         }
         .welcome-message h1 {
           font-size: 1.4rem;
-          font-weight: 850;
-          background: linear-gradient(135deg, #1d4ed8 0%, #10b981 50%, #84cc16 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
+          font-weight: 800;
+          color: var(--text-primary);
           margin-bottom: 4px;
+          text-align: left;
         }
         .welcome-message p {
           font-size: 0.88rem;
           color: var(--text-muted);
           margin-bottom: 2px;
+          text-align: left;
         }
         .welcome-message .welcome-wish {
           font-size: 0.82rem;
-          color: #059669;
+          color: var(--gov-green);
           font-weight: 600;
+          display: block;
+          text-align: left;
         }
         .welcome-datetime {
           text-align: right;
@@ -447,7 +1015,7 @@ const Dashboard = () => {
         .welcome-time {
           font-size: 1.55rem;
           font-weight: 800;
-          background: linear-gradient(135deg, #1d4ed8 0%, #10b981 100%);
+          background: linear-gradient(135deg, var(--gov-blue) 0%, var(--gov-green) 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           line-height: 1.1;
@@ -460,227 +1028,31 @@ const Dashboard = () => {
           margin-top: 2px;
           text-transform: capitalize;
         }
-
-        .btn {
-          padding: 10px 20px;
-          border-radius: var(--radius-md);
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.95rem;
+        .party-quick-tips {
+          animation: pulse 4s infinite;
         }
-
-        .btn-primary {
-          background-color: var(--primary);
-          color: white;
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-        }
-
-        .btn-primary:hover {
-          background-color: var(--primary-hover);
-          transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-          background-color: white;
-          color: var(--text-main);
-          border: 1px solid var(--border);
-        }
-        
-        .btn-secondary:hover {
-          background-color: #f8fafc;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 20px;
-          margin-bottom: 32px;
-        }
-
-        .stat-card {
-          background: white;
-          padding: 24px;
-          border-radius: var(--radius-lg);
-          display: flex;
-          justify-content: space-between;
-          border: 1px solid var(--border);
-          transition: all 0.3s;
-        }
-
-        .stat-card:hover {
-          box-shadow: var(--shadow-lg);
-          transform: translateY(-4px);
-        }
-
-        .stat-card.border-blue { border-left: 4px solid var(--primary) !important; }
-        .stat-card.border-indigo { border-left: 4px solid #6366f1 !important; }
-        .stat-card.border-orange { border-left: 4px solid #f59e0b !important; }
-        .stat-card.border-red { border-left: 4px solid var(--danger) !important; }
-
-        .stat-card.border-blue .stat-card-value { color: var(--primary) !important; }
-        .stat-card.border-indigo .stat-card-value { color: #4f46e5 !important; }
-        .stat-card.border-orange .stat-card-value { color: #d97706 !important; }
-        .stat-card.border-red .stat-card-value { color: var(--danger) !important; }
-
-        .stat-card-title {
-          font-size: 0.9rem;
-          color: var(--text-muted);
-          font-weight: 500;
-        }
-
-        .stat-card-value {
-          font-size: 2rem;
-          margin: 8px 0;
-          letter-spacing: -1px;
-          font-weight: 700;
-        }
-
-        .stat-card-trend {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .trend-badge {
-          font-size: 0.75rem;
-          color: var(--success);
-          background-color: rgba(16, 185, 129, 0.1);
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-weight: 700;
-        }
-
-        .stat-card-subtext {
-          font-size: 0.75rem;
-          color: var(--text-muted);
-        }
-
-        .stat-card-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .stat-card-icon.blue { background-color: rgba(37, 99, 235, 0.1); color: var(--primary); }
-        .stat-card-icon.indigo { background-color: rgba(129, 140, 248, 0.1); color: #6366f1; }
-        .stat-card-icon.orange { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-        .stat-card-icon.red { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); }
-
-        .dashboard-charts {
-          display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 24px;
-        }
-
-        .chart-item {
-          background: white;
-          padding: 24px;
-          border-radius: var(--radius-lg);
-          border: 1px solid var(--border);
-        }
-
-        .chart-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 24px;
-        }
-
-        .view-all {
-          color: var(--primary);
-          font-size: 0.85rem;
-          font-weight: 600;
-          cursor: pointer;
-        }
-
-        .progress-list {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .progress-info {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.95rem;
-          font-weight: 500;
-          margin-bottom: 8px;
-        }
-
-        .progress-bar-bg {
-          height: 10px;
-          background-color: #f1f5f9;
-          border-radius: 5px;
-          overflow: hidden;
-        }
-
-        .progress-bar-fill {
-          height: 100%;
-          background-color: var(--primary);
-          border-radius: 5px;
-          transition: width 1s ease-out;
-        }
-
-        .notification-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .notif-item {
-          display: flex;
-          gap: 12px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f1f5f9;
-        }
-
-        .notif-item:last-child { border-bottom: none; }
-
-        .notif-icon {
-          color: var(--success);
-          padding-top: 2px;
-        }
-
-        .notif-icon.red {
-          color: var(--danger);
-        }
-
-        .notif-content p {
-          font-size: 0.9rem;
-          font-weight: 500;
-          line-height: 1.4;
-          margin-bottom: 4px;
-        }
-
-        .notif-content span {
-          font-size: 0.75rem;
-          color: var(--text-muted);
-        }
-
-        @media (max-width: 1024px) {
-          .dashboard-charts {
-            grid-template-columns: 1fr;
-          }
-        }
-        @media (max-width: 768px) {
-          .premium-welcome-banner {
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 12px 18px;
-          }
-          .welcome-datetime {
-            text-align: left;
-            margin-top: 12px;
-          }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(106, 27, 154, 0.2); }
+          70% { box-shadow: 0 0 0 6px rgba(106, 27, 154, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(106, 27, 154, 0); }
         }
       `}</style>
     </div>
   );
 };
+
+// Simple icons fallback
+const PlusIcon = ({ color }: { color: string }) => (
+  <svg width="18" height="18" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
+
+const MessageCircleIcon = ({ color }: { color: string }) => (
+  <svg width="18" height="18" fill="none" stroke={color} strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+  </svg>
+);
 
 export default Dashboard;

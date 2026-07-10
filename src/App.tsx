@@ -84,6 +84,20 @@ const App = () => {
   const [isOfflineMode, setOfflineMode] = useState<boolean>(localStorage.getItem('offline_mode') === 'true');
   const [isGuestMode, setGuestMode] = useState<boolean>(localStorage.getItem('guest_mode') === 'true');
 
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatVietnameseDateTime = (date: Date) => {
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const dayName = days[date.getDay()];
+    const dateStr = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+    return { dayName, dateStr, timeStr };
+  };
+
   // Floating widgets state
   const [zaloOpen, setZaloOpen] = useState(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
@@ -298,6 +312,8 @@ const App = () => {
   // Notifications states
   const [isNotifOpen, setNotifOpen] = useState(false);
   const [notifList, setNotifList] = useState<any[]>([]);
+  const [householdCount, setHouseholdCount] = useState(0);
+  const [residentCount, setResidentCount] = useState(0);
 
   // Search states
   const [globalQuery, setGlobalQuery] = useState('');
@@ -545,6 +561,14 @@ const App = () => {
     try {
       const list = await db.getComplaints();
       setPendingCount(list.filter(c => c.status === 'pending').length);
+      
+      const [resList, hhList] = await Promise.all([
+        db.getResidents(),
+        db.getHouseholds()
+      ]);
+      setResidentCount(resList.filter(r => r.status !== 'deceased').length);
+      setHouseholdCount(hhList.length);
+      
       await loadNotifications();
     } catch (e) {
       console.error(e);
@@ -1234,24 +1258,24 @@ const App = () => {
   };
 
   const menuItems = [
-    { id: 'dashboard', icon: PieChart, label: 'Bảng điều khiển' },
-    { id: 'households', icon: Home, label: 'Quản lý Hộ dân' },
-    { id: 'residents', icon: Users, label: 'Quản lý Nhân khẩu' },
-    { id: 'policy', icon: UserCircle, label: 'Chế độ & Chính sách' },
-    { id: 'security', icon: ShieldCheck, label: 'An ninh trật tự' },
-    { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', badge: pendingCount },
-    { id: 'environment', icon: Leaf, label: 'Vệ sinh môi trường' },
-    { id: 'finance', icon: Wallet, label: 'Thu chi cộng đồng' },
-    { id: 'ward-funds', icon: Wallet, label: 'Thu Quỹ Phường' },
-    { id: 'meetings', icon: Calendar, label: 'Họp dân' },
-    { id: 'meetings-party', icon: Calendar, label: 'Họp chi bộ' },
-    { id: 'meetings-front', icon: Calendar, label: 'Họp mặt trận' },
-    { id: 'meetings-minutes', icon: FileText, label: 'Biên bản cuộc họp' },
-    { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết' },
-    { id: 'regulations', icon: BookOpen, label: 'Quy định & Nhiệm vụ' },
-    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng' },
-    { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư' },
-    { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI' },
+    { id: 'dashboard', icon: PieChart, label: 'Dashboard', group: 'Tổng quan' },
+    { id: 'households', icon: Home, label: 'Quản lý Hộ dân', group: 'Quản lý dân cư', badge: householdCount },
+    { id: 'residents', icon: Users, label: 'Quản lý Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount },
+    { id: 'policy', icon: UserCircle, label: 'Chế độ & Chính sách', group: 'Quản lý dân cư' },
+    { id: 'security', icon: ShieldCheck, label: 'An ninh trật tự', group: 'Quản lý dân cư' },
+    { id: 'environment', icon: Leaf, label: 'Vệ sinh môi trường', group: 'Quản lý dân cư' },
+    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể' },
+    { id: 'meetings-front', icon: Calendar, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
+    { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết', group: 'Điều hành' },
+    { id: 'meetings', icon: Calendar, label: 'Họp dân', group: 'Điều hành' },
+    { id: 'meetings-party', icon: Calendar, label: 'Họp chi bộ', group: 'Điều hành' },
+    { id: 'meetings-minutes', icon: FileText, label: 'Biên bản cuộc họp', group: 'Điều hành' },
+    { id: 'regulations', icon: BookOpen, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
+    { id: 'finance', icon: Wallet, label: 'Thu chi cộng đồng', group: 'Tài chính' },
+    { id: 'ward-funds', icon: Wallet, label: 'Thu Quỹ Phường', group: 'Tài chính' },
+    { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư', group: 'Tiện ích & Hệ thống' },
+    { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích & Hệ thống', badge: pendingCount },
+    { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích & Hệ thống' },
   ].filter(item => {
     if (isGuestMode) {
       // Ẩn các mục nhạy cảm với chế độ khách
@@ -1304,62 +1328,72 @@ const App = () => {
 
       {/* Sidebar */}
       <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
-        <div className="sidebar-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '24px 20px 16px 20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-            <div className="logo-container" style={{ alignItems: 'flex-start', gap: '10px' }}>
-              {logoUrl && !logoError ? (
-                <img 
-                  src={logoUrl} 
-                  alt="Logo" 
-                  style={{ width: '40px', height: '40px', objectFit: 'contain', marginTop: '2px', flexShrink: 0, borderRadius: '4px' }} 
-                  onError={() => setLogoError(true)}
-                />
-              ) : (
-                <ShieldCheck size={36} color="rgba(251, 255, 0, 1)" fill="rgba(59, 130, 246, 0.15)" style={{ marginTop: '2px', flexShrink: 0 }} />
-              )}
-              <div className="logo-text" style={{ gap: '2px', display: 'flex', flexDirection: 'column' }}>
-                <span className="logo-title" style={{ fontSize: '0.8rem', color: '#fbff03ee', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>THÔN/TỔ DÂN PHỐ</span>
-                <span className="logo-subtitle" style={{ fontSize: '1.25rem', color: '#ffffff', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 1, lineHeight: '1.2' }}>{tdpName}</span>
-                <span className="logo-ward" style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{wardName}</span>
-              </div>
-            </div>
-            {window.innerWidth <= 768 && (
-              <button onClick={() => setSidebarOpen(false)} className="close-sidebar" style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}>
-                <X size={24} />
-              </button>
+        <div className="sidebar-logo" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+          <div className="logo-icon" style={{ width: '44px', height: '44px', background: 'white', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+            {logoUrl && !logoError ? (
+              <img 
+                src={logoUrl} 
+                alt="Logo" 
+                style={{ width: '32px', height: '32px', objectFit: 'contain' }} 
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                <rect width="30" height="30" rx="6" fill="#E3F2FD"/>
+                <path d="M15 4L4 10v10l11 6 11-6V10L15 4z" fill="#1565C0" opacity="0.15"/>
+                <path d="M15 4L4 10v10l11 6 11-6V10L15 4z" fill="none" stroke="#1565C0" stroke-width="1.5"/>
+                <circle cx="15" cy="15" r="4" fill="#1565C0"/>
+                <path d="M15 4v11M4 10l11 5M26 10l-11 5" stroke="#1565C0" stroke-width="1" opacity="0.5"/>
+              </svg>
             )}
           </div>
-          
-          {/* Glassmorphic contact card for the software developer (Technical Support) */}
-          <div className="sidebar-contact-card" style={{
-            marginTop: '6px',
-            background: 'rgba(59, 130, 246, 0.05)',
-            border: '1px solid rgba(59, 130, 246, 0.15)',
-            borderRadius: '8px',
-            padding: '8px 10px',
-            boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.02)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
-              <span style={{ color: '#f8fafc', fontWeight: '700' }}>{supportName}:</span>
-              <span style={{ color: '#60a5fa' }}>{supportPhone}</span>
+          <div className="logo-text" style={{ color: 'white', display: 'flex', flexDirection: 'column' }}>
+            <span className="app-name" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.3px', lineHeight: 1.2 }}>QL Tổ dân phố</span>
+            <span className="app-sub" style={{ fontSize: '10.5px', opacity: 0.75, marginTop: '2px' }}>{tdpName} – {wardName}</span>
+          </div>
+          {window.innerWidth <= 768 && (
+            <button onClick={() => setSidebarOpen(false)} className="close-sidebar" style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', marginLeft: 'auto' }}>
+              <X size={24} />
+            </button>
+          )}
+        </div>
+        
+        {/* Glassmorphic contact card for the software developer (Technical Support) */}
+        <div className="sidebar-footer" style={{ padding: '8px 8px 0px 8px', borderTop: 'none' }}>
+          <div className="support-box" style={{ background: 'rgba(255, 255, 255, 0.1)', borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+            <div className="s-icon" style={{ width: '30px', height: '30px', background: 'rgba(255, 255, 255, 0.2)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="14" height="14" fill="none" stroke="white" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.01 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z" stroke-width="2"/></svg>
+            </div>
+            <div className="s-text" style={{ color: 'white', textAlign: 'left' }}>
+              <div className="s-label" style={{ fontSize: '9px', opacity: 0.7 }}>Hỗ trợ: {supportName}</div>
+              <div className="s-value" style={{ fontSize: '11px', fontWeight: 600, marginTop: '1px' }}>{supportPhone}</div>
             </div>
           </div>
         </div>
 
         <nav className="sidebar-nav">
-          {menuItems.map((item) => (
-            <NavItem 
-              key={item.id}
-              icon={item.icon}
-              label={item.label}
-              active={activeTab === item.id}
-              onClick={() => {
-                setActiveTab(item.id);
-                if (window.innerWidth <= 768) setSidebarOpen(false);
-              }}
-              badge={item.badge}
-            />
-          ))}
+          {['Tổng quan', 'Quản lý dân cư', 'Tổ chức - Đoàn thể', 'Điều hành', 'Tài chính', 'Tiện ích & Hệ thống'].map(grpName => {
+            const grpItems = menuItems.filter(item => item.group === grpName);
+            if (grpItems.length === 0) return null;
+            return (
+              <div key={grpName} className="nav-group">
+                <div className="nav-group-title">{grpName}</div>
+                {grpItems.map(item => (
+                  <NavItem 
+                    key={item.id}
+                    icon={item.icon}
+                    label={item.label}
+                    active={activeTab === item.id}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      if (window.innerWidth <= 768) setSidebarOpen(false);
+                    }}
+                    badge={item.badge}
+                  />
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1438,82 +1472,103 @@ const App = () => {
           </div>
         </div>
         
-        <header className="main-header">
+        <header className="header">
           <div className="header-left">
             {!isSidebarOpen && (
-              <button onClick={() => setSidebarOpen(true)} className="menu-toggle">
+              <button onClick={() => setSidebarOpen(true)} className="menu-toggle" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px', marginRight: '8px' }}>
                 <Menu size={24} />
               </button>
             )}
-            <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <span>{menuItems.find(i => i.id === activeTab)?.label}</span>
-              {leaderPhone && (
-                <span 
-                  className="header-phone-badge" 
-                  onClick={handleOpenSettings}
-                  title="Nhấp để thay đổi số điện thoại trong cấu hình"
-                  style={{
-                    fontSize: '0.82rem',
-                    fontWeight: '600',
-                    color: 'var(--primary)',
-                    background: 'rgba(37, 99, 235, 0.08)',
-                    padding: '4px 10px',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(37, 99, 235, 0.15)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    userSelect: 'none'
-                  }}
-                >
-                  📞 SĐT: {leaderPhone}
-                </span>
-              )}
-            </h2>
+            <div className="breadcrumb-gov">
+              <span>Tổ dân phố {tdpName}</span>
+              <span className="sep">›</span>
+              <span className="current" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{menuItems.find(i => i.id === activeTab)?.label}</span>
+            </div>
           </div>
 
           <div className="header-right">
-            {activeTab === 'dashboard' && (
-              <div className="search-bar" style={{ position: 'relative' }}>
-                <Search size={24} />
-                <input 
-                  type="text" 
-                  placeholder="Tìm kiếm hộ dân, nhân khẩu..." 
-                  value={globalQuery}
-                  onChange={(e) => setGlobalQuery(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-                />
-                {isSearchFocused && searchResults.length > 0 && (
-                  <div className="search-results-dropdown">
-                    {searchResults.map(res => (
-                      <div 
-                        key={res.id} 
-                        className="search-result-item" 
-                        onMouseDown={() => handleSearchResultClick(res)}
-                      >
-                        <div className="res-name">{res.name}</div>
-                        <div className="res-detail">{res.detail}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="header-weather">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke-width="2"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke-width="2"/></svg>
+              <span>32°C – Nắng</span>
+            </div>
+            
+            {(() => {
+              const { dayName, dateStr, timeStr } = formatVietnameseDateTime(currentDateTime);
+              return (
+                <div className="header-datetime">
+                  <div className="date">{dayName}, {dateStr}</div>
+                  <div className="time">{timeStr} ICT</div>
+                </div>
+              );
+            })()}
+
+            <div className="search-box">
+              <Search size={14} />
+              <input 
+                type="text" 
+                placeholder="Tìm hộ dân, nhân khẩu..." 
+                value={globalQuery}
+                onChange={(e) => setGlobalQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              />
+              {isSearchFocused && searchResults.length > 0 && (
+                <div className="search-results-dropdown" style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  width: '320px',
+                  background: 'white',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--shadow-md)',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  zIndex: 1000
+                }}>
+                  {searchResults.map(res => (
+                    <div 
+                      key={res.id} 
+                      className="search-result-item" 
+                      onMouseDown={() => handleSearchResultClick(res)}
+                      style={{
+                        padding: '10px 12px',
+                        borderBottom: '1px solid var(--border)',
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div className="res-name" style={{ fontWeight: '600', fontSize: '12px', color: 'var(--text-primary)' }}>{res.name}</div>
+                      <div className="res-detail" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{res.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setNotifOpen(!isNotifOpen)} title="Cảnh báo">
-                <Bell size={20} />
-                {notifList.length > 0 && <span className="dot"></span>}
+                <Bell size={18} />
+                {notifList.length > 0 && <span className="notif-dot"></span>}
               </button>
               {isNotifOpen && (
-                <div className="notif-dropdown">
-                  <div className="notif-dropdown-header">
-                    <h4>Cảnh báo & Kiến nghị ({notifList.length})</h4>
-                    <button onClick={() => setNotifOpen(false)} style={{ color: 'var(--text-muted)' }}><X size={16} /></button>
+                <div className="notif-dropdown" style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  width: '320px',
+                  background: 'white',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  boxShadow: 'var(--shadow-md)',
+                  zIndex: 1000,
+                  padding: '12px'
+                }}>
+                  <div className="notif-dropdown-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>
+                    <h4 style={{ fontSize: '12px', margin: 0 }}>Cảnh báo & Kiến nghị ({notifList.length})</h4>
+                    <button onClick={() => setNotifOpen(false)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}><X size={14} /></button>
                   </div>
-                  <div className="notif-dropdown-body">
+                  <div className="notif-dropdown-body" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                     {notifList.map(n => (
                       <div 
                         key={n.id} 
@@ -1522,13 +1577,19 @@ const App = () => {
                           setActiveTab(n.type);
                           setNotifOpen(false);
                         }}
+                        style={{
+                          padding: '8px 0',
+                          borderBottom: '1px solid var(--border)',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
                       >
-                        <div className="notif-text">{n.text}</div>
-                        <div className="notif-time">{n.time}</div>
+                        <div className="notif-text" style={{ fontSize: '11.5px', color: 'var(--text-primary)' }}>{n.text}</div>
+                        <div className="notif-time" style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>{n.time}</div>
                       </div>
                     ))}
                     {notifList.length === 0 && (
-                      <div className="notif-empty">Không có cảnh báo mới</div>
+                      <div className="notif-empty" style={{ fontSize: '11px', color: 'var(--text-muted)', padding: '10px 0', textAlign: 'center' }}>Không có cảnh báo mới</div>
                     )}
                   </div>
                 </div>
@@ -1537,7 +1598,7 @@ const App = () => {
 
             {(userRole === 'to_truong' || userRole === 'admin') && !isGuestMode && (
               <button className="icon-btn" onClick={handleOpenSettings} title="Cấu hình hệ thống">
-                <Settings size={20} />
+                <Settings size={18} />
               </button>
             )}
           </div>
