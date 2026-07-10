@@ -17,7 +17,7 @@ const CCBElderly = () => {
   // Form states for adding member
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newGender, setNewGender] = useState<'male' | 'female'>('male');
+  const [newGender, setNewGender] = useState<'male' | 'female' | 'other'>('male');
   const [newDob, setNewDob] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newCccd, setNewCccd] = useState('');
@@ -26,6 +26,20 @@ const CCBElderly = () => {
   const [newHouseholdId, setNewHouseholdId] = useState('');
   const [newRelationship, setNewRelationship] = useState('Thành viên');
   const [newAddress, setNewAddress] = useState('');
+
+  // Form states for editing member
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingResident, setEditingResident] = useState<Resident | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editGender, setEditGender] = useState<'male' | 'female' | 'other'>('male');
+  const [editDob, setEditDob] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editCccd, setEditCccd] = useState('');
+  const [editOccupation, setEditOccupation] = useState('');
+  const [editStatus, setEditStatus] = useState<'resident' | 'temporary_resident'>('resident');
+  const [editHouseholdId, setEditHouseholdId] = useState('');
+  const [editRelationship, setEditRelationship] = useState('Thành viên');
+  const [editAddress, setEditAddress] = useState('');
 
   const [households, setHouseholds] = useState<Household[]>([]);
   const [allResidents, setAllResidents] = useState<Resident[]>([]);
@@ -560,6 +574,94 @@ const CCBElderly = () => {
     }
   };
 
+  const handleOpenEdit = (res: Resident) => {
+    setEditingResident(res);
+    setEditName(res.full_name);
+    setEditGender(res.gender || 'male');
+    setEditDob(res.dob || '');
+    setEditPhone(res.phone || '');
+    setEditCccd(res.cccd || '');
+    setEditOccupation(res.occupation || '');
+    setEditStatus(res.status as any);
+    setEditHouseholdId(res.household_id || '');
+    setEditRelationship(res.relationship_with_head || 'Thành viên');
+    setEditAddress(res.permanent_address || '');
+    setIsEditModalOpen(true);
+  };
+
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingResident) return;
+    if (!editName.trim()) {
+      alert('Vui lòng nhập họ và tên!');
+      return;
+    }
+
+    try {
+      const selectedHh = households.find(h => h.id === editHouseholdId);
+      const updatedRes = {
+        ...editingResident,
+        full_name: editName.trim(),
+        gender: editGender,
+        dob: editDob,
+        phone: editPhone.trim(),
+        cccd: editCccd.trim(),
+        occupation: editOccupation.trim(),
+        household_id: editHouseholdId || '',
+        relationship_with_head: editRelationship,
+        permanent_address: selectedHh?.address || editAddress.trim() || editingResident.permanent_address || 'TDP Quảng Giao',
+        status: editStatus
+      };
+
+      await db.saveResident(updatedRes);
+      setIsEditModalOpen(false);
+      setEditingResident(null);
+      loadData();
+
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: `Đã cập nhật thông tin hội viên thành công!`, type: 'success' } 
+      });
+      window.dispatchEvent(ev);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra: ${err.message || err}`);
+    }
+  };
+
+  const handleRemoveMember = async (res: Resident) => {
+    const isSeniorTab = selectedTab === 'seniors';
+    const assocName = isSeniorTab ? 'Hội Người cao tuổi' : 'Hội Cựu chiến binh';
+    const assocCode = isSeniorTab ? 'nct' : 'ccb';
+
+    const confirmRemove = window.confirm(`Bạn có chắc chắn muốn rút hội viên ${res.full_name} ra khỏi ${assocName}?`);
+    if (!confirmRemove) return;
+
+    try {
+      const membership = res.association_membership || '';
+      const updatedMembership = membership
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s !== assocCode && s !== '')
+        .join(', ');
+
+      const updatedRes = {
+        ...res,
+        association_membership: updatedMembership
+      };
+
+      await db.saveResident(updatedRes);
+      loadData();
+      
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: `Đã rút hội viên ${res.full_name} ra khỏi ${assocName} thành công!`, type: 'success' } 
+      });
+      window.dispatchEvent(ev);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra khi rút hội viên: ${err.message || err}`);
+    }
+  };
+
   return (
     <div className="content-card" style={{ padding: '24px', display: 'block', minHeight: 'calc(100vh - 120px)', animation: 'fadeIn 0.4s ease-out' }}>
       
@@ -717,6 +819,7 @@ const CCBElderly = () => {
                 <th>Điện thoại</th>
                 <th>{selectedTab === 'seniors' ? 'Danh hiệu Mừng thọ' : 'Chức vụ / Công việc'}</th>
                 <th>Trạng thái</th>
+                {!isGuest && <th style={{ width: '130px' }}>Hành động</th>}
               </tr>
             </thead>
             <tbody>
@@ -744,6 +847,22 @@ const CCBElderly = () => {
                           {m.status === 'resident' ? 'Thường trú' : 'Tạm trú'}
                         </span>
                       </td>
+                      {!isGuest && (
+                        <td style={{ padding: '8px 14px', display: 'flex', gap: '6px', borderLeft: 'none' }}>
+                          <button 
+                            onClick={() => handleOpenEdit(m)}
+                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', background: 'white', color: '#1e293b', fontSize: '11px', cursor: 'pointer' }}
+                          >
+                            ✏️ Sửa
+                          </button>
+                          <button 
+                            onClick={() => handleRemoveMember(m)}
+                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #fee2e2', background: '#fef2f2', color: '#dc2626', fontSize: '11px', cursor: 'pointer' }}
+                          >
+                            ❌ Rút
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -932,6 +1051,186 @@ const CCBElderly = () => {
                   style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'var(--gov-blue)', color: 'white', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer' }}
                 >
                   Thêm mới
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT MEMBER MODAL */}
+      {isEditModalOpen && (
+        <div className="modal-overlay" style={{ zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-content medium" style={{ background: 'white', borderRadius: '12px', padding: '24px', width: '500px', maxWidth: '90%', position: 'relative', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', animation: 'fadeIn 0.2s ease-out' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                ✏️ Chỉnh sửa thông tin hội viên ({selectedTab === 'seniors' ? 'Người cao tuổi' : 'Cựu chiến binh'})
+              </h3>
+              <button onClick={() => { setIsEditModalOpen(false); setEditingResident(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitEdit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                  Họ và tên <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Nhập họ và tên hội viên..." 
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                    Giới tính
+                  </label>
+                  <select 
+                    value={editGender}
+                    onChange={(e) => setEditGender(e.target.value as any)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', cursor: 'pointer', boxSizing: 'border-box' }}
+                  >
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                    Ngày sinh
+                  </label>
+                  <input 
+                    type="date" 
+                    value={editDob}
+                    onChange={(e) => setEditDob(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                    Số điện thoại
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Số điện thoại..." 
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                    Số CCCD
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Số CCCD..." 
+                    value={editCccd}
+                    onChange={(e) => setEditCccd(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                  {selectedTab === 'seniors' ? 'Nghề nghiệp / Công việc' : 'Chức vụ / Công việc'}
+                </label>
+                <input 
+                  type="text" 
+                  placeholder={selectedTab === 'seniors' ? 'Ví dụ: Hưu trí, Tự do...' : 'Ví dụ: Chi hội trưởng, Hội viên...'} 
+                  value={editOccupation}
+                  onChange={(e) => setEditOccupation(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                  Liên kết Hộ gia đình
+                </label>
+                <select 
+                  value={editHouseholdId}
+                  onChange={(e) => setEditHouseholdId(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', cursor: 'pointer', boxSizing: 'border-box' }}
+                >
+                  <option value="">-- Không liên kết / Chọn hộ gia đình --</option>
+                  {households.map(hh => {
+                    const head = allResidents.find(r => r.id === hh.head_of_household_id);
+                    const headName = head ? head.full_name : 'Chưa rõ chủ hộ';
+                    return (
+                      <option key={hh.id} value={hh.id}>
+                        {hh.household_number} - Chủ hộ: {headName} ({hh.address})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {!editHouseholdId && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                    Địa chỉ cư trú (Nhập tay nếu không chọn hộ)
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Ví dụ: Tổ 4, TDP Quảng Giao..." 
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                    Trạng thái cư trú
+                  </label>
+                  <select 
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', cursor: 'pointer', boxSizing: 'border-box' }}
+                  >
+                    <option value="resident">Thường trú</option>
+                    <option value="temporary_resident">Tạm trú</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '6px', textAlign: 'left' }}>
+                    Quan hệ với chủ hộ
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Chủ hộ, Vợ, Con, Cháu..." 
+                    value={editRelationship}
+                    onChange={(e) => setEditRelationship(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '13.5px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '12px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => { setIsEditModalOpen(false); setEditingResident(null); }}
+                  style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'var(--gov-blue)', color: 'white', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Lưu thay đổi
                 </button>
               </div>
             </form>
