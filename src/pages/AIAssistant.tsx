@@ -1606,6 +1606,23 @@ ${strippedContent}
     noBorder: any,
     docType: 'party' | 'front' | 'admin'
   ) {
+    // Read the latest signatures directly from localStorage
+    let officialSigs: { id: string; name: string; signatureUrl?: string }[] = [];
+    try {
+      const savedSigs = localStorage.getItem('official_signatures');
+      if (savedSigs) officialSigs = JSON.parse(savedSigs);
+    } catch { /* ignore */ }
+
+    const getOfficialSigUrl = (id: string): string => {
+      const found = officialSigs.find(s => s.id === id);
+      return found?.signatureUrl?.trim() || '';
+    };
+
+    const localToTruongSigUrl = getOfficialSigUrl('to_truong');
+    const localBiThuSigUrl = getOfficialSigUrl('bi_thu');
+    const localMatTranSigUrl = getOfficialSigUrl('mat_tran');
+    const localThuKySigUrl = getOfficialSigUrl('thu_ky');
+
     // Phát hiện phần chữ ký (tìm ngược từ cuối)
     let sigStartIdx = -1;
     let isDoubleSignature = false;
@@ -1765,7 +1782,7 @@ ${strippedContent}
       leftSigs.forEach((l, i) => {
         const isLast = i === leftSigs.length - 1 && leftName !== '' && !leftName.startsWith('(') && !leftName.toUpperCase().includes('TRƯ');
         if (isLast) {
-          const imgP = makeSigImagePara(docSigUrls.thuKy); // Thư ký
+          const imgP = makeSigImagePara(localThuKySigUrl); // Thư ký
           if (imgP) leftParas.push(imgP);
         }
         leftParas.push(makeSignaturePara(l, isLast));
@@ -1775,7 +1792,7 @@ ${strippedContent}
       rightSigs.forEach((l, i) => {
         const isLast = i === rightSigs.length - 1 && rightName !== '' && !rightName.startsWith('(');
         if (isLast) {
-          const rightWordSigUrl = docType === 'party' ? docSigUrls.biThu : docType === 'front' ? docSigUrls.matTran : docSigUrls.toTruong;
+          const rightWordSigUrl = docType === 'party' ? localBiThuSigUrl : docType === 'front' ? localMatTranSigUrl : localToTruongSigUrl;
           const imgP = makeSigImagePara(rightWordSigUrl);
           if (imgP) rightParas.push(imgP);
         }
@@ -1821,7 +1838,7 @@ ${strippedContent}
         const isName = !isDate && !isTitle && !isNote && i === sigClean.length - 1;
 
         if (isName) {
-          const rightWordSigUrl2 = docSigUrls.docType === 'party' ? docSigUrls.biThu : docSigUrls.docType === 'front' ? docSigUrls.matTran : docSigUrls.toTruong;
+          const rightWordSigUrl2 = docType === 'party' ? localBiThuSigUrl : docType === 'front' ? localMatTranSigUrl : localToTruongSigUrl;
           const imgP = makeSigImgParaInline(rightWordSigUrl2);
           if (imgP) rightSigParas.push(imgP);
         }
@@ -1865,11 +1882,28 @@ ${strippedContent}
     const sigImgHtml = (url: string) =>
       url ? `<img src="${url}" alt="Chữ ký" style="height:55px;max-width:130px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
 
-    // Xác định ảnh chữ ký cho từng vị trí dựa vào loại văn bản
-    const isPartyDoc2 = docSigUrls.docType === 'party';
-    const isFrontDoc2 = docSigUrls.docType === 'front';
-    const rightSigImg  = isPartyDoc2 ? sigImgHtml(docSigUrls.biThu) : (isFrontDoc2 ? sigImgHtml(docSigUrls.matTran) : sigImgHtml(docSigUrls.toTruong));
-    const leftSigImg   = sigImgHtml(docSigUrls.thuKy);
+    // Load latest signatures from localStorage
+    let officialSigs: { id: string; name: string; signatureUrl?: string }[] = [];
+    try {
+      const savedSigs = localStorage.getItem('official_signatures');
+      if (savedSigs) officialSigs = JSON.parse(savedSigs);
+    } catch { /* ignore */ }
+
+    const getOfficialSigUrl = (id: string): string => {
+      const found = officialSigs.find(s => s.id === id);
+      return found?.signatureUrl?.trim() || '';
+    };
+
+    const toTruongSigUrl = getOfficialSigUrl('to_truong');
+    const biThuSigUrl = getOfficialSigUrl('bi_thu');
+    const matTranSigUrl = getOfficialSigUrl('mat_tran');
+    const thuKySigUrl = getOfficialSigUrl('thu_ky');
+
+    // Xác định ảnh chữ ký cho từng vị trí dựa vào loại văn bản hiện tại
+    const isPartyDoc2 = result.includes('ĐẢNG CỘNG SẢN VIỆT NAM') || result.includes('CHI BỘ');
+    const isFrontDoc2 = result.includes('MTTQ') || result.includes('MẶT TRẬN');
+    const rightSigImg  = isPartyDoc2 ? sigImgHtml(biThuSigUrl) : (isFrontDoc2 ? sigImgHtml(matTranSigUrl) : sigImgHtml(toTruongSigUrl));
+    const leftSigImg   = sigImgHtml(thuKySigUrl);
 
     // Hàm phụ trợ xử lý chữ ký thông minh dạng bảng
     const renderBodyWithTableSignature = (bodyLines: string[]) => {

@@ -1336,6 +1336,13 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     }
     const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
     
+    let biThuSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const biThu = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'bi_thu');
+      if (biThu?.signatureUrl?.trim()) biThuSigUrl = biThu.signatureUrl.trim();
+    } catch { /* ignore */ }
+    
     const rowsHtml = filtered.map((m, idx) => {
       const dateStr = m.probation_date || m.join_date;
       let tuoiDangStr = '—';
@@ -1427,7 +1434,11 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               <td>
                 <div class="footer-date">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</div>
                 <div class="footer-role">T/M CHI BỘ<br>BÍ THƯ</div>
-                <div style="font-weight: bold; margin-top: 50px;">${partySecretaryName || 'Nguyễn Kim Tuyến'}</div>
+                ${biThuSigUrl 
+                  ? `<div style="height: 60px; display: flex; align-items: center; justify-content: center; margin: 5px auto;"><img src="${biThuSigUrl}" alt="Chữ ký" style="height: 55px; max-height: 60px; object-fit: contain;" /></div>` 
+                  : `<div style="height: 50px;"></div>`
+                }
+                <div style="font-weight: bold;">${partySecretaryName || 'Nguyễn Kim Tuyến'}</div>
               </td>
             </tr>
           </table>

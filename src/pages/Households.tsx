@@ -678,10 +678,12 @@ const Households = () => {
     const tdpName = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
     const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
     try {
       const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
-      const toTruong = sigs.find((s: {id:string;name:string}) => s.id === 'to_truong');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
       if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
     const printWindow = window.open('', '_blank');
@@ -937,7 +939,9 @@ const Households = () => {
             </td>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
               <div class="signature-title" style="font-weight: bold;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
-              <div style="height: 80px;"></div>
+              <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 70px; max-height: 80px; object-fit: contain;" />` : ''}
+              </div>
               <div class="signature-name" style="font-weight: bold;">${leaderName}</div>
             </td>
           </tr>
@@ -1122,6 +1126,15 @@ const Households = () => {
       : 'Tất cả các loại';
     const groupLabel = groupFilter !== 'all' ? ` – ${groupFilter}` : '';
     const today = new Date().toLocaleDateString('vi-VN');
+    
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
 
     const rows = filteredHouseholds.map((h, idx) => {
       const headName = getHeadName(h);
@@ -1175,7 +1188,19 @@ const Households = () => {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div class="footer">${tdpNameVal}, ngày ${today}<br>Tổ trưởng dân phố (Ký, ghi rõ họ tên)</div>
+    <table style="width: 100%; border: none; margin-top: 30px; page-break-inside: avoid;">
+      <tr>
+        <td style="width: 60%; border: none;"></td>
+        <td style="width: 40%; border: none; text-align: center; font-family: 'Times New Roman', serif;">
+          <div style="font-style: italic; color: #64748b; font-size: 12px; margin-bottom: 5px;">${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ngày ${today}</div>
+          <div style="font-weight: bold; font-size: 13px; text-transform: uppercase;">Tổ trưởng dân phố</div>
+          <div style="height: 60px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+            ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 55px; max-height: 60px; object-fit: contain;" />` : ''}
+          </div>
+          <div style="font-weight: bold; font-size: 13px;">${leaderName}</div>
+        </td>
+      </tr>
+    </table>
     <script>window.onload = function() { window.print(); }<\/script>
     </body></html>`;
     printWindow.document.write(htmlContent);

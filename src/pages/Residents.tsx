@@ -994,10 +994,12 @@ const Residents = () => {
     const tdpName = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
     const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
     try {
       const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
-      const toTruong = sigs.find((s: {id:string;name:string}) => s.id === 'to_truong');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
       if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
     
     const isLongevity = categoryFilter === 'longevity';
@@ -1287,7 +1289,9 @@ const Residents = () => {
             </td>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
               <div class="signature-title" style="font-weight: bold;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
-              <div style="height: 80px;"></div>
+              <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 70px; max-height: 80px; object-fit: contain;" />` : ''}
+              </div>
               <div class="signature-name" style="font-weight: bold;">${leaderName}</div>
             </td>
           </tr>

@@ -29,8 +29,73 @@ const MeetingMinutes = () => {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState('19:30');
   const [location, setLocation] = useState('Nhà văn hóa Tổ dân phố');
-  const [chairman, setChairman] = useState('Nguyễn Kim Tuyến - Tổ trưởng');
-  const [secretary, setSecretary] = useState('Lê Thị Dung - Thư ký');
+  // Helper to extract official name from config
+  const getOfficialNameFromConfig = (id: string, fallbackName: string): string => {
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const found = sigs.find((s: any) => s.id === id);
+      if (found?.name?.trim()) return found.name.trim();
+    } catch { /* ignore */ }
+    
+    if (id === 'bi_thu') {
+      return localStorage.getItem('party_secretary_name') || fallbackName;
+    }
+    if (id === 'to_truong' || id === 'mat_tran') {
+      return localStorage.getItem('leader_name') || fallbackName;
+    }
+    return fallbackName;
+  };
+
+  const getDefaultChairmanAndSecretary = (type: string) => {
+    const toTruongName = getOfficialNameFromConfig('to_truong', 'Nguyễn Kim Tuyến');
+    const biThuName = getOfficialNameFromConfig('bi_thu', 'Nguyễn Kim Tuyến');
+    const matTranName = getOfficialNameFromConfig('mat_tran', 'Nguyễn Kim Tuyến');
+    const thuKyName = getOfficialNameFromConfig('thu_ky', 'Lê Thị Dung');
+
+    if (type === 'party') {
+      return {
+        chairman: `${biThuName} - Bí thư Chi bộ`,
+        secretary: `${thuKyName} - Chi ủy viên`
+      };
+    } else if (type === 'front') {
+      return {
+        chairman: `${matTranName} - Trưởng ban CTMT`,
+        secretary: `${thuKyName} - Ủy viên Mặt trận`
+      };
+    } else {
+      return {
+        chairman: `${toTruongName} - Tổ trưởng`,
+        secretary: `${thuKyName} - Thư ký`
+      };
+    }
+  };
+
+  const getSigUrlForNameOrRole = (nameStr: string, roleIdFallback: string): string => {
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      
+      const nameWithoutTitle = nameStr.split('-')[0].trim();
+      const cleanInputName = nameWithoutTitle.replace(/^(Ông|Bà|Đồng chí|Đ\/c|Đc)\.?\s+/i, '').trim().toLowerCase();
+      
+      if (cleanInputName) {
+        const foundByName = sigs.find((s: any) => {
+          const cleanSigName = s.name.trim().toLowerCase();
+          return cleanSigName && (cleanSigName.includes(cleanInputName) || cleanInputName.includes(cleanSigName));
+        });
+        if (foundByName?.signatureUrl?.trim()) {
+          return foundByName.signatureUrl.trim();
+        }
+      }
+      
+      const foundByRole = sigs.find((s: any) => s.id === roleIdFallback);
+      return foundByRole?.signatureUrl?.trim() || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const [chairman, setChairman] = useState(() => getDefaultChairmanAndSecretary('general').chairman);
+  const [secretary, setSecretary] = useState(() => getDefaultChairmanAndSecretary('general').secretary);
   const [attendance, setAttendance] = useState('85');
   const [meetingType, setMeetingType] = useState<string>('general');
   const [content, setContent] = useState('');
@@ -218,11 +283,12 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       setDate(new Date().toISOString().slice(0, 10));
       setTime('19:30');
       setLocation('Nhà văn hóa Tổ dân phố');
-      setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
-      setSecretary('Lê Thị Dung - Thư ký');
+      const defaults = getDefaultChairmanAndSecretary('general');
+      setChairman(defaults.chairman);
+      setSecretary(defaults.secretary);
       setAttendance('85');
       setMeetingType('general');
-      setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
+      setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', defaults.chairman, defaults.secretary));
       
       setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
       setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
@@ -243,19 +309,16 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       const mType = m.type || 'general';
       setMeetingType(mType);
       
-      let initialChairman = 'Nguyễn Kim Tuyến - Tổ trưởng';
-      let initialSecretary = 'Lê Thị Dung - Thư ký';
+      const defaults = getDefaultChairmanAndSecretary(mType);
+      let initialChairman = defaults.chairman;
+      let initialSecretary = defaults.secretary;
       if (mType === 'party') {
-        initialChairman = 'Nguyễn Kim Tuyến - Bí thư Chi bộ';
-        initialSecretary = 'Lê Thị Dung - Chi ủy viên';
         setOrgLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
         setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
         setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
         setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
         setChairmanTitle('BÍ THƯ CHI BỘ');
       } else if (mType === 'front') {
-        initialChairman = 'Nguyễn Kim Tuyến - Trưởng ban CTMT';
-        initialSecretary = 'Lê Thị Dung - Ủy viên Mặt trận';
         const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
         setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
         setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
@@ -307,19 +370,16 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           localStorage.removeItem('selected_meeting_minutes_type');
           
           let defaultTitle = 'Họp Tổ dân phố thường kỳ';
-          let initialChairman = 'Nguyễn Kim Tuyến - Tổ trưởng';
-          let initialSecretary = 'Lê Thị Dung - Thư ký';
+          const defaults = getDefaultChairmanAndSecretary(preSelectedType || 'general');
+          let initialChairman = defaults.chairman;
+          let initialSecretary = defaults.secretary;
           let defaultAttendance = '85';
           
           if (preSelectedType === 'party') {
             defaultTitle = 'Họp Chi bộ Tổ dân phố thường kỳ';
-            initialChairman = 'Nguyễn Kim Tuyến - Bí thư Chi bộ';
-            initialSecretary = 'Lê Thị Dung - Chi ủy viên';
             defaultAttendance = '15';
           } else if (preSelectedType === 'front') {
             defaultTitle = 'Họp Ban công tác Mặt trận thường kỳ';
-            initialChairman = 'Nguyễn Kim Tuyến - Trưởng ban CTMT';
-            initialSecretary = 'Lê Thị Dung - Ủy viên Mặt trận';
             defaultAttendance = '12';
           }
           
@@ -331,12 +391,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           setContent(applyDefaultContentCustom(defaultTitle, '', preSelectedType, initialChairman, initialSecretary));
         } else {
           // Default general
+          const defaults = getDefaultChairmanAndSecretary('general');
           setTitle('Họp Tổ dân phố thường kỳ');
-          setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
-          setSecretary('Lê Thị Dung - Thư ký');
+          setChairman(defaults.chairman);
+          setSecretary(defaults.secretary);
           setAttendance('85');
           setMeetingType('general');
-          setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
+          setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', defaults.chairman, defaults.secretary));
         }
       } catch (e) {
         console.error(e);
@@ -514,6 +575,9 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       return;
     }
 
+    const chairmanSigUrl = getSigUrlForNameOrRole(chairman, meetingType === 'party' ? 'bi_thu' : (meetingType === 'front' ? 'mat_tran' : 'to_truong'));
+    const secretarySigUrl = getSigUrlForNameOrRole(secretary, 'thu_ky');
+
     const dateObj = new Date(date);
     const day = dateObj.getDate();
     const month = dateObj.getMonth() + 1;
@@ -627,8 +691,12 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               vertical-align: top;
             }
             .signature-space {
-              margin-top: 80px;
-            }
+               height: 80px;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               margin: 5px auto;
+             }
             .signature-name {
               font-weight: bold;
             }
@@ -647,7 +715,6 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               <tr>
                 <td class="print-cell">
                   
-                  <!-- Main Content starts here -->
                   <table class="header-table">
                     <tr>
                       <td>
@@ -693,19 +760,23 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
                   <table class="footer-table" style="margin-top: 10px;">
                     <tr>
-                      <td>
-                        <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
-                        <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
-                        <div class="signature-space"></div>
-                        <div class="signature-name">${secretary.split('-')[0].trim()}</div>
-                      </td>
-                      <td>
-                        <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
-                        <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
-                        <div class="signature-space"></div>
-                        <div class="signature-name">${chairman.split('-')[0].trim()}</div>
-                      </td>
-                    </tr>
+                       <td>
+                         <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
+                         <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
+                         <div class="signature-space">
+                           ${secretarySigUrl ? `<img src="${secretarySigUrl}" alt="Chữ ký" style="height: 70px; max-height: 80px; object-fit: contain;" />` : ''}
+                         </div>
+                         <div class="signature-name">${secretary.split('-')[0].trim()}</div>
+                       </td>
+                       <td>
+                         <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
+                         <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
+                         <div class="signature-space">
+                           ${chairmanSigUrl ? `<img src="${chairmanSigUrl}" alt="Chữ ký" style="height: 70px; max-height: 80px; object-fit: contain;" />` : ''}
+                         </div>
+                         <div class="signature-name">${chairman.split('-')[0].trim()}</div>
+                       </td>
+                     </tr>
                   </table>
                   
                 </td>
@@ -737,6 +808,9 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     const day = dateObj.getDate();
     const month = dateObj.getMonth() + 1;
     const year = dateObj.getFullYear();
+
+    const chairmanSigUrl = getSigUrlForNameOrRole(chairman, meetingType === 'party' ? 'bi_thu' : (meetingType === 'front' ? 'mat_tran' : 'to_truong'));
+    const secretarySigUrl = getSigUrlForNameOrRole(secretary, 'thu_ky');
 
     const suffix = getDocNumberSuffix(meetingType);
     const docNumDisplay = docNumber ? `Số: ${docNumber}${suffix}` : `Số: .....${suffix}`;
@@ -841,12 +915,20 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               <td>
                 <div class="sign-title">${secretaryTitle || 'THƯ KÝ CUỘC HỌP'}</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
-                <div class="sign-name">${secretary.split('-')[0].trim()}</div>
+                ${secretarySigUrl 
+                  ? `<div style="margin-top: 10px; margin-bottom: 5px; height: 60px; text-align: center;"><img src="${secretarySigUrl}" style="height: 55px; max-height: 60px; width: auto;" /></div>` 
+                  : `<div style="height: 70px;"></div>`
+                }
+                <div class="sign-name" style="font-weight: bold; font-size: 13pt; margin-top: ${secretarySigUrl ? '5px' : '70px'};">${secretary.split('-')[0].trim()}</div>
               </td>
               <td>
                 <div class="sign-title">${chairmanTitle || 'CHỦ TRÌ CUỘC HỌP'}</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
-                <div class="sign-name">${chairman.split('-')[0].trim()}</div>
+                ${chairmanSigUrl 
+                  ? `<div style="margin-top: 10px; margin-bottom: 5px; height: 60px; text-align: center;"><img src="${chairmanSigUrl}" style="height: 55px; max-height: 60px; width: auto;" /></div>` 
+                  : `<div style="height: 70px;"></div>`
+                }
+                <div class="sign-name" style="font-weight: bold; font-size: 13pt; margin-top: ${chairmanSigUrl ? '5px' : '70px'};">${chairman.split('-')[0].trim()}</div>
               </td>
             </tr>
           </table>
