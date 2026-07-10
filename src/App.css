@@ -83,24 +83,27 @@
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.95rem;
-  font-weight: 500;
+  gap: 10px;
+  padding: 9px 16px;
+  margin: 1px 8px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 400;
   position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.1);
   color: white;
 }
 
 .nav-item.active {
-  background-color: var(--primary);
+  background-color: rgba(255, 255, 255, 0.18);
   color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  font-weight: 600;
 }
 
 .badge {

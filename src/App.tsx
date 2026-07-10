@@ -215,6 +215,15 @@ const App = () => {
     
     localStorage.setItem('current_role', role);
     setUserRole(role);
+    
+    if (role === 'demo') {
+      localStorage.setItem('guest_mode', 'true');
+      setGuestMode(true);
+    } else {
+      localStorage.removeItem('guest_mode');
+      setGuestMode(false);
+    }
+    
     window.dispatchEvent(new CustomEvent('role-changed', { detail: role }));
     
     // Auto redirect if active tab is restricted in new role
