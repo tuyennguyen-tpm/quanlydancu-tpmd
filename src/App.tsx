@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables } from './services/db';
+import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, partyDb } from './services/db';
 import { askGemini } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
@@ -20,6 +20,8 @@ import Complaints from './pages/Complaints';
 import PartyCell from './pages/PartyCell';
 import Regulations from './pages/Regulations';
 import Login from './pages/Login';
+import WomenAssociation from './pages/WomenAssociation';
+import CCBElderly from './pages/CCBElderly';
 import { 
   Users, 
   Home, 
@@ -49,7 +51,12 @@ import {
   Trash2,
   ArrowRight,
   KeyRound,
-  Check
+  Check,
+  Heart,
+  TrendingUp,
+  Award,
+  UsersRound,
+  FolderOpen
 } from 'lucide-react';
 import './App.css';
 
@@ -314,6 +321,8 @@ const App = () => {
   const [notifList, setNotifList] = useState<any[]>([]);
   const [householdCount, setHouseholdCount] = useState(0);
   const [residentCount, setResidentCount] = useState(0);
+  const [temporaryResidentCount, setTemporaryResidentCount] = useState(0);
+  const [partyMemberCount, setPartyMemberCount] = useState(0);
 
   // Search states
   const [globalQuery, setGlobalQuery] = useState('');
@@ -562,12 +571,15 @@ const App = () => {
       const list = await db.getComplaints();
       setPendingCount(list.filter(c => c.status === 'pending').length);
       
-      const [resList, hhList] = await Promise.all([
+      const [resList, hhList, pmList] = await Promise.all([
         db.getResidents(),
-        db.getHouseholds()
+        db.getHouseholds(),
+        partyDb.getPartyMembers()
       ]);
-      setResidentCount(resList.filter(r => r.status !== 'deceased').length);
+      setResidentCount(resList.filter((r: any) => r.status !== 'deceased').length);
       setHouseholdCount(hhList.length);
+      setTemporaryResidentCount(resList.filter((r: any) => r.status === 'temporary_resident' || r.status === 'temporary_absent').length);
+      setPartyMemberCount(pmList.length);
       
       await loadNotifications();
     } catch (e) {
@@ -1244,6 +1256,10 @@ const App = () => {
         return <AIAssistant />;
       case 'regulations':
         return <Regulations />;
+      case 'women-association':
+        return <WomenAssociation />;
+      case 'ccb-elderly':
+        return <CCBElderly />;
       default:
         return (
           <div className="content-card">
@@ -1259,31 +1275,26 @@ const App = () => {
 
   const menuItems = [
     { id: 'dashboard', icon: PieChart, label: 'Dashboard', group: 'Tổng quan' },
-    { id: 'households', icon: Home, label: 'Quản lý Hộ dân', group: 'Quản lý dân cư', badge: householdCount },
-    { id: 'residents', icon: Users, label: 'Quản lý Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount },
-    { id: 'policy', icon: UserCircle, label: 'Chế độ & Chính sách', group: 'Quản lý dân cư' },
-    { id: 'security', icon: ShieldCheck, label: 'An ninh trật tự', group: 'Quản lý dân cư' },
-    { id: 'environment', icon: Leaf, label: 'Vệ sinh môi trường', group: 'Quản lý dân cư' },
-    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể' },
-    { id: 'meetings-front', icon: Calendar, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
-    { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết', group: 'Điều hành' },
-    { id: 'meetings', icon: Calendar, label: 'Họp dân', group: 'Điều hành' },
-    { id: 'meetings-party', icon: Calendar, label: 'Họp chi bộ', group: 'Điều hành' },
-    { id: 'meetings-minutes', icon: FileText, label: 'Biên bản cuộc họp', group: 'Điều hành' },
-    { id: 'regulations', icon: BookOpen, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
-    { id: 'finance', icon: Wallet, label: 'Thu chi cộng đồng', group: 'Tài chính' },
-    { id: 'ward-funds', icon: Wallet, label: 'Thu Quỹ Phường', group: 'Tài chính' },
-    { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư', group: 'Tiện ích & Hệ thống' },
-    { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích & Hệ thống', badge: pendingCount },
-    { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích & Hệ thống' },
+    { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount },
+    { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount },
+    { id: 'residents', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6 },
+    { id: 'residents', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
+    { id: 'policy', icon: ShieldCheck, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
+    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount || 27 },
+    { id: 'meetings-front', icon: UsersRound, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
+    { id: 'women-association', icon: Heart, label: 'Hội Phụ nữ', group: 'Tổ chức - Đoàn thể' },
+    { id: 'ccb-elderly', icon: UserCircle, label: 'CCB – Người cao tuổi', group: 'Tổ chức - Đoàn thể' },
+    { id: 'documents', icon: FileText, label: 'Văn bản', group: 'Điều hành' },
+    { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
+    { id: 'regulations', icon: Check, label: 'Công việc', group: 'Điều hành', badge: 3 },
+    { id: 'finance', icon: Wallet, label: 'Thu chi', group: 'Tài chính' },
+    { id: 'ward-funds', icon: Wallet, label: 'Quỹ cộng đồng', group: 'Tài chính' },
+    { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount },
+    { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },
+    { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
   ].filter(item => {
     if (isGuestMode) {
-      // Ẩn các mục nhạy cảm với chế độ khách
-      return !['households', 'residents', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds'].includes(item.id);
-    }
-    if (userRole === 'mat_tran') {
-      // Ẩn chi bộ đối với Mặt trận
-      return !['party-cell', 'meetings-party'].includes(item.id);
+      return !['households', 'residents', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'women-association', 'ccb-elderly'].includes(item.id);
     }
     return true;
   });
@@ -1372,7 +1383,7 @@ const App = () => {
         </div>
 
         <nav className="sidebar-nav">
-          {['Tổng quan', 'Quản lý dân cư', 'Tổ chức - Đoàn thể', 'Điều hành', 'Tài chính', 'Tiện ích & Hệ thống'].map(grpName => {
+          {['Tổng quan', 'Quản lý dân cư', 'Tổ chức - Đoàn thể', 'Điều hành', 'Tài chính', 'Tiện ích'].map(grpName => {
             const grpItems = menuItems.filter(item => item.group === grpName);
             if (grpItems.length === 0) return null;
             return (
@@ -1385,8 +1396,12 @@ const App = () => {
                     label={item.label}
                     active={activeTab === item.id}
                     onClick={() => {
-                      setActiveTab(item.id);
-                      if (window.innerWidth <= 768) setSidebarOpen(false);
+                      if (item.id === 'settings') {
+                        setSettingsOpen(true);
+                      } else {
+                        setActiveTab(item.id);
+                        if (window.innerWidth <= 768) setSidebarOpen(false);
+                      }
                     }}
                     badge={item.badge}
                   />
