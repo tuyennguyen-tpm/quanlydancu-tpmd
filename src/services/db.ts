@@ -104,21 +104,24 @@ const getStorageItem = <T>(key: string, defaultValue: T): T => {
   return JSON.parse(item);
 };
 
-// Migrate existing residents in localStorage to add association_membership if missing
+// Migrate existing residents in localStorage to add association_membership if missing or empty for seed ids
 const migrateResidentsAssociation = () => {
   try {
     const raw = localStorage.getItem('residents');
     if (!raw) return;
     const residents: Resident[] = JSON.parse(raw);
-    const currentYear = new Date().getFullYear();
+    // Seed residents that should have default memberships
+    const seedMap: Record<string, string> = {
+      'R001': 'ccb',
+      'R002': 'pn',
+      'R005': 'pn,nct',
+      'R006': 'ccb',
+      'R009': 'pn,nct'
+    };
     let changed = false;
     const updated = residents.map(r => {
-      if (r.association_membership !== undefined && r.association_membership !== null) return r;
-      // Auto-assign based on seed data ids
-      const seedMap: Record<string, string> = {
-        'R001': 'ccb', 'R002': 'pn', 'R005': 'pn,nct', 'R006': 'ccb', 'R009': 'pn,nct'
-      };
-      if (seedMap[r.id]) {
+      // Only update seed residents that don't already have a valid (non-empty) association
+      if (seedMap[r.id] && !r.association_membership) {
         changed = true;
         return { ...r, association_membership: seedMap[r.id] };
       }

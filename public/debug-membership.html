@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Debug - Kiểm tra association_membership</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: left; font-size: 13px; }
+  th { background: #1e3a8a; color: white; }
+  tr:nth-child(even) { background: #f1f5f9; }
+  .pn { background: #fce7f3; color: #9d174d; font-weight: bold; padding: 2px 8px; border-radius: 10px; }
+  .ccb { background: #d1fae5; color: #065f46; font-weight: bold; padding: 2px 8px; border-radius: 10px; }
+  .nct { background: #dbeafe; color: #1e40af; font-weight: bold; padding: 2px 8px; border-radius: 10px; }
+  .empty { color: #94a3b8; font-style: italic; }
+  button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin: 5px; font-size: 14px; }
+  button.danger { background: #dc2626; }
+  .section { margin: 20px 0; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; }
+  h2 { color: #1e3a8a; margin-top: 0; }
+</style>
+</head>
+<body>
+<h1>🔍 Debug: Kiểm tra Đoàn thể (association_membership)</h1>
+
+<div class="section">
+  <h2>Danh sách Nhân khẩu trong localStorage</h2>
+  <div id="residents-table"></div>
+</div>
+
+<div class="section">
+  <h2>Hội Phụ nữ (mã: pn)</h2>
+  <div id="pn-list"></div>
+</div>
+
+<div class="section">
+  <h2>Người cao tuổi (mã: nct)</h2>
+  <div id="nct-list"></div>
+</div>
+
+<div class="section">
+  <h2>Cựu chiến binh (mã: ccb)</h2>
+  <div id="ccb-list"></div>
+</div>
+
+<div class="section">
+  <h2>Công cụ</h2>
+  <button onclick="resetAndMigrate()">🔄 Reset + Migration (Xóa và tạo lại dữ liệu mẫu)</button>
+  <button class="danger" onclick="clearResidents()">⚠️ Xóa toàn bộ residents trong localStorage</button>
+  <p id="action-result" style="color: green; font-weight: bold;"></p>
+</div>
+
+<script>
+function getResidents() {
+  try {
+    return JSON.parse(localStorage.getItem('residents') || '[]');
+  } catch(e) { return []; }
+}
+
+function renderTable() {
+  const residents = getResidents();
+  
+  // Full table
+  let html = `<p>Tổng số: <strong>${residents.length}</strong> nhân khẩu</p>`;
+  html += '<table><tr><th>ID</th><th>Họ tên</th><th>Giới tính</th><th>association_membership</th><th>Trạng thái</th></tr>';
+  residents.forEach(r => {
+    const m = r.association_membership || '';
+    const badges = m ? m.split(',').map(code => {
+      const c = code.trim();
+      return `<span class="${c}">${c}</span>`;
+    }).join(' ') : '<span class="empty">chưa có</span>';
+    html += `<tr>
+      <td>${r.id}</td>
+      <td>${r.full_name}</td>
+      <td>${r.gender === 'female' ? '👩 Nữ' : '👨 Nam'}</td>
+      <td>${badges}</td>
+      <td>${r.status}</td>
+    </tr>`;
+  });
+  html += '</table>';
+  document.getElementById('residents-table').innerHTML = html;
+
+  // PN list
+  const pnList = residents.filter(r => r.status !== 'deceased' && (r.association_membership || '').split(',').map(s=>s.trim()).includes('pn'));
+  document.getElementById('pn-list').innerHTML = pnList.length === 0 
+    ? '<p class="empty">Không có ai - cần tích chọn "Chi hội Phụ nữ" trong form nhân khẩu</p>'
+    : `<p>Số lượng: <strong>${pnList.length}</strong></p><ul>${pnList.map(r=>`<li>${r.full_name} (${r.id})</li>`).join('')}</ul>`;
+
+  // NCT list
+  const nctList = residents.filter(r => r.status !== 'deceased' && (r.association_membership || '').split(',').map(s=>s.trim()).includes('nct'));
+  document.getElementById('nct-list').innerHTML = nctList.length === 0 
+    ? '<p class="empty">Không có ai - cần tích chọn "Chi hội Người cao tuổi" trong form nhân khẩu</p>'
+    : `<p>Số lượng: <strong>${nctList.length}</strong></p><ul>${nctList.map(r=>`<li>${r.full_name} (${r.id})</li>`).join('')}</ul>`;
+
+  // CCB list
+  const ccbList = residents.filter(r => r.status !== 'deceased' && (r.association_membership || '').split(',').map(s=>s.trim()).includes('ccb'));
+  document.getElementById('ccb-list').innerHTML = ccbList.length === 0 
+    ? '<p class="empty">Không có ai - cần tích chọn "Chi hội Cựu chiến binh" trong form nhân khẩu</p>'
+    : `<p>Số lượng: <strong>${ccbList.length}</strong></p><ul>${ccbList.map(r=>`<li>${r.full_name} (${r.id})</li>`).join('')}</ul>`;
+}
+
+function resetAndMigrate() {
+  // Clear residents so next app load uses fresh seed with association_membership
+  localStorage.removeItem('residents');
+  document.getElementById('action-result').textContent = '✅ Đã xóa cache residents. Vui lòng mở lại ứng dụng (http://localhost:5173) và F5 để load lại với dữ liệu mẫu mới có association_membership.';
+  renderTable();
+}
+
+function clearResidents() {
+  if (confirm('Bạn có chắc muốn xóa TOÀN BỘ dữ liệu nhân khẩu trong localStorage? Dữ liệu mẫu sẽ được khôi phục khi mở lại ứng dụng.')) {
+    localStorage.removeItem('residents');
+    document.getElementById('action-result').textContent = '✅ Đã xóa. Mở lại ứng dụng để khôi phục dữ liệu mẫu.';
+    renderTable();
+  }
+}
+
+// Run on load
+renderTable();
+</script>
+</body>
+</html>

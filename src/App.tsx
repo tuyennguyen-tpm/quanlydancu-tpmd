@@ -22,6 +22,8 @@ import Regulations from './pages/Regulations';
 import Login from './pages/Login';
 import WomenAssociation from './pages/WomenAssociation';
 import CCBElderly from './pages/CCBElderly';
+import FarmersAssociation from './pages/FarmersAssociation';
+import YouthUnion from './pages/YouthUnion';
 import { 
   Users, 
   Home, 
@@ -59,7 +61,9 @@ import {
   TrendingUp,
   Award,
   UsersRound,
-  FolderOpen
+  FolderOpen,
+  Sprout,
+  Zap
 } from 'lucide-react';
 import './App.css';
 
@@ -1292,6 +1296,10 @@ const App = () => {
         return <WomenAssociation />;
       case 'ccb-elderly':
         return <CCBElderly />;
+      case 'farmers-association':
+        return <FarmersAssociation />;
+      case 'youth-union':
+        return <YouthUnion />;
       default:
         return (
           <div className="content-card">
@@ -1316,6 +1324,8 @@ const App = () => {
     { id: 'meetings-front', icon: UserPlus, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
     { id: 'women-association', icon: Heart, label: 'Hội Phụ nữ', group: 'Tổ chức - Đoàn thể' },
     { id: 'ccb-elderly', icon: UserCircle, label: 'CCB – Người cao tuổi', group: 'Tổ chức - Đoàn thể' },
+    { id: 'farmers-association', icon: Sprout, label: 'Hội Nông dân', group: 'Tổ chức - Đoàn thể' },
+    { id: 'youth-union', icon: Zap, label: 'Đoàn Thanh niên', group: 'Tổ chức - Đoàn thể' },
     { id: 'documents', icon: FileText, label: 'Văn bản', group: 'Điều hành' },
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
     { id: 'regulations', icon: Check, label: 'Công việc', group: 'Điều hành', badge: 3, badgeColor: '#f97316' },

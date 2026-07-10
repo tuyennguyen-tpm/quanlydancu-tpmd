@@ -47,11 +47,23 @@ const WomenAssociation = () => {
         db.getResidents(),
         db.getHouseholds()
       ]);
+      
+      // Debug: log all residents and their memberships
+      console.log('[WomenAssociation] All residents:', residents.map(r => ({
+        id: r.id, name: r.full_name, gender: r.gender, membership: r.association_membership
+      })));
+      
       const activeFemales = residents.filter(r => {
         if (r.status === 'deceased') return false;
         const membership = r.association_membership || '';
-        return membership.split(',').map(s => s.trim()).includes('pn');
+        const codes = membership.split(',').map(s => s.trim()).filter(Boolean);
+        const hasPn = codes.includes('pn');
+        console.log(`[WomenAssociation] ${r.full_name}: membership="${membership}", codes=[${codes}], hasPn=${hasPn}`);
+        return hasPn;
       });
+      
+      console.log('[WomenAssociation] Filtered pn members:', activeFemales.map(r => r.full_name));
+      
       setMembers(activeFemales);
       setHouseholds(hhList);
       setAllResidents(residents);
@@ -611,7 +623,7 @@ const WomenAssociation = () => {
             onMouseOut={(e) => { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.transform = 'none'; }}
           >
             <UserPlus size={16} />
-            Thêm nhân khẩu
+            Thêm hội viên
           </button>
         )}
       </div>
