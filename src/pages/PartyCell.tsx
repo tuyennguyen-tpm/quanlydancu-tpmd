@@ -720,7 +720,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ position: 'member', status: 'official' });
+    setForm({ position: 'member', status: 'official', party_group: '' });
     setResidentSearch('');
     setShowModal(true);
   };
@@ -728,7 +728,12 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     setEditing(m);
     const res = residents.find(r => r.id === m.resident_id);
     setResidentSearch(res ? res.full_name : '');
-    setForm(m);
+    
+    const inheritedGroup = getMemberPartyGroup(m);
+    setForm({
+      ...m,
+      party_group: m.party_group || (inheritedGroup !== 'Chưa phân tổ' ? inheritedGroup : '')
+    });
     setShowModal(true);
   };
 
@@ -764,6 +769,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         resident_id: rId,
         is_exempt_party_activities: form.is_exempt_party_activities || false,
         notes: form.notes || '',
+        party_group: form.party_group || '',
         fee_category: form.fee_category,
         salary_base: form.salary_base,
         wage_zone: form.wage_zone,
@@ -1293,6 +1299,21 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             }
           }
 
+          const partyGroupStr = hasBasePartyCol ? (columns[offset + 3] || '') : '';
+
+          // Đồng bộ tự động Tổ đảng sang Tổ tự quản của Hộ khẩu nếu có liên kết
+          if (partyGroupStr && rId) {
+            const res = residents.find(r => r.id === rId);
+            if (res && res.household_id) {
+              const hhIdx = households.findIndex(h => h.id === res.household_id);
+              if (hhIdx >= 0 && households[hhIdx].self_management_group !== partyGroupStr) {
+                const updatedHh = { ...households[hhIdx], self_management_group: partyGroupStr };
+                households[hhIdx] = updatedHh;
+                await db.saveHousehold(updatedHh);
+              }
+            }
+          }
+
           await partyDb.savePartyMember({
             id: matched ? matched.id : generateUUID(),
             full_name: fullName,
@@ -1302,6 +1323,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             join_date: joinD || (matched ? matched.join_date : undefined),
             status: stat,
             resident_id: rId,
+            party_group: partyGroupStr || (matched ? matched.party_group : ''),
             fee_category: feeCat,
             salary_base: salary,
             wage_zone: [1, 2, 3, 4].includes(zone) ? zone : 3,
@@ -1336,6 +1358,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     return currentYear - yr;
   };
   const getMemberPartyGroup = useCallback((m: PartyMember): string => {
+    if (m.party_group?.trim()) return m.party_group.trim();
     const res = residents.find(r => r.id === m.resident_id);
     if (!res) return 'Chưa phân tổ';
     const hh = households.find(h => h.id === res.household_id);
@@ -1350,6 +1373,16 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     });
     return Array.from(groups).sort((a, b) => a.localeCompare(b, 'vi'));
   }, [members, getMemberPartyGroup]);
+
+  const availableGroups = useMemo(() => {
+    const groups = new Set<string>();
+    households.forEach(h => {
+      if (h.self_management_group?.trim()) {
+        groups.add(h.self_management_group.trim());
+      }
+    });
+    return Array.from(groups).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [households]);
 
   const filtered = useMemo(() => members.filter(m => {
     const matchesSearch = m.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -1927,15 +1960,32 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                 </div>
               </div>
 
-              <div className="party-form-group">
-                <label>Trạng thái</label>
-                <select value={form.status || 'official'} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))}>
-                  <option value="official">Chính thức</option>
-                  <option value="probation">Dự bị</option>
-                  <option value="inactive">Không hoạt động</option>
-                  <option value="party_213">Đảng viên 213 (Nơi cư trú)</option>
-                  <option value="deceased">Đã mất</option>
-                </select>
+              <div className="party-form-row">
+                <div className="party-form-group">
+                  <label>Trạng thái</label>
+                  <select value={form.status || 'official'} onChange={e => setForm(f => ({ ...f, status: e.target.value as any }))}>
+                    <option value="official">Chính thức</option>
+                    <option value="probation">Dự bị</option>
+                    <option value="inactive">Không hoạt động</option>
+                    <option value="party_213">Đảng viên 213 (Nơi cư trú)</option>
+                    <option value="deceased">Đã mất</option>
+                  </select>
+                </div>
+
+                <div className="party-form-group">
+                  <label>Tổ đảng (Tổ tự quản)</label>
+                  <input
+                    list="modal-party-groups"
+                    value={form.party_group || ''}
+                    onChange={e => setForm(f => ({ ...f, party_group: e.target.value }))}
+                    placeholder="Chọn hoặc nhập Tổ đảng..."
+                  />
+                  <datalist id="modal-party-groups">
+                    {availableGroups.map(g => (
+                      <option key={g} value={g} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap', paddingTop: '10px', marginBottom: '10px' }}>

@@ -1792,6 +1792,7 @@ export interface PartyMember {
   salary_base?: number;   // Lương làm căn cứ (đ/tháng)
   wage_zone?: 1 | 2 | 3 | 4; // Vùng lương tối thiểu
   notes?: string;
+  party_group?: string;
   created_at?: string;
 }
 

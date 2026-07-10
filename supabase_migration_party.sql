@@ -15,6 +15,7 @@ CREATE TABLE party_members (
     resident_id UUID REFERENCES residents(id) ON DELETE SET NULL,
     full_name TEXT NOT NULL,
     party_code TEXT,
+    party_group TEXT,
     join_date DATE,
     probation_date DATE,
     position TEXT DEFAULT 'member',
