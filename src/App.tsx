@@ -1225,6 +1225,8 @@ const App = () => {
       case 'households':
         return <Households />;
       case 'residents':
+      case 'residents-temp':
+      case 'residents-changes':
         return <Residents />;
       case 'policy':
         return <Policies />;
@@ -1277,8 +1279,8 @@ const App = () => {
     { id: 'dashboard', icon: PieChart, label: 'Dashboard', group: 'Tổng quan' },
     { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount },
     { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount },
-    { id: 'residents', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6 },
-    { id: 'residents', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
+    { id: 'residents-temp', icon: MapIcon, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount || 6 },
+    { id: 'residents-changes', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
     { id: 'policy', icon: ShieldCheck, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
     { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount || 27 },
     { id: 'meetings-front', icon: UsersRound, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
@@ -1294,7 +1296,7 @@ const App = () => {
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
   ].filter(item => {
     if (isGuestMode) {
-      return !['households', 'residents', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'women-association', 'ccb-elderly'].includes(item.id);
+      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'women-association', 'ccb-elderly'].includes(item.id);
     }
     return true;
   });
