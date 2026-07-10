@@ -1282,6 +1282,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           const cleanFullName = cleanNameStr(fullName);
           const cleanPartyCode = partyCode.trim().replace(/[-\s]/g, '').toLowerCase();
 
+          // Lấy ngày sinh từ Excel để so khớp chính xác
+          const excelDob = parseInputDate(columns[offset + 1]);
+
           const matched = currentMembers.find(m => {
             const dbPartyCode = (m.party_code || '').trim().replace(/[-\s]/g, '').toLowerCase();
             if (cleanPartyCode && dbPartyCode) {
@@ -1290,10 +1293,17 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             return cleanNameStr(m.full_name) === cleanFullName;
           });
 
-          // Auto-link to resident_id if not present
+          // Auto-link to resident_id if not present (sử dụng cả Họ tên và Ngày sinh để tránh trùng tên)
           let rId = matched?.resident_id || null;
           if (!rId) {
-            const matchedRes = residents.find(r => r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanFullName);
+            const matchedRes = residents.find(r => {
+              const nameMatches = cleanNameStr(r.full_name) === cleanFullName;
+              if (!nameMatches) return false;
+              if (excelDob && r.dob) {
+                return r.dob.trim() === excelDob.trim();
+              }
+              return true;
+            });
             if (matchedRes) {
               rId = matchedRes.id;
             }

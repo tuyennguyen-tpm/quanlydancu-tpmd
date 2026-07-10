@@ -1858,9 +1858,33 @@ export const partyDb = {
     const full: PartyMember = { ...cleanMember, created_at: member.created_at || new Date().toISOString() } as PartyMember;
     if (supabase) {
       const uId = await getSessionUserId();
-      const { data, error } = await supabase.from('party_members').upsert({ ...full, user_id: uId, resident_id: full.resident_id || null }).select().single();
-      if (error) { handleDbError('lưu đảng viên', error); throw new Error(error.message); }
-      if (data) return data;
+      try {
+        const { data, error } = await supabase.from('party_members').upsert({ ...full, user_id: uId, resident_id: full.resident_id || null }).select().single();
+        if (error) {
+          // Tự động fallback loại bỏ party_group nếu Supabase chưa chạy migration tạo cột này
+          if (error.message.includes('party_group') || error.code === '42703') {
+            console.warn('Supabase party_members table is missing party_group column. Retrying without it.');
+            const { party_group, ...supabasePayload } = full as any;
+            const { data: retryData, error: retryError } = await supabase.from('party_members').upsert({ ...supabasePayload, user_id: uId, resident_id: full.resident_id || null }).select().single();
+            if (retryError) { handleDbError('lưu đảng viên', retryError); throw new Error(retryError.message); }
+            if (retryData) return retryData;
+          } else {
+            handleDbError('lưu đảng viên', error);
+            throw new Error(error.message);
+          }
+        } else if (data) {
+          return data;
+        }
+      } catch (err: any) {
+        if (err.message?.includes('party_group') || err.message?.includes('42703')) {
+          const { party_group, ...supabasePayload } = full as any;
+          const { data: retryData, error: retryError } = await supabase.from('party_members').upsert({ ...supabasePayload, user_id: uId, resident_id: full.resident_id || null }).select().single();
+          if (retryError) { handleDbError('lưu đảng viên', retryError); throw new Error(retryError.message); }
+          if (retryData) return retryData;
+        } else {
+          throw err;
+        }
+      }
     }
     const list = getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
     const idx = list.findIndex(m => m.id === member.id);
