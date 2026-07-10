@@ -53,19 +53,19 @@ const seedHouseholds: Household[] = [
 ];
 
 const seedResidents: Resident[] = [
-  { id: 'R001', household_id: 'H001', full_name: 'Nguyễn Kim Tuyến', gender: 'male', dob: '1965-05-12', cccd: '038065001234', phone: '0912345678', occupation: 'Kinh doanh tự do', permanent_address: 'Số 45, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: false, status: 'resident', created_at: '2026-01-10T08:00:00Z' },
-  { id: 'R002', household_id: 'H001', full_name: 'Lê Thị Dung', gender: 'female', dob: '1968-08-20', cccd: '038168005678', phone: '0987654321', occupation: 'Nội trợ', permanent_address: 'Số 45, Nam Sầm Sơn, Thanh Hóa', is_head: false, relationship_with_head: 'Vợ', is_senior: false, status: 'resident', created_at: '2026-01-10T08:05:00Z' },
+  { id: 'R001', household_id: 'H001', full_name: 'Nguyễn Kim Tuyến', gender: 'male', dob: '1965-05-12', cccd: '038065001234', phone: '0912345678', occupation: 'Kinh doanh tự do', permanent_address: 'Số 45, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: false, status: 'resident', created_at: '2026-01-10T08:00:00Z', association_membership: 'ccb' },
+  { id: 'R002', household_id: 'H001', full_name: 'Lê Thị Dung', gender: 'female', dob: '1968-08-20', cccd: '038168005678', phone: '0987654321', occupation: 'Nội trợ', permanent_address: 'Số 45, Nam Sầm Sơn, Thanh Hóa', is_head: false, relationship_with_head: 'Vợ', is_senior: false, status: 'resident', created_at: '2026-01-10T08:05:00Z', association_membership: 'pn' },
   { id: 'R003', household_id: 'H001', full_name: 'Lê Thanh Tùng', gender: 'male', dob: '1995-10-15', cccd: '038095004321', phone: '0965432198', occupation: 'Kỹ sư phần mềm', permanent_address: 'Số 45, Nam Sầm Sơn, Thanh Hóa', is_head: false, relationship_with_head: 'Con', is_senior: false, status: 'temporary_absent', created_at: '2026-01-10T08:10:00Z' },
   { id: 'R004', household_id: 'H001', full_name: 'Lê Minh Trang', gender: 'female', dob: '2018-04-02', cccd: '038218001122', phone: '', occupation: 'Học sinh', permanent_address: 'Số 45, Nam Sầm Sơn, Thanh Hóa', is_head: false, relationship_with_head: 'Cháu nội', is_senior: false, status: 'resident', created_at: '2026-03-01T09:00:00Z' },
   
-  { id: 'R005', household_id: 'H002', full_name: 'Trần Thị Năm', gender: 'female', dob: '1940-02-10', cccd: '038140003456', phone: '0356789123', occupation: 'Hưu trí', permanent_address: 'Số 47, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: true, status: 'resident', created_at: '2026-02-15T09:30:00Z' },
-  { id: 'R006', household_id: 'H002', full_name: 'Trần Văn Cường', gender: 'male', dob: '1972-03-15', cccd: '038072007788', phone: '0909090909', occupation: 'Lao động tự do', permanent_address: 'Số 47, Nam Sầm Sơn, Thanh Hóa', is_head: false, relationship_with_head: 'Con', is_senior: false, status: 'resident', created_at: '2026-02-15T09:35:00Z' },
+  { id: 'R005', household_id: 'H002', full_name: 'Trần Thị Năm', gender: 'female', dob: '1940-02-10', cccd: '038140003456', phone: '0356789123', occupation: 'Hưu trí', permanent_address: 'Số 47, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: true, status: 'resident', created_at: '2026-02-15T09:30:00Z', association_membership: 'pn,nct' },
+  { id: 'R006', household_id: 'H002', full_name: 'Trần Văn Cường', gender: 'male', dob: '1972-03-15', cccd: '038072007788', phone: '0909090909', occupation: 'Lao động tự do', permanent_address: 'Số 47, Nam Sầm Sơn, Thanh Hóa', is_head: false, relationship_with_head: 'Con', is_senior: false, status: 'resident', created_at: '2026-02-15T09:35:00Z', association_membership: 'ccb' },
   
   { id: 'R007', household_id: 'H003', full_name: 'Trần Văn Hải', gender: 'male', dob: '1980-04-25', cccd: '038080009999', phone: '0933445566', occupation: 'Ngư dân', permanent_address: 'Số 49, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: false, status: 'resident', created_at: '2026-03-20T10:15:00Z' },
   
   { id: 'R008', household_id: 'H004', full_name: 'Phạm Minh Đức', gender: 'male', dob: '1985-09-05', cccd: '038085002233', phone: '0977889900', occupation: 'Thợ điện', permanent_address: 'Số 51, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: false, status: 'resident', created_at: '2026-04-05T14:20:00Z' },
   
-  { id: 'R009', household_id: 'H005', full_name: 'Hoàng Thị Lan', gender: 'female', dob: '1946-12-30', cccd: '038146004455', phone: '0944556677', occupation: 'Thương binh', permanent_address: 'Số 53, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: true, status: 'resident', created_at: '2026-05-12T11:45:00Z' },
+  { id: 'R009', household_id: 'H005', full_name: 'Hoàng Thị Lan', gender: 'female', dob: '1946-12-30', cccd: '038146004455', phone: '0944556677', occupation: 'Thương binh', permanent_address: 'Số 53, Nam Sầm Sơn, Thanh Hóa', is_head: true, relationship_with_head: 'Chủ hộ', is_senior: true, status: 'resident', created_at: '2026-05-12T11:45:00Z', association_membership: 'pn,nct' },
 ];
 
 const seedFinancialRecords: FinancialRecord[] = [
@@ -103,6 +103,38 @@ const getStorageItem = <T>(key: string, defaultValue: T): T => {
   }
   return JSON.parse(item);
 };
+
+// Migrate existing residents in localStorage to add association_membership if missing
+const migrateResidentsAssociation = () => {
+  try {
+    const raw = localStorage.getItem('residents');
+    if (!raw) return;
+    const residents: Resident[] = JSON.parse(raw);
+    const currentYear = new Date().getFullYear();
+    let changed = false;
+    const updated = residents.map(r => {
+      if (r.association_membership !== undefined && r.association_membership !== null) return r;
+      // Auto-assign based on seed data ids
+      const seedMap: Record<string, string> = {
+        'R001': 'ccb', 'R002': 'pn', 'R005': 'pn,nct', 'R006': 'ccb', 'R009': 'pn,nct'
+      };
+      if (seedMap[r.id]) {
+        changed = true;
+        return { ...r, association_membership: seedMap[r.id] };
+      }
+      return r;
+    });
+    if (changed) {
+      localStorage.setItem('residents', JSON.stringify(updated));
+      console.log('[DB] Migrated residents association_membership in localStorage');
+    }
+  } catch (e) {
+    console.error('[DB] Migration error:', e);
+  }
+};
+
+// Run migration on module load
+migrateResidentsAssociation();
 
 const setStorageItem = <T>(key: string, value: T): void => {
   localStorage.setItem(key, JSON.stringify(value));

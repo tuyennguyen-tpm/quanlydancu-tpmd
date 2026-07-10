@@ -15,27 +15,16 @@ const CCBElderly = () => {
       const residents = await db.getResidents();
       const activeResidents = residents.filter(r => r.status !== 'deceased');
 
-      // Seniors: association_membership contains 'nct' or age >= 60
+      // Seniors: only show residents with 'nct' in association_membership
       const seniorList = activeResidents.filter(r => {
-        const isNctMember = r.association_membership && r.association_membership.split(',').includes('nct');
-        if (isNctMember) return true;
-        
-        if (!r.dob) return false;
-        const birthYear = parseInt(r.dob.substring(0, 4));
-        return (currentYear - birthYear) >= 60;
+        const membership = r.association_membership || '';
+        return membership.split(',').map(s => s.trim()).includes('nct');
       });
 
-      // Veterans (CCB): association_membership contains 'ccb' or occupation/notes contains CCB/Cựu chiến binh
+      // Veterans (CCB): only show residents with 'ccb' in association_membership
       const veteranList = activeResidents.filter(r => {
-        const isCcbMember = r.association_membership && r.association_membership.split(',').includes('ccb');
-        if (isCcbMember) return true;
-
-        const occ = (r.occupation || '').toLowerCase();
-        const notes = (r.notes || '').toLowerCase();
-        const name = r.full_name.toLowerCase();
-        return occ.includes('ccb') || occ.includes('cựu chiến') || occ.includes('bộ đội') ||
-               notes.includes('ccb') || notes.includes('cựu chiến') ||
-               name.includes('nguyễn kim tuyến') || name.includes('văn cường');
+        const membership = r.association_membership || '';
+        return membership.split(',').map(s => s.trim()).includes('ccb');
       });
 
       setSeniors(seniorList);

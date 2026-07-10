@@ -48,9 +48,9 @@ const WomenAssociation = () => {
         db.getHouseholds()
       ]);
       const activeFemales = residents.filter(r => {
-        const isDeceased = r.status === 'deceased';
-        const isPnMember = r.association_membership && r.association_membership.split(',').includes('pn');
-        return !isDeceased && (isPnMember || r.gender === 'female');
+        if (r.status === 'deceased') return false;
+        const membership = r.association_membership || '';
+        return membership.split(',').map(s => s.trim()).includes('pn');
       });
       setMembers(activeFemales);
       setHouseholds(hhList);
