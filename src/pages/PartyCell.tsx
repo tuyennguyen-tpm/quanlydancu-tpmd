@@ -671,10 +671,22 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       // 1. Clean in-memory instantly (takes < 1ms)
       const corrupted: PartyMember[] = [];
       const cleanedMembers = m.map((member) => {
-        const code = member.party_code || '';
+        let needsUpdate = false;
+        let code = member.party_code || '';
         const isInvalid = code.includes('GMT') || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(code) || /^\d{4}-\d{2}-\d{2}/.test(code);
         if (isInvalid) {
-          const cleaned = { ...member, party_code: '' };
+          code = '';
+          needsUpdate = true;
+        }
+
+        let notes = member.notes || '';
+        if (notes.trim() === '3') {
+          notes = '';
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          const cleaned = { ...member, party_code: code, notes };
           corrupted.push(cleaned);
           return cleaned;
         }
@@ -1237,14 +1249,19 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           const fullName = columns[offset];
           // columns[offset + 1] is "Ngày tháng năm sinh" (dob). We skip it here as it's saved in residents and not directly in party_members.
           const partyCode = columns[offset + 2] || '';
-          const pos = getPositionFromLabel(columns[offset + 3] || 'Đảng viên') as any;
-          const probationD = parseInputDate(columns[offset + 4]) || null;
-          const joinD = parseInputDate(columns[offset + 5]) || null;
-          const stat = getStatusFromLabel(columns[offset + 6] || 'Chính thức') as any;
-          const feeCat = getFeeCatFromLabel(columns[offset + 7] || 'Có BHXH bắt buộc') as any;
-          const salary = parseInt(columns[offset + 8]) || 0;
-          const zone = (parseInt(columns[offset + 9]) || 3) as any;
-          const notesStr = columns[offset + 10] || '';
+          
+          // Tự động nhận diện cấu trúc tệp mới (13 cột bao gồm STT) hoặc cũ (12 cột bao gồm STT)
+          const hasBasePartyCol = columns.length >= (isShifted ? 13 : 12);
+          const colIdxOffset = hasBasePartyCol ? 1 : 0;
+
+          const pos = getPositionFromLabel(columns[offset + 3 + colIdxOffset] || 'Đảng viên') as any;
+          const probationD = parseInputDate(columns[offset + 4 + colIdxOffset]) || null;
+          const joinD = parseInputDate(columns[offset + 5 + colIdxOffset]) || null;
+          const stat = getStatusFromLabel(columns[offset + 6 + colIdxOffset] || 'Chính thức') as any;
+          const feeCat = getFeeCatFromLabel(columns[offset + 7 + colIdxOffset] || 'Có BHXH bắt buộc') as any;
+          const salary = parseInt(columns[offset + 8 + colIdxOffset]) || 0;
+          const zone = (parseInt(columns[offset + 9 + colIdxOffset]) || 3) as any;
+          const notesStr = columns[offset + 10 + colIdxOffset] || '';
 
           // Chuẩn hóa tên loại bỏ ký tự tàng hình và Unicode NFC chuẩn
           const cleanNameStr = (str: string) => {
@@ -1401,12 +1418,12 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${idx + 1}</td>
           <td style="border: 1px solid #000; padding: 6px;"><strong>${m.full_name}</strong></td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${m.party_code || '—'}</td>
-          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${POSITION_LABEL[m.position] || m.position}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${getMemberPartyGroup(m)}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${fmtDate(m.probation_date)}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${fmtDate(m.join_date)}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${STATUS_LABEL[m.status] || m.status}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${tuoiDangStr}</td>
-          <td style="border: 1px solid #000; padding: 6px;">${m.notes || '—'}</td>
+          <td style="border: 1px solid #000; padding: 6px;">${m.notes && m.notes.trim() !== '3' ? m.notes : '—'}</td>
         </tr>
       `;
     }).join('');
@@ -1460,7 +1477,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                 <th style="width: 5%;">STT</th>
                 <th style="width: 22%;">Họ và tên</th>
                 <th style="width: 12%;">Số thẻ Đảng</th>
-                <th style="width: 12%;">Chức vụ</th>
+                <th style="width: 12%;">Tổ đảng</th>
                 <th style="width: 12%;">Ngày kết nạp</th>
                 <th style="width: 12%;">Ngày chính thức</th>
                 <th style="width: 10%;">Trạng thái</th>
