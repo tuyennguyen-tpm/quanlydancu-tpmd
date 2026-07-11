@@ -1833,6 +1833,7 @@ const App = () => {
       </div>
     );
   }
+  const isWardSettings = (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && selectedTdpUserId === 'all';
 
   return (
     <div className="layout-container">
@@ -2190,37 +2191,37 @@ const App = () => {
                   🏘️ Thông tin địa bàn
                 </div>
                 <div className="form-group">
-                  <label>Tên Thôn / Tổ dân phố / Khu dân cư</label>
+                  <label>{isWardSettings ? 'Tên Xã / Phường' : 'Tên Thôn / Tổ dân phố / Khu dân cư'}</label>
                   <input
                     type="text"
                     value={tdpNameInput}
                     onChange={(e) => setTdpNameInput(e.target.value)}
-                    placeholder="Ví dụ: Nam Sầm Sơn, Thôn 7..."
+                    placeholder={isWardSettings ? 'Ví dụ: Phường Nam Sầm Sơn, Xã Quảng Giao...' : 'Ví dụ: Nam Sầm Sơn, Thôn 7...'}
                     maxLength={50}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Tên Phường / Xã</label>
+                  <label>{isWardSettings ? 'Tên Quận / Huyện / Thị xã' : 'Tên Phường / Xã'}</label>
                   <input
                     type="text"
                     value={wardNameInput}
                     onChange={(e) => setWardNameInput(e.target.value)}
-                    placeholder="Ví dụ: Phường Nam Sầm Sơn..."
+                    placeholder={isWardSettings ? 'Ví dụ: Thành phố Sầm Sơn, Huyện Quảng Xương...' : 'Ví dụ: Phường Nam Sầm Sơn...'}
                     maxLength={50}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Họ và tên Tổ trưởng </label>
+                  <label>{isWardSettings ? 'Họ và tên Lãnh đạo / Cán bộ phụ trách' : 'Họ và tên Tổ trưởng'}</label>
                   <input
                     type="text"
                     value={leaderNameInput}
                     onChange={(e) => setLeaderNameInput(e.target.value)}
-                    placeholder="Ví dụ: Nguyễn Kim Tuyến..."
+                    placeholder={isWardSettings ? 'Ví dụ: Nguyễn Văn A...' : 'Ví dụ: Nguyễn Kim Tuyến...'}
                     maxLength={50}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Số điện thoại Tổ trưởng</label>
+                  <label>{isWardSettings ? 'Số điện thoại liên hệ' : 'Số điện thoại Tổ trưởng'}</label>
                   <input
                     type="text"
                     value={leaderPhoneInput}
