@@ -372,8 +372,10 @@ const App = () => {
     if (!supabase) return;
     let targetWardId = '';
     const role = localStorage.getItem('user_role');
+    const isSuperAdmin = role === 'super_admin';
+    const finalRole = isSuperAdmin ? newKeyRole : 'tdp_leader';
     
-    if (role === 'super_admin' || role === 'ward_admin') {
+    if (isSuperAdmin) {
       if (showNewWardInput && newWardNameInput.trim()) {
         try {
           const { data: newWard, error } = await supabase
@@ -413,8 +415,8 @@ const App = () => {
 
     const key = await db.generateRegistrationKey(
       targetWardId, 
-      newKeyRole, 
-      newKeyRole === 'ward_admin' ? 'Ban quản trị Phường' : newKeyTdpName
+      finalRole, 
+      finalRole === 'ward_admin' ? 'Ban quản trị Phường' : newKeyTdpName
     );
     if (key) {
       setGeneratedKeyResult(key);
@@ -2924,7 +2926,7 @@ const App = () => {
                     • <strong>Thêm Tổ trưởng mới vào Phường:</strong> Chọn đúng Phường trực thuộc, chọn chức vụ <strong>"Tổ trưởng (TDP)"</strong>, gõ tên Tổ dân phố (ví dụ: Tổ 5) và sinh mã.
                   </div>
 
-                  {(localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
+                  {localStorage.getItem('user_role') === 'super_admin' && (
                     <div style={{ 
                       display: 'flex', 
                       gap: '10px', 
@@ -2979,19 +2981,21 @@ const App = () => {
                   )}
                   
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                    <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-                      <label>Chức vụ cấp phép</label>
-                      <select
-                        value={newKeyRole}
-                        onChange={(e) => setNewKeyRole(e.target.value as any)}
-                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
-                      >
-                        <option value="tdp_leader">🏢 Tổ trưởng (TDP)</option>
-                        <option value="ward_admin">🏛️ Quản trị viên Phường (Ward Admin)</option>
-                      </select>
-                    </div>
+                    {localStorage.getItem('user_role') === 'super_admin' ? (
+                      <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                        <label>Chức vụ cấp phép</label>
+                        <select
+                          value={newKeyRole}
+                          onChange={(e) => setNewKeyRole(e.target.value as any)}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
+                        >
+                          <option value="tdp_leader">🏢 Tổ trưởng (TDP)</option>
+                          <option value="ward_admin">🏛️ Quản trị viên Phường (Ward Admin)</option>
+                        </select>
+                      </div>
+                    ) : null}
 
-                    {newKeyRole === 'tdp_leader' ? (
+                    {(localStorage.getItem('user_role') === 'super_admin' ? newKeyRole === 'tdp_leader' : true) ? (
                       <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
                         <label>Tên Tổ dân phố (Nếu cấp cho Tổ trưởng)</label>
                         <input
