@@ -638,29 +638,36 @@ p { font-size: 1.1rem; line-height: 1.6; } /* Larger font for readability */
   display: flex;
   flex-direction: column;
   justify-content: center;
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
 }
 
 .header-datetime .date {
   font-size: 11px;
   color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 2px;
 }
 
 .header-datetime .time {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--gov-blue);
+  font-weight: 700;
+  color: var(--primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .header-weather {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: #FFF9C4;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #795548;
-  font-weight: 500;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #fef08a 0%, #fef3c7 100%);
+  border: 1px solid rgba(253, 224, 71, 0.45);
+  border-radius: 20px;
+  font-size: 12.5px;
+  color: #854d0e;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(253, 224, 71, 0.15);
 }
 
 .breadcrumb-gov {

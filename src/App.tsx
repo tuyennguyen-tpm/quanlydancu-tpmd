@@ -1617,49 +1617,7 @@ const App = () => {
               </>
             )}
 
-            <div className="search-box">
-              <Search size={14} />
-              <input 
-                type="text" 
-                placeholder="Tìm hộ dân, nhân khẩu..." 
-                value={globalQuery}
-                onChange={(e) => setGlobalQuery(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-              />
-              {isSearchFocused && searchResults.length > 0 && (
-                <div className="search-results-dropdown" style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  width: '320px',
-                  background: 'white',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  boxShadow: 'var(--shadow-md)',
-                  maxHeight: '300px',
-                  overflowY: 'auto',
-                  zIndex: 1000
-                }}>
-                  {searchResults.map(res => (
-                    <div 
-                      key={res.id} 
-                      className="search-result-item" 
-                      onMouseDown={() => handleSearchResultClick(res)}
-                      style={{
-                        padding: '10px 12px',
-                        borderBottom: '1px solid var(--border)',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <div className="res-name" style={{ fontWeight: '600', fontSize: '12px', color: 'var(--text-primary)' }}>{res.name}</div>
-                      <div className="res-detail" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{res.detail}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+
 
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setNotifOpen(!isNotifOpen)} title="Cảnh báo">
