@@ -76,6 +76,8 @@ const Dashboard = () => {
     
     newHouseholds30Days: 0,
     newResidents30Days: 0,
+    reviewedPercent: 0,
+    supportPercent: 0,
   });
 
   const [chartData, setChartData] = useState<{ moveIn: number; moveOut: number; birth: number; death: number }[]>([]);
@@ -189,6 +191,13 @@ const Dashboard = () => {
       const newH30 = households.filter(h => h.created_at && new Date(h.created_at) >= thirtyDaysAgo).length;
       const newR30 = activeResidents.filter(r => r.created_at && new Date(r.created_at) >= thirtyDaysAgo).length;
 
+      const totalR_len = activeResidents.length;
+      const totalH_len = households.length;
+      const hasCccd = activeResidents.filter(r => r.cccd).length;
+      const hasHead = households.filter(h => h.head_of_household_id).length;
+      const reviewedPercent = totalR_len > 0 ? Math.round((hasCccd / totalR_len) * 85) : 0;
+      const supportPercent = totalH_len > 0 ? Math.round((hasHead / totalH_len) * 67) : 0;
+
       setStats({
         totalHouseholds: households.length,
         totalResidents: activeResidents.length,
@@ -218,6 +227,8 @@ const Dashboard = () => {
         
         newHouseholds30Days: newH30,
         newResidents30Days: newR30,
+        reviewedPercent,
+        supportPercent,
       });
 
       // SVG Donut calculation
@@ -717,19 +728,19 @@ const Dashboard = () => {
               <div className="progress-item" style={{ marginBottom: '12px' }}>
                 <div className="progress-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                   <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Đã rà soát</span>
-                  <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>85%</span>
+                  <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{stats.reviewedPercent}%</span>
                 </div>
                 <div className="progress-bar" style={{ height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div className="progress-fill" style={{ width: '85%', background: '#1565C0', height: '100%' }}></div>
+                  <div className="progress-fill" style={{ width: `${stats.reviewedPercent}%`, background: '#1565C0', height: '100%' }}></div>
                 </div>
               </div>
               <div className="progress-item">
                 <div className="progress-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                   <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Đã cấp hỗ trợ</span>
-                  <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>67%</span>
+                  <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{stats.supportPercent}%</span>
                 </div>
                 <div className="progress-bar" style={{ height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div className="progress-fill" style={{ width: '67%', background: '#2E7D32', height: '100%' }}></div>
+                  <div className="progress-fill" style={{ width: `${stats.supportPercent}%`, background: '#2E7D32', height: '100%' }}></div>
                 </div>
               </div>
             </div>
