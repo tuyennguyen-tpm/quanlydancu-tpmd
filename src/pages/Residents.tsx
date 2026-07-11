@@ -136,6 +136,11 @@ const isValidDate = (dateStr: string) => {
   return true;
 };
 
+const formatNumber = (num: number) => {
+  if (num === undefined || num === null || isNaN(num)) return '0';
+  return new Intl.NumberFormat('vi-VN').format(num);
+};
+
 const SearchableHouseholdSelect = ({ households, residents, value, onChange }: { households: Household[], residents: Resident[], value: string, onChange: (val: string) => void }) => {
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -2061,7 +2066,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             <label htmlFor="show-deceased-checkbox" style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600', cursor: 'pointer', userSelect: 'none', margin: 0 }}>
               🕯️ Chỉ hiện người đã mất {residents.filter(r => r.status === 'deceased').length > 0 && (
                 <span style={{ backgroundColor: '#ef4444', color: 'white', borderRadius: '10px', padding: '1px 7px', fontSize: '0.75rem', marginLeft: '4px' }}>
-                  {residents.filter(r => r.status === 'deceased').length}
+                  {formatNumber(residents.filter(r => r.status === 'deceased').length)}
                 </span>
               )}
             </label>
@@ -2320,7 +2325,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       {filteredResidents.length > 0 && (
         <div className="pagination-container">
           <div className="pagination-info">
-            Hiển thị <strong>{Math.min(filteredResidents.length, (currentPage - 1) * pageSize + 1)}-{Math.min(filteredResidents.length, currentPage * pageSize)}</strong> trong số <strong>{filteredResidents.length}</strong> nhân khẩu
+            Hiển thị <strong>{formatNumber(Math.min(filteredResidents.length, (currentPage - 1) * pageSize + 1))}-{formatNumber(Math.min(filteredResidents.length, currentPage * pageSize))}</strong> trong số <strong>{formatNumber(filteredResidents.length)}</strong> nhân khẩu
           </div>
           <div className="pagination-buttons">
             <button 

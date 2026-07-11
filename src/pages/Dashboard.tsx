@@ -6,6 +6,11 @@ const Dashboard = () => {
   const currentYear = new Date().getFullYear();
   const currentYearStr = String(currentYear);
 
+  const formatNumber = (num: number) => {
+    if (num === undefined || num === null || isNaN(num)) return '0';
+    return new Intl.NumberFormat('vi-VN').format(num);
+  };
+
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
   useEffect(() => {
@@ -193,10 +198,10 @@ const Dashboard = () => {
 
       const totalR_len = activeResidents.length;
       const totalH_len = households.length;
-      const hasCccd = activeResidents.filter(r => r.cccd).length;
+      const hasInfo = activeResidents.filter(r => r.cccd || r.phone || r.occupation).length;
       const hasHead = households.filter(h => h.head_of_household_id).length;
-      const reviewedPercent = totalR_len > 0 ? Math.round((hasCccd / totalR_len) * 85) : 0;
-      const supportPercent = totalH_len > 0 ? Math.round((hasHead / totalH_len) * 67) : 0;
+      const reviewedPercent = totalR_len > 0 ? Math.round((hasInfo / totalR_len) * 100) : 0;
+      const supportPercent = totalH_len > 0 ? Math.round((hasHead / totalH_len) * 100) : 0;
 
       setStats({
         totalHouseholds: households.length,
@@ -562,13 +567,13 @@ const Dashboard = () => {
         <div className="stat-card">
           <div className="label"><span className="dot" style={{ background: '#1565C0' }}></span>Tổng số hộ</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="value">{stats.totalHouseholds}</div>
+            <div className="value">{formatNumber(stats.totalHouseholds)}</div>
             <div className="icon-wrap" style={{ background: '#E3F2FD' }}>
               <svg width="18" height="18" fill="none" stroke="#1565C0" viewBox="0 0 24 24" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>
             </div>
           </div>
           <div className="change up">
-            {stats.newHouseholds30Days > 0 ? `▲ +${stats.newHouseholds30Days} trong 30 ngày qua` : 'Không tăng giảm trong 30 ngày'}
+            {stats.newHouseholds30Days > 0 ? `▲ +${formatNumber(stats.newHouseholds30Days)} trong 30 ngày qua` : 'Không tăng giảm trong 30 ngày'}
           </div>
         </div>
 
@@ -576,13 +581,13 @@ const Dashboard = () => {
         <div className="stat-card">
           <div className="label"><span className="dot" style={{ background: '#2E7D32' }}></span>Nhân khẩu</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="value">{stats.totalResidents}</div>
+            <div className="value">{formatNumber(stats.totalResidents)}</div>
             <div className="icon-wrap" style={{ background: '#E8F5E9' }}>
               <svg width="18" height="18" fill="none" stroke="#2E7D32" viewBox="0 0 24 24" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
             </div>
           </div>
           <div className="change up">
-            {stats.newResidents30Days > 0 ? `▲ +${stats.newResidents30Days} trong 30 ngày qua` : 'Không tăng giảm trong 30 ngày'}
+            {stats.newResidents30Days > 0 ? `▲ +${formatNumber(stats.newResidents30Days)} trong 30 ngày qua` : 'Không tăng giảm trong 30 ngày'}
           </div>
         </div>
 
@@ -591,8 +596,8 @@ const Dashboard = () => {
           <div className="label"><span className="dot" style={{ background: '#1976D2' }}></span>Nam / Nữ</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ textAlign: 'left' }}>
-              <div className="value" style={{ fontSize: '18px', color: '#1976D2' }}>{stats.maleCount}</div>
-              <div className="value" style={{ fontSize: '18px', color: '#D81B60', marginTop: '2px' }}>{stats.femaleCount}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#1976D2' }}>{formatNumber(stats.maleCount)}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#D81B60', marginTop: '2px' }}>{formatNumber(stats.femaleCount)}</div>
             </div>
             <div className="icon-wrap" style={{ background: '#EDE7F6' }}>
               <svg width="18" height="18" fill="none" stroke="#7B1FA2" viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="8" r="4" /><path d="M20 21a8 8 0 10-16 0" /></svg>
@@ -605,12 +610,12 @@ const Dashboard = () => {
         <div className="stat-card">
           <div className="label"><span className="dot" style={{ background: '#E65100' }}></span>Đảng viên</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="value">{stats.totalPartyMembers}</div>
+            <div className="value">{formatNumber(stats.totalPartyMembers)}</div>
             <div className="icon-wrap" style={{ background: '#FBE9E7' }}>
               <svg width="18" height="18" fill="none" stroke="#E65100" viewBox="0 0 24 24" strokeWidth="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2" /></svg>
             </div>
           </div>
-          <div className="change neutral">Chính thức: {stats.officialPartyMembers} | Dự bị: {stats.probationPartyMembers}</div>
+          <div className="change neutral">Chính thức: {formatNumber(stats.officialPartyMembers)} | Dự bị: {formatNumber(stats.probationPartyMembers)}</div>
         </div>
 
         {/* Card 5: Cao tuổi / Trẻ em */}
@@ -618,8 +623,8 @@ const Dashboard = () => {
           <div className="label"><span className="dot" style={{ background: '#6A1B9A' }}></span>Cao tuổi / Trẻ em</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ textAlign: 'left' }}>
-              <div className="value" style={{ fontSize: '18px', color: '#6A1B9A' }}>{stats.seniorCount}</div>
-              <div className="value" style={{ fontSize: '18px', color: '#0277BD', marginTop: '2px' }}>{stats.childCount}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#6A1B9A' }}>{formatNumber(stats.seniorCount)}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#0277BD', marginTop: '2px' }}>{formatNumber(stats.childCount)}</div>
             </div>
             <div className="icon-wrap" style={{ background: '#F3E5F5' }}>
               <svg width="18" height="18" fill="none" stroke="#6A1B9A" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
@@ -633,8 +638,8 @@ const Dashboard = () => {
           <div className="label"><span className="dot" style={{ background: '#C62828' }}></span>Hộ nghèo / Cận nghèo</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ textAlign: 'left' }}>
-              <div className="value" style={{ fontSize: '18px', color: '#C62828' }}>{stats.poorHouseholds}</div>
-              <div className="value" style={{ fontSize: '18px', color: '#E65100', marginTop: '2px' }}>{stats.nearPoorHouseholds}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#C62828' }}>{formatNumber(stats.poorHouseholds)}</div>
+              <div className="value" style={{ fontSize: '18px', color: '#E65100', marginTop: '2px' }}>{formatNumber(stats.nearPoorHouseholds)}</div>
             </div>
             <div className="icon-wrap" style={{ background: '#FFEBEE' }}>
               <svg width="18" height="18" fill="none" stroke="#C62828" viewBox="0 0 24 24" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
@@ -702,25 +707,25 @@ const Dashboard = () => {
                 <circle cx="55" cy="55" r="40" fill="none" stroke="#F97316" strokeWidth="18" strokeDasharray={donutData.nearPoorStroke} strokeDashoffset={donutData.nearPoorOffset} transform="rotate(-90 55 55)" />
                 <circle cx="55" cy="55" r="40" fill="none" stroke="#EAB308" strokeWidth="18" strokeDasharray={donutData.otherStroke} strokeDashoffset={donutData.otherOffset} transform="rotate(-90 55 55)" />
                 <circle cx="55" cy="55" r="40" fill="none" stroke="#22C55E" strokeWidth="18" strokeDasharray={donutData.normalStroke} strokeDashoffset={donutData.normalOffset} transform="rotate(-90 55 55)" />
-                <text x="55" y="50" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1A2332">{stats.totalHouseholds}</text>
+                <text x="55" y="50" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1A2332">{formatNumber(stats.totalHouseholds)}</text>
                 <text x="55" y="64" textAnchor="middle" fontSize="9" fill="#64748B">hộ</text>
               </svg>
               <div className="donut-legend" style={{ flex: 1 }}>
                 <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#C62828' }}></div>Hộ nghèo</div>
-                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.poorH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.poorPctStr})</span></div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{formatNumber(donutData.poorH)} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.poorPctStr})</span></div>
                 </div>
                 <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#F97316' }}></div>Cận nghèo</div>
-                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.nearPoorH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.nearPoorPctStr})</span></div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{formatNumber(donutData.nearPoorH)} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.nearPoorPctStr})</span></div>
                 </div>
                 <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#EAB308' }}></div>Hộ chính sách</div>
-                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.otherH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.otherPctStr})</span></div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{formatNumber(donutData.otherH)} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.otherPctStr})</span></div>
                 </div>
                 <div className="donut-legend-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div className="dli-left" style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}><div className="dli-dot" style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#22C55E' }}></div>Hộ còn lại</div>
-                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{donutData.normalH} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.normalPctStr})</span></div>
+                  <div className="dli-right" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{formatNumber(donutData.normalH)} <span style={{ fontSize: '10px', fontWeight: '400', color: '#64748B' }}>({donutData.normalPctStr})</span></div>
                 </div>
               </div>
             </div>

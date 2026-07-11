@@ -32,6 +32,11 @@ const formatToDisplayDate = (dateStr: string) => {
   return dateStr;
 };
 
+const formatNumber = (num: number) => {
+  if (num === undefined || num === null || isNaN(num)) return '0';
+  return new Intl.NumberFormat('vi-VN').format(num);
+};
+
 const formatToDbDate = (dateStr: string) => {
   if (!dateStr) return '';
   if (dateStr.includes('/')) {
@@ -1194,7 +1199,7 @@ const Households = () => {
     </style>
     </head><body>
     <h2>Danh sách hộ dân – ${policyLabel}${groupLabel}</h2>
-    <div class="subtitle">${tdpNameVal} – ${wardNameVal} &nbsp;|&nbsp; Ngày in: ${today} &nbsp;|&nbsp; Tổng số: <strong>${filteredHouseholds.length}</strong> hộ</div>
+    <div class="subtitle">${tdpNameVal} – ${wardNameVal} &nbsp;|&nbsp; Ngày in: ${today} &nbsp;|&nbsp; Tổng số: <strong>${formatNumber(filteredHouseholds.length)}</strong> hộ</div>
     <table>
       <thead><tr>
         <th style="width:40px">STT</th>
@@ -1381,7 +1386,7 @@ const Households = () => {
       const safePolicy = policyLabel.replace(/ /g, '_');
       link.download = `DanhSach_HoDan_${safePolicy}_${tdpNameVal}_${new Date().getFullYear()}.xlsx`;
       link.click();
-      showToast(`Xuất Excel thành công! ${filteredHouseholds.length} hộ.`, 'success');
+      showToast(`Xuất Excel thành công! ${formatNumber(filteredHouseholds.length)} hộ.`, 'success');
     } catch (err) {
       showToast('Lỗi khi xuất file Excel!', 'danger');
       console.error(err);
@@ -1650,7 +1655,7 @@ const Households = () => {
       {filteredHouseholds.length > 0 && (
         <div className="pagination-container">
           <div className="pagination-info">
-            Hiển thị <strong>{Math.min(filteredHouseholds.length, (currentPage - 1) * pageSize + 1)}-{Math.min(filteredHouseholds.length, currentPage * pageSize)}</strong> trong số <strong>{filteredHouseholds.length}</strong> hộ dân
+            Hiển thị <strong>{formatNumber(Math.min(filteredHouseholds.length, (currentPage - 1) * pageSize + 1))}-{formatNumber(Math.min(filteredHouseholds.length, currentPage * pageSize))}</strong> trong số <strong>{formatNumber(filteredHouseholds.length)}</strong> hộ dân
           </div>
           <div className="pagination-buttons">
             <button 
