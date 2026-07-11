@@ -169,7 +169,7 @@ const App = () => {
   useEffect(() => {
     const userRoleVal = localStorage.getItem('user_role');
     const wardId = localStorage.getItem('user_ward_id');
-    if (userRoleVal === 'ward_admin' && wardId) {
+    if ((userRoleVal === 'ward_admin' || userRoleVal === 'super_admin') && wardId) {
       db.getTDPList(wardId).then(list => {
         setTdpList(list);
       });
@@ -2130,7 +2130,7 @@ const App = () => {
             {activeTab === 'Bảng điều khiển' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap' }}>Bảng điều khiển</h1>
-                {localStorage.getItem('user_role') === 'ward_admin' && (
+                {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
                   <select
                     value={selectedTdpUserId}
                     onChange={(e) => handleTdpSelect(e.target.value)}
@@ -2172,7 +2172,7 @@ const App = () => {
             ) : (
               <div className="breadcrumb-gov" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>Tổ dân phố</span>
-                {localStorage.getItem('user_role') === 'ward_admin' ? (
+                {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') ? (
                   <select
                     value={selectedTdpUserId}
                     onChange={(e) => handleTdpSelect(e.target.value)}
