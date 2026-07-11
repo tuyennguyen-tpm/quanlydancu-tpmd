@@ -863,15 +863,15 @@ const Dashboard = () => {
                   </tr>
                   <tr>
                     <td style={{ color: '#64748B', textAlign: 'left', padding: '6px 8px' }}>Hộ chuyển đi tháng này</td>
-                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px' }}>{stats.temporaryAbsentCount || 2}</td>
+                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px' }}>{stats.temporaryAbsentCount}</td>
                   </tr>
                   <tr>
                     <td style={{ color: '#64748B', textAlign: 'left', padding: '6px 8px' }}>Trẻ em mới khai sinh</td>
-                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px' }}>{stats.birthCount || 3}</td>
+                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px' }}>{stats.birthCount}</td>
                   </tr>
                   <tr>
                     <td style={{ textAlign: 'left', padding: '6px 8px', color: '#DC2626' }}>Người quá cố</td>
-                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px', color: '#DC2626' }}>{stats.deceasedCount || 1}</td>
+                    <td style={{ fontWeight: '600', textAlign: 'right', padding: '6px 8px', color: '#DC2626' }}>{stats.deceasedCount}</td>
                   </tr>
                 </tbody>
               </table>
