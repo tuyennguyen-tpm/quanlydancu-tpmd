@@ -373,7 +373,7 @@ const App = () => {
     let targetWardId = '';
     const role = localStorage.getItem('user_role');
     
-    if (role === 'super_admin') {
+    if (role === 'super_admin' || role === 'ward_admin') {
       if (showNewWardInput && newWardNameInput.trim()) {
         try {
           const { data: newWard, error } = await supabase
@@ -2904,7 +2904,7 @@ const App = () => {
                     🔑 Sinh Mã kích hoạt (License Key) Hệ thống
                   </div>
 
-                  {localStorage.getItem('user_role') === 'super_admin' && (
+                  {(localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
                     <div style={{ 
                       display: 'flex', 
                       gap: '10px', 
@@ -2915,7 +2915,7 @@ const App = () => {
                       border: '1px solid rgba(236,72,153,0.15)',
                       marginBottom: '4px'
                     }}>
-                      <div style={{ fontWeight: '700', fontSize: '0.78rem', color: '#db2777', letterSpacing: '0.5px' }}>🏛️ CẤU HÌNH PHƯỜNG (SUPER ADMIN):</div>
+                      <div style={{ fontWeight: '700', fontSize: '0.78rem', color: '#db2777', letterSpacing: '0.5px' }}>🏛️ CẤU HÌNH PHƯỜNG & KHÓA BẢN QUYỀN:</div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <label style={{ fontSize: '0.78rem', color: '#475569', minWidth: '90px', fontWeight: '600' }}>Chọn Phường:</label>
                         {!showNewWardInput ? (
