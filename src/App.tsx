@@ -313,6 +313,7 @@ const App = () => {
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'general' | 'keys'>('general');
   const [allTdpProfiles, setAllTdpProfiles] = useState<any[]>([]);
   const [transferTargetWards, setTransferTargetWards] = useState<Record<string, string>>({});
   const [transferLoading, setTransferLoading] = useState<string | null>(null);
@@ -2296,7 +2297,47 @@ const App = () => {
             </div>
             <form onSubmit={handleSaveSettings} className="modal-form">
 
-              {/* ─── Phần 1: Thông tin Tổ dân phố ─── */}
+              {/* Navigation Tab Bar */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '16px', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('general')}
+                  style={{
+                    padding: '8px 16px',
+                    fontWeight: '600',
+                    fontSize: '0.85rem',
+                    border: 'none',
+                    borderBottom: settingsTab === 'general' ? '3px solid var(--primary)' : '3px solid transparent',
+                    background: 'none',
+                    color: settingsTab === 'general' ? 'var(--primary)' : '#64748b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⚙️ Cấu hình chung
+                </button>
+                {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
+                  <button
+                    type="button"
+                    onClick={() => setSettingsTab('keys')}
+                    style={{
+                      padding: '8px 16px',
+                      fontWeight: '600',
+                      fontSize: '0.85rem',
+                      border: 'none',
+                      borderBottom: settingsTab === 'keys' ? '3px solid #db2777' : '3px solid transparent',
+                      background: 'none',
+                      color: settingsTab === 'keys' ? '#db2777' : '#64748b',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🔑 Khóa & Điều chuyển Phường
+                  </button>
+                )}
+              </div>
+
+              {settingsTab === 'general' && (
+                <>
+                  {/* ─── Phần 1: Thông tin Tổ dân phố ─── */}
               <div style={{
                 background: 'linear-gradient(135deg, rgba(37,99,235,0.06), rgba(37,99,235,0.02))',
                 border: '1.5px solid rgba(37,99,235,0.18)',
@@ -2964,8 +3005,12 @@ const App = () => {
                   </button>
                 </div>
               )}
+                </>
+              )}
 
-              {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Hiển thị cho Ward Admin và Super Admin) ─── */}
+              {settingsTab === 'keys' && (
+                <>
+                  {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Hiển thị cho Ward Admin và Super Admin) ─── */}
               {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(236,72,153,0.06), rgba(236,72,153,0.02))',
@@ -3247,8 +3292,12 @@ const App = () => {
                   </div>
                 </div>
               )}
+                </>
+              )}
 
-              {/* ─── Phần 2: Kết nối Supabase ─── */}
+              {settingsTab === 'general' && (
+                <>
+                  {/* ─── Phần 2: Kết nối Supabase ─── */}
               <div style={{
                 background: '#f8fafc',
                 border: '1.5px solid var(--border)',
@@ -3352,10 +3401,12 @@ const App = () => {
                   🔄 Khôi phục dữ liệu mẫu
                 </button>
               </div>
+                </>
+              )}
 
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setSettingsOpen(false)}>Hủy bỏ</button>
-                <button type="submit" className="btn btn-primary">💾 Lưu cấu hình</button>
+                <button type="submit" className="btn btn-primary" style={{ display: settingsTab === 'general' ? 'inline-flex' : 'none' }}>💾 Lưu cấu hình</button>
               </div>
             </form>
           </div>
