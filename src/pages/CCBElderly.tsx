@@ -742,38 +742,93 @@ const CCBElderly = () => {
         </div>
       </div>
 
-      {/* TABS SELECTOR */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
-        <button 
-          onClick={() => { setSelectedTab('seniors'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '20px',
-            border: '1px solid var(--border)',
-            background: selectedTab === 'seniors' ? 'var(--gov-blue)' : 'white',
-            color: selectedTab === 'seniors' ? 'white' : 'var(--text-secondary)',
-            fontWeight: '600',
-            fontSize: '12.5px',
-            cursor: 'pointer'
-          }}
-        >
-          👴 Hội Người cao tuổi ({seniors.length})
-        </button>
-        <button 
-          onClick={() => { setSelectedTab('veterans'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '20px',
-            border: '1px solid var(--border)',
-            background: selectedTab === 'veterans' ? 'var(--gov-blue)' : 'white',
-            color: selectedTab === 'veterans' ? 'white' : 'var(--text-secondary)',
-            fontWeight: '600',
-            fontSize: '12.5px',
-            cursor: 'pointer'
-          }}
-        >
-          🎖️ Hội Cựu chiến binh ({veterans.length})
-        </button>
+      {/* TABS SELECTOR & ACTIONS BAR */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '10px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            onClick={() => { setSelectedTab('seniors'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: '1px solid var(--border)',
+              background: selectedTab === 'seniors' ? 'var(--gov-blue)' : 'white',
+              color: selectedTab === 'seniors' ? 'white' : 'var(--text-secondary)',
+              fontWeight: '600',
+              fontSize: '12.5px',
+              cursor: 'pointer'
+            }}
+          >
+            👴 Hội Người cao tuổi ({seniors.length})
+          </button>
+          <button 
+            onClick={() => { setSelectedTab('veterans'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: '1px solid var(--border)',
+              background: selectedTab === 'veterans' ? 'var(--gov-blue)' : 'white',
+              color: selectedTab === 'veterans' ? 'white' : 'var(--text-secondary)',
+              fontWeight: '600',
+              fontSize: '12.5px',
+              cursor: 'pointer'
+            }}
+          >
+            🎖️ Hội Cựu chiến binh ({veterans.length})
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {!isGuest && (
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', transition: 'all 0.15s ease' }}
+              onMouseOver={(e) => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <FileUp size={16} />
+              Nhập Excel/CSV
+            </button>
+          )}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            accept=".csv,.txt,.xlsx,.xls" 
+            onChange={handleImportCSV} 
+          />
+          
+          <button 
+            onClick={handleExportExcel} 
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2', transition: 'all 0.15s ease' }}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#cffafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#ecfeff'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <FileDown size={16} />
+            Xuất Excel/CSV
+          </button>
+
+          <button 
+            onClick={handlePrint} 
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6', transition: 'all 0.15s ease' }}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <Printer size={16} />
+            In danh sách
+          </button>
+
+          {!isGuest && (
+            <button 
+              onClick={() => setIsAddModalOpen(true)} 
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', background: '#1d4ed8', color: 'white', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease' }}
+              onMouseOver={(e) => { e.currentTarget.style.background = '#1e40af'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.transform = 'none'; }}
+            >
+              <UserPlus size={16} />
+              Thêm hội viên
+            </button>
+          )}
+        </div>
       </div>
 
       {/* SUB-FILTERS FOR SENIORS */}
@@ -850,60 +905,6 @@ const CCBElderly = () => {
           )}
         </div>
       )}
-
-      {/* ACTIONS BAR */}
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
-        {!isGuest && (
-          <button 
-            onClick={() => fileInputRef.current?.click()} 
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', transition: 'all 0.15s ease' }}
-            onMouseOver={(e) => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <FileUp size={16} />
-            Nhập Excel/CSV
-          </button>
-        )}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          style={{ display: 'none' }} 
-          accept=".csv,.txt,.xlsx,.xls" 
-          onChange={handleImportCSV} 
-        />
-        
-        <button 
-          onClick={handleExportExcel} 
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2', transition: 'all 0.15s ease' }}
-          onMouseOver={(e) => { e.currentTarget.style.background = '#cffafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = '#ecfeff'; e.currentTarget.style.transform = 'none'; }}
-        >
-          <FileDown size={16} />
-          Xuất Excel/CSV
-        </button>
-
-        <button 
-          onClick={handlePrint} 
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6', transition: 'all 0.15s ease' }}
-          onMouseOver={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-          onMouseOut={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}
-        >
-          <Printer size={16} />
-          In danh sách
-        </button>
-
-        {!isGuest && (
-          <button 
-            onClick={() => setIsAddModalOpen(true)} 
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', background: '#1d4ed8', color: 'white', border: 'none', cursor: 'pointer', transition: 'all 0.15s ease', marginLeft: 'auto' }}
-            onMouseOver={(e) => { e.currentTarget.style.background = '#1e40af'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <UserPlus size={16} />
-            Thêm hội viên
-          </button>
-        )}
-      </div>
 
       {/* SEARCH AND TABLE */}
       <div className="card-gov">
