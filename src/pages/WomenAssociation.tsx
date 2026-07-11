@@ -174,7 +174,7 @@ const WomenAssociation = () => {
       rowsHtml += `
         <tr>
           <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${idx + 1}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${m.full_name}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; white-space: nowrap;">${m.full_name}</td>
           <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${dob}</td>
           <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${m.phone || ''}</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${m.occupation || ''}</td>

@@ -1094,7 +1094,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           <tr>
             <td style="text-align: center;">${index + 1}</td>
             ${showTdpCol ? `<td style="font-weight: bold; color: #1e3a8a;">${r.user_id ? (tdpMap[r.user_id] || '—') : '—'}</td>` : ''}
-            <td style="font-weight: bold;">${r.full_name}</td>
+            <td style="font-weight: bold; white-space: nowrap;">${r.full_name}</td>
             <td style="text-align: center;">${formattedDob}</td>
             <td style="text-align: center; font-weight: bold; color: #1e3a8a;">${longevityAge} tuổi</td>
             <td style="text-align: center;">${hh?.self_management_group || '—'}</td>
@@ -1112,7 +1112,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           <tr>
             <td style="text-align: center;">${index + 1}</td>
             ${showTdpCol ? `<td style="font-weight: bold; color: #1e3a8a;">${r.user_id ? (tdpMap[r.user_id] || '—') : '—'}</td>` : ''}
-            <td style="font-weight: bold;">${r.full_name}</td>
+            <td style="font-weight: bold; white-space: nowrap;">${r.full_name}</td>
             <td style="text-align: center;">${r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác'}</td>
             <td style="text-align: center;">${formattedDob}</td>
             <td style="text-align: center;">${r.relationship_with_head}</td>

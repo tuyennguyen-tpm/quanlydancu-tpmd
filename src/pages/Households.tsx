@@ -1166,7 +1166,7 @@ const Households = () => {
         <td style="padding:7px 8px;text-align:center;color:#64748b">${idx + 1}</td>
         ${showTdpCol ? `<td style="padding:7px 8px;font-weight:600;color:#1e3a8a">${h.user_id ? (tdpMap[h.user_id] || '—') : '—'}</td>` : ''}
         <td style="padding:7px 8px;font-weight:600">${h.household_number}</td>
-        <td style="padding:7px 8px">${headName}</td>
+        <td style="padding:7px 8px;white-space:nowrap">${headName}</td>
         <td style="padding:7px 8px">${h.address}</td>
         <td style="padding:7px 8px;text-align:center">${memberCount}</td>
         <td style="padding:7px 8px;text-align:center">${h.self_management_group || '—'}</td>

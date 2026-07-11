@@ -395,7 +395,7 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
               ${committeeMembers.map((m, idx) => `
                 <tr>
                   <td class="center">${idx + 1}</td>
-                  <td style="font-weight: bold;">${m.name}</td>
+                  <td style="font-weight: bold; white-space: nowrap;">${m.name}</td>
                   <td class="center">${m.dob || ''}</td>
                   <td class="center">${m.phone || ''}</td>
                   <td>${m.position || ''}</td>

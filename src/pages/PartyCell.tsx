@@ -1464,7 +1464,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       return `
         <tr>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${idx + 1}</td>
-          <td style="border: 1px solid #000; padding: 6px;"><strong>${m.full_name}</strong></td>
+          <td style="border: 1px solid #000; padding: 6px; white-space: nowrap;"><strong>${m.full_name}</strong></td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${m.party_code || '—'}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${getMemberPartyGroup(m)}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${probationDateStr}</td>

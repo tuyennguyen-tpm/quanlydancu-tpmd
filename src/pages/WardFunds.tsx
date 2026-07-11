@@ -790,7 +790,7 @@ const WardFunds = () => {
       return `
         <tr>
           <td style="text-align: center;">${index + 1}</td>
-          <td style="font-weight: bold;">${item.full_name}</td>
+          <td style="font-weight: bold; white-space: nowrap;">${item.full_name}</td>
           <td style="text-align: center;">${item.dob || '-'}</td>
           <td>${item.address || '-'}</td>
           ${fundContributions}
