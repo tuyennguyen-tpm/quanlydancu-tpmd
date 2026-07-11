@@ -316,16 +316,23 @@ const App = () => {
   const [newKeyTdpName, setNewKeyTdpName] = useState('');
   const [generatedKeysList, setGeneratedKeysList] = useState<any[]>([]);
   const [generatedKeyResult, setGeneratedKeyResult] = useState('');
+  const [wardsList, setWardsList] = useState<any[]>([]);
+  const [selectedKeyWardId, setSelectedKeyWardId] = useState('');
+  const [newWardNameInput, setNewWardNameInput] = useState('');
+  const [showNewWardInput, setShowNewWardInput] = useState(false);
 
   const loadGeneratedKeys = async () => {
-    const wardId = localStorage.getItem('user_ward_id');
-    if (!wardId || !supabase) return;
+    if (!supabase) return;
     try {
-      const { data, error } = await supabase
-        .from('registration_keys')
-        .select('*')
-        .eq('ward_id', wardId)
-        .order('created_at', { ascending: false });
+      const role = localStorage.getItem('user_role');
+      const wardId = localStorage.getItem('user_ward_id');
+      let query = supabase.from('registration_keys').select('*, wards(name)');
+      
+      if (role !== 'super_admin' && wardId) {
+        query = query.eq('ward_id', wardId);
+      }
+      
+      const { data } = await query.order('created_at', { ascending: false });
       if (data) {
         setGeneratedKeysList(data);
       }
@@ -334,17 +341,76 @@ const App = () => {
     }
   };
 
+  const loadWardsList = async () => {
+    if (!supabase) return;
+    try {
+      const { data } = await supabase.from('wards').select('*').order('name');
+      if (data) {
+        setWardsList(data);
+        if (data.length > 0 && !selectedKeyWardId) {
+          setSelectedKeyWardId(data[0].id);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load wards list:', e);
+    }
+  };
+
   useEffect(() => {
-    if (isSettingsOpen && localStorage.getItem('user_role') === 'ward_admin') {
+    const role = localStorage.getItem('user_role');
+    if (isSettingsOpen && (role === 'ward_admin' || role === 'super_admin')) {
       loadGeneratedKeys();
+      loadWardsList();
       setGeneratedKeyResult('');
+      setShowNewWardInput(false);
+      setNewWardNameInput('');
     }
   }, [isSettingsOpen]);
 
   const handleGenerateKey = async () => {
-    const wardId = localStorage.getItem('user_ward_id');
-    if (!wardId) return;
-    const key = await db.generateRegistrationKey(wardId, newKeyRole, newKeyTdpName);
+    if (!supabase) return;
+    let targetWardId = '';
+    const role = localStorage.getItem('user_role');
+    
+    if (role === 'super_admin') {
+      if (showNewWardInput && newWardNameInput.trim()) {
+        try {
+          const { data: newWard, error } = await supabase
+            .from('wards')
+            .insert({ name: newWardNameInput.trim() })
+            .select()
+            .single();
+          if (error) throw error;
+          if (newWard) {
+            targetWardId = newWard.id;
+            await loadWardsList();
+            setSelectedKeyWardId(newWard.id);
+            setShowNewWardInput(false);
+            setNewWardNameInput('');
+          }
+        } catch (err: any) {
+          const ev = new CustomEvent('show-toast', { 
+            detail: { message: `Lỗi tạo Phường mới: ${err.message}`, type: 'danger' } 
+          });
+          window.dispatchEvent(ev);
+          return;
+        }
+      } else {
+        targetWardId = selectedKeyWardId;
+      }
+    } else {
+      targetWardId = localStorage.getItem('user_ward_id') || '';
+    }
+
+    if (!targetWardId) {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: 'Vui lòng chọn hoặc nhập tên Phường!', type: 'warning' } 
+      });
+      window.dispatchEvent(ev);
+      return;
+    }
+
+    const key = await db.generateRegistrationKey(targetWardId, newKeyRole, newKeyTdpName);
     if (key) {
       setGeneratedKeyResult(key);
       const ev = new CustomEvent('show-toast', { 
@@ -2503,8 +2569,8 @@ const App = () => {
                 </div>
               )}
 
-              {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Chỉ hiển thị cho Ward Admin) ─── */}
-              {localStorage.getItem('user_role') === 'ward_admin' && (
+              {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Hiển thị cho Ward Admin và Super Admin) ─── */}
+              {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(236,72,153,0.06), rgba(236,72,153,0.02))',
                   border: '1.5px solid rgba(236,72,153,0.18)',
@@ -2516,8 +2582,62 @@ const App = () => {
                   marginTop: '12px'
                 }}>
                   <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#db2777', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                    🔑 Sinh Mã kích hoạt (License Key) cho Tổ dân phố
+                    🔑 Sinh Mã kích hoạt (License Key) Hệ thống
                   </div>
+
+                  {localStorage.getItem('user_role') === 'super_admin' && (
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '10px', 
+                      flexDirection: 'column', 
+                      background: 'rgba(255,255,255,0.7)', 
+                      padding: '12px', 
+                      borderRadius: '8px', 
+                      border: '1px solid rgba(236,72,153,0.15)',
+                      marginBottom: '4px'
+                    }}>
+                      <div style={{ fontWeight: '700', fontSize: '0.78rem', color: '#db2777', letterSpacing: '0.5px' }}>🏛️ CẤU HÌNH PHƯỜNG (SUPER ADMIN):</div>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.78rem', color: '#475569', minWidth: '90px', fontWeight: '600' }}>Chọn Phường:</label>
+                        {!showNewWardInput ? (
+                          <select
+                            value={selectedKeyWardId}
+                            onChange={(e) => {
+                              if (e.target.value === 'new') {
+                                setShowNewWardInput(true);
+                              } else {
+                                setSelectedKeyWardId(e.target.value);
+                              }
+                            }}
+                            style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', flex: 1, background: 'white', outline: 'none' }}
+                          >
+                            {wardsList.map(w => (
+                              <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                            <option value="new">➕ Tạo Phường mới...</option>
+                          </select>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '6px', flex: 1 }}>
+                            <input
+                              type="text"
+                              placeholder="Nhập tên Phường mới (ví dụ: Quảng Hải)..."
+                              value={newWardNameInput}
+                              onChange={(e) => setNewWardNameInput(e.target.value)}
+                              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', flex: 1 }}
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={() => setShowNewWardInput(false)}
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', height: 'auto', minHeight: '30px' }}
+                            >
+                              Hủy
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                     <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
@@ -2602,6 +2722,7 @@ const App = () => {
                         <thead>
                           <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Mã kích hoạt</th>
+                            <th style={{ padding: '6px 10px', color: '#475569' }}>Phường</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Đối tượng</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Tên địa bàn</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Trạng thái</th>
@@ -2611,6 +2732,7 @@ const App = () => {
                           {generatedKeysList.map((k) => (
                             <tr key={k.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 'bold' }}>{k.key}</td>
+                              <td style={{ padding: '6px 10px' }}>{k.wards?.name || '—'}</td>
                               <td style={{ padding: '6px 10px' }}>{k.role === 'ward_admin' ? '🏛️ Phường Admin' : '🏢 Tổ trưởng'}</td>
                               <td style={{ padding: '6px 10px' }}>{k.tdp_name || '—'}</td>
                               <td style={{ padding: '6px 10px' }}>
@@ -2624,7 +2746,7 @@ const App = () => {
                           ))}
                           {generatedKeysList.length === 0 && (
                             <tr>
-                              <td colSpan={4} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
+                              <td colSpan={5} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
                             </tr>
                           )}
                         </tbody>

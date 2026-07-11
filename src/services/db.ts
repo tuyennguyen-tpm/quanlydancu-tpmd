@@ -400,6 +400,24 @@ export const checkAndSeedUser = async (userId: string): Promise<void> => {
       });
     }
 
+    // 2.5 Ensure a default master key exists for testing and first setup
+    if (defaultWardId) {
+      try {
+        const { count: keyCount } = await supabase.from('registration_keys').select('*', { count: 'exact', head: true });
+        if (keyCount === 0) {
+          await supabase.from('registration_keys').insert({
+            key: 'REG-WARD-MASTER-KEY',
+            ward_id: defaultWardId,
+            role: 'ward_admin',
+            tdp_name: 'Ban quản trị Phường',
+            is_used: false
+          });
+        }
+      } catch (e) {
+        console.error('Failed to seed master key:', e);
+      }
+    }
+
     // 3. Update old records with null ward_id to default ward_id
     if (defaultWardId) {
       await supabase.from('households').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
@@ -1975,16 +1993,12 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
 
   // Ward multi-tenancy & keys
   sql += `-- ─── CẬP NHẬT KIẾN TRÚC ĐA PHƯỜNG & KHÓA KÍCH HOẠT ───\n`;
+  // 1. Khai báo các bảng trước
   sql += `CREATE TABLE IF NOT EXISTS public.wards (\n`;
   sql += `    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`;
   sql += `    name TEXT NOT NULL,\n`;
   sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL\n`;
   sql += `);\n\n`;
-  sql += `ALTER TABLE public.wards ENABLE ROW LEVEL SECURITY;\n`;
-  sql += `DROP POLICY IF EXISTS "Allow public select wards" ON public.wards;\n`;
-  sql += `CREATE POLICY "Allow public select wards" ON public.wards FOR SELECT TO authenticated, anon USING (true);\n`;
-  sql += `DROP POLICY IF EXISTS "Allow admin manage wards" ON public.wards;\n`;
-  sql += `CREATE POLICY "Allow admin manage wards" ON public.wards FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'super_admin'));\n\n`;
 
   sql += `CREATE TABLE IF NOT EXISTS public.profiles (\n`;
   sql += `    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,\n`;
@@ -1994,11 +2008,6 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   sql += `    full_name TEXT,\n`;
   sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL\n`;
   sql += `);\n\n`;
-  sql += `ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;\n`;
-  sql += `DROP POLICY IF EXISTS "Allow select profiles" ON public.profiles;\n`;
-  sql += `CREATE POLICY "Allow select profiles" ON public.profiles FOR SELECT TO authenticated, anon USING (true);\n`;
-  sql += `DROP POLICY IF EXISTS "Allow manage profiles" ON public.profiles;\n`;
-  sql += `CREATE POLICY "Allow manage profiles" ON public.profiles FOR ALL TO authenticated USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'super_admin'));\n\n`;
 
   sql += `CREATE TABLE IF NOT EXISTS public.registration_keys (\n`;
   sql += `    key TEXT PRIMARY KEY,\n`;
@@ -2009,13 +2018,29 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   sql += `    used_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,\n`;
   sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL\n`;
   sql += `);\n\n`;
-  sql += `ALTER TABLE public.registration_keys ENABLE ROW LEVEL SECURITY;\n`;
+
+  // 2. Bật bảo mật RLS
+  sql += `ALTER TABLE public.wards ENABLE ROW LEVEL SECURITY;\n`;
+  sql += `ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;\n`;
+  sql += `ALTER TABLE public.registration_keys ENABLE ROW LEVEL SECURITY;\n\n`;
+
+  // 3. Khai báo các Policies sau khi các bảng đã tồn tại
+  sql += `DROP POLICY IF EXISTS "Allow public select wards" ON public.wards;\n`;
+  sql += `CREATE POLICY "Allow public select wards" ON public.wards FOR SELECT TO authenticated, anon USING (true);\n`;
+  sql += `DROP POLICY IF EXISTS "Allow admin manage wards" ON public.wards;\n`;
+  sql += `CREATE POLICY "Allow admin manage wards" ON public.wards FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'super_admin'));\n\n`;
+
+  sql += `DROP POLICY IF EXISTS "Allow select profiles" ON public.profiles;\n`;
+  sql += `CREATE POLICY "Allow select profiles" ON public.profiles FOR SELECT TO authenticated, anon USING (true);\n`;
+  sql += `DROP POLICY IF EXISTS "Allow manage profiles" ON public.profiles;\n`;
+  sql += `CREATE POLICY "Allow manage profiles" ON public.profiles FOR ALL TO authenticated USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'super_admin'));\n\n`;
+
   sql += `DROP POLICY IF EXISTS "Allow public select registration_keys" ON public.registration_keys;\n`;
   sql += `CREATE POLICY "Allow public select registration_keys" ON public.registration_keys FOR SELECT TO anon, authenticated USING (true);\n`;
   sql += `DROP POLICY IF EXISTS "Allow manage registration_keys" ON public.registration_keys;\n`;
   sql += `CREATE POLICY "Allow manage registration_keys" ON public.registration_keys FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'ward_admin')));\n\n`;
 
-  // Add ward_id columns and policies for all data tables
+  // Add ward_id columns and policies for all data tables safely
   const dataTables = [
     'households', 'residents', 'financial_records', 'complaints', 
     'meetings', 'documents', 'security_logs', 'environment_logs', 
@@ -2024,9 +2049,14 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   ];
   
   dataTables.forEach(t => {
-    sql += `ALTER TABLE public.${t} ADD COLUMN IF NOT EXISTS ward_id UUID REFERENCES public.wards(id) ON DELETE SET NULL;\n`;
-    sql += `DROP POLICY IF EXISTS "Allow ward_admin access ${t}" ON public.${t};\n`;
-    sql += `CREATE POLICY "Allow ward_admin access ${t}" ON public.${t} FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'ward_admin' AND profiles.ward_id = ${t}.ward_id));\n`;
+    sql += `DO $$\n`;
+    sql += `BEGIN\n`;
+    sql += `    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = '${t}') THEN\n`;
+    sql += `        ALTER TABLE public.${t} ADD COLUMN IF NOT EXISTS ward_id UUID REFERENCES public.wards(id) ON DELETE SET NULL;\n`;
+    sql += `        DROP POLICY IF EXISTS "Allow ward_admin access ${t}" ON public.${t};\n`;
+    sql += `        CREATE POLICY "Allow ward_admin access ${t}" ON public.${t} FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'ward_admin' AND profiles.ward_id = ${t}.ward_id));\n`;
+    sql += `    END IF;\n`;
+    sql += `END $$;\n\n`;
   });
   sql += `\n`;
 
@@ -2042,10 +2072,18 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   sql += `$$ LANGUAGE plpgsql SECURITY DEFINER;\n\n`;
 
   dataTables.forEach(t => {
-    sql += `DROP TRIGGER IF EXISTS tr_set_ward_id_${t} ON public.${t};\n`;
-    sql += `CREATE TRIGGER tr_set_ward_id_${t} BEFORE INSERT ON public.${t} FOR EACH ROW EXECUTE FUNCTION public.set_row_ward_id();\n`;
+    sql += `DO $$\n`;
+    sql += `BEGIN\n`;
+    sql += `    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = '${t}') THEN\n`;
+    sql += `        DROP TRIGGER IF EXISTS tr_set_ward_id_${t} ON public.${t};\n`;
+    sql += `        CREATE TRIGGER tr_set_ward_id_${t} BEFORE INSERT ON public.${t} FOR EACH ROW EXECUTE FUNCTION public.set_row_ward_id();\n`;
+    sql += `    END IF;\n`;
+    sql += `END $$;\n\n`;
   });
-  sql += `\n`;
+  
+  sql += `-- ─── THÊM PHƯỜNG MẶC ĐỊNH & KHÓA MASTER ───\n`;
+  sql += `INSERT INTO public.wards (id, name) VALUES ('00000000-0000-0000-0000-000000000000', 'Quảng Giao') ON CONFLICT (id) DO NOTHING;\n`;
+  sql += `INSERT INTO public.registration_keys (key, ward_id, role, tdp_name, is_used) VALUES ('REG-WARD-MASTER-KEY', '00000000-0000-0000-0000-000000000000', 'ward_admin', 'Quản trị Phường', false) ON CONFLICT (key) DO NOTHING;\n\n`;
 
   return sql;
 };
