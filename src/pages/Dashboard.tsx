@@ -73,6 +73,9 @@ const Dashboard = () => {
     temporaryAbsentCount: 0,
     birthCount: 0,
     deceasedCount: 0,
+    
+    newHouseholds30Days: 0,
+    newResidents30Days: 0,
   });
 
   const [chartData, setChartData] = useState<{ moveIn: number; moveOut: number; birth: number; death: number }[]>([]);
@@ -181,6 +184,11 @@ const Dashboard = () => {
       const tempAbs = activeResidents.filter(r => r.status === 'temporary_absent').length;
       const decCount = deceasedResidents.length;
 
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const newH30 = households.filter(h => h.created_at && new Date(h.created_at) >= thirtyDaysAgo).length;
+      const newR30 = activeResidents.filter(r => r.created_at && new Date(r.created_at) >= thirtyDaysAgo).length;
+
       setStats({
         totalHouseholds: households.length,
         totalResidents: activeResidents.length,
@@ -207,6 +215,9 @@ const Dashboard = () => {
         temporaryAbsentCount: tempAbs,
         birthCount: birthVal,
         deceasedCount: decCount,
+        
+        newHouseholds30Days: newH30,
+        newResidents30Days: newR30,
       });
 
       // SVG Donut calculation
@@ -545,7 +556,9 @@ const Dashboard = () => {
               <svg width="18" height="18" fill="none" stroke="#1565C0" viewBox="0 0 24 24" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>
             </div>
           </div>
-          <div className="change up">▲ +3 so với tháng trước</div>
+          <div className="change up">
+            {stats.newHouseholds30Days > 0 ? `▲ +${stats.newHouseholds30Days} trong 30 ngày qua` : 'Không tăng giảm trong 30 ngày'}
+          </div>
         </div>
 
         {/* Card 2: Nhân khẩu */}
@@ -557,7 +570,9 @@ const Dashboard = () => {
               <svg width="18" height="18" fill="none" stroke="#2E7D32" viewBox="0 0 24 24" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
             </div>
           </div>
-          <div className="change up">▲ +7 so với tháng trước</div>
+          <div className="change up">
+            {stats.newResidents30Days > 0 ? `▲ +${stats.newResidents30Days} trong 30 ngày qua` : 'Không tăng giảm trong 30 ngày'}
+          </div>
         </div>
 
         {/* Card 3: Nam / Nữ */}

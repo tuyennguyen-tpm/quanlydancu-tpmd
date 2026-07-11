@@ -2169,7 +2169,12 @@ export const partyDb = {
   getPartyMembers: async (): Promise<PartyMember[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('party_members').select('*').order('created_at', { ascending: true });
+        let query = supabase.from('party_members').select('*').order('created_at', { ascending: true });
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
+        }
+        const { data, error } = await query;
         if (error) handleDbError('tải danh sách đảng viên', error);
         if (!error && data) return data;
       } catch (e) { console.error('getPartyMembers fallback:', e); }
@@ -2247,7 +2252,12 @@ export const partyDb = {
   getPartyMeetings: async (): Promise<PartyMeeting[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('party_meetings').select('*').order('date', { ascending: false });
+        let query = supabase.from('party_meetings').select('*').order('date', { ascending: false });
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
+        }
+        const { data, error } = await query;
         if (error) handleDbError('tải danh sách sinh hoạt chi bộ', error);
         if (!error && data) return data;
       } catch (e) { console.error('getPartyMeetings fallback:', e); }
@@ -2287,6 +2297,10 @@ export const partyDb = {
       try {
         let q = supabase.from('party_evaluations').select('*');
         if (year) q = q.eq('year', year);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          q = q.eq(tenantFilter.field, tenantFilter.value);
+        }
         const { data, error } = await q;
         if (error) handleDbError('tải đánh giá đảng viên', error);
         if (!error && data) return data;
@@ -2314,7 +2328,12 @@ export const partyDb = {
   getPartyFees: async (year: number): Promise<PartyFee[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase.from('party_fees').select('*').eq('year', year);
+        let query = supabase.from('party_fees').select('*').eq('year', year);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
+        }
+        const { data, error } = await query;
         if (error) handleDbError('tải đảng phí', error);
         if (!error && data) return data;
       } catch (e) { console.error('getPartyFees fallback:', e); }
