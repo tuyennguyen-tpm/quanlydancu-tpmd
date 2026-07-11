@@ -50,7 +50,17 @@ const WomenAssociation = () => {
     executiveBoardCount: 3,
   });
 
-  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'chi_hoi_phu_nu' && currentRole !== 'admin');
+
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'demo');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
   const savedGroups = localStorage.getItem('tdp_groups_config');
   const groupsList = savedGroups ? JSON.parse(savedGroups) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
 

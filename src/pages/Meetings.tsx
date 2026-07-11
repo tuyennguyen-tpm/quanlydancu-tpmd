@@ -6,7 +6,11 @@ import type { Meeting } from '../types';
 
 const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }) => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole === 'demo';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || 
+                  currentRole === 'demo' || 
+                  (type === 'party' && currentRole !== 'admin' && currentRole !== 'bi_thu') ||
+                  (type === 'front' && currentRole !== 'admin' && currentRole !== 'mat_tran') ||
+                  (type === 'general' && currentRole !== 'admin' && currentRole !== 'to_truong');
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

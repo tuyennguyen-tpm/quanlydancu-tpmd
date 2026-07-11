@@ -275,7 +275,7 @@ const Residents = () => {
   }, []);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'chung');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   
   useEffect(() => {

@@ -31,7 +31,7 @@ const Finance = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
 
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan');
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');

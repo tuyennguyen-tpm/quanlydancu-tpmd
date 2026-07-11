@@ -24,7 +24,7 @@ interface ActivityProgram {
 
 const Policies = () => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || currentRole === 'demo';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

@@ -117,7 +117,7 @@ const Households = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
 
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'chung');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
 
   // Quyền in danh sách & xuất Excel: không cho phép demo (Trang chủ) và guest_mode
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';

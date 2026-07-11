@@ -44,7 +44,17 @@ const CCBElderly = () => {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [allResidents, setAllResidents] = useState<Resident[]>([]);
 
-  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'demo');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
   const currentYear = new Date().getFullYear();
 
   const loadData = async () => {

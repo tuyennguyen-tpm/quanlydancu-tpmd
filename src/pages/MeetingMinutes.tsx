@@ -6,7 +6,6 @@ import type { Meeting, MeetingMinutesData } from '../types';
 
 const MeetingMinutes = () => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
@@ -98,6 +97,11 @@ const MeetingMinutes = () => {
   const [secretary, setSecretary] = useState(() => getDefaultChairmanAndSecretary('general').secretary);
   const [attendance, setAttendance] = useState('85');
   const [meetingType, setMeetingType] = useState<string>('general');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || 
+                  currentRole === 'demo' || 
+                  (meetingType === 'party' && currentRole !== 'admin' && currentRole !== 'bi_thu') ||
+                  (meetingType === 'front' && currentRole !== 'admin' && currentRole !== 'mat_tran') ||
+                  (meetingType === 'general' && currentRole !== 'admin' && currentRole !== 'to_truong');
   const [content, setContent] = useState('');
   const [isFullscreenEdit, setIsFullscreenEdit] = useState(false);
 

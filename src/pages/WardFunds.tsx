@@ -35,7 +35,7 @@ const WardFunds = () => {
 
   // Cấp quyền sửa cho to_truong, admin, chung
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
-    (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'chung');
+    (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan');
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   
   // State
