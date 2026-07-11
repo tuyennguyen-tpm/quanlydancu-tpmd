@@ -72,10 +72,6 @@ const CCBElderly = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
   const currentYear = new Date().getFullYear();
-  const getAge = (dob: string) => {
-    if (!dob) return 0;
-    return currentYear - parseInt(dob.substring(0, 4));
-  };
 
   const loadData = async () => {
     try {
@@ -148,6 +144,10 @@ const CCBElderly = () => {
     return matchesGroup;
   });
 
+  const getAge = (dob: string) => {
+    if (!dob) return 0;
+    return currentYear - parseInt(dob.substring(0, 4));
+  };
 
   // Longevity category helper (Chúc thọ/Mừng thọ)
   const getLongevityCategory = (age: number) => {

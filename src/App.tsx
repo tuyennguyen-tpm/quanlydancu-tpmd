@@ -372,9 +372,8 @@ const App = () => {
     if (!supabase) return;
     let targetWardId = '';
     const role = localStorage.getItem('user_role');
-    let targetRole = newKeyRole;
     
-    if (role === 'super_admin') {
+    if (role === 'super_admin' || role === 'ward_admin') {
       if (showNewWardInput && newWardNameInput.trim()) {
         try {
           const { data: newWard, error } = await supabase
@@ -401,9 +400,7 @@ const App = () => {
         targetWardId = selectedKeyWardId;
       }
     } else {
-      // Đối với ward_admin hoặc các vai trò khác, ép buộc sử dụng ward_id của chính họ và vai trò tdp_leader
       targetWardId = localStorage.getItem('user_ward_id') || '';
-      targetRole = 'tdp_leader';
     }
 
     if (!targetWardId) {
@@ -414,7 +411,7 @@ const App = () => {
       return;
     }
 
-    const key = await db.generateRegistrationKey(targetWardId, targetRole, newKeyTdpName);
+    const key = await db.generateRegistrationKey(targetWardId, newKeyRole, newKeyTdpName);
     if (key) {
       setGeneratedKeyResult(key);
       const ev = new CustomEvent('show-toast', { 
@@ -693,6 +690,10 @@ const App = () => {
         localStorage.setItem('user_ward_id', profile.ward_id || '');
         localStorage.setItem('user_tdp_name', profile.tdp_name || '');
         localStorage.setItem('user_full_name', profile.full_name || '');
+        
+        // Reset selected TDP on user profile load/switch
+        localStorage.removeItem('selected_tdp_user_id');
+        setSelectedTdpUserId('all');
         
         // Auto check profile structure and clean up seed data from Supabase
         await checkAndSeedUser(userId);
@@ -1574,8 +1575,15 @@ const App = () => {
       localStorage.removeItem('guest_mode');
       localStorage.removeItem('guest_tenant_id');
       localStorage.removeItem('is_public_guest');
+      localStorage.removeItem('selected_tdp_user_id');
+      localStorage.removeItem('supabase_user_id');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_ward_id');
+      localStorage.removeItem('user_tdp_name');
+      localStorage.removeItem('user_full_name');
       setOfflineMode(false);
       setGuestMode(false);
+      setSelectedTdpUserId('all');
       
       if (supabase) {
         try {
@@ -2907,7 +2915,7 @@ const App = () => {
                     🔑 Sinh Mã kích hoạt (License Key) Hệ thống
                   </div>
 
-                  {localStorage.getItem('user_role') === 'super_admin' && (
+                  {(localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
                     <div style={{ 
                       display: 'flex', 
                       gap: '10px', 
@@ -2964,23 +2972,14 @@ const App = () => {
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                     <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                       <label>Chức vụ cấp phép</label>
-                      {localStorage.getItem('user_role') === 'super_admin' ? (
-                        <select
-                          value={newKeyRole}
-                          onChange={(e) => setNewKeyRole(e.target.value as any)}
-                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
-                        >
-                          <option value="tdp_leader">🏢 Tổ trưởng (TDP)</option>
-                          <option value="ward_admin">🏛️ Quản trị viên Phường (Ward Admin)</option>
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          value="🏢 Tổ trưởng (TDP)"
-                          disabled
-                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: '#f1f5f9', cursor: 'not-allowed', color: '#64748b', fontWeight: 'bold' }}
-                        />
-                      )}
+                      <select
+                        value={newKeyRole}
+                        onChange={(e) => setNewKeyRole(e.target.value as any)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
+                      >
+                        <option value="tdp_leader">🏢 Tổ trưởng (TDP)</option>
+                        <option value="ward_admin">🏛️ Quản trị viên Phường (Ward Admin)</option>
+                      </select>
                     </div>
 
                     <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
