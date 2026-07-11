@@ -691,6 +691,19 @@ const App = () => {
     try {
       const profile = await db.getUserProfile(userId);
       if (profile) {
+        // Auto-promote Nguyễn Kim Tuyến to super_admin (Tài khoản Tổng)
+        if (profile.full_name === 'Nguyễn Kim Tuyến' && profile.role !== 'super_admin' && supabase) {
+          try {
+            const { data, error } = await supabase.from('profiles').update({ role: 'super_admin' }).eq('id', userId).select();
+            if (!error && data && data.length > 0) {
+              profile.role = 'super_admin';
+              console.log('[Auth] Nguyễn Kim Tuyến promoted to super_admin');
+            }
+          } catch (e) {
+            console.error('[Auth] Failed to promote Nguyễn Kim Tuyến:', e);
+          }
+        }
+
         localStorage.setItem('supabase_user_id', userId);
         localStorage.setItem('user_role', profile.role);
         localStorage.setItem('user_ward_id', profile.ward_id || '');
@@ -704,7 +717,7 @@ const App = () => {
         // Auto check profile structure and clean up seed data from Supabase
         await checkAndSeedUser(userId);
 
-        if (profile.role === 'ward_admin') {
+        if (profile.role === 'ward_admin' || profile.role === 'super_admin') {
           localStorage.setItem('current_role', 'admin');
           setUserRole('admin');
         } else if (profile.role === 'tdp_leader') {
