@@ -94,12 +94,15 @@ const seedEnvironmentLogs: EnvironmentLog[] = [];
 
 const seedPolicyActivities: PolicyActivity[] = [];
 
-// Helper functions for LocalStorage
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
+  // Neu la tai khoan that da dang nhap (co supabase_user_id) thi mac dinh khoi tao la trong (khong chen du lieu mau)
+  const isDemo = localStorage.getItem('user_role') === 'demo' || !localStorage.getItem('supabase_user_id');
+  const actualDefault = isDemo ? defaultValue : (Array.isArray(defaultValue) ? [] as unknown as T : defaultValue);
+
   const item = localStorage.getItem(key);
   if (!item) {
-    localStorage.setItem(key, JSON.stringify(defaultValue));
-    return defaultValue;
+    localStorage.setItem(key, JSON.stringify(actualDefault));
+    return actualDefault;
   }
   return JSON.parse(item);
 };
