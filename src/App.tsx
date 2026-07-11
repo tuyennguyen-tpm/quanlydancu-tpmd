@@ -481,6 +481,13 @@ const App = () => {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
+  // Activation Key States
+  const [showKeyActivation, setShowKeyActivation] = useState(false);
+  const [activationKey, setActivationKey] = useState('');
+  const [activationName, setActivationName] = useState('');
+  const [activationTdpName, setActivationTdpName] = useState('');
+  const [activationLoading, setActivationLoading] = useState(false);
+
 
   // Targets states for TDP Funds (Dynamic)
   const [fundsConfig, setFundsConfig] = useState<{ name: string; target: string }[]>([]);
@@ -646,10 +653,102 @@ const App = () => {
         } else if (profile.role === 'tdp_leader') {
           localStorage.setItem('tdp_name', profile.tdp_name || 'Tổ dân phố');
         }
+        setShowKeyActivation(false);
+      } else {
+        setShowKeyActivation(true);
       }
     } catch (e) {
       console.error('Failed to load user profile:', e);
     }
+  };
+
+  const handleVerifyActivationKey = async () => {
+    if (!activationKey.trim()) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vui lòng nhập mã kích hoạt.', type: 'warning' } }));
+      return;
+    }
+    if (!activationName.trim()) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vui lòng nhập họ và tên của bạn.', type: 'warning' } }));
+      return;
+    }
+    setActivationLoading(true);
+    if (!supabase) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Cơ sở dữ liệu chưa kết nối.', type: 'danger' } }));
+      setActivationLoading(false);
+      return;
+    }
+    try {
+      const res = await db.validateRegistrationKey(activationKey.trim());
+      if (!res.valid) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: res.message, type: 'danger' } }));
+        setActivationLoading(false);
+        return;
+      }
+      
+      if (res.role === 'tdp_leader' && !activationTdpName.trim()) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vui lòng nhập tên Tổ dân phố của bạn.', type: 'warning' } }));
+        setActivationLoading(false);
+        return;
+      }
+      
+      const userId = session?.user?.id;
+      if (!userId) throw new Error('Không tìm thấy ID người dùng.');
+      
+      // Check if profile exists already
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (existingProfile) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            ward_id: res.ward_id,
+            role: res.role,
+            tdp_name: res.role === 'tdp_leader' ? activationTdpName.trim() : 'Quản trị Phường',
+            full_name: activationName.trim()
+          })
+          .eq('id', userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            ward_id: res.ward_id,
+            role: res.role,
+            tdp_name: res.role === 'tdp_leader' ? activationTdpName.trim() : 'Quản trị Phường',
+            full_name: activationName.trim()
+          });
+        if (error) throw error;
+      }
+      
+      const { error: keyError } = await supabase
+        .from('registration_keys')
+        .update({ is_used: true, used_by: userId })
+        .eq('key', activationKey.trim());
+      if (keyError) throw keyError;
+        
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Kích hoạt tài khoản thành công!', type: 'success' } }));
+      setShowKeyActivation(false);
+      await loadUserProfile(userId);
+    } catch (err: any) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Lỗi kích hoạt: ${err.message || err}`, type: 'danger' } }));
+    } finally {
+      setActivationLoading(false);
+    }
+  };
+
+  const handleActivationCancel = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setShowKeyActivation(false);
+    setSession(null);
+    localStorage.clear();
+    resetToDefaultConfig();
   };
 
   // Cập nhật session và lắng nghe sự thay đổi Auth
@@ -1555,6 +1654,169 @@ const App = () => {
           }}
         />
       </>
+    );
+  }
+
+  if (showKeyActivation) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+        padding: '20px',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}>
+        {toast && (
+          <div className={`toast-notification ${toast.type}`}>
+            {toast.message}
+          </div>
+        )}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '24px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+          padding: '40px',
+          width: '100%',
+          maxWidth: '460px',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ 
+              width: '60px', 
+              height: '60px', 
+              borderRadius: '16px', 
+              backgroundColor: '#4f46e5', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              margin: '0 auto 16px auto',
+              boxShadow: '0 8px 16px rgba(79, 70, 229, 0.3)'
+            }}>
+              <KeyRound size={28} color="white" />
+            </div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#1e293b', margin: '0 0 8px 0' }}>Kích hoạt Bản quyền</h2>
+            <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+              Chào mừng! Bạn đã đăng nhập lần đầu qua Google/OAuth. Vui lòng nhập mã kích hoạt được cấp từ Quản trị viên tối cao để kích hoạt tài khoản.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Mã kích hoạt */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                Mã kích hoạt bản quyền
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: REG-XXXX-XXXX-XXXX"
+                value={activationKey}
+                onChange={(e) => setActivationKey(e.target.value.toUpperCase())}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  fontFamily: 'monospace',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Họ và tên */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                Họ và tên người đăng ký
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Nguyễn Văn A"
+                value={activationName}
+                onChange={(e) => setActivationName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Tên Tổ dân phố */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                Tên Tổ dân phố quản lý (nếu có)
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Tổ dân phố 1 (Bỏ trống nếu là Phường Admin)"
+                value={activationTdpName}
+                onChange={(e) => setActivationTdpName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.9rem',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Nút hành động */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+              <button
+                type="button"
+                onClick={handleVerifyActivationKey}
+                disabled={activationLoading}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  backgroundColor: '#4f46e5',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(79, 70, 229, 0.2)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {activationLoading ? 'Đang kích hoạt...' : 'Kích hoạt tài khoản'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleActivationCancel}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  backgroundColor: 'transparent',
+                  color: '#64748b',
+                  border: '1.5px solid #e2e8f0',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
