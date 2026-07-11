@@ -2033,7 +2033,12 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   sql += `DROP POLICY IF EXISTS "Allow select profiles" ON public.profiles;\n`;
   sql += `CREATE POLICY "Allow select profiles" ON public.profiles FOR SELECT TO authenticated, anon USING (true);\n`;
   sql += `DROP POLICY IF EXISTS "Allow manage profiles" ON public.profiles;\n`;
-  sql += `CREATE POLICY "Allow manage profiles" ON public.profiles FOR ALL TO authenticated USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'super_admin'));\n\n`;
+  sql += `DROP POLICY IF EXISTS "Allow insert profiles" ON public.profiles;\n`;
+  sql += `CREATE POLICY "Allow insert profiles" ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));\n`;
+  sql += `DROP POLICY IF EXISTS "Allow update profiles" ON public.profiles;\n`;
+  sql += `CREATE POLICY "Allow update profiles" ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));\n`;
+  sql += `DROP POLICY IF EXISTS "Allow delete profiles" ON public.profiles;\n`;
+  sql += `CREATE POLICY "Allow delete profiles" ON public.profiles FOR DELETE TO authenticated USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'super_admin'));\n\n`;
 
   sql += `DROP POLICY IF EXISTS "Allow public select registration_keys" ON public.registration_keys;\n`;
   sql += `CREATE POLICY "Allow public select registration_keys" ON public.registration_keys FOR SELECT TO anon, authenticated USING (true);\n`;
