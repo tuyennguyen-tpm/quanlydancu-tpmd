@@ -466,15 +466,23 @@ const CCBElderly = () => {
         <head>
           <title>${titleText}</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #333; }
-            h2 { text-transform: uppercase; color: #1e3a8a; margin-bottom: 5px; }
-            p { margin: 5px 0 20px 0; color: #666; font-size: 14px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-            th { background-color: #f3f4f6; color: #111827; font-weight: bold; padding: 10px; border: 1px solid #ddd; }
             @media print {
+              @page {
+                size: A4 portrait;
+                margin-top: 20mm;
+                margin-bottom: 20mm;
+                margin-left: 30mm;
+                margin-right: 15mm;
+              }
+              body { margin: 0; padding: 0; }
               .no-print { display: none; }
-              body { padding: 0; }
             }
+            body { font-family: "Times New Roman", Times, serif; font-size: 14pt; padding: 20px; color: #000; }
+            h2 { text-transform: uppercase; color: #000; margin-bottom: 5px; font-size: 16pt; font-weight: bold; text-align: center; }
+            p { margin: 5px 0 20px 0; color: #000; font-size: 14pt; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13pt; border: 1px solid #000; }
+            th, td { border: 1px solid #000 !important; padding: 8px; text-align: left; }
+            th { background-color: transparent; color: #000; font-weight: bold; text-align: center; }
           </style>
         </head>
         <body>

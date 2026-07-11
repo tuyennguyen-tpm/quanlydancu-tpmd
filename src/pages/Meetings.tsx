@@ -348,13 +348,23 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
         <head>
           <title>Danh sách Ban công tác Mặt trận</title>
           <style>
-            body { font-family: 'Arial', sans-serif; padding: 30px; color: #333; }
-            h1 { text-align: center; font-size: 20px; text-transform: uppercase; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 13px; }
-            th { background-color: #f2f2f2; text-align: center; font-weight: bold; }
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin-top: 20mm;
+                margin-bottom: 20mm;
+                margin-left: 30mm;
+                margin-right: 15mm;
+              }
+              body { margin: 0; padding: 0; }
+            }
+            body { font-family: "Times New Roman", Times, serif; padding: 30px; color: #000; font-size: 14pt; }
+            h1 { text-align: center; font-size: 16pt; text-transform: uppercase; margin-bottom: 20px; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; border: 1px solid #000; }
+            th, td { border: 1px solid #000 !important; padding: 8px; text-align: left; font-size: 13pt; }
+            th { background-color: transparent; text-align: center; font-weight: bold; }
             td.center { text-align: center; }
-            .header-info { text-align: center; margin-bottom: 30px; font-weight: bold; font-size: 14px; }
+            .header-info { text-align: center; margin-bottom: 30px; font-weight: bold; font-size: 14pt; }
           </style>
         </head>
         <body onload="window.print(); window.close();">

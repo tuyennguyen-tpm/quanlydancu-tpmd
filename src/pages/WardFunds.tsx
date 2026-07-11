@@ -811,17 +811,21 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A4 landscape;
-              margin: 0;
+              margin-top: 15mm;
+              margin-bottom: 15mm;
+              margin-left: 20mm;
+              margin-right: 15mm;
             }
             body {
-              margin: 12mm 8mm 12mm 8mm;
+              margin: 0;
+              padding: 0;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 12px;
+            font-size: 13pt;
             line-height: 1.3;
             color: #000;
             margin: 0;
@@ -840,12 +844,12 @@ const WardFunds = () => {
           .org-title {
             text-align: center;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 12pt;
             text-transform: uppercase;
           }
           .motto {
             text-align: center;
-            font-size: 12px;
+            font-size: 12pt;
           }
           .motto-main {
             font-weight: bold;
@@ -873,14 +877,14 @@ const WardFunds = () => {
             margin-bottom: 15px;
           }
           .doc-title {
-            font-size: 16px;
+            font-size: 16pt;
             font-weight: bold;
             text-transform: uppercase;
             margin: 0 0 5px 0;
           }
           .doc-subtitle {
             font-style: italic;
-            font-size: 12px;
+            font-size: 13pt;
             margin: 0;
           }
           .data-table {
@@ -892,7 +896,7 @@ const WardFunds = () => {
           .data-table th, .data-table td {
             border: 1px solid #000;
             padding: 6px 6px;
-            font-size: 11px;
+            font-size: 12pt;
             vertical-align: middle;
           }
           .data-table th {
@@ -968,7 +972,7 @@ const WardFunds = () => {
         <table style="width: 100%; border-collapse: collapse; margin-top: 30px; page-break-inside: avoid;">
           <tr>
             <td style="width: 50%; border: none;"></td>
-            <td style="width: 50%; border: none; text-align: center; font-style: italic; font-size: 12px;">
+            <td style="width: 50%; border: none; text-align: center; font-style: italic; font-size: 13pt;">
               ${wardName.replace(/Phường\s+/gi, '') || 'Sầm Sơn'}, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}
             </td>
           </tr>
@@ -976,17 +980,17 @@ const WardFunds = () => {
 
         <table class="signature-section" style="width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside: avoid;">
           <tr>
-            <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
-              <div class="signature-title" style="font-weight: bold;">NGƯỜI LẬP BIỂU</div>
+            <td style="width: 50%; text-align: center; border: none; vertical-align: top; font-size: 13pt;">
+              <div class="signature-title" style="font-weight: bold; font-size: 14pt;">NGƯỜI LẬP BIỂU</div>
               <div style="height: 80px;"></div>
-              <div class="signature-name" style="font-weight: normal; font-style: italic; font-size: 12px; color: #000;">(Ký, ghi rõ họ tên)</div>
+              <div class="signature-name" style="font-weight: normal; font-style: italic; font-size: 13pt; color: #000;">(Ký, ghi rõ họ tên)</div>
             </td>
-            <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
-              <div class="signature-title" style="font-weight: bold;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
+            <td style="width: 50%; text-align: center; border: none; vertical-align: top; font-size: 13pt;">
+              <div class="signature-title" style="font-weight: bold; font-size: 14pt;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
               <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
                 ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 70px; max-height: 80px; object-fit: contain;" />` : ''}
               </div>
-              <div class="signature-name" style="font-weight: bold;">${leaderName}</div>
+              <div class="signature-name" style="font-weight: bold; font-size: 14pt;">${leaderName}</div>
             </td>
           </tr>
         </table>

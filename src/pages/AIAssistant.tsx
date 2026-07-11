@@ -2120,6 +2120,41 @@ ${strippedContent}
       return;
     }
 
+    printWindow.document.write(`<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin-top: 20mm;
+      margin-bottom: 20mm;
+      margin-left: 30mm;
+      margin-right: 15mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 14pt;
+      line-height: 1.45;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+    .letterhead { width: 100%; margin-bottom: 20px; }
+    .org-top { font-weight: bold; text-transform: uppercase; }
+    .org-mid { text-decoration: underline; }
+    .dash-line { border-bottom: 1px solid #000; width: 40px; margin: 5px auto; }
+    .doc-body { text-align: justify; }
+    .sig-title { font-weight: bold; text-transform: uppercase; }
+    .sig-name { font-weight: bold; }
+    .sig-instruction { font-style: italic; }
+  </style>
+</head>
+<body>`);
+
     // ─── Hàm tạo HTML ảnh chữ ký (dùng chung) ───
     const sigImgHtml = (url: string) =>
       url ? `<img src="${url}" alt="Chữ ký" style="height:55px;max-width:130px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
@@ -2351,15 +2386,18 @@ ${strippedContent}
   <style>
     @page {
       size: A4 portrait;
-      margin: 0;
+      margin-top: 20mm;
+      margin-bottom: 20mm;
+      margin-left: 30mm;
+      margin-right: 15mm;
     }
     * { box-sizing: border-box; }
     body {
       font-family: "Times New Roman", Times, serif;
-      font-size: 13pt;
+      font-size: 14pt;
       line-height: 1.45;
       color: #000;
-      margin: 20mm 20mm 20mm 30mm;
+      margin: 0;
       padding: 0;
       background: #fff;
     }
@@ -2418,7 +2456,7 @@ ${strippedContent}
     .doc-body {
       white-space: pre-wrap;
       word-wrap: break-word;
-      font-size: 13pt;
+      font-size: 14pt;
       line-height: 1.45;
       margin-top: 16px;
     }
@@ -3409,9 +3447,9 @@ ${strippedContent}
 
                     pw.document.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
                       <style>
-                        @page { size: A4 portrait; margin: 0; }
-                        body { font-family: "Times New Roman", serif; font-size: 13pt; line-height: 1.5; color: #000;
-                               margin: 20mm 20mm 20mm 30mm; background: #fff; }
+                        @page { size: A4 portrait; margin-top: 20mm; margin-bottom: 20mm; margin-left: 30mm; margin-right: 15mm; }
+                        body { font-family: "Times New Roman", serif; font-size: 14pt; line-height: 1.5; color: #000;
+                               margin: 0; background: #fff; }
                         @media print { body { -webkit-print-color-adjust: exact; } }
                       </style></head><body>
                       ${headerBlock}

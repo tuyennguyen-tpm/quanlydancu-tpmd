@@ -1095,17 +1095,21 @@ const Residents = () => {
           @media print {
             @page {
               size: A4 landscape;
-              margin: 0;
+              margin-top: 15mm;
+              margin-bottom: 15mm;
+              margin-left: 20mm;
+              margin-right: 15mm;
             }
             body {
-              margin: 12mm 8mm 12mm 8mm;
+              margin: 0;
+              padding: 0;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 12px;
+            font-size: 13pt;
             line-height: 1.3;
             color: #000;
             margin: 0;
@@ -1124,12 +1128,12 @@ const Residents = () => {
           .org-title {
             text-align: center;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 12pt;
             text-transform: uppercase;
           }
           .motto {
             text-align: center;
-            font-size: 12px;
+            font-size: 12pt;
           }
           .motto-main {
             font-weight: bold;
@@ -1157,14 +1161,14 @@ const Residents = () => {
             margin-bottom: 15px;
           }
           .doc-title {
-            font-size: 16px;
+            font-size: 16pt;
             font-weight: bold;
             text-transform: uppercase;
             margin: 0 0 5px 0;
           }
           .doc-subtitle {
             font-style: italic;
-            font-size: 12px;
+            font-size: 13pt;
             margin: 0;
           }
           .data-table {
@@ -1176,7 +1180,7 @@ const Residents = () => {
           .data-table th, .data-table td {
             border: 1px solid #000;
             padding: 6px 4px;
-            font-size: 11px;
+            font-size: 12pt;
             vertical-align: middle;
           }
           .data-table th {
@@ -1195,19 +1199,22 @@ const Residents = () => {
             border: none;
             text-align: center;
             width: 50%;
-            font-size: 12px;
+            font-size: 13pt;
             vertical-align: top;
           }
           .signature-title {
             font-weight: bold;
             margin-bottom: 60px;
+            font-size: 14pt;
           }
           .signature-name {
             font-weight: bold;
+            font-size: 14pt;
           }
           .date-placeholder {
             font-style: italic;
             margin-bottom: 5px;
+            font-size: 13pt;
           }
         </style>
       </head>

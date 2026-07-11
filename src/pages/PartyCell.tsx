@@ -1481,35 +1481,41 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         <head>
           <title></title>
           <style>
-            body { font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.4; padding: 25px; color: #000; }
+            body { font-family: "Times New Roman", Times, serif; font-size: 14pt; line-height: 1.4; padding: 25px; color: #000; }
             .header-table { width: 100%; border: none; margin-bottom: 25px; border-collapse: collapse; }
             .header-table td { border: none; padding: 0; vertical-align: top; }
             .title { text-align: center; margin-bottom: 20px; }
-            .title h2 { margin: 5px 0; font-size: 15pt; font-weight: bold; text-transform: uppercase; }
-            .title p { margin: 5px 0; font-style: italic; }
+            .title h2 { margin: 5px 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; }
+            .title p { margin: 5px 0; font-style: italic; font-size: 14pt; }
             .main-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            .main-table th, .main-table td { border: 1px solid #000; padding: 8px 6px; font-size: 11pt; }
+            .main-table th, .main-table td { border: 1px solid #000; padding: 8px 6px; font-size: 13pt; }
             .main-table th { font-weight: bold; background-color: #f2f2f2; text-align: center; text-transform: uppercase; }
             .footer-section { width: 100%; margin-top: 35px; border: none; border-collapse: collapse; }
-            .footer-section td { border: none; padding: 0; text-align: center; width: 50%; vertical-align: top; }
-            .footer-date { font-style: italic; margin-bottom: 5px; }
-            .footer-role { font-weight: bold; margin-bottom: 60px; }
+            .footer-section td { border: none; padding: 0; text-align: center; width: 50%; vertical-align: top; font-size: 14pt; }
+            .footer-date { font-style: italic; margin-bottom: 5px; font-size: 14pt; }
+            .footer-role { font-weight: bold; margin-bottom: 60px; font-size: 14pt; }
             @media print {
-              @page { size: A4 portrait; margin: 0; }
-              body { margin: 1.5cm 1cm 1.5cm 1.5cm; padding: 0; }
+              @page {
+                size: A4 portrait;
+                margin-top: 20mm;
+                margin-bottom: 20mm;
+                margin-left: 30mm;
+                margin-right: 15mm;
+              }
+              body { margin: 0; padding: 0; }
             }
           </style>
         </head>
         <body>
           <table class="header-table">
             <tr>
-              <td style="width: 45%; text-align: center; line-height: 1.3;">
+              <td style="width: 45%; text-align: center; line-height: 1.3; font-size: 13pt;">
                 <strong>ĐẢNG BỘ PHƯỜNG QUẢNG GIAO</strong><br>
                 <strong style="text-decoration: underline;">CHI BỘ TDP ${tdpName.toUpperCase()}</strong>
               </td>
-              <td style="width: 55%; text-align: center; line-height: 1.3;">
+              <td style="width: 55%; text-align: center; line-height: 1.3; font-size: 13pt;">
                 <strong>ĐẢNG CỘNG SẢN VIỆT NAM</strong><br>
-                <span style="font-size: 10pt; font-style: italic;">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</span>
+                <span style="font-size: 12pt; font-style: italic;">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</span>
               </td>
             </tr>
           </table>

@@ -296,8 +296,17 @@ const Regulations = () => {
         <head>
           <title>Quy định và Nhiệm vụ Tổ dân phố</title>
           <style>
-            @media print { @page { margin: 0; } body { margin: 20mm !important; } }
-            body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.6; color: #000; margin: 30px; }
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin-top: 20mm;
+                margin-bottom: 20mm;
+                margin-left: 30mm;
+                margin-right: 15mm;
+              }
+              body { margin: 0 !important; padding: 0 !important; }
+            }
+            body { font-family: "Times New Roman", Times, serif; font-size: 14pt; line-height: 1.6; color: #000; margin: 30px; }
             h1, h2 { text-align: center; text-transform: uppercase; }
             h3, h4 { color: #111; margin-bottom: 5px; }
             .header-info { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }

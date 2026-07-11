@@ -716,17 +716,21 @@ const Households = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0;
+              margin-top: 20mm;
+              margin-bottom: 20mm;
+              margin-left: 30mm;
+              margin-right: 15mm;
             }
             body {
-              margin: 15mm 15mm 15mm 15mm;
+              margin: 0;
+              padding: 0;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 13px;
+            font-size: 14pt;
             line-height: 1.4;
             color: #000;
             margin: 0;
@@ -745,12 +749,12 @@ const Households = () => {
           .org-title {
             text-align: center;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 13pt;
             text-transform: uppercase;
           }
           .motto {
             text-align: center;
-            font-size: 12px;
+            font-size: 13pt;
           }
           .motto-main {
             font-weight: bold;
@@ -778,14 +782,14 @@ const Households = () => {
             margin-bottom: 25px;
           }
           .doc-title {
-            font-size: 18px;
+            font-size: 18pt;
             font-weight: bold;
             text-transform: uppercase;
             margin: 0 0 5px 0;
           }
           .doc-subtitle {
             font-style: italic;
-            font-size: 13px;
+            font-size: 13pt;
             margin: 0;
           }
           .info-table {
@@ -794,7 +798,7 @@ const Households = () => {
           }
           .info-table td {
             padding: 4px 0;
-            font-size: 14px;
+            font-size: 14pt;
           }
           .info-label {
             font-weight: bold;
@@ -809,7 +813,7 @@ const Households = () => {
           .data-table th, .data-table td {
             border: 1px solid #000;
             padding: 8px 6px;
-            font-size: 12px;
+            font-size: 13pt;
             vertical-align: middle;
           }
           .data-table th {
@@ -828,7 +832,7 @@ const Households = () => {
             border: none;
             text-align: center;
             width: 50%;
-            font-size: 13px;
+            font-size: 13pt;
             vertical-align: top;
           }
           .signature-title {
@@ -1152,17 +1156,23 @@ const Households = () => {
     const htmlContent = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
     <title>Danh sách hộ dân – ${tdpNameVal}</title>
     <style>
-      body { font-family: 'Times New Roman', serif; font-size: 13px; margin: 20px; color: #1e293b; }
-      h2 { text-align:center; font-size:15px; margin:0 0 2px; text-transform:uppercase; letter-spacing:1px; }
-      .subtitle { text-align:center; font-size:12px; color:#64748b; margin-bottom:16px; }
-      table { width:100%; border-collapse:collapse; }
-      thead tr { background:#1e3a8a; color:#fff; }
-      thead th { padding:8px 8px; font-size:12px; text-align:center; }
-      tbody tr:nth-child(even) { background:#f8fafc; }
-      .footer { text-align:right; margin-top:24px; font-size:12px; color:#64748b; }
+      body { font-family: 'Times New Roman', serif; font-size: 14pt; margin: 20px; color: #000; }
+      h2 { text-align:center; font-size:16pt; font-weight:bold; margin:0 0 2px; text-transform:uppercase; letter-spacing:1px; color:#000; }
+      .subtitle { text-align:center; font-size:13pt; color:#000; margin-bottom:16px; }
+      table { width:100%; border-collapse:collapse; border: 1px solid #000; }
+      thead tr { background:transparent; color:#000; }
+      thead th { padding:8px 8px; font-size:12pt; text-align:center; border: 1px solid #000; font-weight:bold; }
+      tbody td { padding:8px 8px; font-size:12pt; border: 1px solid #000; }
+      .footer { text-align:right; margin-top:24px; font-size:13pt; color:#000; }
       @media print {
-        @page { size: A4 landscape; margin: 0; }
-        body { margin: 10mm 15mm; }
+        @page {
+          size: A4 landscape;
+          margin-top: 15mm;
+          margin-bottom: 15mm;
+          margin-left: 20mm;
+          margin-right: 15mm;
+        }
+        body { margin: 0; }
       }
     </style>
     </head><body>
@@ -1185,12 +1195,12 @@ const Households = () => {
       <tr>
         <td style="width: 60%; border: none;"></td>
         <td style="width: 40%; border: none; text-align: center; font-family: 'Times New Roman', serif;">
-          <div style="font-style: italic; color: #64748b; font-size: 12px; margin-bottom: 5px;">${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ngày ${today}</div>
-          <div style="font-weight: bold; font-size: 13px; text-transform: uppercase;">Tổ trưởng dân phố</div>
+          <div style="font-style: italic; color: #000; font-size: 13pt; margin-bottom: 5px;">${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ngày ${today}</div>
+          <div style="font-weight: bold; font-size: 14pt; text-transform: uppercase;">Tổ trưởng dân phố</div>
           <div style="height: 60px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
             ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 55px; max-height: 60px; object-fit: contain;" />` : ''}
           </div>
-          <div style="font-weight: bold; font-size: 13px;">${leaderName}</div>
+          <div style="font-weight: bold; font-size: 14pt;">${leaderName}</div>
         </td>
       </tr>
     </table>
