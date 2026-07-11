@@ -169,7 +169,7 @@ const App = () => {
   useEffect(() => {
     const userRoleVal = localStorage.getItem('user_role');
     const wardId = localStorage.getItem('user_ward_id');
-    if ((userRoleVal === 'ward_admin' || userRoleVal === 'super_admin') && wardId) {
+    if ((userRoleVal === 'ward_admin' || userRoleVal === 'super_admin' || (userRoleVal === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) && wardId) {
       db.getTDPList(wardId).then(list => {
         setTdpList(list);
       });
@@ -333,7 +333,8 @@ const App = () => {
       const wardId = localStorage.getItem('user_ward_id');
       let query = supabase.from('registration_keys').select('*, wards(name)');
       
-      if (role !== 'super_admin' && wardId) {
+      const isSuper = role === 'super_admin' || (role === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
+      if (!isSuper && wardId) {
         query = query.eq('ward_id', wardId);
       }
       
@@ -376,7 +377,7 @@ const App = () => {
     if (!supabase) return;
     let targetWardId = '';
     const role = localStorage.getItem('user_role');
-    const isSuperAdmin = role === 'super_admin';
+    const isSuperAdmin = role === 'super_admin' || (role === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
     const finalRole = isSuperAdmin ? newKeyRole : 'tdp_leader';
     
     if (isSuperAdmin) {
@@ -727,16 +728,16 @@ const App = () => {
     try {
       const profile = await db.getUserProfile(userId);
       if (profile) {
-        // Auto-promote Nguyễn Kim Tuyến to super_admin (Tài khoản Tổng)
-        if (profile.full_name === 'Nguyễn Kim Tuyến' && profile.role !== 'super_admin' && supabase) {
+        // Auto-demote Nguyễn Kim Tuyến to ward_admin to satisfy database RLS query policies, but front-end will treat as super_admin
+        if (profile.full_name === 'Nguyễn Kim Tuyến' && profile.role !== 'ward_admin' && supabase) {
           try {
-            const { data, error } = await supabase.from('profiles').update({ role: 'super_admin' }).eq('id', userId).select();
+            const { data, error } = await supabase.from('profiles').update({ role: 'ward_admin' }).eq('id', userId).select();
             if (!error && data && data.length > 0) {
-              profile.role = 'super_admin';
-              console.log('[Auth] Nguyễn Kim Tuyến promoted to super_admin');
+              profile.role = 'ward_admin';
+              console.log('[Auth] Nguyễn Kim Tuyến database role reset to ward_admin for RLS compatibility');
             }
           } catch (e) {
-            console.error('[Auth] Failed to promote Nguyễn Kim Tuyến:', e);
+            console.error('[Auth] Failed to update profile role:', e);
           }
         }
 
@@ -1285,7 +1286,8 @@ const App = () => {
       } catch {}
     }
 
-    if (localStorage.getItem('user_role') === 'super_admin') {
+    const isSuper = localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
+    if (isSuper) {
       db.getAllTDPProfiles().then((profiles) => {
         setAllTdpProfiles(profiles);
         const initialTargets: Record<string, string> = {};
@@ -2315,7 +2317,7 @@ const App = () => {
                 >
                   ⚙️ Cấu hình chung
                 </button>
-                {localStorage.getItem('user_role') === 'super_admin' && (
+                {(localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) && (
                   <button
                     type="button"
                     onClick={() => setSettingsTab('keys')}
@@ -3033,7 +3035,7 @@ const App = () => {
                     • <strong>Thêm Tổ trưởng mới vào Phường:</strong> Chọn đúng Phường trực thuộc, chọn chức vụ <strong>"Tổ trưởng (TDP)"</strong>, gõ tên Tổ dân phố (ví dụ: Tổ 5) và sinh mã.
                   </div>
 
-                  {localStorage.getItem('user_role') === 'super_admin' && (
+                  {(localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) && (
                     <div style={{ 
                       display: 'flex', 
                       gap: '10px', 
@@ -3088,7 +3090,7 @@ const App = () => {
                   )}
                   
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                    {localStorage.getItem('user_role') === 'super_admin' ? (
+                    {(localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) ? (
                       <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                         <label>Chức vụ cấp phép</label>
                         <select
@@ -3102,7 +3104,7 @@ const App = () => {
                       </div>
                     ) : null}
 
-                    {(localStorage.getItem('user_role') === 'super_admin' ? newKeyRole === 'tdp_leader' : true) ? (
+                    {((localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) ? newKeyRole === 'tdp_leader' : true) ? (
                       <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
                         <label>Tên Tổ dân phố (Nếu cấp cho Tổ trưởng)</label>
                         <input
@@ -3215,7 +3217,7 @@ const App = () => {
               )}
 
               {/* ─── Phần 1e: Điều chuyển Tổ dân phố (Chuyển Phường) - Chỉ dành cho Super Admin ─── */}
-              {localStorage.getItem('user_role') === 'super_admin' && (
+              {(localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02))',
                   border: '1.5px solid rgba(16,185,129,0.18)',
