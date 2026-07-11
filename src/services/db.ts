@@ -94,14 +94,30 @@ const seedEnvironmentLogs: EnvironmentLog[] = [];
 
 const seedPolicyActivities: PolicyActivity[] = [];
 
+const getTenantPrefix = (): string => {
+  const currentUserId = localStorage.getItem('supabase_user_id');
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const tenantId = localStorage.getItem('guest_tenant_id');
+  
+  if (isGuest && tenantId) {
+    return `tenant_${tenantId}_`;
+  }
+  if (currentUserId) {
+    return `user_${currentUserId}_`;
+  }
+  return 'demo_';
+};
+
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
-  // Neu la tai khoan that da dang nhap (co supabase_user_id) thi mac dinh khoi tao la trong (khong chen du lieu mau)
-  const isDemo = localStorage.getItem('user_role') === 'demo' || !localStorage.getItem('supabase_user_id');
+  const prefix = getTenantPrefix();
+  const prefixedKey = prefix + key;
+
+  const isDemo = prefix === 'demo_';
   const actualDefault = isDemo ? defaultValue : (Array.isArray(defaultValue) ? [] as unknown as T : defaultValue);
 
-  const item = localStorage.getItem(key);
+  const item = localStorage.getItem(prefixedKey);
   if (!item) {
-    localStorage.setItem(key, JSON.stringify(actualDefault));
+    localStorage.setItem(prefixedKey, JSON.stringify(actualDefault));
     return actualDefault;
   }
   return JSON.parse(item);
@@ -143,7 +159,9 @@ const migrateResidentsAssociation = () => {
 migrateResidentsAssociation();
 
 const setStorageItem = <T>(key: string, value: T): void => {
-  localStorage.setItem(key, JSON.stringify(value));
+  const prefix = getTenantPrefix();
+  const prefixedKey = prefix + key;
+  localStorage.setItem(prefixedKey, JSON.stringify(value));
 };
 
 const handleDbError = (action: string, error: any) => {
