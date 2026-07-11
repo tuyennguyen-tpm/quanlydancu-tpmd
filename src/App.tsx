@@ -313,6 +313,9 @@ const App = () => {
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [allTdpProfiles, setAllTdpProfiles] = useState<any[]>([]);
+  const [transferTargetWards, setTransferTargetWards] = useState<Record<string, string>>({});
+  const [transferLoading, setTransferLoading] = useState<string | null>(null);
   const [newKeyRole, setNewKeyRole] = useState<'tdp_leader' | 'ward_admin'>('tdp_leader');
   const [newKeyTdpName, setNewKeyTdpName] = useState('');
   const [generatedKeysList, setGeneratedKeysList] = useState<any[]>([]);
@@ -433,6 +436,38 @@ const App = () => {
       window.dispatchEvent(ev);
     }
   };
+
+  const handleTransferTDP = async (tdpUserId: string) => {
+    const targetWardId = transferTargetWards[tdpUserId];
+    if (!targetWardId) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vui lòng chọn Phường muốn chuyển tới!', type: 'warning' } }));
+      return;
+    }
+    const tdp = allTdpProfiles.find(p => p.id === tdpUserId);
+    if (!tdp) return;
+    
+    if (window.confirm(`Bạn có chắc chắn muốn chuyển Tổ dân phố "${tdp.tdp_name}" sang Phường mới? Toàn bộ dữ liệu hộ dân/nhân khẩu của tổ này sẽ được điều chuyển sang Phường mới.`)) {
+      setTransferLoading(tdpUserId);
+      const success = await db.transferTDP(tdpUserId, targetWardId);
+      setTransferLoading(null);
+      if (success) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Đã điều chuyển Tổ dân phố "${tdp.tdp_name}" thành công!`, type: 'success' } }));
+        // Reload list
+        const profiles = await db.getAllTDPProfiles();
+        setAllTdpProfiles(profiles);
+        const initialTargets: Record<string, string> = {};
+        profiles.forEach((p) => {
+          initialTargets[p.id] = p.ward_id || '';
+        });
+        setTransferTargetWards(initialTargets);
+        // Refresh local dashboard data
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } else {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Gặp lỗi trong quá trình điều chuyển dữ liệu.', type: 'danger' } }));
+      }
+    }
+  };
+
   const [sbUrl, setSbUrl] = useState(localStorage.getItem('supabase_url') || '');
   const [rolePinAdminInput, setRolePinAdminInput] = useState('9999');
   const [rolePinToTruongInput, setRolePinToTruongInput] = useState('0000');
@@ -1247,6 +1282,18 @@ const App = () => {
           return found ? { ...def, ...found } : def;
         }));
       } catch {}
+    }
+
+    if (localStorage.getItem('user_role') === 'super_admin') {
+      db.getAllTDPProfiles().then((profiles) => {
+        setAllTdpProfiles(profiles);
+        const initialTargets: Record<string, string> = {};
+        profiles.forEach((p) => {
+          initialTargets[p.id] = p.ward_id || '';
+        });
+        setTransferTargetWards(initialTargets);
+      });
+      loadWardsList();
     }
 
     setSettingsOpen(true);
@@ -3116,6 +3163,87 @@ const App = () => {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Phần 1e: Điều chuyển Tổ dân phố (Chuyển Phường) - Chỉ dành cho Super Admin ─── */}
+              {localStorage.getItem('user_role') === 'super_admin' && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02))',
+                  border: '1.5px solid rgba(16,185,129,0.18)',
+                  borderRadius: '12px',
+                  padding: '16px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  marginTop: '12px'
+                }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+                    🔄 Điều chuyển Tổ dân phố (Chuyển Phường)
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', borderLeft: '3px solid #10b981', paddingLeft: '8px', margin: '4px 0 8px 0', lineHeight: '1.4' }}>
+                    💡 <strong>Mô tả tính năng:</strong> Tại đây hiển thị tất cả các Tổ trưởng đã đăng ký. Bạn có thể thay đổi Phường trực thuộc cho một Tổ dân phố bất kỳ. Hệ thống sẽ tự động cập nhật toàn bộ nhân khẩu và hộ tịch của tổ đó sang Phường mới mà không mất mát hay chồng chéo dữ liệu.
+                  </div>
+
+                  <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'white' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                          <th style={{ padding: '8px 10px', fontWeight: 'bold' }}>Tên Tổ dân phố</th>
+                          <th style={{ padding: '8px 10px', fontWeight: 'bold' }}>Tổ trưởng</th>
+                          <th style={{ padding: '8px 10px', fontWeight: 'bold' }}>Phường hiện tại</th>
+                          <th style={{ padding: '8px 10px', fontWeight: 'bold' }}>Chuyển sang Phường</th>
+                          <th style={{ padding: '8px 10px', fontWeight: 'bold', textAlign: 'center' }}>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allTdpProfiles.map((p) => (
+                          <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '8px 10px', fontWeight: '600' }}>{p.tdp_name}</td>
+                            <td style={{ padding: '8px 10px' }}>{p.full_name}</td>
+                            <td style={{ padding: '8px 10px', color: '#4f46e5', fontWeight: '600' }}>{p.wards?.name || 'Chưa rõ'}</td>
+                            <td style={{ padding: '8px 10px' }}>
+                              <select
+                                value={transferTargetWards[p.id] || ''}
+                                onChange={(e) => setTransferTargetWards(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                style={{ padding: '4px 6px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '0.75rem', background: 'white' }}
+                              >
+                                <option value="">-- Chọn Phường --</option>
+                                {wardsList.map(w => (
+                                  <option key={w.id} value={w.id}>{w.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => handleTransferTDP(p.id)}
+                                disabled={transferLoading === p.id || transferTargetWards[p.id] === p.ward_id}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  height: 'auto',
+                                  minHeight: '26px',
+                                  background: transferTargetWards[p.id] === p.ward_id ? '#f1f5f9' : '#10b981',
+                                  color: transferTargetWards[p.id] === p.ward_id ? '#94a3b8' : 'white',
+                                  border: 'none',
+                                  cursor: transferTargetWards[p.id] === p.ward_id ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                {transferLoading === p.id ? 'Đang chuyển...' : 'Xác nhận'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {allTdpProfiles.length === 0 && (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa có Tổ dân phố nào đăng ký trên hệ thống.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}

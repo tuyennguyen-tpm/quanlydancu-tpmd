@@ -581,6 +581,55 @@ export const db = {
       return [];
     }
   },
+  getAllTDPProfiles: async (): Promise<any[]> => {
+    const client = supabase;
+    if (!client) return [];
+    try {
+      const { data, error } = await client
+        .from('profiles')
+        .select('*, wards(name)')
+        .eq('role', 'tdp_leader');
+      if (error) return [];
+      return data || [];
+    } catch (e) {
+      console.error('Failed to get all TDP profiles:', e);
+      return [];
+    }
+  },
+  transferTDP: async (tdpUserId: string, newWardId: string): Promise<boolean> => {
+    const client = supabase;
+    if (!client) return false;
+    try {
+      // 1. Update profile ward_id
+      const { error: profileErr } = await client
+        .from('profiles')
+        .update({ ward_id: newWardId })
+        .eq('id', tdpUserId);
+      if (profileErr) throw profileErr;
+
+      // 2. Update all associated entities
+      const tables = [
+        'households', 'residents', 'financial_records', 'complaints', 
+        'meetings', 'documents', 'security_logs', 'environment_logs', 
+        'policy_activities', 'meeting_minutes', 'household_funds', 'ward_funds'
+      ];
+
+      await Promise.all(tables.map(async (table) => {
+        const { error } = await client
+          .from(table)
+          .update({ ward_id: newWardId })
+          .eq('user_id', tdpUserId);
+        if (error) {
+          console.warn(`[DB] Failed to update ward_id in table ${table}:`, error);
+        }
+      }));
+
+      return true;
+    } catch (e) {
+      console.error('Failed to transfer TDP:', e);
+      return false;
+    }
+  },
   generateRegistrationKey: async (wardId: string, role: string, tdpName?: string): Promise<string> => {
     if (!supabase) return '';
     try {
