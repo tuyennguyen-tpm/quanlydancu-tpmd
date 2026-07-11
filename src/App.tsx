@@ -2315,7 +2315,7 @@ const App = () => {
                 >
                   ⚙️ Cấu hình chung
                 </button>
-                {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
+                {localStorage.getItem('user_role') === 'super_admin' && (
                   <button
                     type="button"
                     onClick={() => setSettingsTab('keys')}
@@ -2799,143 +2799,7 @@ const App = () => {
                 </div>
               </div>
 
-              {/* ─── Phần 1c: Bảo mật truy cập công cộng ─── */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))',
-                border: '1.5px solid rgba(245,158,11,0.18)',
-                borderRadius: '12px',
-                padding: '16px 18px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                marginTop: '12px'
-              }}>
-                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                  🔒 Bảo mật truy cập công cộng
-                </div>
-                <div className="form-group">
-                  <label>Mã PIN truy cập cho Bà con</label>
-                  <input
-                    type="text"
-                    value={guestPinInput}
-                    onChange={(e) => setGuestPinInput(e.target.value)}
-                    placeholder="Mặc định: 1234"
-                    maxLength={10}
-                  />
-                </div>
-              {userRole === 'admin' && (
-                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginTop: '4px' }}>
-                  <div className="form-group">
-                    <label>PIN Admin</label>
-                    <input
-                      type="text"
-                      value={rolePinAdminInput}
-                      onChange={(e) => setRolePinAdminInput(e.target.value)}
-                      placeholder="Mặc định: 9999"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>PIN Tổ trưởng</label>
-                    <input
-                      type="text"
-                      value={rolePinToTruongInput}
-                      onChange={(e) => setRolePinToTruongInput(e.target.value)}
-                      placeholder="Mặc định: 0000"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>PIN Bí thư</label>
-                    <input
-                      type="text"
-                      value={rolePinBiThuInput}
-                      onChange={(e) => setRolePinBiThuInput(e.target.value)}
-                      placeholder="Mặc định: 1111"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>PIN Mặt trận</label>
-                    <input
-                      type="text"
-                      value={rolePinMatTranInput}
-                      onChange={(e) => setRolePinMatTranInput(e.target.value)}
-                      placeholder="Mặc định: 2222"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>PIN Chung</label>
-                    <input
-                      type="text"
-                      value={rolePinChungInput}
-                      onChange={(e) => setRolePinChungInput(e.target.value)}
-                      placeholder="Mặc định: 3333"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>PIN Phụ nữ</label>
-                    <input
-                      type="text"
-                      value={rolePinPhuNuInput}
-                      onChange={(e) => setRolePinPhuNuInput(e.target.value)}
-                      placeholder="Mặc định: 4444"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>PIN Kế toán</label>
-                    <input
-                      type="text"
-                      value={rolePinKeToanInput}
-                      onChange={(e) => setRolePinKeToanInput(e.target.value)}
-                      placeholder="Mặc định: 5555"
-                      maxLength={10}
-                    />
-                  </div>
-                </div>
-              )}
-                <div className="form-group">
-                  <label>Phiên bản phần mềm mới nhất (Admin)</label>
-                  <input
-                    type="text"
-                    value={latestAppVersionInput}
-                    onChange={(e) => setLatestAppVersionInput(e.target.value)}
-                    placeholder="Ví dụ: 1.0.2"
-                    maxLength={20}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
-                    * Phiên bản hiện tại của file chạy này là: <strong>{APP_VERSION}</strong>. Đổi số này cao hơn để ép người khác cập nhật!
-                  </span>
-                </div>
-                {session?.user?.id && (
-                  <div className="form-group" style={{ marginTop: '4px' }}>
-                    <label>Đường dẫn chia sẻ cho Bà con</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        readOnly
-                        value={`${window.location.origin}/?t=${session?.user?.id}`}
-                        style={{ background: 'rgba(0,0,0,0.05)', color: '#64748b', fontSize: '0.82rem', flex: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)' }}
-                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={handleCopyShareLink}
-                        style={{ fontSize: '0.8rem', padding: '0 12px', height: 'auto', minHeight: '34px', borderRadius: '6px', flexShrink: 0 }}
-                      >
-                        Sao chép
-                      </button>
-                    </div>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: '1.4', marginTop: '2px', display: 'block' }}>
-                      * Gửi link này cho Bà con để họ truy cập và xem công khai bằng mã PIN của tổ.
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Section 1c moved to Tab 2 */}
 
               {/* ─── Phần 1d: Đổi mật khẩu tài khoản (Chỉ hiển thị khi đã đăng nhập Supabase) ─── */}
               {session && !isOfflineMode && !isGuestMode && (
@@ -3010,6 +2874,144 @@ const App = () => {
 
               {settingsTab === 'keys' && (
                 <>
+                  {/* ─── Phần 1c: Bảo mật truy cập công cộng ─── */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))',
+                    border: '1.5px solid rgba(245,158,11,0.18)',
+                    borderRadius: '12px',
+                    padding: '16px 18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    marginTop: '12px'
+                  }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+                      🔒 Bảo mật truy cập công cộng
+                    </div>
+                    <div className="form-group">
+                      <label>Mã PIN truy cập cho Bà con</label>
+                      <input
+                        type="text"
+                        value={guestPinInput}
+                        onChange={(e) => setGuestPinInput(e.target.value)}
+                        placeholder="Mặc định: 1234"
+                        maxLength={10}
+                      />
+                    </div>
+                    {userRole === 'admin' && (
+                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginTop: '4px' }}>
+                        <div className="form-group">
+                          <label>PIN Admin</label>
+                          <input
+                            type="text"
+                            value={rolePinAdminInput}
+                            onChange={(e) => setRolePinAdminInput(e.target.value)}
+                            placeholder="Mặc định: 9999"
+                            maxLength={10}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>PIN Tổ trưởng</label>
+                          <input
+                            type="text"
+                            value={rolePinToTruongInput}
+                            onChange={(e) => setRolePinToTruongInput(e.target.value)}
+                            placeholder="Mặc định: 0000"
+                            maxLength={10}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>PIN Bí thư</label>
+                          <input
+                            type="text"
+                            value={rolePinBiThuInput}
+                            onChange={(e) => setRolePinBiThuInput(e.target.value)}
+                            placeholder="Mặc định: 1111"
+                            maxLength={10}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>PIN Mặt trận</label>
+                          <input
+                            type="text"
+                            value={rolePinMatTranInput}
+                            onChange={(e) => setRolePinMatTranInput(e.target.value)}
+                            placeholder="Mặc định: 2222"
+                            maxLength={10}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>PIN Chung</label>
+                          <input
+                            type="text"
+                            value={rolePinChungInput}
+                            onChange={(e) => setRolePinChungInput(e.target.value)}
+                            placeholder="Mặc định: 3333"
+                            maxLength={10}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>PIN Phụ nữ</label>
+                          <input
+                            type="text"
+                            value={rolePinPhuNuInput}
+                            onChange={(e) => setRolePinPhuNuInput(e.target.value)}
+                            placeholder="Mặc định: 4444"
+                            maxLength={10}
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>PIN Kế toán</label>
+                          <input
+                            type="text"
+                            value={rolePinKeToanInput}
+                            onChange={(e) => setRolePinKeToanInput(e.target.value)}
+                            placeholder="Mặc định: 5555"
+                            maxLength={10}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="form-group">
+                      <label>Phiên bản phần mềm mới nhất (Admin)</label>
+                      <input
+                        type="text"
+                        value={latestAppVersionInput}
+                        onChange={(e) => setLatestAppVersionInput(e.target.value)}
+                        placeholder="Ví dụ: 1.0.2"
+                        maxLength={20}
+                      />
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px' }}>
+                        * Phiên bản hiện tại của file chạy này là: <strong>{APP_VERSION}</strong>. Đổi số này cao hơn để ép người khác cập nhật!
+                      </span>
+                    </div>
+                    {session?.user?.id && (
+                      <div className="form-group" style={{ marginTop: '4px' }}>
+                        <label>Đường dẫn chia sẻ cho Bà con</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            readOnly
+                            value={`${window.location.origin}/?t=${session?.user?.id}`}
+                            style={{ background: 'rgba(0,0,0,0.05)', color: '#64748b', fontSize: '0.82rem', flex: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)' }}
+                            onClick={(e) => (e.target as HTMLInputElement).select()}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={handleCopyShareLink}
+                            style={{ fontSize: '0.8rem', padding: '0 12px', height: 'auto', minHeight: '34px', borderRadius: '6px', flexShrink: 0 }}
+                          >
+                            Sao chép
+                          </button>
+                        </div>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: '1.4', marginTop: '2px', display: 'block' }}>
+                          * Gửi link này cho Bà con để họ truy cập và xem công khai bằng mã PIN của tổ.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
                   {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Hiển thị cho Ward Admin và Super Admin) ─── */}
               {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
                 <div style={{
@@ -3406,7 +3408,7 @@ const App = () => {
 
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => setSettingsOpen(false)}>Hủy bỏ</button>
-                <button type="submit" className="btn btn-primary" style={{ display: settingsTab === 'general' ? 'inline-flex' : 'none' }}>💾 Lưu cấu hình</button>
+                <button type="submit" className="btn btn-primary">💾 Lưu cấu hình</button>
               </div>
             </form>
           </div>
