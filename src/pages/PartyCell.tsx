@@ -1496,7 +1496,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             .footer-role { font-weight: bold; margin-bottom: 60px; font-size: 14pt; }
             @media print {
               @page {
-                size: A4 portrait;
+                size: A4 landscape;
                 margin-top: 20mm;
                 margin-bottom: 20mm;
                 margin-left: 30mm;

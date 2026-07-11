@@ -1137,9 +1137,9 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           @media print {
             @page {
               size: A4 landscape;
-              margin-top: 15mm;
-              margin-bottom: 15mm;
-              margin-left: 20mm;
+              margin-top: 20mm;
+              margin-bottom: 20mm;
+              margin-left: 30mm;
               margin-right: 15mm;
             }
             body {
@@ -1221,8 +1221,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           }
           .data-table th, .data-table td {
             border: 1px solid #000;
-            padding: 6px 4px;
-            font-size: 12pt;
+            padding: 8px 6px;
+            font-size: 13pt;
             vertical-align: middle;
           }
           .data-table th {

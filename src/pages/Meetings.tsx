@@ -87,18 +87,24 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
   const [tdpName, setTdpName] = useState(
     localStorage.getItem('tdp_name') || 'Nam Sầm Sơn'
   );
+  const [wardName, setWardName] = useState(
+    localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn'
+  );
 
   useEffect(() => {
     loadData();
     const handleStorageChange = () => {
       setTdpName(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn');
+      setWardName(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn');
     };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('tdp-name-changed', handleStorageChange);
+    window.addEventListener('ward-name-changed', handleStorageChange);
     window.addEventListener('db-changed', loadData);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tdp-name-changed', handleStorageChange);
+      window.removeEventListener('ward-name-changed', handleStorageChange);
       window.removeEventListener('db-changed', loadData);
     };
   }, []);
@@ -371,7 +377,7 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
         </head>
         <body onload="window.print(); window.close();">
           <div class="header-info">
-            ỦY BAN MẶT TRẬN TỔ QUỐC VIỆT NAM PHƯỜNG QUẢNG ĐẠI<br>
+            ỦY BAN MẶT TRẬN TỔ QUỐC VIỆT NAM ${(wardName.toLowerCase().startsWith('phường') ? wardName : 'Phường ' + wardName).toUpperCase()}<br>
             BAN CÔNG TÁC MẶT TRẬN TỔ DÂN PHỐ ${tdpName.toUpperCase()}
           </div>
           <h1>DANH SÁCH BAN CHẤP HÀNH / BAN CÔNG TÁC MẶT TRẬN</h1>

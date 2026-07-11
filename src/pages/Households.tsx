@@ -1183,15 +1183,15 @@ const Households = () => {
       .subtitle { text-align:center; font-size:13pt; color:#000; margin-bottom:16px; }
       table { width:100%; border-collapse:collapse; border: 1px solid #000; }
       thead tr { background:transparent; color:#000; }
-      thead th { padding:8px 8px; font-size:12pt; text-align:center; border: 1px solid #000; font-weight:bold; }
-      tbody td { padding:8px 8px; font-size:12pt; border: 1px solid #000; }
+      thead th { padding:8px 6px; font-size:13pt; text-align:center; border: 1px solid #000; font-weight:bold; }
+      tbody td { padding:8px 6px; font-size:13pt; border: 1px solid #000; }
       .footer { text-align:right; margin-top:24px; font-size:13pt; color:#000; }
       @media print {
         @page {
           size: A4 landscape;
-          margin-top: 15mm;
-          margin-bottom: 15mm;
-          margin-left: 20mm;
+          margin-top: 20mm;
+          margin-bottom: 20mm;
+          margin-left: 30mm;
           margin-right: 15mm;
         }
         body { margin: 0; }

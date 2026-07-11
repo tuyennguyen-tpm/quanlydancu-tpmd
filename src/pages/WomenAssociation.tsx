@@ -161,7 +161,8 @@ const WomenAssociation = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const tdpName = localStorage.getItem('tdp_name') || 'Tổ dân phố Quảng Giao';
+    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+    const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     const currentGroup = groupFilter === 'all' ? 'Tất cả các tổ' : groupFilter;
 
     let rowsHtml = '';
@@ -210,8 +211,8 @@ const WomenAssociation = () => {
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div>
-              <h3 style="margin: 0; text-transform: uppercase;">ỦY BAN NHÂN DÂN PHƯỜNG NAM SẦM SƠN</h3>
-              <h4 style="margin: 5px 0 0 0; text-decoration: underline;">TỔ DÂN PHỐ QUẢNG GIAO</h4>
+              <h3 style="margin: 0; text-transform: uppercase;">ỦY BAN NHÂN DÂN ${(wardName.toLowerCase().startsWith('phường') ? wardName : 'Phường ' + wardName).toUpperCase()}</h3>
+              <h4 style="margin: 5px 0 0 0; text-decoration: underline;">TỔ DÂN PHỐ ${tdpName.toUpperCase()}</h4>
             </div>
             <div style="text-align: right;">
               <p style="margin: 0; font-style: italic;">Ngày in: ${new Date().toLocaleDateString('vi-VN')}</p>

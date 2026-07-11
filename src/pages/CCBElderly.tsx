@@ -457,7 +457,8 @@ const CCBElderly = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const tdpName = localStorage.getItem('tdp_name') || 'Tổ dân phố Quảng Giao';
+    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+    const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     let titleText = selectedTab === 'seniors' ? 'DANH SÁCH NGƯỜI CAO TUỔI' : 'DANH SÁCH HỘI VIÊN CỰU CHIẾN BINH';
     if (selectedTab === 'seniors' && subFilter === 'senior70') titleText = 'DANH SÁCH NGƯỜI CAO TUỔI (≥70 TUỔI)';
     if (selectedTab === 'seniors' && subFilter === 'longevity') titleText = `DANH SÁCH NGƯỜI CAO TUỔI MỪNG THỌ NĂM ${longevityYear}`;
@@ -499,7 +500,7 @@ const CCBElderly = () => {
           <style>
             @media print {
               @page {
-                size: A4 portrait;
+                size: A4 landscape;
                 margin-top: 20mm;
                 margin-bottom: 20mm;
                 margin-left: 30mm;
@@ -519,8 +520,8 @@ const CCBElderly = () => {
         <body>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div>
-              <h3 style="margin: 0; text-transform: uppercase;">ỦY BAN NHÂN DÂN PHƯỜNG NAM SẦM SƠN</h3>
-              <h4 style="margin: 5px 0 0 0; text-decoration: underline;">TỔ DÂN PHỐ QUẢNG GIAO</h4>
+              <h3 style="margin: 0; text-transform: uppercase;">ỦY BAN NHÂN DÂN ${(wardName.toLowerCase().startsWith('phường') ? wardName : 'Phường ' + wardName).toUpperCase()}</h3>
+              <h4 style="margin: 5px 0 0 0; text-decoration: underline;">TỔ DÂN PHỐ ${tdpName.toUpperCase()}</h4>
             </div>
             <div style="text-align: right;">
               <p style="margin: 0; font-style: italic;">Ngày in: ${new Date().toLocaleDateString('vi-VN')}</p>
