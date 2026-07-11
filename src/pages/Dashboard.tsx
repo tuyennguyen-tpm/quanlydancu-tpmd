@@ -75,6 +75,7 @@ const Dashboard = () => {
     deceasedCount: 0,
   });
 
+  const [chartData, setChartData] = useState<{ moveIn: number; moveOut: number; birth: number; death: number }[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState('');
 
   // Donut chart stroke attributes
@@ -126,7 +127,8 @@ const Dashboard = () => {
         securityLogs, 
         hhFunds,
         partyMembers,
-        meetings
+        meetings,
+        documents
       ] = await Promise.all([
         db.getHouseholds(),
         db.getResidents(),
@@ -135,7 +137,8 @@ const Dashboard = () => {
         db.getSecurityLogs(),
         db.getHouseholdFunds(),
         partyDb.getPartyMembers(),
-        db.getMeetings()
+        db.getMeetings(),
+        db.getDocuments()
       ]);
 
       const activeResidents = residents.filter(r => r.status !== 'deceased');
@@ -232,88 +235,180 @@ const Dashboard = () => {
         normalPctStr: (nPct * 100).toFixed(1) + '%',
       });
 
+      // Calculate dynamic chartData for last 6 months
+      const chartMonthsData: { moveIn: number; moveOut: number; birth: number; death: number }[] = [];
+      const currentDate = new Date();
+      for (let i = 5; i >= 0; i--) {
+        chartMonthsData.push({
+          moveIn: 0,
+          moveOut: 0,
+          birth: 0,
+          death: 0
+        });
+      }
+
+      residents.forEach(r => {
+        if (r.dob) {
+          const rDob = new Date(r.dob);
+          if (!isNaN(rDob.getTime())) {
+            const diffMonths = (currentDate.getFullYear() - rDob.getFullYear()) * 12 + (currentDate.getMonth() - rDob.getMonth());
+            if (diffMonths >= 0 && diffMonths < 6) {
+              const idx = 5 - diffMonths;
+              chartMonthsData[idx].birth++;
+            }
+          }
+        }
+
+        if (r.status === 'deceased' && r.death_date) {
+          const rDeath = new Date(r.death_date);
+          if (!isNaN(rDeath.getTime())) {
+            const diffMonths = (currentDate.getFullYear() - rDeath.getFullYear()) * 12 + (currentDate.getMonth() - rDeath.getMonth());
+            if (diffMonths >= 0 && diffMonths < 6) {
+              const idx = 5 - diffMonths;
+              chartMonthsData[idx].death++;
+            }
+          }
+        }
+
+        if (r.created_at) {
+          const rCreated = new Date(r.created_at);
+          if (!isNaN(rCreated.getTime())) {
+            const diffMonths = (currentDate.getFullYear() - rCreated.getFullYear()) * 12 + (currentDate.getMonth() - rCreated.getMonth());
+            if (diffMonths >= 0 && diffMonths < 6) {
+              const idx = 5 - diffMonths;
+              if (r.status === 'temporary_resident' || r.status === 'resident') {
+                chartMonthsData[idx].moveIn++;
+              }
+            }
+          }
+        }
+
+        if (r.status === 'temporary_absent' && r.created_at) {
+          const rCreated = new Date(r.created_at);
+          if (!isNaN(rCreated.getTime())) {
+            const diffMonths = (currentDate.getFullYear() - rCreated.getFullYear()) * 12 + (currentDate.getMonth() - rCreated.getMonth());
+            if (diffMonths >= 0 && diffMonths < 6) {
+              const idx = 5 - diffMonths;
+              chartMonthsData[idx].moveOut++;
+            }
+          }
+        }
+      });
+
+      setChartData(chartMonthsData);
+
       // Format current date & time for update banner
-      const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      const nowTime = new Date();
+      const timeStr = `${String(nowTime.getHours()).padStart(2, '0')}:${String(nowTime.getMinutes()).padStart(2, '0')}`;
+      const dateStr = `${String(nowTime.getDate()).padStart(2, '0')}/${String(nowTime.getMonth() + 1).padStart(2, '0')}/${nowTime.getFullYear()}`;
       setLastUpdateTime(`${dateStr} lúc ${timeStr}`);
 
-      // Notifications aggregation matching the mockup
+      // Dynamic Notifications
       const complaintsPending = complaints.filter(c => c.status === 'pending');
       const formattedNotifs: any[] = [];
       
-      // Let's add some from complaints to keep it live
-      complaintsPending.slice(0, 2).forEach(c => {
+      complaintsPending.forEach(c => {
         formattedNotifs.push({
           id: `c-${c.id}`,
           bg: '#FEE2E2',
           stroke: '#DC2626',
           iconType: 'complaint',
-          title: `Phản ánh từ ${c.resident_name}: "${c.content.slice(0, 35)}..."`,
-          time: new Date(c.created_at || c.date).toLocaleDateString('vi-VN') + ' – Cần xử lý',
+          title: `Kiến nghị từ ${c.resident_name}: "${c.content.slice(0, 35)}${c.content.length > 35 ? '...' : ''}"`,
+          time: new Date(c.created_at || c.date).toLocaleDateString('vi-VN') + ' – Chờ giải quyết',
           unread: true
         });
       });
 
-      // Static placeholder notifications to match mockup exactly
-      formattedNotifs.push({
-        id: 'm1',
-        bg: '#FEF3C7',
-        stroke: '#D97706',
-        iconType: 'document',
-        title: 'Kế hoạch họp tổ dân phố tháng 7/2026',
-        time: '10/07/2026 – 08:30',
-        unread: true
+      const nowMeeting = new Date();
+      const upcomingMeetings = meetings
+        .filter(m => new Date(m.date) >= nowMeeting)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      upcomingMeetings.forEach(m => {
+        formattedNotifs.push({
+          id: `m-${m.id}`,
+          bg: '#FEF3C7',
+          stroke: '#D97706',
+          iconType: 'calendar',
+          title: `Lịch họp: "${m.title}"`,
+          time: new Date(m.date).toLocaleDateString('vi-VN') + ' lúc ' + new Date(m.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          unread: true
+        });
       });
-      formattedNotifs.push({
-        id: 'm2',
-        bg: '#D1FAE5',
-        stroke: '#059669',
-        iconType: 'check',
-        title: 'Báo cáo vệ sinh môi trường Tháng 6 – Đã duyệt',
-        time: '08/07/2026 – 15:45',
-        unread: true
+
+      const sortedDocs = [...documents].sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+      sortedDocs.slice(0, 3).forEach(d => {
+        formattedNotifs.push({
+          id: `d-${d.id}`,
+          bg: '#D1FAE5',
+          stroke: '#059669',
+          iconType: 'document',
+          title: `Văn bản mới: "${d.title.slice(0, 35)}${d.title.length > 35 ? '...' : ''}"`,
+          time: new Date(d.uploaded_at).toLocaleDateString('vi-VN'),
+          unread: false
+        });
       });
-      formattedNotifs.push({
-        id: 'm3',
-        bg: '#FEE2E2',
-        stroke: '#DC2626',
-        iconType: 'complaint',
-        title: 'Phản ánh về đèn đường hỏng – Cần xử lý',
-        time: '07/07/2026 – 19:12'
-      });
-      formattedNotifs.push({
-        id: 'm4',
-        bg: '#E3F2FD',
-        stroke: '#1565C0',
-        iconType: 'calendar',
-        title: 'Lịch họp Chi bộ tháng 7 – Ngày 15/07',
-        time: '05/07/2026 – 10:00'
-      });
+
+      if (formattedNotifs.length === 0) {
+        formattedNotifs.push({
+          id: 'fb-1',
+          bg: '#E3F2FD',
+          stroke: '#1565C0',
+          iconType: 'check',
+          title: 'Hệ thống hoạt động ổn định',
+          time: 'Hôm nay',
+          unread: false
+        });
+      }
 
       setDynamicNotifs(formattedNotifs.slice(0, 4));
 
       // Dynamic task items
       const tasks: any[] = [];
       
-      // Let's check environment status or complaints
-      const envLogs = await db.getSecurityLogs();
-      complaintsPending.slice(0, 1).forEach(c => {
+      if (complaintsPending.length > 0) {
         tasks.push({
-          id: `t-c-${c.id}`,
+          id: 't-comp',
+          color: '#DC2626',
+          title: `Xử lý ${complaintsPending.length} phản ánh kiến nghị chưa giải quyết`,
+          badgeText: 'Cần xử lý',
+          badgeClass: 'overdue'
+        });
+      }
+
+      if (upcomingMeetings.length > 0) {
+        tasks.push({
+          id: 't-meet',
           color: '#D97706',
-          title: `Xử lý kiến nghị của ${c.resident_name}`,
+          title: `Chuẩn bị nội dung cho cuộc họp: "${upcomingMeetings[0].title}"`,
           badgeText: 'Đang làm',
           badgeClass: 'doing'
         });
+      }
+
+      tasks.push({
+        id: 't-funds',
+        color: '#D97706',
+        title: 'Theo dõi tiến độ đóng các quỹ năm ' + currentYear,
+        badgeText: 'Đang làm',
+        badgeClass: 'doing'
       });
 
-      // Default mock tasks from the mockup
-      tasks.push({ id: 't1', color: '#DC2626', title: 'Hoàn thiện báo cáo cao điểm tháng 7', badgeText: 'Quá hạn', badgeClass: 'overdue' });
-      tasks.push({ id: 't2', color: '#D97706', title: 'Tổng hợp danh sách hộ đóng Quỹ TDP', badgeText: 'Đang làm', badgeClass: 'doing' });
-      tasks.push({ id: 't3', color: '#D97706', title: 'Chuẩn bị nội dung họp tổ dân phố tháng 7', badgeText: 'Đang làm', badgeClass: 'doing' });
-      tasks.push({ id: 't4', color: '#059669', title: 'Kiểm tra, cập nhật biến động dân cư', badgeText: 'Hoàn thành', badgeClass: 'done' });
-      tasks.push({ id: 't5', color: '#059669', title: 'Tổ chức tổng vệ sinh môi trường', badgeText: 'Hoàn thành', badgeClass: 'done' });
+      tasks.push({
+        id: 't-res',
+        color: '#059669',
+        title: 'Kiểm tra biến động nhân khẩu cư trú trên địa bàn',
+        badgeText: 'Hoàn thành',
+        badgeClass: 'done'
+      });
+
+      tasks.push({
+        id: 't-san',
+        color: '#059669',
+        title: 'Giám sát hoạt động vệ sinh môi trường các ngõ xóm',
+        badgeText: 'Hoàn thành',
+        badgeClass: 'done'
+      });
 
       setDynamicTasks(tasks.slice(0, 5));
 
@@ -536,48 +631,21 @@ const Dashboard = () => {
           </div>
           <div className="card-gov-body">
             <div className="chart-area" style={{ height: '160px', display: 'flex', alignItems: 'flex-end', gap: '6px', padding: '0 4px' }}>
-              {/* Month 1 */}
-              <div className="chart-bar-group">
-                <div className="chart-bar" style={{ height: '55%', background: '#1565C0' }} title="Chuyển đến: 14"></div>
-                <div className="chart-bar" style={{ height: '30%', background: '#2E7D32' }} title="Chuyển đi: 8"></div>
-                <div className="chart-bar" style={{ height: '20%', background: '#F97316' }} title="Sinh: 4"></div>
-                <div className="chart-bar" style={{ height: '10%', background: '#DC2626' }} title="Tử: 2"></div>
-              </div>
-              {/* Month 2 */}
-              <div className="chart-bar-group">
-                <div className="chart-bar" style={{ height: '62%', background: '#1565C0' }} title="Chuyển đến: 18"></div>
-                <div className="chart-bar" style={{ height: '25%', background: '#2E7D32' }} title="Chuyển đi: 10"></div>
-                <div className="chart-bar" style={{ height: '18%', background: '#F97316' }} title="Sinh: 6"></div>
-                <div className="chart-bar" style={{ height: '8%', background: '#DC2626' }} title="Tử: 3"></div>
-              </div>
-              {/* Month 3 */}
-              <div className="chart-bar-group">
-                <div className="chart-bar" style={{ height: '48%', background: '#1565C0' }} title="Chuyển đến: 12"></div>
-                <div className="chart-bar" style={{ height: '35%', background: '#2E7D32' }} title="Chuyển đi: 11"></div>
-                <div className="chart-bar" style={{ height: '25%', background: '#F97316' }} title="Sinh: 5"></div>
-                <div className="chart-bar" style={{ height: '12%', background: '#DC2626' }} title="Tử: 1"></div>
-              </div>
-              {/* Month 4 */}
-              <div className="chart-bar-group">
-                <div className="chart-bar" style={{ height: '70%', background: '#1565C0' }} title="Chuyển đến: 22"></div>
-                <div className="chart-bar" style={{ height: '28%', background: '#2E7D32' }} title="Chuyển đi: 15"></div>
-                <div className="chart-bar" style={{ height: '15%', background: '#F97316' }} title="Sinh: 8"></div>
-                <div className="chart-bar" style={{ height: '9%', background: '#DC2626' }} title="Tử: 4"></div>
-              </div>
-              {/* Month 5 */}
-              <div className="chart-bar-group">
-                <div className="chart-bar" style={{ height: '58%', background: '#1565C0' }} title="Chuyển đến: 25"></div>
-                <div className="chart-bar" style={{ height: '40%', background: '#2E7D32' }} title="Chuyển đi: 12"></div>
-                <div className="chart-bar" style={{ height: '22%', background: '#F97316' }} title="Sinh: 7"></div>
-                <div className="chart-bar" style={{ height: '11%', background: '#DC2626' }} title="Tử: 5"></div>
-              </div>
-              {/* Month 6 */}
-              <div className="chart-bar-group">
-                <div className="chart-bar" style={{ height: '75%', background: '#1565C0' }} title="Chuyển đến: 28"></div>
-                <div className="chart-bar" style={{ height: '32%', background: '#2E7D32' }} title="Chuyển đi: 9"></div>
-                <div className="chart-bar" style={{ height: '28%', background: '#F97316' }} title="Sinh: 10"></div>
-                <div className="chart-bar" style={{ height: '14%', background: '#DC2626' }} title="Tử: 3"></div>
-              </div>
+              {chartData.map((month, idx) => {
+                const maxVal = Math.max(...chartData.map(m => Math.max(m.moveIn, m.moveOut, m.birth, m.death)), 5);
+                const getBarHeight = (val: number) => {
+                  if (val === 0) return '0%';
+                  return `${(val / maxVal) * 85 + 15}%`;
+                };
+                return (
+                  <div key={idx} className="chart-bar-group">
+                    <div className="chart-bar" style={{ height: getBarHeight(month.moveIn), background: '#1565C0' }} title={`Chuyển đến: ${month.moveIn}`}></div>
+                    <div className="chart-bar" style={{ height: getBarHeight(month.moveOut), background: '#2E7D32' }} title={`Chuyển đi: ${month.moveOut}`}></div>
+                    <div className="chart-bar" style={{ height: getBarHeight(month.birth), background: '#F97316' }} title={`Sinh: ${month.birth}`}></div>
+                    <div className="chart-bar" style={{ height: getBarHeight(month.death), background: '#DC2626' }} title={`Tử: ${month.death}`}></div>
+                  </div>
+                );
+              })}
             </div>
             {/* Chart Labels */}
             <div className="chart-labels" style={{ display: 'flex', gap: '6px', marginTop: '8px', padding: '0 4px' }}>
