@@ -163,6 +163,28 @@ const App = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [activeTab, setActiveTab] = useState('Bảng điều khiển');
   const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'demo');
+  const [tdpList, setTdpList] = useState<any[]>([]);
+  const [selectedTdpUserId, setSelectedTdpUserId] = useState<string>(localStorage.getItem('selected_tdp_user_id') || 'all');
+
+  useEffect(() => {
+    const userRoleVal = localStorage.getItem('user_role');
+    const wardId = localStorage.getItem('user_ward_id');
+    if (userRoleVal === 'ward_admin' && wardId) {
+      db.getTDPList(wardId).then(list => {
+        setTdpList(list);
+      });
+    }
+  }, [session, userRole]);
+
+  const handleTdpSelect = (userId: string) => {
+    setSelectedTdpUserId(userId);
+    if (userId === 'all') {
+      localStorage.removeItem('selected_tdp_user_id');
+    } else {
+      localStorage.setItem('selected_tdp_user_id', userId);
+    }
+    window.dispatchEvent(new CustomEvent('db-changed'));
+  };
 
   useEffect(() => {
     // Check if the current role is verified on this device
@@ -290,6 +312,54 @@ const App = () => {
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [newKeyRole, setNewKeyRole] = useState<'tdp_leader' | 'ward_admin'>('tdp_leader');
+  const [newKeyTdpName, setNewKeyTdpName] = useState('');
+  const [generatedKeysList, setGeneratedKeysList] = useState<any[]>([]);
+  const [generatedKeyResult, setGeneratedKeyResult] = useState('');
+
+  const loadGeneratedKeys = async () => {
+    const wardId = localStorage.getItem('user_ward_id');
+    if (!wardId || !supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('registration_keys')
+        .select('*')
+        .eq('ward_id', wardId)
+        .order('created_at', { ascending: false });
+      if (data) {
+        setGeneratedKeysList(data);
+      }
+    } catch (e) {
+      console.error('Failed to load generated keys:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (isSettingsOpen && localStorage.getItem('user_role') === 'ward_admin') {
+      loadGeneratedKeys();
+      setGeneratedKeyResult('');
+    }
+  }, [isSettingsOpen]);
+
+  const handleGenerateKey = async () => {
+    const wardId = localStorage.getItem('user_ward_id');
+    if (!wardId) return;
+    const key = await db.generateRegistrationKey(wardId, newKeyRole, newKeyTdpName);
+    if (key) {
+      setGeneratedKeyResult(key);
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: 'Đã sinh mã kích hoạt thành công!', type: 'success' } 
+      });
+      window.dispatchEvent(ev);
+      loadGeneratedKeys();
+      setNewKeyTdpName('');
+    } else {
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: 'Lỗi khi tạo mã kích hoạt.', type: 'danger' } 
+      });
+      window.dispatchEvent(ev);
+    }
+  };
   const [sbUrl, setSbUrl] = useState(localStorage.getItem('supabase_url') || '');
   const [rolePinAdminInput, setRolePinAdminInput] = useState('9999');
   const [rolePinToTruongInput, setRolePinToTruongInput] = useState('0000');
@@ -494,6 +564,28 @@ const App = () => {
     }
   };
 
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const profile = await db.getUserProfile(userId);
+      if (profile) {
+        localStorage.setItem('supabase_user_id', userId);
+        localStorage.setItem('user_role', profile.role);
+        localStorage.setItem('user_ward_id', profile.ward_id || '');
+        localStorage.setItem('user_tdp_name', profile.tdp_name || '');
+        localStorage.setItem('user_full_name', profile.full_name || '');
+        
+        if (profile.role === 'ward_admin') {
+          localStorage.setItem('current_role', 'admin');
+          setUserRole('admin');
+        } else if (profile.role === 'tdp_leader') {
+          localStorage.setItem('tdp_name', profile.tdp_name || 'Tổ dân phố');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load user profile:', e);
+    }
+  };
+
   // Cập nhật session và lắng nghe sự thay đổi Auth
   useEffect(() => {
     if (!supabase) return;
@@ -501,6 +593,9 @@ const App = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       loadSystemConfig();
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -509,6 +604,7 @@ const App = () => {
         localStorage.removeItem('offline_mode');
         setOfflineMode(false);
         loadSystemConfig();
+        loadUserProfile(session.user.id);
       }
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecoveryMode(true);
@@ -519,7 +615,6 @@ const App = () => {
         window.dispatchEvent(ev);
       }
     });
-
 
     return () => subscription.unsubscribe();
   }, []);
@@ -1572,6 +1667,29 @@ const App = () => {
             {activeTab === 'Bảng điều khiển' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h1 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, whiteSpace: 'nowrap' }}>Bảng điều khiển</h1>
+                {localStorage.getItem('user_role') === 'ward_admin' && (
+                  <select
+                    value={selectedTdpUserId}
+                    onChange={(e) => handleTdpSelect(e.target.value)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1.5px solid #bfdbfe',
+                      background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                      color: '#1e40af',
+                      fontWeight: '600',
+                      fontSize: '11.5px',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      marginLeft: '6px'
+                    }}
+                  >
+                    <option value="all">🌐 Tất cả các Tổ (Tổng hợp Phường)</option>
+                    {tdpList.map(t => (
+                      <option key={t.id} value={t.id}>🏢 {t.tdp_name} ({t.full_name})</option>
+                    ))}
+                  </select>
+                )}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1589,8 +1707,32 @@ const App = () => {
                 </div>
               </div>
             ) : (
-              <div className="breadcrumb-gov">
-                <span>Tổ dân phố {tdpName}</span>
+              <div className="breadcrumb-gov" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Tổ dân phố</span>
+                {localStorage.getItem('user_role') === 'ward_admin' ? (
+                  <select
+                    value={selectedTdpUserId}
+                    onChange={(e) => handleTdpSelect(e.target.value)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1.5px solid #bfdbfe',
+                      background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                      color: '#1e40af',
+                      fontWeight: '600',
+                      fontSize: '11.5px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">🌐 Tất cả các Tổ (Tổng hợp Phường)</option>
+                    {tdpList.map(t => (
+                      <option key={t.id} value={t.id}>🏢 {t.tdp_name} ({t.full_name})</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="current" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{tdpName}</span>
+                )}
                 <span className="sep">›</span>
                 <span className="current" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{menuItems.find(i => i.id === activeTab)?.label}</span>
               </div>
@@ -2358,6 +2500,137 @@ const App = () => {
                   >
                     {passwordLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
                   </button>
+                </div>
+              )}
+
+              {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Chỉ hiển thị cho Ward Admin) ─── */}
+              {localStorage.getItem('user_role') === 'ward_admin' && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(236,72,153,0.06), rgba(236,72,153,0.02))',
+                  border: '1.5px solid rgba(236,72,153,0.18)',
+                  borderRadius: '12px',
+                  padding: '16px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  marginTop: '12px'
+                }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#db2777', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+                    🔑 Sinh Mã kích hoạt (License Key) cho Tổ dân phố
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                      <label>Chức vụ cấp phép</label>
+                      <select
+                        value={newKeyRole}
+                        onChange={(e) => setNewKeyRole(e.target.value as any)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
+                      >
+                        <option value="tdp_leader">🏢 Tổ trưởng (TDP)</option>
+                        <option value="ward_admin">🏛️ Quản trị viên Phường (Ward Admin)</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
+                      <label>Tên Tổ dân phố (Nếu cấp cho Tổ trưởng)</label>
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: Tổ dân phố 4..."
+                        value={newKeyTdpName}
+                        onChange={(e) => setNewKeyTdpName(e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleGenerateKey}
+                      style={{
+                        background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+                        borderColor: '#be185d',
+                        padding: '10px 16px',
+                        height: '38px',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      Sinh mã Key
+                    </button>
+                  </div>
+
+                  {generatedKeyResult && (
+                    <div style={{
+                      background: 'rgba(236,72,153,0.1)',
+                      border: '1px dashed #ec4899',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      textAlign: 'center',
+                      marginTop: '8px'
+                    }}>
+                      <div style={{ fontSize: '0.75rem', color: '#db2777', fontWeight: 'bold' }}>MÃ KHÓA VỪA TẠO (HÃY SAO CHÉP GỬI ĐI):</div>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center', marginTop: '6px' }}>
+                        <code style={{ fontSize: '1.05rem', color: '#db2777', fontFamily: 'monospace', fontWeight: 'bold' }}>{generatedKeyResult}</code>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedKeyResult);
+                            const ev = new CustomEvent('show-toast', { 
+                              detail: { message: 'Đã sao chép mã khóa kích hoạt!', type: 'success' } 
+                            });
+                            window.dispatchEvent(ev);
+                          }}
+                          style={{ padding: '2px 8px', fontSize: '0.75rem', height: 'auto', minHeight: '26px' }}
+                        >
+                          Sao chép
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '8px' }}>
+                    <div style={{ fontWeight: '600', fontSize: '0.78rem', color: '#475569', marginBottom: '6px' }}>Danh sách mã đã tạo:</div>
+                    <div style={{
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      background: 'white'
+                    }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '6px 10px', color: '#475569' }}>Mã kích hoạt</th>
+                            <th style={{ padding: '6px 10px', color: '#475569' }}>Đối tượng</th>
+                            <th style={{ padding: '6px 10px', color: '#475569' }}>Tên địa bàn</th>
+                            <th style={{ padding: '6px 10px', color: '#475569' }}>Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {generatedKeysList.map((k) => (
+                            <tr key={k.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 'bold' }}>{k.key}</td>
+                              <td style={{ padding: '6px 10px' }}>{k.role === 'ward_admin' ? '🏛️ Phường Admin' : '🏢 Tổ trưởng'}</td>
+                              <td style={{ padding: '6px 10px' }}>{k.tdp_name || '—'}</td>
+                              <td style={{ padding: '6px 10px' }}>
+                                {k.is_used ? (
+                                  <span style={{ color: '#ef4444', fontWeight: '600' }}>🔴 Đã dùng</span>
+                                ) : (
+                                  <span style={{ color: '#22c55e', fontWeight: '600' }}>🟢 Chưa dùng</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          {generatedKeysList.length === 0 && (
+                            <tr>
+                              <td colSpan={4} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
 

@@ -18,6 +18,9 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [regKey, setRegKey] = React.useState('');
+  const [fullName, setFullName] = React.useState('');
+  const [tdpName, setTdpName] = React.useState('');
 
   const handleVerifyGuestPin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +76,25 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       
       if (data && data.user) {
         await checkAndSeedUser(data.user.id);
+        
+        // Fetch and store profile
+        const profile = await db.getUserProfile(data.user.id);
+        if (profile) {
+          localStorage.setItem('supabase_user_id', data.user.id);
+          localStorage.setItem('user_role', profile.role);
+          localStorage.setItem('user_ward_id', profile.ward_id || '');
+          localStorage.setItem('user_tdp_name', profile.tdp_name || '');
+          localStorage.setItem('user_full_name', profile.full_name || '');
+          
+          if (profile.role === 'ward_admin') {
+            // Set current_role to admin and delete any old selected tdp id
+            localStorage.setItem('current_role', 'admin');
+            localStorage.removeItem('selected_tdp_user_id');
+            window.dispatchEvent(new CustomEvent('role-changed', { detail: 'admin' }));
+          } else if (profile.role === 'tdp_leader') {
+            localStorage.setItem('tdp_name', profile.tdp_name || 'Tổ dân phố');
+          }
+        }
       }
     } catch (err: any) {
       const msg = err.message || '';
@@ -102,26 +124,59 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       showToast('Mật khẩu phải chứa ít nhất 6 ký tự!', 'warning');
       return;
     }
+    if (!regKey.trim()) {
+      showToast('Vui lòng nhập Mã kích hoạt bản quyền!', 'warning');
+      return;
+    }
     setLoading(true);
     try {
+      // 1. Kiểm tra mã kích hoạt
+      const keyVal = await db.validateRegistrationKey(regKey);
+      if (!keyVal.valid) {
+        showToast(keyVal.message, 'danger');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Tiến hành đăng ký tài khoản Auth
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password
       });
       if (error) throw error;
+      
       if (data && data.user) {
+        const finalTdpName = keyVal.tdp_name || tdpName || 'Tổ dân phố';
+        
+        // 3. Tạo profile mới liên kết với Phường & Vai trò
+        await db.createUserProfile({
+          id: data.user.id,
+          ward_id: keyVal.ward_id,
+          role: keyVal.role,
+          tdp_name: finalTdpName,
+          full_name: fullName || 'Tổ trưởng'
+        });
+
+        // 4. Kích hoạt mã key
+        await db.useRegistrationKey(regKey, data.user.id);
+
         if (!data.session) {
           // Email confirmation is enabled in Supabase
           showToast('Đăng ký thành công! Vui lòng mở Email để nhấn liên kết xác thực tài khoản trước khi đăng nhập.', 'warning');
         } else {
           // Email confirmation is disabled, user is immediately logged in/session is available
-          showToast('Đăng ký tài khoản thành công! Đang khởi tạo dữ liệu mẫu...', 'success');
-          await seedTenantData(data.user.id);
-          showToast('Khởi tạo dữ liệu mẫu thành công! Vui lòng đăng nhập.', 'success');
+          showToast('Đăng ký tài khoản thành công! Đang khởi tạo dữ liệu...', 'success');
+          if (keyVal.role === 'tdp_leader') {
+            await seedTenantData(data.user.id);
+          }
+          showToast('Đăng ký tài khoản và khởi tạo dữ liệu thành công! Vui lòng đăng nhập.', 'success');
         }
         setAuthMode('login');
         setPassword('');
         setConfirmPassword('');
+        setRegKey('');
+        setFullName('');
+        setTdpName('');
       } else {
         showToast('Đăng ký thành công! Vui lòng xác thực tài khoản qua email gửi đến.', 'info');
       }
@@ -299,6 +354,75 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
             </form>
           ) : (
             <form onSubmit={authMode === 'login' ? handleEmailLogin : handleEmailRegister} style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+              {authMode === 'register' && (
+                <>
+                  <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Mã kích hoạt bản quyền *</label>
+                    <input 
+                      type="text" 
+                      value={regKey}
+                      onChange={(e) => setRegKey(e.target.value)}
+                      placeholder="Mã kích hoạt do Phường cung cấp"
+                      required
+                      style={{
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        background: 'rgba(15, 23, 42, 0.65)',
+                        color: 'white',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Họ và tên người đăng ký *</label>
+                    <input 
+                      type="text" 
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Nguyễn Văn A"
+                      required
+                      style={{
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        background: 'rgba(15, 23, 42, 0.65)',
+                        color: 'white',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Tên Tổ dân phố (Nếu đăng ký Tổ mới)</label>
+                    <input 
+                      type="text" 
+                      value={tdpName}
+                      onChange={(e) => setTdpName(e.target.value)}
+                      placeholder="Tổ dân phố 4 (Để trống nếu đăng ký Phường)"
+                      style={{
+                        padding: '9px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        background: 'rgba(15, 23, 42, 0.65)',
+                        color: 'white',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
               <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: '600' }}>Tài khoản Email</label>
                 <input 

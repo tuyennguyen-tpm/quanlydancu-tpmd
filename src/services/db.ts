@@ -201,14 +201,20 @@ const handleDbError = (action: string, error: any) => {
   }
 };
 
-// General DB Interface
-// General DB Interface
-export const getSessionUserId = async (): Promise<string | null> => {
+export const getActualSessionUserId = async (): Promise<string | null> => {
   if (supabase) {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.user?.id || null;
   }
   return null;
+};
+
+export const getSessionUserId = async (): Promise<string | null> => {
+  const selectedTdpId = localStorage.getItem('selected_tdp_user_id');
+  if (selectedTdpId && selectedTdpId !== 'all') {
+    return selectedTdpId;
+  }
+  return getActualSessionUserId();
 };
 
 const getTenantFilter = () => {
@@ -217,7 +223,24 @@ const getTenantFilter = () => {
   if (isGuest && tenantId) {
     return tenantId;
   }
+  const selectedTdpId = localStorage.getItem('selected_tdp_user_id');
+  if (selectedTdpId) {
+    if (selectedTdpId === 'all') return null;
+    return selectedTdpId;
+  }
+  const currentUserId = localStorage.getItem('supabase_user_id');
+  if (currentUserId) {
+    return currentUserId;
+  }
   return null;
+};
+
+const enrichPayload = (payload: any) => {
+  const wardId = localStorage.getItem('user_ward_id');
+  if (wardId && !payload.ward_id) {
+    payload.ward_id = wardId;
+  }
+  return payload;
 };
 
 export const mapToUUID = (id: string): string => {
@@ -353,6 +376,47 @@ export const seedTenantData = async (userId: string): Promise<void> => {
 export const checkAndSeedUser = async (userId: string): Promise<void> => {
   if (!supabase) return;
   try {
+    // 1. Ensure a default ward exists
+    let defaultWardId = '';
+    const { data: wards, error: wardsError } = await supabase.from('wards').select('id').limit(1);
+    if (wards && wards.length > 0) {
+      defaultWardId = wards[0].id;
+    } else {
+      // Create default ward
+      const { data: newWard } = await supabase.from('wards').insert({ name: 'Quảng Giao' }).select().single();
+      if (newWard) defaultWardId = newWard.id;
+    }
+
+    // 2. Ensure user has a profile
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    if (!profile && defaultWardId) {
+      // Create profile
+      await supabase.from('profiles').insert({
+        id: userId,
+        ward_id: defaultWardId,
+        role: 'tdp_leader',
+        tdp_name: localStorage.getItem('tdp_name') || 'Tổ dân phố Quảng Giao',
+        full_name: 'Tổ trưởng'
+      });
+    }
+
+    // 3. Update old records with null ward_id to default ward_id
+    if (defaultWardId) {
+      await supabase.from('households').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('residents').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('financial_records').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('complaints').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('meetings').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('documents').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('security_logs').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('environment_logs').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('policy_activities').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('meeting_minutes').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('household_funds').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+      await supabase.from('ward_funds').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
+    }
+
+    // 4. Ensure households and other seed data exists if tenant is empty
     const { count, error } = await supabase
       .from('households')
       .select('*', { count: 'exact', head: true })
@@ -367,6 +431,107 @@ export const checkAndSeedUser = async (userId: string): Promise<void> => {
 };
 
 export const db = {
+  // --- Ward Multi-tenancy & Key verification ---
+  validateRegistrationKey: async (keyText: string): Promise<{ valid: boolean; role?: string; tdp_name?: string; ward_id?: string; message: string }> => {
+    if (!supabase) return { valid: false, message: 'Cơ sở dữ liệu chưa được kết nối.' };
+    try {
+      const { data, error } = await supabase
+        .from('registration_keys')
+        .select('*, wards(name)')
+        .eq('key', keyText.trim())
+        .single();
+      if (error || !data) {
+        return { valid: false, message: 'Mã kích hoạt không chính xác.' };
+      }
+      if (data.is_used) {
+        return { valid: false, message: 'Mã kích hoạt này đã được sử dụng.' };
+      }
+      return { 
+        valid: true, 
+        role: data.role, 
+        tdp_name: data.tdp_name, 
+        ward_id: data.ward_id, 
+        message: `Mã kích hoạt hợp lệ thuộc ${data.wards?.name || 'Phường'}` 
+      };
+    } catch (e: any) {
+      return { valid: false, message: `Lỗi kiểm tra mã: ${e.message || e}` };
+    }
+  },
+  useRegistrationKey: async (keyText: string, userId: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('registration_keys')
+        .update({ is_used: true, used_by: userId })
+        .eq('key', keyText.trim());
+      return !error;
+    } catch (e) {
+      console.error('Failed to use key:', e);
+      return false;
+    }
+  },
+  getUserProfile: async (userId: string): Promise<any> => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, wards(name)')
+        .eq('id', userId)
+        .single();
+      if (error) return null;
+      return data;
+    } catch (e) {
+      console.error('Failed to get user profile:', e);
+      return null;
+    }
+  },
+  createUserProfile: async (profile: any): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .insert(profile);
+      return !error;
+    } catch (e) {
+      console.error('Failed to create user profile:', e);
+      return false;
+    }
+  },
+  getTDPList: async (wardId: string): Promise<any[]> => {
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, tdp_name, full_name')
+        .eq('ward_id', wardId)
+        .eq('role', 'tdp_leader');
+      if (error) return [];
+      return data || [];
+    } catch (e) {
+      console.error('Failed to get TDP list:', e);
+      return [];
+    }
+  },
+  generateRegistrationKey: async (wardId: string, role: string, tdpName?: string): Promise<string> => {
+    if (!supabase) return '';
+    try {
+      const key = `REG-${role === 'ward_admin' ? 'WARD' : 'TDP'}-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const { error } = await supabase
+        .from('registration_keys')
+        .insert({
+          key,
+          ward_id: wardId,
+          role,
+          tdp_name: tdpName || null
+        });
+      if (error) throw error;
+      return key;
+    } catch (e) {
+      console.error('Failed to generate key:', e);
+      return '';
+    }
+  },
+
   // --- Households ---
   getHouseholds: async (): Promise<Household[]> => {
     if (supabase) {
@@ -1807,6 +1972,80 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `DROP POLICY IF EXISTS "Allow public read ward_funds" ON ward_funds;\n`;
     sql += `CREATE POLICY "Allow public read ward_funds" ON ward_funds FOR SELECT TO anon USING (true);\n\n`;
   }
+
+  // Ward multi-tenancy & keys
+  sql += `-- ─── CẬP NHẬT KIẾN TRÚC ĐA PHƯỜNG & KHÓA KÍCH HOẠT ───\n`;
+  sql += `CREATE TABLE IF NOT EXISTS public.wards (\n`;
+  sql += `    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n`;
+  sql += `    name TEXT NOT NULL,\n`;
+  sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL\n`;
+  sql += `);\n\n`;
+  sql += `ALTER TABLE public.wards ENABLE ROW LEVEL SECURITY;\n`;
+  sql += `DROP POLICY IF EXISTS "Allow public select wards" ON public.wards;\n`;
+  sql += `CREATE POLICY "Allow public select wards" ON public.wards FOR SELECT TO authenticated, anon USING (true);\n`;
+  sql += `DROP POLICY IF EXISTS "Allow admin manage wards" ON public.wards;\n`;
+  sql += `CREATE POLICY "Allow admin manage wards" ON public.wards FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'super_admin'));\n\n`;
+
+  sql += `CREATE TABLE IF NOT EXISTS public.profiles (\n`;
+  sql += `    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,\n`;
+  sql += `    ward_id UUID REFERENCES public.wards(id) ON DELETE SET NULL,\n`;
+  sql += `    role TEXT NOT NULL CHECK (role IN ('super_admin', 'ward_admin', 'tdp_leader', 'demo', 'guest')),\n`;
+  sql += `    tdp_name TEXT,\n`;
+  sql += `    full_name TEXT,\n`;
+  sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL\n`;
+  sql += `);\n\n`;
+  sql += `ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;\n`;
+  sql += `DROP POLICY IF EXISTS "Allow select profiles" ON public.profiles;\n`;
+  sql += `CREATE POLICY "Allow select profiles" ON public.profiles FOR SELECT TO authenticated, anon USING (true);\n`;
+  sql += `DROP POLICY IF EXISTS "Allow manage profiles" ON public.profiles;\n`;
+  sql += `CREATE POLICY "Allow manage profiles" ON public.profiles FOR ALL TO authenticated USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role = 'super_admin'));\n\n`;
+
+  sql += `CREATE TABLE IF NOT EXISTS public.registration_keys (\n`;
+  sql += `    key TEXT PRIMARY KEY,\n`;
+  sql += `    ward_id UUID REFERENCES public.wards(id) ON DELETE CASCADE,\n`;
+  sql += `    role TEXT NOT NULL CHECK (role IN ('ward_admin', 'tdp_leader')),\n`;
+  sql += `    tdp_name TEXT,\n`;
+  sql += `    is_used BOOLEAN DEFAULT FALSE,\n`;
+  sql += `    used_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,\n`;
+  sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL\n`;
+  sql += `);\n\n`;
+  sql += `ALTER TABLE public.registration_keys ENABLE ROW LEVEL SECURITY;\n`;
+  sql += `DROP POLICY IF EXISTS "Allow public select registration_keys" ON public.registration_keys;\n`;
+  sql += `CREATE POLICY "Allow public select registration_keys" ON public.registration_keys FOR SELECT TO anon, authenticated USING (true);\n`;
+  sql += `DROP POLICY IF EXISTS "Allow manage registration_keys" ON public.registration_keys;\n`;
+  sql += `CREATE POLICY "Allow manage registration_keys" ON public.registration_keys FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'ward_admin')));\n\n`;
+
+  // Add ward_id columns and policies for all data tables
+  const dataTables = [
+    'households', 'residents', 'financial_records', 'complaints', 
+    'meetings', 'documents', 'security_logs', 'environment_logs', 
+    'policy_activities', 'meeting_minutes', 'household_funds', 'ward_funds',
+    'party_members', 'party_meetings'
+  ];
+  
+  dataTables.forEach(t => {
+    sql += `ALTER TABLE public.${t} ADD COLUMN IF NOT EXISTS ward_id UUID REFERENCES public.wards(id) ON DELETE SET NULL;\n`;
+    sql += `DROP POLICY IF EXISTS "Allow ward_admin access ${t}" ON public.${t};\n`;
+    sql += `CREATE POLICY "Allow ward_admin access ${t}" ON public.${t} FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE profiles.id = auth.uid() AND profiles.role = 'ward_admin' AND profiles.ward_id = ${t}.ward_id));\n`;
+  });
+  sql += `\n`;
+
+  sql += `-- ─── TRIGGER TỰ ĐỘNG ĐIỀN WARD_ID KHI INSERT ───\n`;
+  sql += `CREATE OR REPLACE FUNCTION public.set_row_ward_id()\n`;
+  sql += `RETURNS TRIGGER AS $$\n`;
+  sql += `BEGIN\n`;
+  sql += `    IF NEW.ward_id IS NULL THEN\n`;
+  sql += `        SELECT ward_id INTO NEW.ward_id FROM public.profiles WHERE id = NEW.user_id;\n`;
+  sql += `    END IF;\n`;
+  sql += `    RETURN NEW;\n`;
+  sql += `END;\n`;
+  sql += `$$ LANGUAGE plpgsql SECURITY DEFINER;\n\n`;
+
+  dataTables.forEach(t => {
+    sql += `DROP TRIGGER IF EXISTS tr_set_ward_id_${t} ON public.${t};\n`;
+    sql += `CREATE TRIGGER tr_set_ward_id_${t} BEFORE INSERT ON public.${t} FOR EACH ROW EXECUTE FUNCTION public.set_row_ward_id();\n`;
+  });
+  sql += `\n`;
 
   return sql;
 };
