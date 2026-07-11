@@ -20,6 +20,8 @@ export interface Household {
   fire_safety_group?: string; // Tổ liên gia an toàn PCCC
   self_management_group?: string; // Tổ tự quản
   created_at: string;
+  user_id?: string;
+  ward_id?: string;
 }
 
 export interface Resident {
@@ -54,6 +56,8 @@ export interface Resident {
   has_health_insurance?: boolean;
   temporary_residence_expiry?: string;
   association_membership?: string; // ngăn cách bởi dấu phẩy, ví dụ: 'nct,ccb'
+  user_id?: string;
+  ward_id?: string;
 }
 
 export interface FinancialRecord {

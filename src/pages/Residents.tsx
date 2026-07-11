@@ -248,6 +248,9 @@ interface ResidentsProps {
 const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
+  const [tdpMap, setTdpMap] = useState<Record<string, string>>({});
+  const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
+  const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
 
@@ -401,6 +404,16 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       ]);
       setResidents(rList);
       setHouseholds(hList);
+
+      const wardId = localStorage.getItem('user_ward_id');
+      if (wardId) {
+        const list = await db.getTDPList(wardId);
+        const map: Record<string, string> = {};
+        list.forEach(item => {
+          map[item.id] = item.tdp_name || item.full_name || 'Tổ dân phố';
+        });
+        setTdpMap(map);
+      }
     } catch (e) {
       showToast('Lỗi tải dữ liệu nhân khẩu!', 'danger');
     }
@@ -693,7 +706,16 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
 
     showToast('Đang khởi tạo file Excel...', 'info');
 
-    const headers = [
+    const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
+    const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
+
+    const headers = showTdpCol ? [
+      'Tổ dân phố', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
+      'Nghề nghiệp', 'Cụm/Tổ', 'Thường trú', 
+      'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
+      'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
+      'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
+    ] : [
       'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
       'Nghề nghiệp', 'Cụm/Tổ', 'Thường trú', 
       'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
@@ -715,7 +737,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         }
       }
 
-      return [
+      const rowData = [
         hhNum || '',
         r.full_name,
         r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
@@ -740,6 +762,12 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         ageAtDeath,
         r.notes || ''
       ];
+
+      if (showTdpCol) {
+        rowData.unshift(r.user_id ? (tdpMap[r.user_id] || '—') : '—');
+      }
+
+      return rowData;
     });
 
     try {
@@ -1048,6 +1076,9 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       return;
     }
 
+    const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
+    const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
+
     const rowsHtml = printList.map((r, index) => {
       const formattedDob = r.dob ? formatToDisplayDate(r.dob) : '';
       
@@ -1057,6 +1088,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         return `
           <tr>
             <td style="text-align: center;">${index + 1}</td>
+            ${showTdpCol ? `<td style="font-weight: bold; color: #1e3a8a;">${r.user_id ? (tdpMap[r.user_id] || '—') : '—'}</td>` : ''}
             <td style="font-weight: bold;">${r.full_name}</td>
             <td style="text-align: center;">${formattedDob}</td>
             <td style="text-align: center; font-weight: bold; color: #1e3a8a;">${longevityAge} tuổi</td>
@@ -1074,6 +1106,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         return `
           <tr>
             <td style="text-align: center;">${index + 1}</td>
+            ${showTdpCol ? `<td style="font-weight: bold; color: #1e3a8a;">${r.user_id ? (tdpMap[r.user_id] || '—') : '—'}</td>` : ''}
             <td style="font-weight: bold;">${r.full_name}</td>
             <td style="text-align: center;">${r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác'}</td>
             <td style="text-align: center;">${formattedDob}</td>
@@ -1253,6 +1286,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             ${isLongevity ? `
               <tr>
                 <th style="width: 3%;">STT</th>
+                ${showTdpCol ? '<th style="width: 10%;">Tổ dân phố</th>' : ''}
                 <th style="width: 18%;">Họ và tên</th>
                 <th style="width: 10%;">Ngày sinh</th>
                 <th style="width: 10%;">Tuổi mừng thọ</th>
@@ -1265,6 +1299,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             ` : `
               <tr>
                 <th style="width: 3%;">STT</th>
+                ${showTdpCol ? '<th style="width: 10%;">Tổ dân phố</th>' : ''}
                 <th style="width: 14%;">Họ và tên</th>
                 <th style="width: 5%;">Giới tính</th>
                 <th style="width: 8%;">Ngày sinh</th>
@@ -2113,6 +2148,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         <table className="data-table">
           <thead>
             <tr>
+              {showTdpCol && <th>Tổ dân phố</th>}
               <th>Họ và tên</th>
               <th>Giới tính / Tuổi</th>
               <th>Ngày sinh</th>
@@ -2132,6 +2168,11 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                   id={`resident-row-${resident.id}`}
                   style={isDeceased ? { opacity: 0.65, backgroundColor: '#f8fafc' } : {}}
                 >
+                  {showTdpCol && (
+                    <td style={{ fontWeight: '600', color: 'var(--primary)' }}>
+                      📍 {resident.user_id ? (tdpMap[resident.user_id] || '—') : '—'}
+                    </td>
+                  )}
                   <td>
                     <div className="resident-name-cell">
                       <div className="avatar-sm" style={isDeceased ? { backgroundColor: '#cbd5e1', color: '#64748b' } : {}}>{resident.full_name.charAt(0)}</div>

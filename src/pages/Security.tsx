@@ -48,6 +48,10 @@ const Security = () => {
 
   useEffect(() => {
     loadData();
+    window.addEventListener('db-changed', loadData);
+    return () => {
+      window.removeEventListener('db-changed', loadData);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

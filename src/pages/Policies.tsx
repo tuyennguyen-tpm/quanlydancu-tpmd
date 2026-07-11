@@ -79,6 +79,10 @@ const Policies = () => {
 
   useEffect(() => {
     loadData();
+    window.addEventListener('db-changed', loadData);
+    return () => {
+      window.removeEventListener('db-changed', loadData);
+    };
   }, []);
 
   const handleCreateActivity = async (e: React.FormEvent) => {

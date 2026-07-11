@@ -180,6 +180,10 @@ const Finance = () => {
 
   useEffect(() => {
     loadData();
+    window.addEventListener('db-changed', loadData);
+    return () => {
+      window.removeEventListener('db-changed', loadData);
+    };
   }, []);
 
   const handleOpenAdd = () => {

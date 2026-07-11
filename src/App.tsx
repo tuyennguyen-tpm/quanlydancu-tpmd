@@ -183,6 +183,7 @@ const App = () => {
     } else {
       localStorage.setItem('selected_tdp_user_id', userId);
     }
+    loadSystemConfig();
     window.dispatchEvent(new CustomEvent('db-changed'));
   };
 
@@ -579,7 +580,11 @@ const App = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlTenant = urlParams.get('t');
       const guestUid = urlTenant || localStorage.getItem('guest_tenant_id');
-      const targetUid = adminUid || guestUid;
+      
+      const selectedTdpId = localStorage.getItem('selected_tdp_user_id');
+      const targetUid = (selectedTdpId && selectedTdpId !== 'all') 
+        ? selectedTdpId 
+        : (adminUid || guestUid);
       
       let query = supabase.from('app_config').select('key, value');
       if (targetUid) {
@@ -925,6 +930,15 @@ const App = () => {
     };
     window.addEventListener('missing-tables-updated', handleMissingTables);
     return () => window.removeEventListener('missing-tables-updated', handleMissingTables);
+  }, []);
+
+  useEffect(() => {
+    const handleDbChanged = () => {
+      loadSystemConfig();
+    };
+    window.dispatchEvent(new CustomEvent('storage')); // trigger update
+    window.addEventListener('db-changed', handleDbChanged);
+    return () => window.removeEventListener('db-changed', handleDbChanged);
   }, []);
 
   useEffect(() => {

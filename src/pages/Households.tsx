@@ -70,6 +70,7 @@ const isValidDate = (dateStr: string) => {
 const Households = () => {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
+  const [tdpMap, setTdpMap] = useState<Record<string, string>>({});
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
 
@@ -205,6 +206,16 @@ const Households = () => {
       ]);
       setHouseholds(hList);
       setResidents(rList);
+
+      const wardId = localStorage.getItem('user_ward_id');
+      if (wardId) {
+        const list = await db.getTDPList(wardId);
+        const map: Record<string, string> = {};
+        list.forEach(item => {
+          map[item.id] = item.tdp_name || item.full_name || 'Tổ dân phố';
+        });
+        setTdpMap(map);
+      }
     } catch (e) {
       showToast('Lỗi tải dữ liệu!', 'danger');
     }
@@ -221,9 +232,11 @@ const Households = () => {
     };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('tdp-name-changed', handleStorageChange);
+    window.addEventListener('db-changed', loadData);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tdp-name-changed', handleStorageChange);
+      window.removeEventListener('db-changed', loadData);
     };
   }, []);
 
@@ -1133,6 +1146,9 @@ const Households = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
+    const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
+    const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
+
     const rows = filteredHouseholds.map((h, idx) => {
       const headName = getHeadName(h);
       const members = getHouseholdMembers(h.id);
@@ -1143,6 +1159,7 @@ const Households = () => {
         : '';
       return `<tr style="border-bottom:1px solid #e2e8f0">
         <td style="padding:7px 8px;text-align:center;color:#64748b">${idx + 1}</td>
+        ${showTdpCol ? `<td style="padding:7px 8px;font-weight:600;color:#1e3a8a">${h.user_id ? (tdpMap[h.user_id] || '—') : '—'}</td>` : ''}
         <td style="padding:7px 8px;font-weight:600">${h.household_number}</td>
         <td style="padding:7px 8px">${headName}</td>
         <td style="padding:7px 8px">${h.address}</td>
@@ -1181,6 +1198,7 @@ const Households = () => {
     <table>
       <thead><tr>
         <th style="width:40px">STT</th>
+        ${showTdpCol ? '<th style="width:120px">Tổ dân phố</th>' : ''}
         <th style="width:100px">Số hộ khẩu</th>
         <th>Chủ hộ</th>
         <th>Địa chỉ</th>
@@ -1229,14 +1247,19 @@ const Households = () => {
       const ws = workbook.addWorksheet('Danh sach ho dan');
 
       // Tiêu đề
-      ws.mergeCells('A1:H1');
+      const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
+      const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
+      const maxCol = showTdpCol ? 'I' : 'H';
+
+      // Tiêu đề
+      ws.mergeCells(`A1:${maxCol}1`);
       const titleCell = ws.getCell('A1');
       titleCell.value = `DANH SÁCH HỘ DÂN – ${policyLabel.toUpperCase()}${groupLabel.toUpperCase()}`;
       titleCell.font = { name: 'Times New Roman', size: 14, bold: true, color: { argb: 'FF1E3A8A' } };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       ws.getRow(1).height = 30;
 
-      ws.mergeCells('A2:H2');
+      ws.mergeCells(`A2:${maxCol}2`);
       const subCell = ws.getCell('A2');
       subCell.value = `${tdpNameVal} – ${wardNameVal}  |  Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}  |  Tổng số: ${filteredHouseholds.length} hộ`;
       subCell.font = { name: 'Times New Roman', size: 11, italic: true, color: { argb: 'FF475569' } };
@@ -1244,7 +1267,9 @@ const Households = () => {
       ws.getRow(2).height = 22;
 
       // Header row
-      const headers = ['STT', 'Số hộ khẩu', 'Chủ hộ', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú'];
+      const headers = showTdpCol 
+        ? ['STT', 'Tổ dân phố', 'Số hộ khẩu', 'Chủ hộ', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú']
+        : ['STT', 'Số hộ khẩu', 'Chủ hộ', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú'];
       const headerRow = ws.addRow(headers);
       headerRow.height = 26;
       headerRow.eachCell(cell => {
@@ -1262,7 +1287,17 @@ const Households = () => {
         const headName = getHeadName(h);
         const memberCount = getHouseholdMembers(h.id).length;
         const pLabel = getPolicyLabel(h.policy_type);
-        const dataRow = ws.addRow([
+        const rowData = showTdpCol ? [
+          idx + 1,
+          h.user_id ? (tdpMap[h.user_id] || '—') : '—',
+          h.household_number,
+          headName,
+          h.address,
+          memberCount,
+          h.self_management_group || '',
+          h.policy_type !== 'none' ? pLabel : '',
+          ''
+        ] : [
           idx + 1,
           h.household_number,
           headName,
@@ -1271,21 +1306,41 @@ const Households = () => {
           h.self_management_group || '',
           h.policy_type !== 'none' ? pLabel : '',
           ''
-        ]);
+        ];
+        const dataRow = ws.addRow(rowData);
         dataRow.height = 22;
-        dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-        dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-        dataRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
-        dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
-        dataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
-        dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
-        dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
-        if (h.policy_type !== 'none') {
-          const color = h.policy_type === 'poor' ? 'FFEF4444'
-            : h.policy_type === 'near_poor' ? 'FFF97316'
-            : 'FF8B5CF6';
-          dataRow.getCell(7).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
+
+        if (showTdpCol) {
+          dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }; // TDP
+          dataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }; // Sổ
+          dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' }; // Chủ hộ
+          dataRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' }; // Địa chỉ
+          dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' }; // Số NK
+          dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' }; // Tổ tự quản
+          dataRow.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' }; // Chính sách
+          if (h.policy_type !== 'none') {
+            const color = h.policy_type === 'poor' ? 'FFEF4444'
+              : h.policy_type === 'near_poor' ? 'FFF97316'
+              : 'FF8B5CF6';
+            dataRow.getCell(8).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
+          }
+        } else {
+          dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+          if (h.policy_type !== 'none') {
+            const color = h.policy_type === 'poor' ? 'FFEF4444'
+              : h.policy_type === 'near_poor' ? 'FFF97316'
+              : 'FF8B5CF6';
+            dataRow.getCell(7).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
+          }
         }
+
         dataRow.eachCell(cell => {
           if (!cell.font) cell.font = { name: 'Times New Roman', size: 11 };
           else cell.font = { ...cell.font, name: 'Times New Roman', size: 11 };
@@ -1307,10 +1362,17 @@ const Households = () => {
       });
 
       // Column widths
-      ws.columns = [
-        { width: 6 }, { width: 14 }, { width: 26 }, { width: 32 },
-        { width: 12 }, { width: 16 }, { width: 22 }, { width: 20 }
-      ];
+      if (showTdpCol) {
+        ws.columns = [
+          { width: 6 }, { width: 18 }, { width: 14 }, { width: 26 }, { width: 32 },
+          { width: 12 }, { width: 16 }, { width: 22 }, { width: 20 }
+        ];
+      } else {
+        ws.columns = [
+          { width: 6 }, { width: 14 }, { width: 26 }, { width: 32 },
+          { width: 12 }, { width: 16 }, { width: 22 }, { width: 20 }
+        ];
+      }
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -1508,7 +1570,23 @@ const Households = () => {
               </div>
               
               <div className="card-body">
-                <div className="hk-number">Sổ: {h.household_number}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <div className="hk-number" style={{ margin: 0 }}>Sổ: {h.household_number}</div>
+                  {h.user_id && tdpMap[h.user_id] && (
+                    <span style={{
+                      fontSize: '0.7rem',
+                      backgroundColor: '#f1f5f9',
+                      color: '#475569',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: '600',
+                      border: '1px solid #e2e8f0',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      📍 {tdpMap[h.user_id]}
+                    </span>
+                  )}
+                </div>
                 <h3 className="head-name">{headName}</h3>
                 <div className="info-row">
                   <MapPin size={16} />

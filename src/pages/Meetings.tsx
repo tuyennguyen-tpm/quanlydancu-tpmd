@@ -95,9 +95,11 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
     };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('tdp-name-changed', handleStorageChange);
+    window.addEventListener('db-changed', loadData);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tdp-name-changed', handleStorageChange);
+      window.removeEventListener('db-changed', loadData);
     };
   }, []);
 

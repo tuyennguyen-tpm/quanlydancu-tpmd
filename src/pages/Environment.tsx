@@ -47,6 +47,10 @@ const Environment = () => {
 
   useEffect(() => {
     loadData();
+    window.addEventListener('db-changed', loadData);
+    return () => {
+      window.removeEventListener('db-changed', loadData);
+    };
   }, []);
 
   const handleCreateLog = async (e: React.FormEvent) => {
