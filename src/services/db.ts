@@ -450,16 +450,6 @@ export const checkAndSeedUser = async (userId: string): Promise<void> => {
       await supabase.from('household_funds').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
       await supabase.from('ward_funds').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
     }
-
-    // 4. Ensure households and other seed data exists if tenant is empty
-    const { count, error } = await supabase
-      .from('households')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-    if (!error && count === 0) {
-      console.log('No households found, seeding tenant default data...');
-      await seedTenantData(userId);
-    }
   } catch (err) {
     console.error('Failed to check or seed user data:', err);
   }

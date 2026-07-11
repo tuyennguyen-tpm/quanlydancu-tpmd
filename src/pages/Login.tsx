@@ -165,11 +165,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
           showToast('Đăng ký thành công! Vui lòng mở Email để nhấn liên kết xác thực tài khoản trước khi đăng nhập.', 'warning');
         } else {
           // Email confirmation is disabled, user is immediately logged in/session is available
-          showToast('Đăng ký tài khoản thành công! Đang khởi tạo dữ liệu...', 'success');
-          if (keyVal.role === 'tdp_leader') {
-            await seedTenantData(data.user.id);
-          }
-          showToast('Đăng ký tài khoản và khởi tạo dữ liệu thành công! Vui lòng đăng nhập.', 'success');
+          showToast('Đăng ký tài khoản thành công! Vui lòng đăng nhập.', 'success');
         }
         setAuthMode('login');
         setPassword('');
