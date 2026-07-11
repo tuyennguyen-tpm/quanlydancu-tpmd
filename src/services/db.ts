@@ -471,6 +471,24 @@ export const checkAndSeedUser = async (userId: string): Promise<void> => {
       await supabase.from('household_funds').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
       await supabase.from('ward_funds').update({ ward_id: defaultWardId }).eq('user_id', userId).is('ward_id', null);
     }
+
+    // 4. Tu dong xoa cac du lieu mau (seed data) neu co lo update len Supabase de dam bao csdl that sach 100%
+    try {
+      const seedHhIds = seedHouseholds.map(h => mapToUUID(h.id));
+      const seedResIds = seedResidents.map(r => mapToUUID(r.id));
+      const seedFinIds = seedFinancialRecords.map(f => mapToUUID(f.id));
+      const seedMeetingIds = seedMeetings.map(m => mapToUUID(m.id));
+      const seedDocIds = seedDocuments.map(d => mapToUUID(d.id));
+
+      await supabase.from('residents').delete().in('id', seedResIds);
+      await supabase.from('households').delete().in('id', seedHhIds);
+      await supabase.from('financial_records').delete().in('id', seedFinIds);
+      await supabase.from('meetings').delete().in('id', seedMeetingIds);
+      await supabase.from('documents').delete().in('id', seedDocIds);
+      console.log('[DB] Da quet va don sach du lieu mau (seed data) khoi Supabase.');
+    } catch (e) {
+      console.warn('[DB] Quet du lieu mau that bai:', e);
+    }
   } catch (err) {
     console.error('Failed to check or seed user data:', err);
   }

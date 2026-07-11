@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, partyDb } from './services/db';
+import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, partyDb, checkAndSeedUser } from './services/db';
 import { askGemini } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
@@ -691,6 +691,9 @@ const App = () => {
         localStorage.setItem('user_tdp_name', profile.tdp_name || '');
         localStorage.setItem('user_full_name', profile.full_name || '');
         
+        // Auto check profile structure and clean up seed data from Supabase
+        await checkAndSeedUser(userId);
+
         if (profile.role === 'ward_admin') {
           localStorage.setItem('current_role', 'admin');
           setUserRole('admin');
