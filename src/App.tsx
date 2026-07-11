@@ -411,7 +411,11 @@ const App = () => {
       return;
     }
 
-    const key = await db.generateRegistrationKey(targetWardId, newKeyRole, newKeyTdpName);
+    const key = await db.generateRegistrationKey(
+      targetWardId, 
+      newKeyRole, 
+      newKeyRole === 'ward_admin' ? 'Ban quản trị Phường' : newKeyTdpName
+    );
     if (key) {
       setGeneratedKeyResult(key);
       const ev = new CustomEvent('show-toast', { 
@@ -2914,6 +2918,11 @@ const App = () => {
                   <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#db2777', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
                     🔑 Sinh Mã kích hoạt (License Key) Hệ thống
                   </div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', borderLeft: '3px solid #db2777', paddingLeft: '8px', margin: '4px 0 8px 0', lineHeight: '1.4' }}>
+                    📌 <strong>Hướng dẫn nhanh:</strong><br />
+                    • <strong>Tạo Phường mới hoàn toàn:</strong> Chọn "Chọn Phường" ở dưới → chọn <strong>"➕ Tạo Phường mới..."</strong>, gõ tên Phường mới (ví dụ: Quảng Đại), chọn chức vụ <strong>"Quản trị viên Phường"</strong> và sinh mã.<br />
+                    • <strong>Thêm Tổ trưởng mới vào Phường:</strong> Chọn đúng Phường trực thuộc, chọn chức vụ <strong>"Tổ trưởng (TDP)"</strong>, gõ tên Tổ dân phố (ví dụ: Tổ 5) và sinh mã.
+                  </div>
 
                   {(localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
                     <div style={{ 
@@ -2982,16 +2991,24 @@ const App = () => {
                       </select>
                     </div>
 
-                    <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
-                      <label>Tên Tổ dân phố (Nếu cấp cho Tổ trưởng)</label>
-                      <input
-                        type="text"
-                        placeholder="Ví dụ: Tổ dân phố 4..."
-                        value={newKeyTdpName}
-                        onChange={(e) => setNewKeyTdpName(e.target.value)}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
-                      />
-                    </div>
+                    {newKeyRole === 'tdp_leader' ? (
+                      <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
+                        <label>Tên Tổ dân phố (Nếu cấp cho Tổ trưởng)</label>
+                        <input
+                          type="text"
+                          placeholder="Ví dụ: Tổ dân phố Quảng Giao..."
+                          value={newKeyTdpName}
+                          onChange={(e) => setNewKeyTdpName(e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="form-group" style={{ flex: 1.5, minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '8px' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', margin: 0, lineHeight: '1.4' }}>
+                          💡 Quản trị viên Phường quản lý tất cả các Tổ dân phố thuộc Phường được chọn.
+                        </div>
+                      </div>
+                    )}
 
                     <button
                       type="button"
