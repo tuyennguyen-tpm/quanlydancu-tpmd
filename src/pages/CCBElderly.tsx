@@ -4,11 +4,27 @@ import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
 import { FileUp, FileDown, Printer, UserPlus, X } from 'lucide-react';
 
+const MILESTONE_AGES = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150];
+
+const getLongevityAge = (dobStr: string, targetYear: number) => {
+  if (!dobStr) return -1;
+  const parts = dobStr.split(/[-/]/);
+  let yearStr = parts[0];
+  if (parts.length === 3 && parts[2].length === 4) {
+    yearStr = parts[2];
+  }
+  const birthYear = parseInt(yearStr, 10);
+  if (isNaN(birthYear) || birthYear <= 0) return -1;
+  return targetYear - birthYear;
+};
+
 const CCBElderly = () => {
   const [seniors, setSeniors] = useState<Resident[]>([]);
   const [veterans, setVeterans] = useState<Resident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState<'seniors' | 'veterans'>('seniors');
+  const [subFilter, setSubFilter] = useState<'all' | 'senior70' | 'longevity'>('all');
+  const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
   const [groupFilter, setGroupFilter] = useState('all');
   const savedGroups = localStorage.getItem('tdp_groups_config');
   const groupsList = savedGroups ? JSON.parse(savedGroups) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
@@ -102,6 +118,17 @@ const CCBElderly = () => {
     
     if (!matchesSearch) return false;
     
+    // Sub-filters for seniors
+    if (selectedTab === 'seniors') {
+      const age = getAge(m.dob);
+      if (subFilter === 'senior70') {
+        if (age < 70) return false;
+      } else if (subFilter === 'longevity') {
+        const longevityAge = getLongevityAge(m.dob, longevityYear);
+        if (!MILESTONE_AGES.includes(longevityAge)) return false;
+      }
+    }
+    
     // Group filter match
     if (groupFilter === 'all') return true;
 
@@ -113,7 +140,7 @@ const CCBElderly = () => {
     // Smart matching or direct inclusion check
     const matchesGroup = selfGroup.toLowerCase().includes(groupFilter.toLowerCase()) || 
                          address.toLowerCase().includes(groupFilter.toLowerCase());
-                         
+                          
     return matchesGroup;
   });
 
@@ -307,7 +334,9 @@ const CCBElderly = () => {
   const handleExportExcel = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
-      const sheetName = selectedTab === 'seniors' ? 'NguoiCaoTuoi' : 'CuuChienBinh';
+      let sheetName = selectedTab === 'seniors' ? 'NguoiCaoTuoi' : 'CuuChienBinh';
+      if (selectedTab === 'seniors' && subFilter === 'senior70') sheetName = 'NguoiCaoTuoi_Tren70';
+      if (selectedTab === 'seniors' && subFilter === 'longevity') sheetName = `MungTho_${longevityYear}`;
       const worksheet = workbook.addWorksheet(sheetName);
 
       const headers = [
@@ -429,7 +458,9 @@ const CCBElderly = () => {
     if (!printWindow) return;
 
     const tdpName = localStorage.getItem('tdp_name') || 'Tổ dân phố Quảng Giao';
-    const titleText = selectedTab === 'seniors' ? 'DANH SÁCH NGƯỜI CAO TUỔI' : 'DANH SÁCH HỘI VIÊN CỰU CHIẾN BINH';
+    let titleText = selectedTab === 'seniors' ? 'DANH SÁCH NGƯỜI CAO TUỔI' : 'DANH SÁCH HỘI VIÊN CỰU CHIẾN BINH';
+    if (selectedTab === 'seniors' && subFilter === 'senior70') titleText = 'DANH SÁCH NGƯỜI CAO TUỔI (≥70 TUỔI)';
+    if (selectedTab === 'seniors' && subFilter === 'longevity') titleText = `DANH SÁCH NGƯỜI CAO TUỔI MỪNG THỌ NĂM ${longevityYear}`;
 
     let rowsHtml = '';
     filteredList.forEach((m, idx) => {
@@ -713,7 +744,7 @@ const CCBElderly = () => {
       {/* TABS SELECTOR */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
         <button 
-          onClick={() => { setSelectedTab('seniors'); setSearchQuery(''); setGroupFilter('all'); }}
+          onClick={() => { setSelectedTab('seniors'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
           style={{
             padding: '8px 16px',
             borderRadius: '20px',
@@ -728,7 +759,7 @@ const CCBElderly = () => {
           👴 Hội Người cao tuổi ({seniors.length})
         </button>
         <button 
-          onClick={() => { setSelectedTab('veterans'); setSearchQuery(''); setGroupFilter('all'); }}
+          onClick={() => { setSelectedTab('veterans'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
           style={{
             padding: '8px 16px',
             borderRadius: '20px',
@@ -743,6 +774,81 @@ const CCBElderly = () => {
           🎖️ Hội Cựu chiến binh ({veterans.length})
         </button>
       </div>
+
+      {/* SUB-FILTERS FOR SENIORS */}
+      {selectedTab === 'seniors' && (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setSubFilter('all')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: subFilter === 'all' ? 'var(--gov-blue)' : 'white',
+              color: subFilter === 'all' ? 'white' : 'var(--text-secondary)',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Tất cả Người cao tuổi
+          </button>
+          <button
+            onClick={() => setSubFilter('senior70')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: subFilter === 'senior70' ? '#1d4ed8' : 'white',
+              color: subFilter === 'senior70' ? 'white' : 'var(--text-secondary)',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            👴 Người cao tuổi (≥70)
+          </button>
+          <button
+            onClick={() => setSubFilter('longevity')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: subFilter === 'longevity' ? '#db2777' : 'white',
+              color: subFilter === 'longevity' ? 'white' : 'var(--text-secondary)',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            🎉 Mừng thọ (70-150)
+          </button>
+
+          {subFilter === 'longevity' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-dark)' }}>Năm mừng thọ:</span>
+              <select
+                value={longevityYear}
+                onChange={(e) => setLongevityYear(parseInt(e.target.value))}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  fontSize: '12px',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  background: 'white'
+                }}
+              >
+                {Array.from({ length: 5 }, (_, i) => {
+                  const y = new Date().getFullYear() - 1 + i;
+                  return <option key={y} value={y}>{y}</option>;
+                })}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ACTIONS BAR */}
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>

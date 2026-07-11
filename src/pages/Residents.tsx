@@ -241,7 +241,11 @@ const SearchableHouseholdSelect = ({ households, residents, value, onChange }: {
   );
 };
 
-const Residents = () => {
+interface ResidentsProps {
+  viewMode?: 'all' | 'temp' | 'changes';
+}
+
+const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [searchInput, setSearchInput] = useState('');
@@ -1745,6 +1749,13 @@ const Residents = () => {
 
   // Filters calculation
   const filteredResidents = useMemo(() => residents.filter(r => {
+    // Filter by temporary status in temp view mode
+    if (viewMode === 'temp') {
+      if (r.status !== 'temporary_resident' && r.status !== 'temporary_absent' && r.status !== 'stay') {
+        return false;
+      }
+    }
+
     // Search query matches
     const name = r.full_name.toLowerCase();
     const cccdCode = (r.cccd || '').toLowerCase();
@@ -1904,8 +1915,20 @@ const Residents = () => {
     <div className="residents-container">
       <div className="page-header">
         <div className="header-info">
-          <h1>Danh sách Nhân khẩu</h1>
-          <p>Quản lý thông tin chi tiết của từng cư dân cư trú tại Tổ dân phố.</p>
+          <h1>
+            {viewMode === 'temp' 
+              ? 'Quản lý Tạm trú – Tạm vắng' 
+              : viewMode === 'changes' 
+                ? 'Biến động nhân khẩu' 
+                : 'Danh sách Nhân khẩu'}
+          </h1>
+          <p>
+            {viewMode === 'temp' 
+              ? 'Quản lý danh sách cư dân đăng ký tạm trú, tạm vắng và lưu trú trên địa bàn.' 
+              : viewMode === 'changes'
+                ? 'Theo dõi lịch sử biến động, thay đổi thông tin nhân khẩu.'
+                : 'Quản lý thông tin chi tiết của từng cư dân cư trú tại Tổ dân phố.'}
+          </p>
         </div>
         <div className="header-actions">
           <div className="vertical-actions-group">
@@ -2038,12 +2061,14 @@ const Residents = () => {
                 <option key={g} value={g}>🏢 {g}</option>
               ))}
             </select>
-            <button 
-              className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('senior')}
-            >
-              <UserCheck size={16} /> Người cao tuổi (≥70)
-            </button>
+            {viewMode !== 'temp' && (
+              <button 
+                className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
+                onClick={() => setCategoryFilter('senior')}
+              >
+                <UserCheck size={16} /> Người cao tuổi (≥70)
+              </button>
+            )}
             <button 
               className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
               onClick={() => setCategoryFilter('child')}
@@ -2056,12 +2081,14 @@ const Residents = () => {
             >
               <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
             </button>
-            <button 
-              className={`filter-btn filter-btn-longevity ${categoryFilter === 'longevity' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('longevity')}
-            >
-              🎉 Mừng thọ (70-150)
-            </button>
+            {viewMode !== 'temp' && (
+              <button 
+                className={`filter-btn filter-btn-longevity ${categoryFilter === 'longevity' ? 'active' : ''}`}
+                onClick={() => setCategoryFilter('longevity')}
+              >
+                🎉 Mừng thọ (70-150)
+              </button>
+            )}
 
             {categoryFilter === 'longevity' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>

@@ -50,6 +50,10 @@ const MeetingMinutes = () => {
     const biThuName = getOfficialNameFromConfig('bi_thu', 'Nguyễn Kim Tuyến');
     const matTranName = getOfficialNameFromConfig('mat_tran', 'Nguyễn Kim Tuyến');
     const thuKyName = getOfficialNameFromConfig('thu_ky', 'Lê Thị Dung');
+    const womenName = getOfficialNameFromConfig('women', 'Nguyễn Thị Hoa');
+    const veteransName = getOfficialNameFromConfig('veterans', 'Trần Văn Hùng');
+    const seniorsName = getOfficialNameFromConfig('seniors', 'Lê Hoàng Nam');
+    const youthName = getOfficialNameFromConfig('youth', 'Phạm Minh Đức');
 
     if (type === 'party') {
       return {
@@ -60,6 +64,26 @@ const MeetingMinutes = () => {
       return {
         chairman: `${matTranName} - Trưởng ban CTMT`,
         secretary: `${thuKyName} - Ủy viên Mặt trận`
+      };
+    } else if (type === 'women') {
+      return {
+        chairman: `${womenName} - Chi hội trưởng Phụ nữ`,
+        secretary: `${thuKyName} - Thư ký`
+      };
+    } else if (type === 'veterans') {
+      return {
+        chairman: `${veteransName} - Chi hội trưởng Cựu chiến binh`,
+        secretary: `${thuKyName} - Thư ký`
+      };
+    } else if (type === 'seniors') {
+      return {
+        chairman: `${seniorsName} - Chi hội trưởng Người cao tuổi`,
+        secretary: `${thuKyName} - Thư ký`
+      };
+    } else if (type === 'youth') {
+      return {
+        chairman: `${youthName} - Bí thư Chi đoàn`,
+        secretary: `${thuKyName} - Thư ký`
       };
     } else {
       return {
@@ -156,7 +180,21 @@ const MeetingMinutes = () => {
   const getDocNumberSuffix = (type: string) => {
     if (type === 'party') return '/BB-CB';
     if (type === 'front') return '/BB-MT';
+    if (type === 'women') return '/BB-PN';
+    if (type === 'veterans') return '/BB-CCB';
+    if (type === 'seniors') return '/BB-NCT';
+    if (type === 'youth') return '/BB-DTN';
     return '/BB-TDP';
+  };
+
+  const getAttendanceLabel = (type: string) => {
+    if (type === 'party') return 'đảng viên';
+    if (type === 'front') return 'thành viên';
+    if (type === 'women') return 'hội viên phụ nữ';
+    if (type === 'veterans') return 'hội viên cựu chiến binh';
+    if (type === 'seniors') return 'hội viên người cao tuổi';
+    if (type === 'youth') return 'đoàn viên';
+    return 'hộ gia đình';
   };
 
   const loadSavedMinutes = async () => {
@@ -179,6 +217,110 @@ const MeetingMinutes = () => {
     const activeChairman = customChairman || chairman;
     const activeSecretary = customSecretary || secretary;
     
+    if (mType === 'women') {
+      return `I. THÀNH PHẦN THAM DỰ
+1. Cán bộ và hội viên phụ nữ trong Chi hội: Có mặt ....../...... hội viên.
+2. Đại diện Ban Thường vụ Hội LHPN phường: ...................................................
+3. Khách mời tham dự: Bí thư Chi bộ, Tổ trưởng Tổ dân phố.
+4. Chủ trì hội nghị: Bà ${activeChairman.split('-')[0].trim()} - Chi hội trưởng Phụ nữ.
+5. Thư ký hội nghị: Bà ${activeSecretary.split('-')[0].trim()} - Thư ký.
+
+II. NỘI DUNG VÀ DIỄN BIẾN CUỘC HỌP
+1. Bà Chủ trì tuyên bố lý do, thông qua nội dung sinh hoạt Chi hội: ${meetingTitle || 'Họp sinh hoạt Chi hội Phụ nữ thường kỳ'}.
+2. Đánh giá kết quả công tác Hội và phong trào phụ nữ thời gian qua:
+- Kết quả thực hiện cuộc vận động "Xây dựng gia đình 5 không, 3 sạch" và hỗ trợ phụ nữ phát triển kinh tế.
+- Tình hình đóng góp quỹ hội, tương trợ giúp đỡ hội viên khó khăn.
+3. Triển khai kế hoạch hoạt động của Chi hội thời gian tới:
+- Trọng tâm công tác: ${rawContent || 'Tuyên truyền vận động hội viên tham gia giữ gìn vệ sinh môi trường, phòng chống rác thải nhựa và xây dựng quỹ hội.'}
+4. Ý kiến thảo luận đóng góp của hội viên:
+- Ý kiến 1: Hội viên ................................. đề xuất nhân rộng mô hình phân loại rác thải tại nguồn và làm gạch sinh thái từ rác thải nhựa.
+- Ý kiến 2: Hội viên ................................. kiến nghị tổ chức thêm các buổi giao lưu văn nghệ, dân vũ để tạo sân chơi bổ ích cho hội viên.
+- Chi hội trưởng tiếp thu, tổng hợp ý kiến thảo luận của hội nghị.
+
+III. QUYẾT NGHỊ VÀ BIỂU QUYẾT
+Chi hội thống nhất quyết nghị:
+- Thông qua báo cáo công tác quý trước và nhiệm vụ trọng tâm quý tới.
+- Biểu quyết 100% nhất trí thực hiện chỉ tiêu thi đua đề ra.`;
+    }
+
+    if (mType === 'veterans') {
+      return `I. THÀNH PHẦN THAM DỰ
+1. Hội viên Cựu chiến binh trong Chi hội: Có mặt ....../...... hội viên.
+2. Đại diện Ban Thường vụ Hội Cựu chiến binh phường: ...................................................
+3. Khách mời tham dự: Bí thư Chi bộ, Tổ trưởng Tổ dân phố.
+4. Chủ trì hội nghị: Ông ${activeChairman.split('-')[0].trim()} - Chi hội trưởng Cựu chiến binh.
+5. Thư ký hội nghị: Ông ${activeSecretary.split('-')[0].trim()} - Thư ký.
+
+II. NỘI DUNG VÀ DIỄN BIẾN CUỘC HỌP
+1. Ông Chủ trì tuyên bố lý do, thông qua nội dung sinh hoạt Chi hội: ${meetingTitle || 'Họp sinh hoạt Chi hội Cựu chiến binh thường kỳ'}.
+2. Báo cáo kết quả hoạt động của Chi hội thời gian qua:
+- Kết quả thực hiện phong trào "Cựu chiến binh gương mẫu" giữ gìn an ninh trật tự tại địa phương.
+- Quản lý quỹ hội, thăm hỏi hội viên ốm đau, giúp đỡ phát triển kinh tế gia đình.
+3. Triển khai nhiệm vụ hoạt động của Chi hội thời gian tới:
+- Trọng tâm công tác: ${rawContent || 'Tăng cường tuần tra tự quản giữ gìn an ninh trật tự ngõ xóm và tuyên truyền giáo dục truyền thống cách mạng cho thế hệ trẻ.'}
+4. Ý kiến thảo luận của hội viên:
+- Ý kiến 1: Hội viên ................................. nhất trí với báo cáo và đề xuất đẩy mạnh công tác phối hợp tuần tra giữ gìn trật tự an toàn giao thông trước cổng trường học.
+- Ý kiến 2: Hội viên ................................. đề xuất quan tâm giúp đỡ một số gia đình hội viên gặp hoàn cảnh khó khăn đột xuất.
+- Chi hội trưởng tiếp thu và kết luận các nội dung thảo luận.
+
+III. QUYẾT NGHỊ VÀ BIỂU QUYẾT
+Chi hội thống nhất quyết nghị:
+- Nhất trí báo cáo kết quả và chương trình hoạt động thời gian tới.
+- 100% hội viên có mặt biểu quyết thống nhất thông qua nghị quyết cuộc họp.`;
+    }
+
+    if (mType === 'seniors') {
+      return `I. THÀNH PHẦN THAM DỰ
+1. Hội viên Người cao tuổi trong Chi hội: Có mặt ....../...... hội viên.
+2. Đại diện Ban đại diện Hội Người cao tuổi phường: ...................................................
+3. Khách mời tham dự: Bí thư Chi bộ, Tổ trưởng Tổ dân phố.
+4. Chủ trì hội nghị: Ông/Bà ${activeChairman.split('-')[0].trim()} - Chi hội trưởng Người cao tuổi.
+5. Thư ký hội nghị: Ông/Bà ${activeSecretary.split('-')[0].trim()} - Thư ký.
+
+II. NỘI DUNG VÀ DIỄN BIẾN CUỘC HỌP
+1. Ông/Bà Chủ trì tuyên bố lý do, thông qua nội dung sinh hoạt Chi hội: ${meetingTitle || 'Họp sinh hoạt Chi hội Người cao tuổi thường kỳ'}.
+2. Đánh giá kết quả hoạt động phong trào "Tuổi cao - Gương sáng" thời gian qua:
+- Công tác chăm sóc, mừng thọ người cao tuổi dịp Tết và Ngày truyền thống.
+- Hoạt động của Câu lạc bộ dưỡng sinh, thơ ca và phong trào thể dục thể thao nâng cao sức khỏe.
+3. Triển khai chương trình hoạt động của Chi hội thời gian tới:
+- Trọng tâm công tác: ${rawContent || 'Tổ chức mừng thọ, chăm sóc sức khỏe người cao tuổi, vận động con cháu gương mẫu thực hiện nếp sống văn minh đô thị.'}
+4. Ý kiến thảo luận của hội viên:
+- Ý kiến 1: Hội viên ................................. đề nghị phối hợp với Trạm y tế tổ chức đợt khám sức khỏe, tư vấn cấp thuốc miễn phí cho người cao tuổi.
+- Ý kiến 2: Hội viên ................................. đề nghị mở rộng các câu lạc bộ thể dục dưỡng sinh để thu hút đông đảo hội viên tham gia sinh hoạt.
+- Chi hội trưởng ghi nhận và giải đáp các ý kiến đóng góp.
+
+III. QUYẾT NGHỊ VÀ BIỂU QUYẾT
+Hội nghị nhất trí quyết nghị:
+- Thông qua báo cáo phong trào thi đua "Tuổi cao - Gương sáng" của Chi hội.
+- 100% đại biểu thống nhất thông qua kế hoạch chuẩn bị công tác mừng thọ và khám sức khỏe định kỳ.`;
+    }
+
+    if (mType === 'youth') {
+      return `I. THÀNH PHẦN THAM DỰ
+1. Đoàn viên trong Chi đoàn: Có mặt ....../...... đoàn viên.
+2. Đại diện Ban Thường vụ Đoàn phường: ...................................................
+3. Khách mời tham dự: Bí thư Chi bộ, Tổ trưởng Tổ dân phố.
+4. Chủ trì hội nghị: Đồng chí ${activeChairman.split('-')[0].trim()} - Bí thư Chi đoàn.
+5. Thư ký hội nghị: Đồng chí ${activeSecretary.split('-')[0].trim()} - Phân đoàn trưởng / Thư ký.
+
+II. NỘI DUNG VÀ DIỄN BIẾN CUỘC HỌP
+1. Đồng chí Chủ trì tuyên bố lý do, thông qua nội dung sinh hoạt Chi đoàn: ${meetingTitle || 'Họp sinh hoạt Chi đoàn thường kỳ'}.
+2. Báo cáo đánh giá hoạt động công tác Đoàn và phong trào thanh thiếu nhi thời gian qua:
+- Kết quả thực hiện chiến dịch tình nguyện hè, ngày "Chủ nhật xanh" dọn dẹp vệ sinh môi trường.
+- Tuyên truyền phòng chống tệ nạn xã hội và phong trào "Tuổi trẻ sáng tạo".
+3. Triển khai kế hoạch hoạt động của Chi đoàn thời gian tới:
+- Trọng tâm công tác: ${rawContent || 'Tổ chức các hoạt động tình nguyện vì cộng đồng, sinh hoạt hè cho thiếu nhi và bồi dưỡng thanh niên ưu tú giới thiệu kết nạp Đảng.'}
+4. Ý kiến đóng góp thảo luận của đoàn viên:
+- Ý kiến 1: Đoàn viên ................................. đề xuất tổ chức giải bóng đá mini hoặc hội trại giao lưu để tạo không khí sôi nổi thu hút đoàn viên tham gia.
+- Ý kiến 2: Đoàn viên ................................. kiến nghị đẩy mạnh tuyên truyền văn hóa giao thông và tổ chức lớp hướng dẫn kỹ năng phòng chống tai nạn thương tích cho thiếu nhi.
+- Đồng chí Bí thư Chi đoàn kết luận và tổng hợp các ý kiến đóng góp.
+
+III. QUYẾT NGHỊ VÀ BIỂU QUYẾT
+Chi đoàn thống nhất quyết nghị:
+- Thống nhất báo cáo đánh giá và kế hoạch hoạt động Đoàn thanh niên thời gian tới.
+- Nhất trí 100% thông qua các nội dung chỉ tiêu hoạt động tình nguyện đề ra.`;
+    }
+
     if (mType === 'party') {
       return `I. THÀNH PHẦN THAM DỰ
 1. Tổng số Đảng viên của Chi bộ: ...... đồng chí, trong đó:
@@ -505,10 +647,22 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       const match = meetings.find(m => m.id === minutes.meeting_id);
       if (match) mType = match.type || 'general';
     } else {
-      if (minutes.title.includes('Chi bộ') || minutes.content.includes('Chi bộ') || minutes.chairman.includes('Bí thư')) {
+      const titleLower = minutes.title.toLowerCase();
+      const contentLower = minutes.content.toLowerCase();
+      const chairmanLower = minutes.chairman.toLowerCase();
+      
+      if (titleLower.includes('chi bộ') || contentLower.includes('chi bộ') || chairmanLower.includes('bí thư chi bộ')) {
         mType = 'party';
-      } else if (minutes.title.includes('Mặt trận') || minutes.content.includes('Mặt trận') || minutes.chairman.includes('Trưởng ban CTMT') || minutes.chairman.includes('Mặt trận')) {
+      } else if (titleLower.includes('mặt trận') || contentLower.includes('mặt trận') || chairmanLower.includes('trưởng ban ctmt') || chairmanLower.includes('mặt trận')) {
         mType = 'front';
+      } else if (titleLower.includes('phụ nữ') || contentLower.includes('phụ nữ') || chairmanLower.includes('phụ nữ')) {
+        mType = 'women';
+      } else if (titleLower.includes('cựu chiến binh') || contentLower.includes('cựu chiến binh') || chairmanLower.includes('cựu chiến binh')) {
+        mType = 'veterans';
+      } else if (titleLower.includes('người cao tuổi') || contentLower.includes('người cao tuổi') || chairmanLower.includes('người cao tuổi')) {
+        mType = 'seniors';
+      } else if (titleLower.includes('chi đoàn') || contentLower.includes('chi đoàn') || chairmanLower.includes('bí thư chi đoàn') || titleLower.includes('thanh niên') || contentLower.includes('thanh niên')) {
+        mType = 'youth';
       }
     }
     setMeetingType(mType);
@@ -579,7 +733,15 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       return;
     }
 
-    const chairmanSigUrl = getSigUrlForNameOrRole(chairman, meetingType === 'party' ? 'bi_thu' : (meetingType === 'front' ? 'mat_tran' : 'to_truong'));
+    let fallbackRoleId = 'to_truong';
+    if (meetingType === 'party') fallbackRoleId = 'bi_thu';
+    else if (meetingType === 'front') fallbackRoleId = 'mat_tran';
+    else if (meetingType === 'women') fallbackRoleId = 'women';
+    else if (meetingType === 'veterans') fallbackRoleId = 'veterans';
+    else if (meetingType === 'seniors') fallbackRoleId = 'seniors';
+    else if (meetingType === 'youth') fallbackRoleId = 'youth';
+
+    const chairmanSigUrl = getSigUrlForNameOrRole(chairman, fallbackRoleId);
     const secretarySigUrl = getSigUrlForNameOrRole(secretary, 'thu_ky');
 
     const dateObj = new Date(date);
@@ -736,7 +898,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             <div class="content-p">
               1. <strong>Chủ trì cuộc họp:</strong> Ông/Bà ${chairman}<br/>
               2. <strong>Thư ký ghi biên bản:</strong> Ông/Bà ${secretary}<br/>
-              3. <strong>Đại diện tham dự:</strong> Đại diện của <strong>${attendance}</strong> hộ gia đình trên địa bàn Tổ dân phố tham gia đầy đủ.
+              3. <strong>Đại diện tham dự:</strong> Đại diện của <strong>${attendance}</strong> ${getAttendanceLabel(meetingType)} trên địa bàn Tổ dân phố tham gia đầy đủ.
             </div>
 
             <div class="section-title">II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
@@ -790,7 +952,15 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     const month = dateObj.getMonth() + 1;
     const year = dateObj.getFullYear();
 
-    const chairmanSigUrl = getSigUrlForNameOrRole(chairman, meetingType === 'party' ? 'bi_thu' : (meetingType === 'front' ? 'mat_tran' : 'to_truong'));
+    let fallbackRoleId = 'to_truong';
+    if (meetingType === 'party') fallbackRoleId = 'bi_thu';
+    else if (meetingType === 'front') fallbackRoleId = 'mat_tran';
+    else if (meetingType === 'women') fallbackRoleId = 'women';
+    else if (meetingType === 'veterans') fallbackRoleId = 'veterans';
+    else if (meetingType === 'seniors') fallbackRoleId = 'seniors';
+    else if (meetingType === 'youth') fallbackRoleId = 'youth';
+
+    const chairmanSigUrl = getSigUrlForNameOrRole(chairman, fallbackRoleId);
     const secretarySigUrl = getSigUrlForNameOrRole(secretary, 'thu_ky');
 
     const suffix = getDocNumberSuffix(meetingType);
@@ -883,7 +1053,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>2. Địa điểm:</strong> Tại ${location}</p>
             <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>3. Chủ trì:</strong> ${chairman}</p>
             <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>4. Thư ký:</strong> ${secretary}</p>
-            <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>5. Thành phần tham dự:</strong> Đại diện của ${attendance} hộ gia đình trên địa bàn Tổ dân phố tham gia đầy đủ.</p>
+            <p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;"><strong>5. Thành phần tham dự:</strong> Đại diện của ${attendance} ${getAttendanceLabel(meetingType)} trên địa bàn Tổ dân phố tham gia đầy đủ.</p>
             
             <div class="section-title" style="margin-top: 18pt;">II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
             ${formattedContent}
@@ -1087,6 +1257,92 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             </select>
           </div>
 
+          {/* Meeting Type Selection */}
+          <div className="form-group">
+            <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>Loại biên bản / Thành phần tổ chức</label>
+            <select
+              value={meetingType}
+              onChange={(e) => {
+                const newType = e.target.value;
+                setMeetingType(newType);
+                
+                // Cập nhật thông tin tiêu đề và chủ trì tương ứng nếu chưa lưu biên bản hoặc bắt đầu tạo mới
+                const defaults = getDefaultChairmanAndSecretary(newType);
+                setChairman(defaults.chairman);
+                setSecretary(defaults.secretary);
+                
+                if (newType === 'party') {
+                  setOrgLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+                  setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+                  setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
+                  setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
+                  setChairmanTitle('BÍ THƯ CHI BỘ');
+                } else if (newType === 'front') {
+                  const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+                  setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
+                  setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
+                  setDocTitle('BIÊN BẢN CUỘC HỌP');
+                  setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+                  setChairmanTitle('TRƯỞNG BAN');
+                } else if (newType === 'women') {
+                  const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+                  setOrgLevel1(`HỘI LHPN PHƯỜNG ${cleanWard}`);
+                  setOrgLevel2(`CHI HỘI PHỤ NỮ TDP ${tdpName.toUpperCase()}`);
+                  setDocTitle('BIÊN BẢN CUỘC HỌP');
+                  setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+                  setChairmanTitle('CHI HỘI TRƯỞNG');
+                } else if (newType === 'veterans') {
+                  const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+                  setOrgLevel1(`HỘI CỰU CHIẾN BINH PHƯỜNG ${cleanWard}`);
+                  setOrgLevel2(`CHI HỘI CỰU CHIẾN BINH TDP ${tdpName.toUpperCase()}`);
+                  setDocTitle('BIÊN BẢN CUỘC HỌP');
+                  setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+                  setChairmanTitle('CHI HỘI TRƯỞNG');
+                } else if (newType === 'seniors') {
+                  const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+                  setOrgLevel1(`HỘI NGƯỜI CAO TUỔI PHƯỜNG ${cleanWard}`);
+                  setOrgLevel2(`CHI HỘI NGƯỜI CAO TUỔI TDP ${tdpName.toUpperCase()}`);
+                  setDocTitle('BIÊN BẢN CUỘC HỌP');
+                  setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+                  setChairmanTitle('CHI HỘI TRƯỞNG');
+                } else if (newType === 'youth') {
+                  const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+                  setOrgLevel1(`ĐOÀN TNCS HỒ CHÍ MINH PHƯỜNG ${cleanWard}`);
+                  setOrgLevel2(`CHI ĐOÀN TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+                  setDocTitle('BIÊN BẢN CUỘC HỌP');
+                  setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+                  setChairmanTitle('BÍ THƯ CHI ĐOÀN');
+                } else {
+                  setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+                  setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+                  setDocTitle('BIÊN BẢN CUỘC HỌP');
+                  setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+                  setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
+                }
+                
+                // Đồng thời reset lại nội dung theo template mẫu mới nếu nội dung trống hoặc chưa chỉnh sửa nhiều
+                if (!content || content.trim() === '' || content.startsWith('I. THÀNH PHẦN THAM DỰ')) {
+                  setContent(applyDefaultContentCustom(title, '', newType, defaults.chairman, defaults.secretary));
+                }
+              }}
+              style={{
+                padding: '10px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                outline: 'none',
+                width: '100%'
+              }}
+            >
+              <option value="general">Tổ dân phố (Họp tự quản dân cư)</option>
+              <option value="party">Chi bộ Đảng</option>
+              <option value="front">Ban công tác Mặt trận</option>
+              <option value="women">Chi hội Phụ nữ</option>
+              <option value="veterans">Chi hội Cựu chiến binh</option>
+              <option value="seniors">Chi hội Người cao tuổi</option>
+              <option value="youth">Chi đoàn Thanh niên</option>
+            </select>
+          </div>
+
           <div className="form-group">
             <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>Vấn đề / Tiêu đề biên bản cuộc họp</label>
             <input
@@ -1163,8 +1419,16 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               {meetingType === 'party' 
                 ? 'Số lượng Đảng viên tham gia' 
                 : meetingType === 'front' 
-                  ? 'Số lượng thành viên tham gia' 
-                  : 'Số lượng hộ gia đình tham gia'}
+                  ? 'Số lượng thành viên tham gia'
+                  : meetingType === 'women'
+                    ? 'Số lượng hội viên Phụ nữ tham gia'
+                    : meetingType === 'veterans'
+                      ? 'Số lượng hội viên Cựu chiến binh tham gia'
+                      : meetingType === 'seniors'
+                        ? 'Số lượng hội viên Người cao tuổi tham gia'
+                        : meetingType === 'youth'
+                          ? 'Số lượng đoàn viên tham gia'
+                          : 'Số lượng hộ gia đình tham gia'}
             </label>
             <input
               type="number"
@@ -1372,7 +1636,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             <div style={{ fontSize: '10.5pt', paddingLeft: '8px', marginBottom: '12px', textAlign: 'justify' }}>
               1. Chủ trì cuộc họp: Ông/Bà {chairman}<br/>
               2. Thư ký ghi biên bản: Ông/Bà {secretary}<br/>
-              3. Đại diện tham dự: Đại diện của <strong>{attendance}</strong> hộ gia đình.
+              3. Đại diện tham dự: Đại diện của <strong>{attendance}</strong> {getAttendanceLabel(meetingType)}.
             </div>
 
             {/* Part II */}

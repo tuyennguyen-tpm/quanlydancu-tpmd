@@ -319,6 +319,10 @@ const App = () => {
     { id: 'to_pho',   title: 'Tổ phó dân phố',   name: '', signatureUrl: '' },
     { id: 'mat_tran', title: 'Trưởng ban Mặt trận', name: '', signatureUrl: '' },
     { id: 'thu_ky',   title: 'Thư ký',               name: '', signatureUrl: '' },
+    { id: 'women',    title: 'Chi hội trưởng Phụ nữ', name: '', signatureUrl: '' },
+    { id: 'veterans', title: 'Chi hội trưởng Cựu chiến binh', name: '', signatureUrl: '' },
+    { id: 'seniors',  title: 'Chi hội trưởng Người cao tuổi', name: '', signatureUrl: '' },
+    { id: 'youth',    title: 'Bí thư Chi đoàn',       name: '', signatureUrl: '' },
   ];
   const [officialSignatures, setOfficialSignatures] = useState<{ id: string; title: string; name: string; signatureUrl: string }[]>(() => {
     const saved = localStorage.getItem('official_signatures');
@@ -1277,9 +1281,11 @@ const App = () => {
       case 'households':
         return <Households />;
       case 'residents':
+        return <Residents viewMode="all" />;
       case 'residents-temp':
+        return <Residents viewMode="temp" />;
       case 'residents-changes':
-        return <Residents />;
+        return <Residents viewMode="changes" />;
       case 'policy':
         return <Policies />;
       case 'security':
