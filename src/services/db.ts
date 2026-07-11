@@ -414,19 +414,24 @@ export const seedTenantData = async (userId: string): Promise<void> => {
 export const checkAndSeedUser = async (userId: string): Promise<void> => {
   if (!supabase) return;
   try {
-    // 1. Ensure a default ward exists
+    // 1. Ensure user has a profile & retrieve their ward_id
     let defaultWardId = '';
-    const { data: wards, error: wardsError } = await supabase.from('wards').select('id').limit(1);
-    if (wards && wards.length > 0) {
-      defaultWardId = wards[0].id;
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    
+    if (profile && profile.ward_id) {
+      defaultWardId = profile.ward_id;
     } else {
-      // Create default ward
-      const { data: newWard } = await supabase.from('wards').insert({ name: 'Quảng Giao' }).select().single();
-      if (newWard) defaultWardId = newWard.id;
+      // Ensure a default ward exists
+      const { data: wards } = await supabase.from('wards').select('id').limit(1);
+      if (wards && wards.length > 0) {
+        defaultWardId = wards[0].id;
+      } else {
+        // Create default ward
+        const { data: newWard } = await supabase.from('wards').insert({ name: 'Quảng Giao' }).select().single();
+        if (newWard) defaultWardId = newWard.id;
+      }
     }
 
-    // 2. Ensure user has a profile
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (!profile && defaultWardId) {
       // Create profile
       await supabase.from('profiles').insert({
@@ -648,11 +653,11 @@ export const db = {
     };
     if (supabase) {
       const uId = await getSessionUserId();
-      const payload = { 
+      const payload = enrichPayload({ 
         ...fullHousehold, 
         user_id: uId,
         head_of_household_id: fullHousehold.head_of_household_id || null
-      };
+      });
       const { data, error } = await supabase.from('households').upsert(payload).select().single();
       if (error) {
         handleDbError('lưu hộ dân', error);
@@ -700,7 +705,7 @@ export const db = {
     
     if (supabase) {
       const uId = await getSessionUserId();
-      const payload = fullHouseholds.map(h => ({
+      const payload = fullHouseholds.map(h => enrichPayload({
         ...h,
         user_id: uId,
         head_of_household_id: h.head_of_household_id || null
@@ -795,11 +800,11 @@ export const db = {
     };
     if (supabase) {
       const uId = await getSessionUserId();
-      const { is_senior, ...dbPayload } = { 
+      const { is_senior, ...dbPayload } = enrichPayload({ 
         ...fullResident, 
         user_id: uId,
         household_id: fullResident.household_id || null
-      };
+      });
       const { data, error } = await supabase.from('residents').upsert(dbPayload).select().single();
       if (error) {
         handleDbError('lưu nhân khẩu', error);
@@ -855,11 +860,11 @@ export const db = {
       const uId = await getSessionUserId();
       const payload = fullResidents.map(r => {
         const { is_senior, ...rest } = r;
-        return {
+        return enrichPayload({
           ...rest,
           user_id: uId,
           household_id: rest.household_id || null
-        };
+        });
       });
       
       const chunkSize = 100;
@@ -930,7 +935,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...fullRecord, user_id: uId };
+        const payload = enrichPayload({ ...fullRecord, user_id: uId });
         const { data, error } = await supabase.from('financial_records').upsert(payload).select().single();
         if (error) handleDbError('lưu bản ghi thu chi', error);
         if (!error && data) return data;
@@ -990,7 +995,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...fullComplaint, user_id: uId };
+        const payload = enrichPayload({ ...fullComplaint, user_id: uId });
         const { data, error } = await supabase.from('complaints').upsert(payload).select().single();
         if (error) handleDbError('gửi phản ánh', error);
         if (!error && data) return data;
@@ -1069,12 +1074,12 @@ export const db = {
         // Gửi trực tiếp cột type và vẫn lưu group_id mã hóa để tương thích ngược
         const meetingType = fullMeeting.type || 'general';
         const encodedGroupId = (fullMeeting.group_id || 'NAM_SAM_SON_01') + '|' + meetingType;
-        const payload = { 
+        const payload = enrichPayload({ 
           ...fullMeeting, 
           group_id: encodedGroupId, 
           type: meetingType, 
           user_id: uId 
-        };
+        });
         const { data, error } = await supabase.from('meetings').upsert(payload).select().single();
         if (error) handleDbError('lưu thông tin cuộc họp', error);
         if (!error && data) return { ...data, type: meetingType || 'general' } as Meeting;
@@ -1133,7 +1138,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...doc, user_id: uId };
+        const payload = enrichPayload({ ...doc, user_id: uId });
         const { data, error } = await supabase.from('documents').upsert(payload).select().single();
         if (error) handleDbError('lưu tài liệu', error);
         if (!error && data) return data;
@@ -1174,7 +1179,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...log, user_id: uId };
+        const payload = enrichPayload({ ...log, user_id: uId });
         const { data, error } = await supabase.from('security_logs').upsert(payload).select().single();
         if (error) handleDbError('lưu nhật ký an ninh', error);
         if (!error && data) return data;
@@ -1233,7 +1238,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...log, user_id: uId };
+        const payload = enrichPayload({ ...log, user_id: uId });
         const { data, error } = await supabase.from('environment_logs').upsert(payload).select().single();
         if (error) handleDbError('lưu nhật ký môi trường', error);
         if (!error && data) return data;
@@ -1301,7 +1306,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const dbPayload = {
+        const dbPayload = enrichPayload({
           id: act.id,
           title: act.title,
           description: act.desc,
@@ -1309,7 +1314,7 @@ export const db = {
           date: act.date,
           created_at: act.created_at || new Date().toISOString(),
           user_id: uId
-        };
+        });
         const { data, error } = await supabase.from('policy_activities').upsert(dbPayload).select().single();
         if (error) handleDbError('lưu chương trình chính sách', error);
         if (!error && data) {
@@ -1455,7 +1460,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...minutes, user_id: uId };
+        const payload = enrichPayload({ ...minutes, user_id: uId });
         const { data, error } = await supabase.from('meeting_minutes').upsert(payload).select().single();
         if (error) handleDbError('lưu biên bản cuộc họp', error);
         if (!error && data) return data;
@@ -1515,7 +1520,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...fullFund, user_id: uId };
+        const payload = enrichPayload({ ...fullFund, user_id: uId });
         const { data, error } = await supabase.from('household_funds').upsert(payload).select().single();
         if (error) handleDbError('lưu biên lai đóng quỹ hộ dân', error);
         if (!error && data) return data;
@@ -1654,7 +1659,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = { ...fullFund, user_id: uId };
+        const payload = enrichPayload({ ...fullFund, user_id: uId });
         const { data, error } = await supabase
           .from('ward_funds')
           .upsert(payload)
@@ -1680,7 +1685,7 @@ export const db = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payload = funds.map(f => ({ ...f, user_id: uId }));
+        const payload = funds.map(f => enrichPayload({ ...f, user_id: uId }));
         const { error } = await supabase
           .from('ward_funds')
           .upsert(payload);
