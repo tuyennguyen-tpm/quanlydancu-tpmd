@@ -217,20 +217,37 @@ export const getSessionUserId = async (): Promise<string | null> => {
   return getActualSessionUserId();
 };
 
-const getTenantFilter = () => {
+const getTenantFilter = (): { field: 'user_id' | 'ward_id'; value: string } | null => {
   const isGuest = localStorage.getItem('guest_mode') === 'true';
   const tenantId = localStorage.getItem('guest_tenant_id');
   if (isGuest && tenantId) {
-    return tenantId;
+    return { field: 'user_id', value: tenantId };
   }
+
+  const userRole = localStorage.getItem('user_role');
   const selectedTdpId = localStorage.getItem('selected_tdp_user_id');
-  if (selectedTdpId) {
-    if (selectedTdpId === 'all') return null;
-    return selectedTdpId;
+
+  // Ward Admin: lọc theo ward_id khi chọn "Tất cả", hoặc user_id khi chọn Tổ cụ thể
+  if (userRole === 'ward_admin' || userRole === 'super_admin') {
+    if (selectedTdpId && selectedTdpId !== 'all') {
+      // Chọn Tổ cụ thể → lọc theo user_id của Tổ đó
+      return { field: 'user_id', value: selectedTdpId };
+    }
+    // Chọn "Tất cả" → lọc theo ward_id của Phường để tránh lẫn dữ liệu Phường khác
+    const wardId = localStorage.getItem('user_ward_id');
+    if (wardId) {
+      return { field: 'ward_id', value: wardId };
+    }
+    return null;
+  }
+
+  // TDP Leader hoặc các vai trò khác: lọc theo user_id của chính họ
+  if (selectedTdpId && selectedTdpId !== 'all') {
+    return { field: 'user_id', value: selectedTdpId };
   }
   const currentUserId = localStorage.getItem('supabase_user_id');
   if (currentUserId) {
-    return currentUserId;
+    return { field: 'user_id', value: currentUserId };
   }
   return null;
 };
@@ -562,9 +579,9 @@ export const db = {
         
         while (hasMore) {
           let query = supabase.from('households').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
-          const tenantId = getTenantFilter();
-          if (tenantId) {
-            query = query.eq('user_id', tenantId);
+          const tenantFilter = getTenantFilter();
+          if (tenantFilter) {
+            query = query.eq(tenantFilter.field, tenantFilter.value);
           }
           const { data, error } = await query;
           if (error) {
@@ -696,9 +713,9 @@ export const db = {
         
         while (hasMore) {
           let query = supabase.from('residents').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
-          const tenantId = getTenantFilter();
-          if (tenantId) {
-            query = query.eq('user_id', tenantId);
+          const tenantFilter = getTenantFilter();
+          if (tenantFilter) {
+            query = query.eq(tenantFilter.field, tenantFilter.value);
           }
           const { data, error } = await query;
           if (error) {
@@ -863,9 +880,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('financial_records').select('*');
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách thu chi', error);
@@ -923,9 +940,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('complaints').select('*');
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách phản ánh', error);
@@ -943,8 +960,7 @@ export const db = {
     };
     if (supabase) {
       try {
-        const tenantId = getTenantFilter();
-        const uId = tenantId || (await getSessionUserId());
+        const uId = await getSessionUserId();
         const payload = { ...fullComplaint, user_id: uId };
         const { data, error } = await supabase.from('complaints').upsert(payload).select().single();
         if (error) handleDbError('gửi phản ánh', error);
@@ -987,9 +1003,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('meetings').select('*');
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách cuộc họp', error);
@@ -1070,12 +1086,12 @@ export const db = {
         // Không dùng .neq('id', 'CONFIG_PIN') vì cột id là UUID, không so sánh được với chuỗi text
         // Thay vào đó lọc bằng JavaScript sau khi nhận dữ liệu
         let query = supabase.from('documents').select('*').order('uploaded_at', { ascending: false });
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
-        if (error) handleDbError('t\u1ea3i danh s\u00e1ch t\u00e0i li\u1ec7u', error);
+        if (error) handleDbError('tải danh sách tài liệu', error);
         if (!error && data) return data.filter((d: any) => d.id !== 'CONFIG_PIN');
       } catch (e) {
         console.error('Supabase getDocuments error, falling back to local storage', e);
@@ -1112,9 +1128,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('security_logs').select('*').order('date', { ascending: false });
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải nhật ký an ninh', error);
@@ -1171,9 +1187,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('environment_logs').select('*').order('last_cleaned', { ascending: false });
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải nhật ký môi trường', error);
@@ -1230,9 +1246,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('policy_activities').select('*').order('date', { ascending: false });
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải chương trình chính sách', error);
@@ -1393,9 +1409,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('meeting_minutes').select('*').order('created_at', { ascending: false });
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách biên bản cuộc họp', error);
@@ -1449,9 +1465,9 @@ export const db = {
     if (supabase) {
       try {
         let query = supabase.from('household_funds').select('*');
-        const tenantId = getTenantFilter();
-        if (tenantId) {
-          query = query.eq('user_id', tenantId);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
         }
         const { data, error } = await query;
         if (error) handleDbError('tải danh sách đóng quỹ hộ dân', error);
