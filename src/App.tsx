@@ -635,7 +635,46 @@ const App = () => {
         window.dispatchEvent(new CustomEvent('group-id-changed'));
         window.dispatchEvent(new CustomEvent('fund-targets-changed'));
       } else if (!error && (!data || data.length === 0)) {
-        resetToDefaultConfig();
+        if (!adminUid) {
+          resetToDefaultConfig();
+        } else {
+          // Keep welcome_setup_completed as 'true' so onboarding doesn't pop up
+          localStorage.setItem('welcome_setup_completed', 'true');
+          
+          // Clear TDP configuration keys in localStorage
+          localStorage.removeItem('tdp_name');
+          localStorage.removeItem('leader_name');
+          localStorage.removeItem('leader_phone');
+          localStorage.removeItem('group_id');
+          localStorage.removeItem('logo_url');
+          localStorage.removeItem('support_name');
+          localStorage.removeItem('support_phone');
+          
+          // Set UI states to blank/default
+          setTdpName('Tổ dân phố mới');
+          setLeaderName('Chưa thiết lập');
+          setLeaderPhone('');
+          setGroupId('');
+          setLogoUrl('');
+          setSupportName('');
+          setSupportPhone('');
+          
+          // Sync settings form inputs
+          setTdpNameInput('');
+          setWardNameInput(localStorage.getItem('ward_name') || 'Phường');
+          setLeaderNameInput('');
+          setLeaderPhoneInput('');
+          setGroupIdInput('');
+          setLogoUrlInput('');
+          setSupportNameInput('');
+          setSupportPhoneInput('');
+          
+          window.dispatchEvent(new CustomEvent('tdp-name-changed'));
+          window.dispatchEvent(new CustomEvent('leader-name-changed'));
+          window.dispatchEvent(new CustomEvent('leader-phone-changed'));
+          window.dispatchEvent(new CustomEvent('group-id-changed'));
+          window.dispatchEvent(new CustomEvent('fund-targets-changed'));
+        }
       }
     } catch (e) {
       console.error('Failed to load system config from Supabase:', e);
