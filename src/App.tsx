@@ -2864,8 +2864,6 @@ const App = () => {
                 </div>
               </div>
 
-              {/* Section 1c moved to Tab 2 */}
-
               {/* ─── Phần 1d: Đổi mật khẩu tài khoản (Chỉ hiển thị khi đã đăng nhập Supabase) ─── */}
               {session && !isOfflineMode && !isGuestMode && (
                 <div style={{
@@ -2934,11 +2932,7 @@ const App = () => {
                   </button>
                 </div>
               )}
-                </>
-              )}
 
-              {settingsTab === 'keys' && (
-                <>
                   {/* ─── Phần 1c: Bảo mật truy cập công cộng ─── */}
                   {userRole === 'admin' && !(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
                     <div style={{
@@ -3088,7 +3082,11 @@ const App = () => {
                       )}
                     </div>
                   )}
+                </>
+              )}
 
+              {settingsTab === 'keys' && (
+                <>
                   {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Hiển thị cho Ward Admin và Super Admin) ─── */}
               {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
                 <div style={{
