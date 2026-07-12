@@ -13,9 +13,10 @@ import {
   FileSpreadsheet,
   RefreshCw,
   Coins,
-  Printer
+  Printer,
+  Users
 } from 'lucide-react';
-import { db, generateUUID } from '../services/db';
+import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { WardFund, Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
@@ -459,7 +460,142 @@ const WardFunds = () => {
     }
   };
 
-  // Excel Bulk Import Logic (Dynamic columns matching)
+  // Auto-initialize Ward Funds from Resident List based on age & policy exemptions
+  const handleAutoInitFromResidents = async () => {
+    if (isGuest) {
+      showToast('Bạn không có quyền khởi tạo dữ liệu đóng quỹ!', 'warning');
+      return;
+    }
+
+    if (window.confirm(`Bạn có chắc chắn muốn TỰ ĐỘNG KHỞI TẠO danh sách thu quỹ Phường năm ${selectedYear} từ dữ liệu Nhân khẩu không?\n` +
+      `Lưu ý: Hệ thống sẽ tự động lọc độ tuổi lao động, loại trừ người cao tuổi, trẻ em, hộ nghèo, cận nghèo, gia đình chính sách và người hưởng lương hưu theo quy định của pháp luật.`)) {
+      
+      setIsLoading(true);
+      try {
+        // 1. Lấy danh sách nhân khẩu và hộ khẩu
+        const resList = await db.getResidents();
+        const hhList = await db.getHouseholds();
+
+        // 2. Lấy danh sách chỉ tiêu quỹ hiện tại
+        const activeFundsList = (db as any).getWardFundList();
+        if (activeFundsList.length === 0) {
+          showToast('Vui lòng cấu hình danh mục Quỹ Phường trước khi khởi tạo!', 'warning');
+          setIsLoading(false);
+          return;
+        }
+
+        const batchFunds: WardFund[] = [];
+        let successCount = 0;
+
+        // Định nghĩa các từ khóa nghề nghiệp/ghi chú của người về hưu hoặc hưởng lương hưu
+        const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu'];
+
+        resList.forEach(r => {
+          // A. Bỏ qua nếu nhân khẩu đã mất
+          if (r.status === 'deceased') return;
+
+          // B. Lấy thông tin hộ khẩu
+          const hh = hhList.find(h => h.id === r.household_id);
+          const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
+
+          // C. Tính tuổi của nhân khẩu trong năm selectedYear
+          if (!r.dob) return;
+          const dobYear = new Date(r.dob).getFullYear();
+          if (isNaN(dobYear)) return;
+          const age = selectedYear - dobYear;
+
+          // D. Tính toán mức đóng góp của từng quỹ dựa trên quy định pháp luật
+          const contributions: Record<string, any> = {};
+          let shouldAdd = false;
+
+          activeFundsList.forEach(fund => {
+            const isPCTT = fund.name.toLowerCase().includes('thiên tai');
+            const isDOdn = fund.name.toLowerCase().includes('đền ơn đáp nghĩa') || fund.name.toLowerCase().includes('đền ơn');
+            
+            // Mặc định miễn đóng
+            let expected = 0;
+
+            // Kiểm tra miễn đóng theo luật Việt Nam:
+            // 1. Hộ nghèo, cận nghèo, gia đình chính sách được miễn toàn bộ
+            if (isPolicyHousehold) {
+              expected = 0;
+            } else {
+              // 2. Kiểm tra nghề nghiệp/ghi chú về hưu
+              const occLower = (r.occupation || '').toLowerCase();
+              const notesLower = (r.notes || '').toLowerCase();
+              const isPensioner = pensionKeywords.some(key => occLower.includes(key) || notesLower.includes(key));
+
+              if (isPensioner) {
+                // Người hưởng lương hưu được miễn Quỹ Thiên tai và Đền ơn đáp nghĩa
+                expected = 0;
+              } else {
+                if (isPCTT) {
+                  // Quỹ Thiên tai: Nam 18-60, Nữ 18-55 trong độ tuổi lao động
+                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 60;
+                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 55;
+                  if (isMaleInAge || isFemaleInAge) {
+                    expected = fund.target;
+                    shouldAdd = true;
+                  }
+                } else if (isDOdn) {
+                  // Quỹ Đền ơn đáp nghĩa: Người trong độ tuổi lao động Nam 18-60, Nữ 18-55
+                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 60;
+                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 55;
+                  if (isMaleInAge || isFemaleInAge) {
+                    expected = fund.target;
+                    shouldAdd = true;
+                  }
+                } else {
+                  // Các quỹ khác: Thu theo đầu người hoặc đầu hộ bình thường (chỉ áp dụng cho người lớn >= 18 tuổi)
+                  if (age >= 18) {
+                    expected = fund.target;
+                    shouldAdd = true;
+                  }
+                }
+              }
+            }
+
+            contributions[fund.name] = {
+              expected,
+              actual: 0
+            };
+          });
+
+          // Nếu có ít nhất một quỹ phải đóng > 0, đưa vào danh sách
+          const hasExpectedValue = Object.values(contributions).some((c: any) => c.expected > 0);
+          if (hasExpectedValue) {
+            batchFunds.push({
+              id: generateUUID(),
+              year: selectedYear,
+              full_name: r.full_name.trim(),
+              dob: r.dob ? r.dob.slice(0, 4) : undefined, // chỉ lấy năm sinh
+              address: hh ? hh.address : undefined,
+              user_id: r.user_id, // Gán trực tiếp cho TDP quản lý nhân khẩu này
+              contributions
+            });
+            successCount++;
+          }
+        });
+
+        if (batchFunds.length === 0) {
+          showToast('Không có nhân khẩu nào đủ điều kiện đóng quỹ Phường theo quy định!', 'info');
+        } else {
+          // Lưu hàng loạt vào bảng ward_funds
+          await db.saveWardFundsBatch(batchFunds);
+          showToast(`Khởi tạo thành công! Đã thêm ${successCount} nhân khẩu thuộc diện phải đóng quỹ năm ${selectedYear}.`, 'success');
+          loadData();
+          window.dispatchEvent(new CustomEvent('db-changed'));
+        }
+      } catch (err) {
+        showToast('Lỗi trong quá trình khởi tạo dữ liệu!', 'danger');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // Excel Bulk Import Logic (Dynamic columns matching with TDP distribution)
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isGuest) {
       showToast('Khách không có quyền sửa đổi dữ liệu đóng quỹ!', 'warning');
@@ -505,11 +641,22 @@ const WardFunds = () => {
           });
         }
 
+        // Lấy thông tin các Tổ dân phố để phân phối dữ liệu
+        let tdpProfiles: { id: string; tdp_name: string }[] = [];
+        if (supabase) {
+          try {
+            const { data } = await supabase.from('profiles').select('id, tdp_name').eq('role', 'tdp_leader');
+            tdpProfiles = data || [];
+          } catch (err) {
+            console.error('Lỗi tải danh sách TDP để đối chiếu:', err);
+          }
+        }
+
         const batchFunds: WardFund[] = [];
         let successCount = 0;
 
         worksheet.eachRow((row, rowNum) => {
-          // Bỏ qua dòng tiêu đề và header
+          // Bỏ quan dòng tiêu đề và header
           if (rowNum < 4) return;
 
           const name = row.getCell(2).value?.toString() || '';
@@ -518,6 +665,37 @@ const WardFunds = () => {
 
           // Bỏ qua dòng trống không có tên
           if (!name.trim()) return;
+
+          // Phân loại dòng này thuộc về Tổ dân phố nào
+          let matchedTdpId: string | undefined = undefined;
+          if (tdpProfiles.length > 0) {
+            // 1. Ưu tiên đối chiếu với danh sách nhân khẩu đã tải để tìm TDP
+            const matchedResident = residents.find(r => 
+              r.full_name.trim().toLowerCase() === name.trim().toLowerCase() &&
+              (dobVal ? (r.dob && r.dob.includes(dobVal)) : true)
+            );
+            if (matchedResident && matchedResident.user_id) {
+              matchedTdpId = matchedResident.user_id;
+            } else {
+              // 2. Nếu không khớp nhân khẩu, đối chiếu từ khóa địa chỉ với tên của TDP
+              const addrLower = addr.toLowerCase();
+              const matched = tdpProfiles.find(p => {
+                const nameLower = (p.tdp_name || '').toLowerCase();
+                if (nameLower && addrLower.includes(nameLower)) return true;
+                const numMatch = nameLower.match(/\d+/);
+                if (numMatch) {
+                  const num = numMatch[0];
+                  if (addrLower.includes(`tổ ${num}`) || addrLower.includes(`tổ: ${num}`) || addrLower.includes(`tổ tự quản ${num}`)) {
+                    return true;
+                  }
+                }
+                return false;
+              });
+              if (matched) {
+                matchedTdpId = matched.id;
+              }
+            }
+          }
 
           // Parse quỹ động
           const contributions: Record<string, any> = {};
@@ -542,6 +720,7 @@ const WardFunds = () => {
             full_name: name.trim(),
             dob: dobVal ? dobVal.trim() : undefined,
             address: addr ? addr.trim() : undefined,
+            user_id: matchedTdpId, // Tự động gán cho TDP tương ứng
             contributions
           };
           batchFunds.push(record);
@@ -552,7 +731,7 @@ const WardFunds = () => {
           showToast('Không đọc được dòng dữ liệu hợp lệ nào từ file Excel!', 'warning');
         } else {
           await db.saveWardFundsBatch(batchFunds);
-          showToast(`Nhập dữ liệu thành công! Đã thêm ${successCount} nhân khẩu phải đóng quỹ Phường.`, 'success');
+          showToast(`Nhập dữ liệu thành công! Đã thêm và phân bổ ${successCount} nhân khẩu phải đóng quỹ về các TDP.`, 'success');
           loadData();
           window.dispatchEvent(new CustomEvent('db-changed'));
         }
@@ -1257,6 +1436,29 @@ const WardFunds = () => {
               }}
             >
               <Download size={16} /> Tải file mẫu
+            </button>
+          )}
+
+          {/* Khởi tạo tự động từ Nhân khẩu */}
+          {!isGuest && (
+            <button
+              onClick={handleAutoInitFromResidents}
+              className="btn btn-primary"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#fef3c7',
+                border: '1.5px solid #fde68a',
+                color: '#d97706',
+                fontWeight: '700',
+                fontSize: '0.85rem'
+              }}
+              title="Khởi tạo tự động danh sách thu theo độ tuổi & diện miễn giảm quy định pháp luật"
+            >
+              <Users size={16} /> Khởi tạo từ Nhân khẩu
             </button>
           )}
 

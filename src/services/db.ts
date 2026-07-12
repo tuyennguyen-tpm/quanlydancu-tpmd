@@ -1707,10 +1707,12 @@ export const db = {
   getWardFunds: async (year: number): Promise<WardFund[]> => {
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from('ward_funds')
-          .select('*')
-          .eq('year', year)
+        let query = supabase.from('ward_funds').select('*').eq('year', year);
+        const tenantFilter = getTenantFilter();
+        if (tenantFilter) {
+          query = query.eq(tenantFilter.field, tenantFilter.value);
+        }
+        const { data, error } = await query
           .order('created_at', { ascending: true })
           .order('id', { ascending: true });
         if (error) throw error;
