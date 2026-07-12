@@ -9,12 +9,15 @@ import {
   Users, 
   Plus, 
   Phone,
-  Search
+  Search,
+  FileDown,
+  Printer
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import type { SecurityLog } from '../services/db';
 import type { Resident } from '../types';
 import { showToast } from '../utils/toast';
+import ExcelJS from 'exceljs';
 
 const Security = () => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
@@ -143,6 +146,191 @@ const Security = () => {
       } catch (err) {
         showToast('Lỗi khi xóa đội viên!', 'danger');
       }
+    }
+  };
+
+  // Printer function for Militia
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+    const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+
+    let rowsHtml = '';
+    filteredMilitiaMembers.forEach((m, idx) => {
+      const dobFormatted = m.dob ? m.dob.split('-').reverse().join('/') : '—';
+      const age = m.dob ? `${new Date().getFullYear() - parseInt(m.dob.substring(0, 4))}` : '—';
+      rowsHtml += `
+        <tr>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${idx + 1}</td>
+          <td style="padding: 8px; border: 1px solid #000; font-weight: bold; white-space: nowrap;">${m.full_name}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${dobFormatted}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${age}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${m.phone || ''}</td>
+          <td style="padding: 8px; border: 1px solid #000;">${m.permanent_address || ''}</td>
+        </tr>
+      `;
+    });
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>DANH SÁCH LỰC LƯỢNG DÂN QUÂN TỰ VỆ</title>
+          <style>
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin-top: 20mm;
+                margin-bottom: 20mm;
+                margin-left: 20mm;
+                margin-right: 15mm;
+              }
+              body { margin: 0; padding: 0; }
+            }
+            body { font-family: "Times New Roman", Times, serif; font-size: 12pt; padding: 20px; color: #000; }
+            h2 { text-transform: uppercase; color: #000; margin-bottom: 5px; font-size: 15pt; font-weight: bold; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11pt; border: 1.5px solid #000; }
+            th, td { border: 1px solid #000 !important; padding: 6px 8px; text-align: left; }
+            th { font-weight: bold; text-align: center; background-color: #f3f4f6; }
+          </style>
+        </head>
+        <body>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+              <h3 style="margin: 0; text-transform: uppercase; font-size: 12pt;">UBND ${(wardName.toLowerCase().startsWith('phường') ? wardName : 'Phường ' + wardName).toUpperCase()}</h3>
+              <h4 style="margin: 5px 0 0 0; text-decoration: underline; font-size: 12pt;">TỔ DÂN PHỐ ${tdpName.toUpperCase()}</h4>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0; font-style: italic; font-size: 11pt;">Ngày in: ${new Date().toLocaleDateString('vi-VN')}</p>
+            </div>
+          </div>
+          
+          <h2 style="margin-top: 30px; text-align: center;">DANH SÁCH LỰC LƯỢNG DÂN QUÂN TỰ VỆ / TỰ QUẢN</h2>
+          <p style="text-align: center; font-style: italic; margin-top: 5px; margin-bottom: 25px;">Đơn vị: Tổ dân phố ${tdpName}</p>
+          
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%">STT</th>
+                <th style="width: 25%">Họ và tên</th>
+                <th style="width: 15%">Ngày sinh</th>
+                <th style="width: 10%">Tuổi</th>
+                <th style="width: 18%">Điện thoại</th>
+                <th style="width: 27%">Địa chỉ thường trú</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 40px; font-size: 12pt; page-break-inside: avoid;">
+            <div style="width: 40%; text-align: center;">
+              <p style="font-weight: bold; margin-bottom: 60px;">CHỈ HUY TRƯỞNG QUÂN SỰ</p>
+              <p style="font-style: italic; color: #555;">(Ký, ghi rõ họ tên)</p>
+            </div>
+            <div style="width: 45%; text-align: center;">
+              <p style="font-weight: bold; margin-bottom: 60px;">TỔ TRƯỞNG TỔ DÂN PHỐ</p>
+              <p style="font-style: italic; color: #555;">(Ký, ghi rõ họ tên)</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
+  // Excel export function for Militia
+  const handleExportExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('LucLuongDanQuan');
+
+      const headers = ['STT', 'Họ và tên', 'Ngày sinh', 'Tuổi', 'Điện thoại', 'Địa chỉ thường trú'];
+      const headerRow = worksheet.addRow(headers);
+      headerRow.height = 26;
+      
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1E3A8A' } // Blue for Security
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' },
+          name: 'Segoe UI',
+          size: 11
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center'
+        };
+      });
+
+      filteredMilitiaMembers.forEach((m, idx) => {
+        const dob = m.dob ? m.dob.split('-').reverse().join('/') : '—';
+        const age = m.dob ? `${new Date().getFullYear() - parseInt(m.dob.substring(0, 4))}` : '—';
+
+        const addedRow = worksheet.addRow([
+          idx + 1,
+          m.full_name,
+          dob,
+          age,
+          m.phone || '',
+          m.permanent_address || ''
+        ]);
+        
+        addedRow.height = 24;
+        addedRow.eachCell((cell, colNumber) => {
+          cell.font = { name: 'Segoe UI', size: 11 };
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: colNumber === 1 || colNumber === 3 || colNumber === 4 || colNumber === 5 ? 'center' : 'left'
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+        });
+      });
+
+      worksheet.columns.forEach((column, colIdx) => {
+        if (colIdx === 0) {
+          column.width = 6;
+        } else {
+          let maxLen = 0;
+          column.values?.forEach(v => {
+            const valStr = v ? v.toString() : '';
+            if (valStr.length > maxLen) {
+              maxLen = valStr.length;
+            }
+          });
+          column.width = Math.min(Math.max(maxLen + 4, 12), 40);
+        }
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `danh_sach_dan_quan_tu_ve_${new Date().toISOString().slice(0,10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('Export Excel error', e);
     }
   };
 
@@ -467,17 +655,41 @@ const Security = () => {
           )}
 
           {/* Roster list header & search */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>Danh sách cán bộ, chiến sĩ Dân quân tự quản</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', width: '260px' }}>
-              <Search size={16} style={{ color: 'var(--text-muted)' }} />
-              <input
-                type="text"
-                placeholder="Tìm tên hoặc số điện thoại..."
-                value={searchMilitia}
-                onChange={(e) => setSearchMilitia(e.target.value)}
-                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.85rem' }}
-              />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-main)' }}>Danh sách cán bộ, chiến sĩ Dân quân tự quản</h3>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button 
+                type="button"
+                onClick={handleExportExcel} 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#cffafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = '#ecfeff'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <FileDown size={16} />
+                Xuất Excel/CSV
+              </button>
+
+              <button 
+                type="button"
+                onClick={handlePrint} 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <Printer size={16} />
+                In danh sách
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', width: '220px' }}>
+                <Search size={16} style={{ color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Tìm tên hoặc SĐT..."
+                  value={searchMilitia}
+                  onChange={(e) => setSearchMilitia(e.target.value)}
+                  style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.85rem', background: 'transparent' }}
+                />
+              </div>
             </div>
           </div>
 

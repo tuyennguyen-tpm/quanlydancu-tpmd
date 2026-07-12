@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../services/db';
 import type { Resident } from '../types';
-import { Search, Sprout, Users, Phone } from 'lucide-react';
+import { Search, Sprout, Users, Phone, FileDown, Printer } from 'lucide-react';
+import ExcelJS from 'exceljs';
 
 const currentYear = new Date().getFullYear();
 
@@ -47,6 +48,200 @@ const FarmersAssociation = () => {
     return isNaN(year) ? '—' : `${currentYear - year}`;
   };
 
+  // Printer function
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+    const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const currentGroup = groupFilter === 'all' ? 'Tất cả các tổ' : groupFilter;
+
+    let rowsHtml = '';
+    filteredMembers.forEach((m, idx) => {
+      const dobFormatted = m.dob ? m.dob.split('-').reverse().join('/') : '—';
+      const age = getAge(m.dob);
+      const statusText = m.status === 'resident' ? 'Thường trú' : m.status === 'temporary_resident' ? 'Tạm trú' : m.status === 'temporary_absent' ? 'Tạm vắng' : m.status;
+      rowsHtml += `
+        <tr>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${idx + 1}</td>
+          <td style="padding: 8px; border: 1px solid #000; font-weight: bold; white-space: nowrap;">${m.full_name}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${dobFormatted}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${age}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${m.phone || ''}</td>
+          <td style="padding: 8px; border: 1px solid #000;">${m.occupation || ''}</td>
+          <td style="padding: 8px; border: 1px solid #000;">${m.permanent_address || ''}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #000;">${statusText}</td>
+        </tr>
+      `;
+    });
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>DANH SÁCH CHI HỘI VIÊN NÔNG DÂN</title>
+          <style>
+            @media print {
+              @page {
+                size: A4 portrait;
+                margin-top: 20mm;
+                margin-bottom: 20mm;
+                margin-left: 20mm;
+                margin-right: 15mm;
+              }
+              body { margin: 0; padding: 0; }
+            }
+            body { font-family: "Times New Roman", Times, serif; font-size: 12pt; padding: 20px; color: #000; }
+            h2 { text-transform: uppercase; color: #000; margin-bottom: 5px; font-size: 15pt; font-weight: bold; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11pt; border: 1.5px solid #000; }
+            th, td { border: 1px solid #000 !important; padding: 6px 8px; text-align: left; }
+            th { font-weight: bold; text-align: center; background-color: #f3f4f6; }
+          </style>
+        </head>
+        <body>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div>
+              <h3 style="margin: 0; text-transform: uppercase; font-size: 12pt;">UBND ${(wardName.toLowerCase().startsWith('phường') ? wardName : 'Phường ' + wardName).toUpperCase()}</h3>
+              <h4 style="margin: 5px 0 0 0; text-decoration: underline; font-size: 12pt;">TỔ DÂN PHỐ ${tdpName.toUpperCase()}</h4>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0; font-style: italic; font-size: 11pt;">Ngày in: ${new Date().toLocaleDateString('vi-VN')}</p>
+            </div>
+          </div>
+          
+          <h2 style="margin-top: 30px; text-align: center;">DANH SÁCH CHI HỘI VIÊN NÔNG DÂN</h2>
+          <p style="text-align: center; font-style: italic; margin-top: 5px; margin-bottom: 25px;">Tổ/Nhóm: ${currentGroup}</p>
+          
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 5%">STT</th>
+                <th style="width: 20%">Họ và tên</th>
+                <th style="width: 12%">Ngày sinh</th>
+                <th style="width: 8%">Tuổi</th>
+                <th style="width: 13%">Điện thoại</th>
+                <th style="width: 15%">Nghề nghiệp</th>
+                <th style="width: 17%">Địa chỉ</th>
+                <th style="width: 10%">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 40px; font-size: 12pt; page-break-inside: avoid;">
+            <div style="width: 40%; text-align: center;">
+              <p style="font-weight: bold; margin-bottom: 60px;">CHI HỘI TRƯỞNG</p>
+              <p style="font-style: italic; color: #555;">(Ký, ghi rõ họ tên)</p>
+            </div>
+            <div style="width: 45%; text-align: center;">
+              <p style="font-weight: bold; margin-bottom: 60px;">TỔ TRƯỞNG TỔ DÂN PHỐ</p>
+              <p style="font-style: italic; color: #555;">(Ký, ghi rõ họ tên)</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
+  // Excel export function
+  const handleExportExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('HoiVienNongDan');
+
+      const headers = ['STT', 'Họ và tên', 'Ngày sinh', 'Tuổi', 'Điện thoại', 'Nghề nghiệp', 'Địa chỉ cư trú', 'Trạng thái'];
+      const headerRow = worksheet.addRow(headers);
+      headerRow.height = 26;
+      
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF16A34A' } // Green for Farmers
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' },
+          name: 'Segoe UI',
+          size: 11
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center'
+        };
+      });
+
+      filteredMembers.forEach((m, idx) => {
+        const dob = m.dob ? m.dob.split('-').reverse().join('/') : '—';
+        const age = getAge(m.dob);
+        const statusText = m.status === 'resident' ? 'Thường trú' : m.status === 'temporary_resident' ? 'Tạm trú' : m.status === 'temporary_absent' ? 'Tạm vắng' : m.status;
+
+        const addedRow = worksheet.addRow([
+          idx + 1,
+          m.full_name,
+          dob,
+          age,
+          m.phone || '',
+          m.occupation || '',
+          m.permanent_address || '',
+          statusText
+        ]);
+        
+        addedRow.height = 24;
+        addedRow.eachCell((cell, colNumber) => {
+          cell.font = { name: 'Segoe UI', size: 11 };
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: colNumber === 1 || colNumber === 3 || colNumber === 4 || colNumber === 5 || colNumber === 8 ? 'center' : 'left'
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          };
+        });
+      });
+
+      worksheet.columns.forEach((column, colIdx) => {
+        if (colIdx === 0) {
+          column.width = 6;
+        } else {
+          let maxLen = 0;
+          column.values?.forEach(v => {
+            const valStr = v ? v.toString() : '';
+            if (valStr.length > maxLen) {
+              maxLen = valStr.length;
+            }
+          });
+          column.width = Math.min(Math.max(maxLen + 4, 12), 40);
+        }
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `danh_sach_hoi_vien_nong_dan_${new Date().toISOString().slice(0,10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('Export Excel error', e);
+    }
+  };
+
   return (
     <div style={{ padding: '20px', fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
@@ -88,6 +283,26 @@ const FarmersAssociation = () => {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            onClick={handleExportExcel} 
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2', transition: 'all 0.15s ease' }}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#cffafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#ecfeff'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <FileDown size={16} />
+            Xuất Excel/CSV
+          </button>
+
+          <button 
+            onClick={handlePrint} 
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6', transition: 'all 0.15s ease' }}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <Printer size={16} />
+            In danh sách
+          </button>
+
           <select
             value={groupFilter}
             onChange={e => setGroupFilter(e.target.value)}

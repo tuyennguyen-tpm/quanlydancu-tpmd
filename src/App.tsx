@@ -2963,7 +2963,7 @@ const App = () => {
                         maxLength={10}
                       />
                     </div>
-                    {userRole === 'admin' && (
+                    {(userRole === 'admin' || userRole === 'to_truong') && (
                       <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginTop: '4px' }}>
                         <div className="form-group">
                           <label>PIN Admin</label>
