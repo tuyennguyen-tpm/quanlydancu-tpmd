@@ -1336,13 +1336,13 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           <tr>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
               <div class="signature-title" style="font-weight: bold;">NGƯỜI LẬP BIỂU</div>
-              <div style="height: 80px;"></div>
+              <div style="height: 120px;"></div>
               <div class="signature-name" style="font-weight: normal; font-style: italic; font-size: 12px; color: #000;">(Ký, ghi rõ họ tên)</div>
             </td>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
               <div class="signature-title" style="font-weight: bold;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
-              <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
-                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 70px; max-height: 80px; object-fit: contain;" />` : ''}
+              <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 100px; max-height: 110px; object-fit: contain;" />` : ''}
               </div>
               <div class="signature-name" style="font-weight: bold;">${leaderName}</div>
             </td>

@@ -1551,8 +1551,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                 <div class="footer-date">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</div>
                 <div class="footer-role">T/M CHI BỘ<br>BÍ THƯ</div>
                 ${biThuSigUrl 
-                  ? `<div style="height: 60px; display: flex; align-items: center; justify-content: center; margin: 5px auto;"><img src="${biThuSigUrl}" alt="Chữ ký" style="height: 55px; max-height: 60px; object-fit: contain;" /></div>` 
-                  : `<div style="height: 50px;"></div>`
+                  ? `<div style="height: 100px; display: flex; align-items: center; justify-content: center; margin: 5px auto;"><img src="${biThuSigUrl}" alt="Chữ ký" style="height: 85px; max-height: 95px; object-fit: contain;" /></div>` 
+                  : `<div style="height: 80px;"></div>`
                 }
                 <div style="font-weight: bold;">${partySecretaryName || 'Nguyễn Kim Tuyến'}</div>
               </td>

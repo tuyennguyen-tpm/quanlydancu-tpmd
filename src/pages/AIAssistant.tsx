@@ -1414,7 +1414,7 @@ ${strippedContent}
     const thuKySigUrl = getOfficialSigUrl('thu_ky');
 
     const sigImgHtml = (url: string) =>
-      url ? `<img src="${url}" alt="Chữ ký" style="height:50px;max-width:120px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
+      url ? `<img src="${url}" alt="Chữ ký" style="height:85px;max-width:180px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
 
     const rightSigImg = docType === 'party' ? sigImgHtml(biThuSigUrl) : (docType === 'front' ? sigImgHtml(matTranSigUrl) : sigImgHtml(toTruongSigUrl));
     const leftSigImg = sigImgHtml(thuKySigUrl);
@@ -2157,7 +2157,7 @@ ${strippedContent}
 
     // ─── Hàm tạo HTML ảnh chữ ký (dùng chung) ───
     const sigImgHtml = (url: string) =>
-      url ? `<img src="${url}" alt="Chữ ký" style="height:55px;max-width:130px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
+      url ? `<img src="${url}" alt="Chữ ký" style="height:90px;max-width:190px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
 
     // Load latest signatures from localStorage
     let officialSigs: { id: string; name: string; signatureUrl?: string }[] = [];
