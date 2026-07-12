@@ -3618,16 +3618,16 @@ const App = () => {
 
       {/* ═══ FLOATING BUTTONS: Zalo + AI Chat (always visible) ═══ */}
       <>
-          {/* Floating Button Group — ngang hàng, Zalo trái / AI phải */}
+          {/* Floating Button Group — Zalo trên / AI dưới */}
           <div style={{
             position: 'fixed',
             bottom: '20px',
             right: '20px',
             display: 'flex',
-            flexDirection: 'row',
+            flexDirection: 'column',
             gap: '10px',
             zIndex: 1200,
-            alignItems: 'flex-end'
+            alignItems: 'center'
           }}>
             {/* Zalo Button */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
@@ -3674,10 +3674,10 @@ const App = () => {
           </div>
 
 
-          {/* Zalo Popup — hiển thị phía trên nút Zalo */}
+          {/* Zalo Popup — hiển thị bên trái nút Zalo */}
           {zaloOpen && (
             <div style={{
-              position: 'fixed', bottom: '92px', right: '70px', zIndex: 1300,
+              position: 'fixed', bottom: '100px', right: '90px', zIndex: 1300,
               background: '#fff', border: '2px solid #dbeafe',
               borderRadius: '16px', padding: '20px',
               boxShadow: '0 8px 32px rgba(0,104,255,0.14)',
@@ -3721,10 +3721,10 @@ const App = () => {
             </div>
           )}
 
-          {/* AI Chat Widget — hiển thị phía trên nút Bot */}
+          {/* AI Chat Widget — hiển thị bên trái nút Bot */}
           {aiChatOpen && (
             <div style={{
-              position: 'fixed', bottom: '92px', right: '20px', zIndex: 1300,
+              position: 'fixed', bottom: '20px', right: '90px', zIndex: 1300,
               background: '#fff', border: '2px solid #bfdbfe',
               borderRadius: '16px',
               boxShadow: '0 8px 32px rgba(37,99,235,0.14)',
