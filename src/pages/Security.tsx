@@ -40,6 +40,8 @@ const Security = () => {
   // Roster states
   const [searchMilitia, setSearchMilitia] = useState('');
   const [selectedResidentId, setSelectedResidentId] = useState('');
+  const [searchResidentQuery, setSearchResidentQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -108,6 +110,7 @@ const Security = () => {
       await db.saveResident(updated);
       showToast(`Đã thêm ${targetRes.full_name} vào Lực lượng Dân quân tự vệ!`, 'success');
       setSelectedResidentId('');
+      setSearchResidentQuery('');
       loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
     } catch (err) {
@@ -202,6 +205,14 @@ const Security = () => {
     if (r.status === 'deceased') return false;
     const membership = r.association_membership || '';
     return !membership.split(',').map(s => s.trim()).filter(Boolean).includes('dqtv');
+  });
+
+  const filteredNonMilitiaResidents = nonMilitiaResidents.filter(r => {
+    const q = searchResidentQuery.toLowerCase().trim();
+    if (!q) return true;
+    return r.full_name.toLowerCase().includes(q) || 
+           (r.phone && r.phone.includes(q)) || 
+           (r.permanent_address && r.permanent_address.toLowerCase().includes(q));
   });
 
   return (
@@ -341,25 +352,116 @@ const Security = () => {
         </div>
       ) : (
         <div className="militia-roster-section">
+          {/* Click-away overlay for custom dropdown */}
+          {isDropdownOpen && (
+            <div 
+              onClick={() => setIsDropdownOpen(false)} 
+              style={{ position: 'fixed', top: 0, bottom: 0, left: 0, right: 0, zIndex: 998 }}
+            />
+          )}
+
           {/* Form thêm Dân quân mới (chỉ hiện với vai trò cho phép) */}
           {!isGuest && (
-            <form onSubmit={handleAddMilitia} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '240px' }}>
-                <select
-                  value={selectedResidentId}
-                  onChange={(e) => setSelectedResidentId(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none', fontSize: '0.9rem', cursor: 'pointer' }}
-                >
-                  <option value="">-- Chọn nhân khẩu TDP để kết nạp vào lực lượng Dân quân --</option>
-                  {nonMilitiaResidents.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.full_name} ({r.dob ? r.dob.slice(0, 4) : '—'}) - {r.permanent_address || 'Địa chỉ TDP'}
-                    </option>
-                  ))}
-                </select>
+            <form onSubmit={handleAddMilitia} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', flexWrap: 'wrap', position: 'relative', zIndex: 999 }}>
+              <div style={{ flex: 1, minWidth: '280px', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1.5px solid var(--border)', borderRadius: '8px', padding: '8px 12px' }}>
+                  <Search size={16} style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder="Nhập tên hoặc địa chỉ để tìm nhân khẩu kết nạp..."
+                    value={searchResidentQuery}
+                    onChange={(e) => {
+                      setSearchResidentQuery(e.target.value);
+                      setIsDropdownOpen(true);
+                      setSelectedResidentId('');
+                    }}
+                    onFocus={(e) => {
+                      setIsDropdownOpen(true);
+                      e.target.select();
+                    }}
+                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.9rem', background: 'transparent' }}
+                  />
+                  {(searchResidentQuery || selectedResidentId) && (
+                    <button 
+                      type="button" 
+                      onClick={() => { setSelectedResidentId(''); setSearchResidentQuery(''); }} 
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '2px' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {isDropdownOpen && filteredNonMilitiaResidents.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    background: 'white',
+                    border: '1.5px solid var(--border)',
+                    borderRadius: '8px',
+                    boxShadow: 'var(--shadow-md)',
+                    zIndex: 1000,
+                    marginTop: '4px'
+                  }}>
+                    {filteredNonMilitiaResidents.map(r => (
+                      <div
+                        key={r.id}
+                        onClick={() => {
+                          setSelectedResidentId(r.id);
+                          setSearchResidentQuery(`${r.full_name} (${r.dob ? r.dob.slice(0, 4) : '—'}) - ${r.permanent_address || 'TDP Quảng Giao'}`);
+                          setIsDropdownOpen(false);
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          fontSize: '0.88rem',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f1f5f9',
+                          background: selectedResidentId === r.id ? '#eff6ff' : 'white',
+                          transition: 'background 0.2s',
+                          textAlign: 'left'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selectedResidentId === r.id ? '#eff6ff' : 'white'; }}
+                      >
+                        <div style={{ fontWeight: '700', color: '#1e3a8a' }}>{r.full_name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Năm sinh: {r.dob ? r.dob.slice(0, 4) : '—'} | SĐT: {r.phone || '—'}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          Đ/c: {r.permanent_address || '—'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isDropdownOpen && searchResidentQuery && filteredNonMilitiaResidents.length === 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    padding: '12px',
+                    textAlign: 'center',
+                    background: 'white',
+                    border: '1.5px solid var(--border)',
+                    borderRadius: '8px',
+                    boxShadow: 'var(--shadow-md)',
+                    zIndex: 1000,
+                    marginTop: '4px',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.88rem'
+                  }}>
+                    Không tìm thấy nhân khẩu phù hợp
+                  </div>
+                )}
               </div>
               <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', minHeight: '38px', fontWeight: '600' }}>
-                <Plus size={16} /> Thêm đội viên
+                <Plus size={16} /> Kết nạp đội viên
               </button>
             </form>
           )}
