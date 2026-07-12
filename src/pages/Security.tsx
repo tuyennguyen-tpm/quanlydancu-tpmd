@@ -1,12 +1,25 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, AlertTriangle, Eye, ShieldAlert, X, Trash2 } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  AlertTriangle, 
+  Eye, 
+  ShieldAlert, 
+  X, 
+  Trash2, 
+  Users, 
+  Plus, 
+  Phone,
+  Search
+} from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import type { SecurityLog } from '../services/db';
+import type { Resident } from '../types';
 import { showToast } from '../utils/toast';
 
 const Security = () => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || 
+                  (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'an_ninh');
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
@@ -16,8 +29,17 @@ const Security = () => {
     window.addEventListener('role-changed', handleRoleChange);
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
+
   const [logs, setLogs] = useState<SecurityLog[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [militiaMembers, setMilitiaMembers] = useState<Resident[]>([]);
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [subTab, setSubTab] = useState<'logs' | 'militia'>('logs');
+  
+  // Roster states
+  const [searchMilitia, setSearchMilitia] = useState('');
+  const [selectedResidentId, setSelectedResidentId] = useState('');
 
   // Form states
   const [title, setTitle] = useState('');
@@ -26,10 +48,22 @@ const Security = () => {
 
   const loadData = async () => {
     try {
-      const list = await db.getSecurityLogs();
+      const [list, resList] = await Promise.all([
+        db.getSecurityLogs(),
+        db.getResidents()
+      ]);
       setLogs(list);
+      setResidents(resList);
+
+      // Lọc danh sách dân quân tự vệ (có mã dqtv trong hội viên đoàn thể)
+      const filteredMilitia = resList.filter(r => {
+        if (r.status === 'deceased') return false;
+        const membership = r.association_membership || '';
+        return membership.split(',').map(s => s.trim()).filter(Boolean).includes('dqtv');
+      });
+      setMilitiaMembers(filteredMilitia);
     } catch (e) {
-      showToast('Lỗi tải nhật ký an ninh!', 'danger');
+      showToast('Lỗi tải dữ liệu an ninh!', 'danger');
     }
   };
 
@@ -42,6 +76,69 @@ const Security = () => {
         window.dispatchEvent(new CustomEvent('db-changed'));
       } catch (e) {
         showToast('Lỗi khi xóa nhật ký!', 'danger');
+      }
+    }
+  };
+
+  const handleAddMilitia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isGuest) {
+      showToast('Tài khoản không có quyền chỉnh sửa lực lượng!', 'warning');
+      return;
+    }
+    if (!selectedResidentId) {
+      showToast('Vui lòng chọn một nhân khẩu để thêm!', 'warning');
+      return;
+    }
+
+    try {
+      const targetRes = residents.find(r => r.id === selectedResidentId);
+      if (!targetRes) return;
+
+      const currentAssoc = targetRes.association_membership ? targetRes.association_membership.split(',') : [];
+      if (!currentAssoc.includes('dqtv')) {
+        currentAssoc.push('dqtv');
+      }
+
+      const updated = {
+        ...targetRes,
+        association_membership: currentAssoc.join(',')
+      };
+
+      await db.saveResident(updated);
+      showToast(`Đã thêm ${targetRes.full_name} vào Lực lượng Dân quân tự vệ!`, 'success');
+      setSelectedResidentId('');
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (err) {
+      showToast('Lỗi khi thêm đội viên!', 'danger');
+    }
+  };
+
+  const handleRemoveMilitia = async (id: string, name: string) => {
+    if (isGuest) {
+      showToast('Tài khoản không có quyền chỉnh sửa lực lượng!', 'warning');
+      return;
+    }
+    if (window.confirm(`Bạn có chắc chắn muốn đưa ${name} ra khỏi Lực lượng Dân quân tự vệ không?`)) {
+      try {
+        const targetRes = residents.find(r => r.id === id);
+        if (!targetRes) return;
+
+        const currentAssoc = targetRes.association_membership ? targetRes.association_membership.split(',') : [];
+        const updatedAssoc = currentAssoc.filter(a => a !== 'dqtv');
+
+        const updated = {
+          ...targetRes,
+          association_membership: updatedAssoc.join(',')
+        };
+
+        await db.saveResident(updated);
+        showToast(`Đã đưa ${name} ra khỏi Lực lượng Dân quân tự vệ!`, 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (err) {
+        showToast('Lỗi khi xóa đội viên!', 'danger');
       }
     }
   };
@@ -94,15 +191,28 @@ const Security = () => {
     return dateB - dateA;
   });
 
+  const filteredMilitiaMembers = militiaMembers.filter(m => {
+    const q = searchMilitia.toLowerCase().trim();
+    return m.full_name.toLowerCase().includes(q) || 
+           (m.phone && m.phone.includes(q)) || 
+           (m.permanent_address && m.permanent_address.toLowerCase().includes(q));
+  });
+
+  const nonMilitiaResidents = residents.filter(r => {
+    if (r.status === 'deceased') return false;
+    const membership = r.association_membership || '';
+    return !membership.split(',').map(s => s.trim()).filter(Boolean).includes('dqtv');
+  });
+
   return (
-    <div className="security-page">
+    <div className="security-page" style={{ padding: '20px', fontFamily: "'Inter', sans-serif" }}>
       <div className="page-header" style={{ display: 'block', marginBottom: '24px' }}>
         <h1 style={{ margin: '0 0 6px 0', fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-main)' }}>An ninh trật tự</h1>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', flex: 1, minWidth: '280px' }}>
-            Giám sát tình hình trật tự xã hội và lưu trữ nhật ký tuần tra bảo vệ khu dân cư.
+            Giám sát tình hình trật tự trị an, quản lý lực lượng tự quản và lưu vết nhật ký tuần tra bảo vệ khu dân cư.
           </p>
-          {!isGuest && (
+          {subTab === 'logs' && !isGuest && (
             <button 
               className="btn btn-primary" 
               onClick={() => setIsFormOpen(true)}
@@ -137,61 +247,190 @@ const Security = () => {
         </div>
       </div>
 
-      <div className="security-grid">
-         <div className="security-card stat">
+      <div className="security-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+         <div className="security-card stat" style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <ShieldCheck size={32} color={alertCount > 0 ? "var(--warning)" : "var(--success)"} />
             <div className="txt">
-               <span className="l">Tình trạng địa bàn</span>
-               <span className="v">{alertCount > 0 ? `Có ${alertCount} cảnh báo gần đây` : 'Ổn định, an toàn'}</span>
+               <div className="l" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tình trạng địa bàn</div>
+               <div className="v" style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>{alertCount > 0 ? `Có ${alertCount} cảnh báo gần đây` : 'Ổn định, an toàn'}</div>
             </div>
          </div>
-         <div className="security-card stat">
-            <Eye size={32} color="var(--primary)" />
+         <div className="security-card stat" style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <Users size={32} color="var(--primary)" />
             <div className="txt">
-               <span className="l">Lịch tuần tra đêm tự quản</span>
-               <span className="v">21:00 - 23:00 hàng ngày</span>
+               <div className="l" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tổng lực lượng dân quân</div>
+               <div className="v" style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>{militiaMembers.length} cán bộ, chiến sĩ</div>
             </div>
          </div>
       </div>
 
-      <div className="incident-list">
-         <h3>Nhật ký an ninh & tuần tra gần đây</h3>
-         <div className="list-wrapper">
-            {sortedLogs.map(log => (
-               <div key={log.id} className="incident-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                    {log.type === 'alert' ? (
-                      <ShieldAlert size={20} className="icon-red" style={{ flexShrink: 0, marginTop: '2px' }} />
-                    ) : (
-                      <ShieldCheck size={20} className="icon-green" style={{ flexShrink: 0, marginTop: '2px' }} />
-                    )}
-                    <div className="det">
-                       <div className="t">{log.title}</div>
-                       <div className="d">{new Date(log.date).toLocaleDateString('vi-VN')} - {log.description}</div>
-                    </div>
-                  </div>
-                  {!isGuest && (
-                    <button 
-                      onClick={() => handleDeleteSecurityLog(log.id)}
-                      style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '6px', flexShrink: 0 }}
-                      title="Xóa nhật ký"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-               </div>
-            ))}
-           {logs.length === 0 && (
-             <div style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)'}}>
-               Chưa ghi nhận sự kiện an ninh nào.
-             </div>
-           )}
-         </div>
+      {/* Điều hướng tab cấp 2 */}
+      <div className="security-tabs-nav" style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--border)', marginBottom: '24px' }}>
+        <button 
+          className={`security-tab-btn ${subTab === 'logs' ? 'active' : ''}`}
+          onClick={() => setSubTab('logs')}
+          style={{
+            padding: '10px 20px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: '700',
+            color: subTab === 'logs' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: subTab === 'logs' ? '3px solid var(--primary)' : '3px solid transparent',
+            transition: 'all 0.2s',
+            marginBottom: '-2px'
+          }}
+        >
+          Nhật ký sự vụ & tuần tra
+        </button>
+        <button 
+          className={`security-tab-btn ${subTab === 'militia' ? 'active' : ''}`}
+          onClick={() => setSubTab('militia')}
+          style={{
+            padding: '10px 20px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            fontWeight: '700',
+            color: subTab === 'militia' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: subTab === 'militia' ? '3px solid var(--primary)' : '3px solid transparent',
+            transition: 'all 0.2s',
+            marginBottom: '-2px'
+          }}
+        >
+          Đội ngũ Dân quân tự vệ
+        </button>
       </div>
+
+      {subTab === 'logs' ? (
+        <div className="incident-list">
+           <h3 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: '700' }}>Nhật ký sự vụ gần đây</h3>
+           <div className="list-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {sortedLogs.map(log => (
+                 <div key={log.id} className="incident-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '14px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                      {log.type === 'alert' ? (
+                        <ShieldAlert size={22} color="var(--danger)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      ) : (
+                        <ShieldCheck size={22} color="var(--success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      )}
+                      <div className="det">
+                         <div className="t" style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-main)' }}>{log.title}</div>
+                         <div className="d" style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px' }}>{new Date(log.date).toLocaleDateString('vi-VN')} - {log.description}</div>
+                      </div>
+                    </div>
+                    {!isGuest && (
+                      <button 
+                        onClick={() => handleDeleteSecurityLog(log.id)}
+                        style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '6px', flexShrink: 0 }}
+                        title="Xóa nhật ký"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                 </div>
+              ))}
+             {logs.length === 0 && (
+               <div style={{textAlign: 'center', padding: '24px', color: 'var(--text-muted)', background: 'white', borderRadius: '12px', border: '1px solid var(--border)'}}>
+                 Chưa ghi nhận sự kiện an ninh nào.
+               </div>
+             )}
+           </div>
+        </div>
+      ) : (
+        <div className="militia-roster-section">
+          {/* Form thêm Dân quân mới (chỉ hiện với vai trò cho phép) */}
+          {!isGuest && (
+            <form onSubmit={handleAddMilitia} style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '240px' }}>
+                <select
+                  value={selectedResidentId}
+                  onChange={(e) => setSelectedResidentId(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', outline: 'none', fontSize: '0.9rem', cursor: 'pointer' }}
+                >
+                  <option value="">-- Chọn nhân khẩu TDP để kết nạp vào lực lượng Dân quân --</option>
+                  {nonMilitiaResidents.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.full_name} ({r.dob ? r.dob.slice(0, 4) : '—'}) - {r.permanent_address || 'Địa chỉ TDP'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', minHeight: '38px', fontWeight: '600' }}>
+                <Plus size={16} /> Thêm đội viên
+              </button>
+            </form>
+          )}
+
+          {/* Roster list header & search */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>Danh sách cán bộ, chiến sĩ Dân quân tự quản</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', width: '260px' }}>
+              <Search size={16} style={{ color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                placeholder="Tìm tên hoặc số điện thoại..."
+                value={searchMilitia}
+                onChange={(e) => setSearchMilitia(e.target.value)}
+                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.85rem' }}
+              />
+            </div>
+          </div>
+
+          {/* Roster table */}
+          <div style={{ overflowX: 'auto', border: '1.5px solid var(--border)', borderRadius: '12px', background: 'white' }}>
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', margin: 0 }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border)', height: '42px' }}>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', width: '60px', fontSize: '0.85rem' }}>STT</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '0.85rem' }}>Họ và tên</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', width: '100px', fontSize: '0.85rem' }}>Năm sinh</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', width: '160px', fontSize: '0.85rem' }}>Số điện thoại</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '0.85rem' }}>Địa chỉ thường trú</th>
+                  {!isGuest && <th style={{ padding: '12px 10px', textAlign: 'center', width: '100px', fontSize: '0.85rem' }}>Hành động</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMilitiaMembers.map((m, index) => (
+                  <tr key={m.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ textAlign: 'center', padding: '12px 10px', fontSize: '0.88rem' }}>{index + 1}</td>
+                    <td style={{ fontWeight: '700', color: '#1e3a8a', padding: '12px 10px', fontSize: '0.88rem' }}>{m.full_name}</td>
+                    <td style={{ textAlign: 'center', padding: '12px 10px', fontSize: '0.88rem' }}>{m.dob ? m.dob.slice(0, 4) : '—'}</td>
+                    <td style={{ padding: '12px 10px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: 'none' }}>
+                      <Phone size={14} style={{ color: 'var(--text-muted)' }} /> {m.phone || '—'}
+                    </td>
+                    <td style={{ padding: '12px 10px', fontSize: '0.88rem' }}>{m.permanent_address || '—'}</td>
+                    {!isGuest && (
+                      <td style={{ textAlign: 'center', padding: '12px 10px' }}>
+                        <button
+                          onClick={() => handleRemoveMilitia(m.id, m.full_name)}
+                          style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '6px' }}
+                          title="Đưa ra khỏi lực lượng"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+                {filteredMilitiaMembers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      Chưa có đội viên nào trong lực lượng Dân quân.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* New Incident Modal */}
       {isFormOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
           <div className="modal-content">
             <div className="modal-header">
               <h2>Báo cáo sự vụ / tuần tra</h2>
@@ -199,64 +438,43 @@ const Security = () => {
             </div>
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
-                <label>Loại nhật ký *</label>
+                <label>Loại sự vụ *</label>
                 <select value={type} onChange={(e: any) => setType(e.target.value)}>
-                  <option value="alert">Cảnh báo mất an ninh (Trộm cắp, gây rối...)</option>
-                  <option value="ok">Báo cáo tuần tra bình thường (An toàn)</option>
+                  <option value="alert">🚨 Cảnh báo / Vụ việc mất an ninh trật tự</option>
+                  <option value="ok">🟢 Nhật ký tuần tra đêm an toàn</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>Tiêu đề sự kiện *</label>
+                <label>Tiêu đề báo cáo *</label>
                 <input 
                   type="text" 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ví dụ: Tuần tra đêm địa bàn, Mất trộm xe đạp..."
+                  placeholder="Ví dụ: Tuần tra đêm 12/07 an toàn"
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label>Chi tiết nội dung vụ việc *</label>
+                <label>Chi tiết vụ việc / Diễn biến tuần tra *</label>
                 <textarea 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Mô tả cụ thể thời gian xảy ra, đối tượng liên quan và cách thức xử lý..."
-                  style={{height: '100px', resize: 'none', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)'}}
+                  placeholder="Mô tả diễn biến cụ thể sự việc hoặc kết quả tuần tra bảo vệ..."
+                  style={{ minHeight: '120px' }}
                   required
                 />
               </div>
 
-              <div className="form-actions">
+              <div className="form-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsFormOpen(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary">Lưu báo cáo</button>
+                <button type="submit" className="btn btn-primary">Ghi sổ</button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      <style>{`
-        .security-page { animation: fadeIn 0.4s ease-out; }
-        .security-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        .security-card { background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); display: flex; align-items: center; gap: 16px; }
-        .txt { display: flex; flex-direction: column; }
-        .l { font-size: 0.85rem; color: var(--text-muted); }
-        .v { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
-        
-        .incident-list { background: white; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border); }
-        .incident-item { display: flex; gap: 16px; padding: 16px; border-bottom: 1px solid #f1f5f9; }
-        .incident-item:last-child { border-bottom: none; }
-        .icon-red { color: var(--danger); }
-        .icon-green { color: var(--success); }
-        .det .t { font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
-        .det .d { font-size: 0.9rem; color: #475569; line-height: 1.4; }
-        
-        @media (max-width: 768px) {
-          .security-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
     </div>
   );
 };

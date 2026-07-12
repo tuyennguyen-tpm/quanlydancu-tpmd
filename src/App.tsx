@@ -176,6 +176,12 @@ const App = () => {
     }
   }, [session, userRole]);
 
+  useEffect(() => {
+    if (userRole === 'an_ninh') {
+      setActiveTab('security');
+    }
+  }, [userRole]);
+
   const handleTdpSelect = (userId: string) => {
     setSelectedTdpUserId(userId);
     if (userId === 'all') {
@@ -212,6 +218,7 @@ const App = () => {
         const pChung = await (db as any).getRolePin('chung');
         const pPhuNu = await (db as any).getRolePin('chi_hoi_phu_nu');
         const pKeToan = await (db as any).getRolePin('ke_toan');
+        const pAnNinh = await (db as any).getRolePin('an_ninh');
         localStorage.setItem('role_pin_admin', pAdmin);
         localStorage.setItem('role_pin_to_truong', pToTruong);
         localStorage.setItem('role_pin_bi_thu', pBiThu);
@@ -219,6 +226,7 @@ const App = () => {
         localStorage.setItem('role_pin_chung', pChung);
         localStorage.setItem('role_pin_chi_hoi_phu_nu', pPhuNu);
         localStorage.setItem('role_pin_ke_toan', pKeToan);
+        localStorage.setItem('role_pin_an_ninh', pAnNinh);
       } catch (e) {
         console.error('Failed to sync role PINs on mount', e);
       }
@@ -237,7 +245,8 @@ const App = () => {
       mat_tran: 'Trưởng ban Mặt trận',
       chi_hoi_phu_nu: 'Chi hội Phụ nữ',
       ke_toan: 'Kế toán',
-      chung: 'Cán bộ Chung'
+      chung: 'Cán bộ Chung',
+      an_ninh: 'Dân quân / An ninh'
     };
 
     // Demo mode does not require PIN
@@ -265,7 +274,8 @@ const App = () => {
       mat_tran: 'Trưởng ban Mặt trận',
       chi_hoi_phu_nu: 'Chi hội Phụ nữ',
       ke_toan: 'Kế toán',
-      chung: 'Cán bộ Chung'
+      chung: 'Cán bộ Chung',
+      an_ninh: 'Dân quân / An ninh'
     };
     
     localStorage.setItem('current_role', role);
@@ -282,7 +292,9 @@ const App = () => {
     window.dispatchEvent(new CustomEvent('role-changed', { detail: role }));
     
     // Auto redirect if active tab is restricted in new role
-    if ((role === 'mat_tran' || role === 'demo' || role === 'chung' || role === 'chi_hoi_phu_nu' || role === 'ke_toan') && ['party-cell', 'meetings-party'].includes(activeTab)) {
+    if (role === 'an_ninh') {
+      setActiveTab('security');
+    } else if ((role === 'mat_tran' || role === 'demo' || role === 'chung' || role === 'chi_hoi_phu_nu' || role === 'ke_toan') && ['party-cell', 'meetings-party'].includes(activeTab)) {
       setActiveTab('Bảng điều khiển');
     }
     
@@ -478,6 +490,7 @@ const App = () => {
   const [rolePinChungInput, setRolePinChungInput] = useState('3333');
   const [rolePinPhuNuInput, setRolePinPhuNuInput] = useState('4444');
   const [rolePinKeToanInput, setRolePinKeToanInput] = useState('5555');
+  const [rolePinAnNinhInput, setRolePinAnNinhInput] = useState('6666');
   const [sbKey, setSbKey] = useState(localStorage.getItem('supabase_anon_key') || '');
   const [tdpNameInput, setTdpNameInput] = useState(tdpName);
   const [wardNameInput, setWardNameInput] = useState(wardName);
@@ -1297,6 +1310,7 @@ const App = () => {
     setRolePinChungInput(localStorage.getItem('role_pin_chung') || '3333');
     setRolePinPhuNuInput(localStorage.getItem('role_pin_chi_hoi_phu_nu') || '4444');
     setRolePinKeToanInput(localStorage.getItem('role_pin_ke_toan') || '5555');
+    setRolePinAnNinhInput(localStorage.getItem('role_pin_an_ninh') || '6666');
     setLatestAppVersionInput(localStorage.getItem('latest_app_version') || APP_VERSION);
     
     // Load groups configuration
@@ -1460,6 +1474,7 @@ const App = () => {
     const pinChungToSave = rolePinChungInput.trim() || '3333';
     const pinPhuNuToSave = rolePinPhuNuInput.trim() || '4444';
     const pinKeToanToSave = rolePinKeToanInput.trim() || '5555';
+    const pinAnNinhToSave = rolePinAnNinhInput.trim() || '6666';
     try {
       await db.saveGuestPin(pinToSave);
       await (db as any).saveRolePin('admin', pinAdminToSave);
@@ -1469,6 +1484,7 @@ const App = () => {
       await (db as any).saveRolePin('chung', pinChungToSave);
       await (db as any).saveRolePin('chi_hoi_phu_nu', pinPhuNuToSave);
       await (db as any).saveRolePin('ke_toan', pinKeToanToSave);
+      await (db as any).saveRolePin('an_ninh', pinAnNinhToSave);
 
       // Mark as verified on this device since we configured it
       localStorage.setItem('role_verified_admin', 'true');
@@ -1478,6 +1494,7 @@ const App = () => {
       localStorage.setItem('role_verified_chung', 'true');
       localStorage.setItem('role_verified_chi_hoi_phu_nu', 'true');
       localStorage.setItem('role_verified_ke_toan', 'true');
+      localStorage.setItem('role_verified_an_ninh', 'true');
 
       window.dispatchEvent(new CustomEvent('show-toast', {
         detail: { message: `✅ Cấu hình và mã PIN phân quyền đã đồng bộ lên Database!`, type: 'success' }
@@ -1775,6 +1792,7 @@ const App = () => {
     { id: 'residents-temp', icon: MapPin, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount, badgeColor: '#f97316' },
     { id: 'residents-changes', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
     { id: 'policy', icon: Shield, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
+    { id: 'security', icon: ShieldCheck, label: 'An ninh trật tự', group: 'Quản lý dân cư' },
     { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount, badgeColor: '#ef4444' },
     { id: 'meetings-party', icon: Calendar, label: 'Lịch họp Chi bộ', group: 'Tổ chức - Đoàn thể' },
     { id: 'meetings-front', icon: UserPlus, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
@@ -1792,6 +1810,9 @@ const App = () => {
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
   ].filter(item => {
+    if (userRole === 'an_ninh') {
+      return item.id === 'security';
+    }
     if (isGuestMode) {
       return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'settings'].includes(item.id);
     }
@@ -2114,6 +2135,7 @@ const App = () => {
                 <option value="chi_hoi_phu_nu">Chi hội Phụ nữ</option>
                 <option value="ke_toan">Kế toán</option>
                 <option value="chung">Cán bộ Chung</option>
+                <option value="an_ninh">Dân quân / An ninh</option>
               </select>
             </div>
           )}
@@ -2138,7 +2160,7 @@ const App = () => {
                 {session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Tổ trưởng'}
               </span>
               <span className="user-role" title={session?.user?.email || 'Ngoại tuyến'} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
-                {isGuestMode ? 'Xem công khai' : userRole === 'demo' ? '👁️ Trang Chủ' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : userRole === 'mat_tran' ? 'Trưởng ban Mặt trận' : userRole === 'chi_hoi_phu_nu' ? 'Chi hội Phụ nữ' : userRole === 'ke_toan' ? 'Kế toán' : 'Cán bộ Chung'}
+                {isGuestMode ? 'Xem công khai' : userRole === 'demo' ? '👁️ Trang Chủ' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : userRole === 'mat_tran' ? 'Trưởng ban Mặt trận' : userRole === 'chi_hoi_phu_nu' ? 'Chi hội Phụ nữ' : userRole === 'ke_toan' ? 'Kế toán' : userRole === 'an_ninh' ? 'Dân quân / An ninh' : 'Cán bộ Chung'}
               </span>
             </div>
             <button className="logout-btn" onClick={handleLogout} title="Đăng xuất" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -3013,6 +3035,16 @@ const App = () => {
                             maxLength={10}
                           />
                         </div>
+                        <div className="form-group">
+                          <label>PIN An ninh</label>
+                          <input
+                            type="text"
+                            value={rolePinAnNinhInput}
+                            onChange={(e) => setRolePinAnNinhInput(e.target.value)}
+                            placeholder="Mặc định: 6666"
+                            maxLength={10}
+                          />
+                        </div>
                       </div>
                     )}
                     <div className="form-group">
@@ -3579,7 +3611,8 @@ const App = () => {
               mat_tran: '2222',
               chung: '3333',
               chi_hoi_phu_nu: '4444',
-              ke_toan: '5555'
+              ke_toan: '5555',
+              an_ninh: '6666'
             };
             const correctPin = localStorage.getItem(`role_pin_${pinPrompt.role}`) || defaultPins[pinPrompt.role];
             
@@ -3863,7 +3896,8 @@ const RolePinModal = ({
     mat_tran: '2222',
     chung: '3333',
     chi_hoi_phu_nu: '4444',
-    ke_toan: '5555'
+    ke_toan: '5555',
+    an_ninh: '6666'
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

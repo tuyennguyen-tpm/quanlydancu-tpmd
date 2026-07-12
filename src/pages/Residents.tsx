@@ -2634,6 +2634,10 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     <input type="checkbox" checked={hasAssociation('nd')} onChange={() => toggleAssociation('nd')} />
                     Chi hội Nông dân
                   </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                    <input type="checkbox" checked={hasAssociation('dqtv')} onChange={() => toggleAssociation('dqtv')} />
+                    Lực lượng Dân quân tự vệ
+                  </label>
                 </div>
               </div>
 
