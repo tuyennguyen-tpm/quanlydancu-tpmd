@@ -967,14 +967,21 @@ export const db = {
         if (tenantFilter) {
           query = query.eq(tenantFilter.field, tenantFilter.value);
         }
-        const { data, error } = await query;
+        const { data, error } = await query
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true });
         if (error) handleDbError('tải danh sách thu chi', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getFinancialRecords error, falling back to local storage', e);
       }
     }
-    return getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
+    const list = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
+    return [...list].sort((a, b) => {
+      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    });
   },
   saveFinancialRecord: async (record: Omit<FinancialRecord, 'created_at'> & { created_at?: string }): Promise<FinancialRecord> => {
     const fullRecord: FinancialRecord = {
@@ -1027,14 +1034,21 @@ export const db = {
         if (tenantFilter) {
           query = query.eq(tenantFilter.field, tenantFilter.value);
         }
-        const { data, error } = await query;
+        const { data, error } = await query
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true });
         if (error) handleDbError('tải danh sách phản ánh', error);
         if (!error && data) return data;
       } catch (e) {
         console.error('Supabase getComplaints error, falling back to local storage', e);
       }
     }
-    return getStorageItem<Complaint[]>('complaints', seedComplaints);
+    const list = getStorageItem<Complaint[]>('complaints', seedComplaints);
+    return [...list].sort((a, b) => {
+      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    });
   },
   saveComplaint: async (complaint: Omit<Complaint, 'created_at'> & { created_at?: string }): Promise<Complaint> => {
     const fullComplaint: Complaint = {
@@ -1090,7 +1104,9 @@ export const db = {
         if (tenantFilter) {
           query = query.eq(tenantFilter.field, tenantFilter.value);
         }
-        const { data, error } = await query;
+        const { data, error } = await query
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true });
         if (error) handleDbError('tải danh sách cuộc họp', error);
         if (!error && data) {
           return data.map((m: any) => {
@@ -1110,7 +1126,12 @@ export const db = {
         console.error('Supabase getMeetings error, falling back to local storage', e);
       }
     }
-    return getStorageItem<Meeting[]>('meetings', seedMeetings);
+    const list = getStorageItem<Meeting[]>('meetings', seedMeetings);
+    return [...list].sort((a, b) => {
+      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    });
   },
   saveMeeting: async (meeting: Omit<Meeting, 'created_at'> & { created_at?: string }): Promise<Meeting> => {
     const fullMeeting: Meeting = {
@@ -1690,7 +1711,8 @@ export const db = {
           .from('ward_funds')
           .select('*')
           .eq('year', year)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true });
         if (error) throw error;
         return data || [];
       } catch (e) {
@@ -1698,7 +1720,12 @@ export const db = {
       }
     }
     const list = getStorageItem<WardFund[]>('ward_funds', []);
-    return list.filter(f => f.year === year);
+    const filtered = list.filter(f => f.year === year);
+    return [...filtered].sort((a, b) => {
+      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+      if (diff !== 0) return diff;
+      return a.id.localeCompare(b.id);
+    });
   },
   saveWardFund: async (fund: Omit<WardFund, 'created_at'> & { created_at?: string }): Promise<WardFund> => {
     const fullFund: WardFund = {

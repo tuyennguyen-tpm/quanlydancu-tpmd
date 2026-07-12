@@ -982,13 +982,14 @@ const WardFunds = () => {
           <tr>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top; font-size: 13pt;">
               <div class="signature-title" style="font-weight: bold; font-size: 14pt;">NGƯỜI LẬP BIỂU</div>
-              <div style="height: 120px;"></div>
-              <div class="signature-name" style="font-weight: normal; font-style: italic; font-size: 13pt; color: #000;">(Ký, ghi rõ họ tên)</div>
+              <div style="font-style: italic; font-size: 13pt; color: #000; margin-top: 4px;">(Ký, ghi rõ họ tên)</div>
+              <div style="height: 110px;"></div>
             </td>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top; font-size: 13pt;">
               <div class="signature-title" style="font-weight: bold; font-size: 14pt;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
-              <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
-                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 100px; max-height: 110px; object-fit: contain;" />` : ''}
+              <div style="font-style: italic; font-size: 13pt; color: #000; margin-top: 4px;">(Ký, đóng dấu, ghi rõ họ tên)</div>
+              <div style="height: 110px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
               </div>
               <div class="signature-name" style="font-weight: bold; font-size: 14pt;">${leaderName}</div>
             </td>

@@ -1414,7 +1414,7 @@ ${strippedContent}
     const thuKySigUrl = getOfficialSigUrl('thu_ky');
 
     const sigImgHtml = (url: string) =>
-      url ? `<img src="${url}" alt="Chữ ký" style="height:85px;max-width:180px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
+      url ? `<img src="${url}" alt="Chữ ký" style="height:110px;max-width:220px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
 
     const rightSigImg = docType === 'party' ? sigImgHtml(biThuSigUrl) : (docType === 'front' ? sigImgHtml(matTranSigUrl) : sigImgHtml(toTruongSigUrl));
     const leftSigImg = sigImgHtml(thuKySigUrl);
@@ -2010,7 +2010,7 @@ ${strippedContent}
             spacing: { after: 20, before: 320, line: 360 },
             children: [new ImageRun({
               data: bytes.buffer,
-              transformation: { width: 100, height: 45 },
+              transformation: { width: 140, height: 60 },
               type: dataUrl.startsWith('data:image/png') ? 'png' : 'jpg',
             })],
           });
@@ -2065,7 +2065,7 @@ ${strippedContent}
             spacing: { after: 20, before: 300, line: 360 },
             children: [new ImageRun({
               data: bytes.buffer,
-              transformation: { width: 100, height: 45 },
+              transformation: { width: 140, height: 60 },
               type: dataUrl.startsWith('data:image/png') ? 'png' : 'jpg',
             })],
           });
@@ -2157,7 +2157,7 @@ ${strippedContent}
 
     // ─── Hàm tạo HTML ảnh chữ ký (dùng chung) ───
     const sigImgHtml = (url: string) =>
-      url ? `<img src="${url}" alt="Chữ ký" style="height:90px;max-width:190px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
+      url ? `<img src="${url}" alt="Chữ ký" style="height:110px;max-width:220px;object-fit:contain;display:block;margin:0 auto 2px;" />` : '';
 
     // Load latest signatures from localStorage
     let officialSigs: { id: string; name: string; signatureUrl?: string }[] = [];

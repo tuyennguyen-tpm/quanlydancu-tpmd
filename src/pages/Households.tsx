@@ -949,13 +949,14 @@ const Households = () => {
           <tr>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
               <div class="signature-title" style="font-weight: bold;">NGƯỜI XÁC NHẬN</div>
-              <div style="height: 120px;"></div>
-              <div class="signature-name" style="font-weight: normal; font-style: italic; font-size: 12px; color: #000;">(Ký, ghi rõ họ tên)</div>
+              <div style="font-style: italic; font-size: 12px; color: #000; margin-top: 4px;">(Ký, ghi rõ họ tên)</div>
+              <div style="height: 110px;"></div>
             </td>
             <td style="width: 50%; text-align: center; border: none; vertical-align: top;">
               <div class="signature-title" style="font-weight: bold;">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
-              <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
-                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 100px; max-height: 110px; object-fit: contain;" />` : ''}
+              <div style="font-style: italic; font-size: 12px; color: #000; margin-top: 4px;">(Ký, đóng dấu, ghi rõ họ tên)</div>
+              <div style="height: 110px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
               </div>
               <div class="signature-name" style="font-weight: bold;">${leaderName}</div>
             </td>
@@ -1220,8 +1221,9 @@ const Households = () => {
         <td style="width: 40%; border: none; text-align: center; font-family: 'Times New Roman', serif;">
           <div style="font-style: italic; color: #000; font-size: 13pt; margin-bottom: 5px;">${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ngày ${today}</div>
           <div style="font-weight: bold; font-size: 14pt; text-transform: uppercase;">Tổ trưởng dân phố</div>
-          <div style="height: 100px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
-            ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 85px; max-height: 95px; object-fit: contain;" />` : ''}
+          <div style="font-style: italic; font-size: 13pt; margin-top: 4px; margin-bottom: 5px;">(Ký, đóng dấu, ghi rõ họ tên)</div>
+          <div style="height: 110px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+            ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
           </div>
           <div style="font-weight: bold; font-size: 14pt;">${leaderName}</div>
         </td>

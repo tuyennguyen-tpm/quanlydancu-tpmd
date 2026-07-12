@@ -855,7 +855,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               font-size: 14pt;
             }
             .signature-space {
-               height: 120px;
+               height: 130px;
                display: flex;
                align-items: center;
                justify-content: center;
@@ -918,7 +918,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                    <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
                    <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
                    <div class="signature-space">
-                     ${secretarySigUrl ? `<img src="${secretarySigUrl}" alt="Chữ ký" style="height: 100px; max-height: 110px; object-fit: contain;" />` : ''}
+                      ${secretarySigUrl ? `<img src="${secretarySigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
                    </div>
                    <div class="signature-name">${secretary.split('-')[0].trim()}</div>
                  </td>
@@ -926,7 +926,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                    <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
                    <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
                    <div class="signature-space">
-                     ${chairmanSigUrl ? `<img src="${chairmanSigUrl}" alt="Chữ ký" style="height: 100px; max-height: 110px; object-fit: contain;" />` : ''}
+                      ${chairmanSigUrl ? `<img src="${chairmanSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
                    </div>
                    <div class="signature-name">${chairman.split('-')[0].trim()}</div>
                  </td>
@@ -1067,19 +1067,19 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 <div class="sign-title">${secretaryTitle || 'THƯ KÝ CUỘC HỌP'}</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
                 ${secretarySigUrl 
-                  ? `<div style="margin-top: 10px; margin-bottom: 5px; height: 100px; text-align: center;"><img src="${secretarySigUrl}" style="height: 85px; max-height: 95px; width: auto;" /></div>` 
+                  ? `<div style="margin-top: 10px; margin-bottom: 5px; height: 110px; text-align: center;"><img src="${secretarySigUrl}" style="height: 110px; max-height: 120px; width: auto; object-fit: contain;" /></div>` 
                   : `<div style="height: 110px;"></div>`
                 }
-                <div class="sign-name" style="font-weight: bold; font-size: 13pt; margin-top: ${secretarySigUrl ? '5px' : '110px'};">${secretary.split('-')[0].trim()}</div>
+                <div class="sign-name" style="font-weight: bold; font-size: 13pt; margin-top: 5px;">${secretary.split('-')[0].trim()}</div>
               </td>
               <td>
                 <div class="sign-title">${chairmanTitle || 'CHỦ TRÌ CUỘC HỌP'}</div>
                 <div style="font-style: italic; font-size: 11pt;">(Ký, ghi rõ họ tên)</div>
                 ${chairmanSigUrl 
-                  ? `<div style="margin-top: 10px; margin-bottom: 5px; height: 100px; text-align: center;"><img src="${chairmanSigUrl}" style="height: 85px; max-height: 95px; width: auto;" /></div>` 
+                  ? `<div style="margin-top: 10px; margin-bottom: 5px; height: 110px; text-align: center;"><img src="${chairmanSigUrl}" style="height: 110px; max-height: 120px; width: auto; object-fit: contain;" /></div>` 
                   : `<div style="height: 110px;"></div>`
                 }
-                <div class="sign-name" style="font-weight: bold; font-size: 13pt; margin-top: ${chairmanSigUrl ? '5px' : '110px'};">${chairman.split('-')[0].trim()}</div>
+                <div class="sign-name" style="font-weight: bold; font-size: 13pt; margin-top: 5px;">${chairman.split('-')[0].trim()}</div>
               </td>
             </tr>
           </table>

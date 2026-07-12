@@ -1493,7 +1493,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             .footer-section { width: 100%; margin-top: 35px; border: none; border-collapse: collapse; }
             .footer-section td { border: none; padding: 0; text-align: center; width: 50%; vertical-align: top; font-size: 14pt; }
             .footer-date { font-style: italic; margin-bottom: 5px; font-size: 14pt; }
-            .footer-role { font-weight: bold; margin-bottom: 60px; font-size: 14pt; }
+            .footer-role { font-weight: bold; margin-bottom: 5px; font-size: 14pt; }
             @media print {
               @page {
                 size: A4 landscape;
@@ -1550,9 +1550,10 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               <td>
                 <div class="footer-date">Quảng Giao, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</div>
                 <div class="footer-role">T/M CHI BỘ<br>BÍ THƯ</div>
+                <div style="font-style: italic; font-size: 13pt; margin-top: 4px; margin-bottom: 5px;">(Ký, ghi rõ họ tên)</div>
                 ${biThuSigUrl 
-                  ? `<div style="height: 100px; display: flex; align-items: center; justify-content: center; margin: 5px auto;"><img src="${biThuSigUrl}" alt="Chữ ký" style="height: 85px; max-height: 95px; object-fit: contain;" /></div>` 
-                  : `<div style="height: 80px;"></div>`
+                  ? `<div style="height: 110px; display: flex; align-items: center; justify-content: center; margin: 5px auto;"><img src="${biThuSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" /></div>` 
+                  : `<div style="height: 90px;"></div>`
                 }
                 <div style="font-weight: bold;">${partySecretaryName || 'Nguyễn Kim Tuyến'}</div>
               </td>
