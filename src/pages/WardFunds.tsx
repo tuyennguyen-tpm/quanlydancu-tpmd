@@ -508,7 +508,7 @@ const WardFunds = () => {
           const contributions: Record<string, any> = {};
           let shouldAdd = false;
 
-          activeFundsList.forEach(fund => {
+          activeFundsList.forEach((fund: { name: string; target: number }) => {
             const isPCTT = fund.name.toLowerCase().includes('thiên tai');
             const isDOdn = fund.name.toLowerCase().includes('đền ơn đáp nghĩa') || fund.name.toLowerCase().includes('đền ơn');
             
