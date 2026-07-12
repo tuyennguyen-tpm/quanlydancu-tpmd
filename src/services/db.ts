@@ -2044,7 +2044,7 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `DROP POLICY IF EXISTS "Allow admin access app_config" ON app_config;\n`;
     sql += `CREATE POLICY "Allow admin access app_config" ON app_config FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);\n\n`;
     sql += `DROP POLICY IF EXISTS "Allow public read app_config" ON app_config;\n`;
-    sql += `CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO anon USING (true);\n\n`;
+    sql += `CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO authenticated, anon USING (true);\n\n`;
   }
 
   // Meeting Minutes

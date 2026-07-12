@@ -198,7 +198,7 @@ CREATE POLICY "Allow public read documents" ON documents FOR SELECT TO anon USIN
 CREATE POLICY "Allow public read security_logs" ON security_logs FOR SELECT TO anon USING (true);
 CREATE POLICY "Allow public read environment_logs" ON environment_logs FOR SELECT TO anon USING (true);
 CREATE POLICY "Allow public read policy_activities" ON policy_activities FOR SELECT TO anon USING (true);
-CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO anon USING (true);
+CREATE POLICY "Allow public read app_config" ON app_config FOR SELECT TO authenticated, anon USING (true);
 CREATE POLICY "Allow public read meeting_minutes" ON meeting_minutes FOR SELECT TO anon USING (true);
 
 -- Người dân được gửi phản ánh mới (INSERT vào bảng complaints)
