@@ -680,14 +680,13 @@ const Security = () => {
                 In danh sách
               </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', width: '220px' }}>
-                <Search size={16} style={{ color: 'var(--text-muted)' }} />
+              <div className="search-box" style={{ width: '220px' }}>
+                <Search size={16} />
                 <input
                   type="text"
                   placeholder="Tìm tên hoặc SĐT..."
                   value={searchMilitia}
                   onChange={(e) => setSearchMilitia(e.target.value)}
-                  style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.85rem', background: 'transparent' }}
                 />
               </div>
             </div>

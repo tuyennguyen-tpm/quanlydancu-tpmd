@@ -316,14 +316,13 @@ const YouthUnion = () => {
             <option value="all">Tất cả các tổ</option>
             {groupsList.map((g: string) => <option key={g} value={g}>{g}</option>)}
           </select>
-          <div style={{ position: 'relative' }}>
-            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+          <div className="search-box" style={{ width: '200px' }}>
+            <Search size={14} />
             <input
               type="text"
               placeholder="Tìm kiếm đoàn viên..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{ paddingLeft: '32px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', border: '1px solid #fecaca', borderRadius: '8px', outline: 'none', fontSize: '13px', width: '200px' }}
             />
           </div>
         </div>

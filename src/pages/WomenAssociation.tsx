@@ -790,14 +790,13 @@ const WomenAssociation = () => {
             </select>
 
             {/* Tìm kiếm */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', width: '220px' }}>
-              <Search size={14} style={{ color: 'var(--text-muted)' }} />
+            <div className="search-box" style={{ width: '220px' }}>
+              <Search size={14} />
               <input 
                 type="text" 
                 placeholder="Tìm kiếm hội viên..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ border: 'none', background: 'none', outline: 'none', fontSize: '12.5px', width: '100%' }}
               />
             </div>
           </div>

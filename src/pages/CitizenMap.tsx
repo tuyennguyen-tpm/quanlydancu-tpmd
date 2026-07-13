@@ -244,24 +244,14 @@ const CitizenMap = () => {
         <div className="map-sidebar">
            <h3>Danh sách hộ dân ({filteredSidebarHouseholds.length})</h3>
            
-           <div style={{ marginBottom: '12px', position: 'relative' }}>
+           <div className="search-box" style={{ width: '100%', marginBottom: '12px' }}>
+             <Search size={14} />
              <input
                type="text"
                placeholder="Tìm tên chủ hộ, địa chỉ..."
                value={mapSearchTerm}
                onChange={(e) => setMapSearchTerm(e.target.value)}
-               style={{
-                 width: '100%',
-                 padding: '8px 12px 8px 32px',
-                 borderRadius: '8px',
-                 border: '1px solid var(--border)',
-                 fontSize: '0.85rem',
-                 outline: 'none',
-                 fontFamily: 'inherit',
-                 boxSizing: 'border-box'
-               }}
              />
-             <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: '#94a3b8' }} />
            </div>
 
            <div className="household-mini-list">

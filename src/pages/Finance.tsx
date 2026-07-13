@@ -1737,42 +1737,33 @@ const Finance = () => {
 
             {/* Hàng 2: Tìm kiếm bên trái, Tổng thu & Xuất Excel bên phải */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div className="search-bar" style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '320px', margin: 0 }}>
-                <div className="input-with-icon" style={{ flex: 1, position: 'relative' }}>
-                  <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input
-                    type="text"
-                    placeholder="Tìm theo tên chủ hộ, địa chỉ..."
-                    value={fundSearchInput}
-                    onChange={(e) => setFundSearchInput(e.target.value)}
+              <div className="search-box" style={{ minWidth: '320px', flex: 1, position: 'relative' }}>
+                <Search size={18} />
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên chủ hộ, địa chỉ..."
+                  value={fundSearchInput}
+                  onChange={(e) => setFundSearchInput(e.target.value)}
+                  style={{ paddingRight: fundSearchInput ? '36px' : '12px' }}
+                />
+                {fundSearchInput && (
+                  <button
+                    type="button"
+                    onClick={() => { setFundSearchInput(''); setFundSearchTerm(''); }}
                     style={{
-                      padding: '8px 12px 8px 38px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      outline: 'none',
-                      width: '100%',
-                      fontSize: '0.9rem'
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-muted)'
                     }}
-                  />
-                  {fundSearchInput && (
-                    <button
-                      type="button"
-                      onClick={() => { setFundSearchInput(''); setFundSearchTerm(''); }}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '55%',
-                        transform: 'translateY(-50%)',
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--text-muted)'
-                      }}
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db } from '../services/db';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
-import { FileUp, FileDown, Printer, UserPlus, X } from 'lucide-react';
+import { FileUp, FileDown, Printer, UserPlus, X, Search } from 'lucide-react';
 
 const MILESTONE_AGES = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150];
 
@@ -923,13 +923,13 @@ const CCBElderly = () => {
               {groupsList.map((g: string) => <option key={g} value={g}>{g}</option>)}
             </select>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', width: '240px' }}>
+            <div className="search-box" style={{ width: '240px' }}>
+              <Search size={14} />
               <input 
                 type="text" 
                 placeholder="Tìm kiếm theo tên, số điện thoại..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ border: 'none', background: 'none', outline: 'none', fontSize: '12.5px', width: '100%' }}
               />
             </div>
           </div>
