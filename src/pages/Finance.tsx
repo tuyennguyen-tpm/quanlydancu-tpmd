@@ -1615,9 +1615,9 @@ const Finance = () => {
           {!isWardUser && (
             <div className="fund-stats-3d-grid" style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: '20px',
-              marginBottom: '28px'
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '12px',
+              marginBottom: '20px'
             }}>
               {fundNames.map((fundName, index) => {
                 const totalCollectedForFund = filteredHouseholdsForFunds.reduce((sum, hh) => {
@@ -1642,31 +1642,31 @@ const Finance = () => {
                     style={{
                       backgroundColor: 'white',
                       border: `1.5px solid ${color.border}`,
-                      borderRadius: '12px',
-                      padding: '20px',
-                      boxShadow: `0 8px 0 ${color.border}, 0 12px 20px -5px rgba(0, 0, 0, 0.06)`,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      boxShadow: `0 4px 0 ${color.border}, 0 8px 12px -4px rgba(0, 0, 0, 0.05)`,
+                      transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: '110px',
+                      justifyContent: 'center',
+                      minHeight: '75px',
                       cursor: 'default',
                       position: 'relative'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(3px)';
-                      e.currentTarget.style.boxShadow = `0 5px 0 ${color.border}, 0 8px 12px -3px rgba(0, 0, 0, 0.05)`;
+                      e.currentTarget.style.transform = 'translateY(2px)';
+                      e.currentTarget.style.boxShadow = `0 2px 0 ${color.border}, 0 4px 8px -3px rgba(0, 0, 0, 0.04)`;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = `0 8px 0 ${color.border}, 0 12px 20px -5px rgba(0, 0, 0, 0.06)`;
+                      e.currentTarget.style.boxShadow = `0 4px 0 ${color.border}, 0 8px 12px -4px rgba(0, 0, 0, 0.05)`;
                     }}
                   >
-                    <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
                       {fundName}
                     </div>
-                    <div style={{ fontSize: '1.45rem', fontWeight: '800', color: color.text, lineHeight: '1.2' }}>
-                      {formatCurrency(totalCollectedForFund)} <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#94a3b8' }}>đ</span>
+                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: color.text, lineHeight: '1.2' }}>
+                      {formatCurrency(totalCollectedForFund)} <span style={{ fontSize: '0.78rem', fontWeight: '600', color: '#94a3b8' }}>đ</span>
                     </div>
                   </div>
                 );
