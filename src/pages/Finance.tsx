@@ -1163,11 +1163,11 @@ const Finance = () => {
           @media print {
             @page {
               size: A5 landscape;
-              margin: 8mm 10mm;
+              margin: 0;
             }
             body {
               margin: 0;
-              padding: 0;
+              padding: 8mm 10mm;
             }
           }
           body {
@@ -1319,11 +1319,11 @@ const Finance = () => {
           @media print {
             @page {
               size: A5 landscape;
-              margin: 8mm 10mm;
+              margin: 0;
             }
             body {
               margin: 0;
-              padding: 0;
+              padding: 8mm 10mm;
             }
             .receipt-container {
               page-break-after: always;
@@ -1481,11 +1481,11 @@ const Finance = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 15mm 20mm;
+              margin: 0;
             }
             body {
               margin: 0;
-              padding: 0;
+              padding: 12mm 15mm;
             }
             .receipt-container {
               page-break-inside: avoid !important;
@@ -1651,11 +1651,11 @@ const Finance = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 12mm 15mm;
+              margin: 0;
             }
             body {
               margin: 0;
-              padding: 0;
+              padding: 12mm 15mm;
             }
             .page {
               page-break-after: always;
