@@ -1467,71 +1467,6 @@ const Households = () => {
         </div>
       </div>
 
-      {/* Thống kê Tổng hộ và Tổng nhân khẩu */}
-      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="stat-card" style={{
-          background: 'white',
-          padding: '20px',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: 'var(--shadow-sm)',
-          transition: 'all 0.3s ease'
-        }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(37, 99, 235, 0.1)',
-            color: 'var(--primary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Home size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng số hộ</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2 }}>
-              {formatNumber(stats.totalHouseholds)} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>hộ</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card" style={{
-          background: 'white',
-          padding: '20px',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          boxShadow: 'var(--shadow-sm)',
-          transition: 'all 0.3s ease'
-        }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            color: 'var(--success)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Users size={24} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng nhân khẩu</div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2 }}>
-              {formatNumber(stats.totalResidents)} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>người</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="filter-bar" style={{ flexWrap: 'wrap', gap: '10px' }}>
         <div className="search-box">
           <Search size={20} />
@@ -1552,6 +1487,41 @@ const Households = () => {
 
         {/* Lọc theo phân quyền & Nút in/xuất */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginLeft: 'auto' }}>
+          {/* Widget Tổng hộ nhỏ gọn */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            border: '1.5px solid var(--border)',
+            backgroundColor: '#eff6ff',
+            color: '#1e3a8a',
+            fontSize: '0.82rem',
+            fontWeight: '700',
+            whiteSpace: 'nowrap'
+          }}>
+            <Home size={14} style={{ color: '#2563eb' }} />
+            <span>Tổng: <strong style={{ fontSize: '0.88rem', color: '#1d4ed8' }}>{formatNumber(stats.totalHouseholds)}</strong> hộ</span>
+          </div>
+
+          {/* Widget Tổng nhân khẩu nhỏ gọn */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            border: '1.5px solid var(--border)',
+            backgroundColor: '#f0fdf4',
+            color: '#166534',
+            fontSize: '0.82rem',
+            fontWeight: '700',
+            whiteSpace: 'nowrap'
+          }}>
+            <Users size={14} style={{ color: '#16a34a' }} />
+            <span>NK: <strong style={{ fontSize: '0.88rem', color: '#15803d' }}>{formatNumber(stats.totalResidents)}</strong> người</span>
+          </div>
           {isWardAdmin ? (
             /* Dropdown lọc Tổ dân phố (tài khoản phường) */
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
