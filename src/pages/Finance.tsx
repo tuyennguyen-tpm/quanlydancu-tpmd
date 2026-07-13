@@ -928,6 +928,22 @@ const Finance = () => {
     const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
     const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
 
+    // Tải chữ ký động cho Kế toán trưởng & Thủ quỹ
+    let keToanName = '';
+    let keToanSigUrl = '';
+    let thuQuyName = '';
+    let thuQuySigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const kt = sigs.find((s: any) => s.id === 'ke_toan');
+      if (kt?.name?.trim()) keToanName = kt.name.trim();
+      if (kt?.signatureUrl?.trim()) keToanSigUrl = kt.signatureUrl.trim();
+
+      const tq = sigs.find((s: any) => s.id === 'thu_quy');
+      if (tq?.name?.trim()) thuQuyName = tq.name.trim();
+      if (tq?.signatureUrl?.trim()) thuQuySigUrl = tq.signatureUrl.trim();
+    } catch { /* ignore */ }
+
     const paidFundsRowsHtml = fundNames.map((fundName, idx) => {
       const fundRecord = hhFunds.find(f => f.fund_name === fundName);
       const amountPaid = fundRecord ? fundRecord.amount : 0;
@@ -1094,8 +1110,18 @@ const Finance = () => {
               </div>
               <strong>${leaderName}</strong>
             </td>
-            <td style="vertical-align: bottom;"></td>
-            <td style="vertical-align: bottom;"></td>
+            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
+              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${keToanSigUrl ? `<img src="${keToanSigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${keToanName}</strong>
+            </td>
+            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
+              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${thuQuySigUrl ? `<img src="${thuQuySigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${thuQuyName}</strong>
+            </td>
             <td style="vertical-align: bottom;"><strong>Ban Quản lý Quỹ</strong></td>
             <td style="vertical-align: bottom;"><strong>${headName}</strong></td>
           </tr>
