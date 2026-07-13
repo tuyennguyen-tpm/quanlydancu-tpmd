@@ -2188,35 +2188,101 @@ const Finance = () => {
                   </strong>
                 </span>
                 {canPrintExport && (
-                  <button 
-                    onClick={handlePrintFundsList}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: '#fff',
-                      border: '1px solid #cbd5e1',
-                      color: '#334155',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      height: 'auto',
-                      minHeight: '36px',
-                      fontSize: '0.85rem'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f1f5f9';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#fff';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    <Printer size={16} /> In danh sách A4
-                  </button>
+                  <>
+                    <button 
+                      onClick={handlePrintFundsList}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: '#fff',
+                        border: '1px solid #cbd5e1',
+                        color: '#334155',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        height: 'auto',
+                        minHeight: '36px',
+                        fontSize: '0.85rem'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fff';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <Printer size={16} /> In danh sách A4
+                    </button>
+
+                    <button 
+                      onClick={handlePrintBulkReceiptsA4}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        color: '#1e40af',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        height: 'auto',
+                        minHeight: '36px',
+                        fontSize: '0.85rem'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dbeafe';
+                        e.currentTarget.style.borderColor = '#93c5fd';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#eff6ff';
+                        e.currentTarget.style.borderColor = '#bfdbfe';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <Printer size={16} /> In loạt phiếu A4 (2 phiếu/trang)
+                    </button>
+
+                    <button 
+                      onClick={handlePrintBulkReceiptsA5}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        color: '#166534',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        height: 'auto',
+                        minHeight: '36px',
+                        fontSize: '0.85rem'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#dcfce7';
+                        e.currentTarget.style.borderColor = '#86efac';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f0fdf4';
+                        e.currentTarget.style.borderColor = '#bbf7d0';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <Printer size={16} /> In loạt phiếu A5
+                    </button>
+                  </>
                 )}
                 {canPrintExport && (
                   <button 
