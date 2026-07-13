@@ -81,12 +81,14 @@ const Households = () => {
 
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
+  const [tdpList, setTdpList] = useState<any[]>([]);
+  const [tdpFilter, setTdpFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 50;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, policyFilter, groupFilter]);
+  }, [searchTerm, policyFilter, groupFilter, tdpFilter]);
   
   // Modals state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -124,6 +126,10 @@ const Households = () => {
   }, []);
 
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+
+  // Phân quyền tài khoản (phường vs tổ)
+  const userRoleVal = localStorage.getItem('user_role') || 'tdp_leader';
+  const isWardAdmin = userRoleVal === 'ward_admin' || userRoleVal === 'super_admin';
 
   // Quyền in danh sách & xuất Excel: không cho phép demo (Trang chủ) và guest_mode
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
@@ -213,13 +219,23 @@ const Households = () => {
       setResidents(rList);
 
       const wardId = localStorage.getItem('user_ward_id');
+      let list: any[] = [];
+      const map: Record<string, string> = {};
       if (wardId) {
-        const list = await db.getTDPList(wardId);
-        const map: Record<string, string> = {};
+        list = await db.getTDPList(wardId);
         list.forEach(item => {
           map[item.id] = item.tdp_name || item.full_name || 'Tổ dân phố';
         });
         setTdpMap(map);
+        setTdpList(list);
+      }
+      if (list.length === 0) {
+        const uniqueUserIds = Array.from(new Set(hList.map(h => h.user_id).filter(Boolean)));
+        const fallbackList = uniqueUserIds.map(uid => ({
+          id: uid as string,
+          tdp_name: map[uid as string] || localStorage.getItem('tdp_name') || `Tổ dân phố (ID: ${uid})`
+        }));
+        setTdpList(fallbackList);
       }
     } catch (e) {
       showToast('Lỗi tải dữ liệu!', 'danger');
@@ -1108,9 +1124,12 @@ const Households = () => {
     const matchesSearch = matchesByHead || matchesByMember;
 
     const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
-    const matchesGroup = groupFilter === 'all' || h.self_management_group === groupFilter;
+    
+    // Phân quyền lọc: tài khoản phường thì lọc theo tổ dân phố, tài khoản TDP thì lọc theo tổ
+    const matchesTdp = !isWardAdmin || tdpFilter === 'all' || h.user_id === tdpFilter;
+    const matchesGroup = isWardAdmin || groupFilter === 'all' || h.self_management_group === groupFilter;
 
-    return matchesSearch && matchesPolicy && matchesGroup;
+    return matchesSearch && matchesPolicy && matchesTdp && matchesGroup;
   }).sort((a, b) => {
     // Sắp xếp theo số của Số sổ hộ khẩu (vd: HH000001 -> 1)
     const numA = parseInt(a.household_number.replace(/\D/g, '') || '0', 10);
@@ -1118,7 +1137,18 @@ const Households = () => {
     if (numA !== numB) return numA - numB;
     // Fallback nếu trùng số
     return a.id.localeCompare(b.id);
-  }), [households, residents, searchTerm, policyFilter, groupFilter]);
+  }), [households, residents, searchTerm, policyFilter, groupFilter, isWardAdmin, tdpFilter]);
+
+  const stats = useMemo(() => {
+    const totalH = filteredHouseholds.length;
+    const hhIds = new Set(filteredHouseholds.map(h => h.id));
+    const activeResidents = residents.filter(r => hhIds.has(r.household_id) && r.status !== 'deceased');
+    const totalR = activeResidents.length;
+    return {
+      totalHouseholds: totalH,
+      totalResidents: totalR
+    };
+  }, [filteredHouseholds, residents]);
 
   const totalPages = Math.ceil(filteredHouseholds.length / pageSize) || 1;
   const paginatedHouseholds = filteredHouseholds.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -1242,13 +1272,17 @@ const Households = () => {
       return;
     }
     try {
-      const tdpNameVal = localStorage.getItem('tdp_name') || 'TDP';
+      const tdpNameVal = isWardAdmin 
+        ? (tdpFilter !== 'all' ? (tdpMap[tdpFilter] || 'Tổ dân phố') : 'Tất cả TDP')
+        : (localStorage.getItem('tdp_name') || 'TDP');
       const wardNameVal = localStorage.getItem('ward_name') || 'Phường';
       const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
         : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
         : policyFilter === 'policy_family' ? 'Gia đình chính sách'
         : 'Tất cả';
-      const groupLabel = groupFilter !== 'all' ? ` - ${groupFilter}` : '';
+      const groupLabel = isWardAdmin
+        ? (tdpFilter !== 'all' ? ` - ${tdpMap[tdpFilter] || 'TDP'}` : '')
+        : (groupFilter !== 'all' ? ` - ${groupFilter}` : '');
 
       const workbook = new ExcelJS.Workbook();
       const ws = workbook.addWorksheet('Danh sach ho dan');
@@ -1433,6 +1467,71 @@ const Households = () => {
         </div>
       </div>
 
+      {/* Thống kê Tổng hộ và Tổng nhân khẩu */}
+      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="stat-card" style={{
+          background: 'white',
+          padding: '20px',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          boxShadow: 'var(--shadow-sm)',
+          transition: 'all 0.3s ease'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            color: 'var(--primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Home size={24} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng số hộ</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2 }}>
+              {formatNumber(stats.totalHouseholds)} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>hộ</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card" style={{
+          background: 'white',
+          padding: '20px',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          boxShadow: 'var(--shadow-sm)',
+          transition: 'all 0.3s ease'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            color: 'var(--success)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Users size={24} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tổng nhân khẩu</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1.2 }}>
+              {formatNumber(stats.totalResidents)} <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)' }}>người</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="filter-bar" style={{ flexWrap: 'wrap', gap: '10px' }}>
         <div className="search-box">
           <Search size={20} />
@@ -1451,32 +1550,59 @@ const Households = () => {
           <button className={`tab-mini ${policyFilter === 'policy_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('policy_family')}>Gia đình chính sách</button>
         </div>
 
-        {/* Lọc theo Tổ & Nút in/xuất */}
+        {/* Lọc theo phân quyền & Nút in/xuất */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginLeft: 'auto' }}>
-          {/* Dropdown lọc Tổ */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Filter size={15} style={{ color: 'var(--text-muted)' }} />
-            <select
-              value={groupFilter}
-              onChange={(e) => setGroupFilter(e.target.value)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: '1.5px solid var(--border)',
-                backgroundColor: groupFilter !== 'all' ? '#eff6ff' : '#fff',
-                color: groupFilter !== 'all' ? '#2563eb' : 'var(--text-main)',
-                fontWeight: groupFilter !== 'all' ? '700' : '500',
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                minWidth: '120px'
-              }}
-            >
-              <option value="all">Tất cả Tổ</option>
-              {groups.map(g => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          </div>
+          {isWardAdmin ? (
+            /* Dropdown lọc Tổ dân phố (tài khoản phường) */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MapPin size={15} style={{ color: 'var(--text-muted)' }} />
+              <select
+                value={tdpFilter}
+                onChange={(e) => setTdpFilter(e.target.value)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid var(--border)',
+                  backgroundColor: tdpFilter !== 'all' ? '#eff6ff' : '#fff',
+                  color: tdpFilter !== 'all' ? '#2563eb' : 'var(--text-main)',
+                  fontWeight: tdpFilter !== 'all' ? '700' : '500',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  minWidth: '150px'
+                }}
+              >
+                <option value="all">Tất cả TDP</option>
+                {tdpList.map(t => (
+                  <option key={t.id} value={t.id}>{t.tdp_name || t.full_name || 'Tổ dân phố'}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            /* Dropdown lọc Tổ tự quản (tài khoản tổ dân phố) */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Filter size={15} style={{ color: 'var(--text-muted)' }} />
+              <select
+                value={groupFilter}
+                onChange={(e) => setGroupFilter(e.target.value)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: '1.5px solid var(--border)',
+                  backgroundColor: groupFilter !== 'all' ? '#eff6ff' : '#fff',
+                  color: groupFilter !== 'all' ? '#2563eb' : 'var(--text-main)',
+                  fontWeight: groupFilter !== 'all' ? '700' : '500',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  minWidth: '120px'
+                }}
+              >
+                <option value="all">Tất cả Tổ</option>
+                {groups.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Nút In A4 – chỉ hiện với vai trò có quyền (không phải Trang chủ/demo) */}
           {canPrintExport && (
