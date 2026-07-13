@@ -1003,65 +1003,67 @@ const Finance = () => {
       ) : (
         <div className="funds-matrix-view" style={{ animation: 'fadeIn 0.3s ease' }}>
           {/* Thống kê Quỹ nổi 3D */}
-          <div className="fund-stats-3d-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: '20px',
-            marginBottom: '28px'
-          }}>
-            {fundNames.map((fundName, index) => {
-              const totalCollectedForFund = filteredHouseholdsForFunds.reduce((sum, hh) => {
-                const paid = householdFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
-                return sum + (paid ? paid.amount : 0);
-              }, 0);
+          {!isWardUser && (
+            <div className="fund-stats-3d-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gap: '20px',
+              marginBottom: '28px'
+            }}>
+              {fundNames.map((fundName, index) => {
+                const totalCollectedForFund = filteredHouseholdsForFunds.reduce((sum, hh) => {
+                  const paid = householdFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
+                  return sum + (paid ? paid.amount : 0);
+                }, 0);
 
-              const colors = [
-                { text: '#1e3a8a', border: '#dbeafe' }, // Blue
-                { text: '#166534', border: '#dcfce7' }, // Green
-                { text: '#78350f', border: '#fef3c7' }, // Yellow
-                { text: '#581c87', border: '#e9d5ff' }, // Purple
-                { text: '#831843', border: '#fbcfe8' }, // Pink
-                { text: '#742a2a', border: '#fed7d7' }  // Red
-              ];
-              const color = colors[index % colors.length];
+                const colors = [
+                  { text: '#1e3a8a', border: '#dbeafe' }, // Blue
+                  { text: '#166534', border: '#dcfce7' }, // Green
+                  { text: '#78350f', border: '#fef3c7' }, // Yellow
+                  { text: '#581c87', border: '#e9d5ff' }, // Purple
+                  { text: '#831843', border: '#fbcfe8' }, // Pink
+                  { text: '#742a2a', border: '#fed7d7' }  // Red
+                ];
+                const color = colors[index % colors.length];
 
-              return (
-                <div 
-                  key={fundName} 
-                  className="fund-3d-card"
-                  style={{
-                    backgroundColor: 'white',
-                    border: `1.5px solid ${color.border}`,
-                    borderRadius: '12px',
-                    padding: '20px',
-                    boxShadow: `0 8px 0 ${color.border}, 0 12px 20px -5px rgba(0, 0, 0, 0.06)`,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    minHeight: '110px',
-                    cursor: 'default',
-                    position: 'relative'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(3px)';
-                    e.currentTarget.style.boxShadow = `0 5px 0 ${color.border}, 0 8px 12px -3px rgba(0, 0, 0, 0.05)`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = `0 8px 0 ${color.border}, 0 12px 20px -5px rgba(0, 0, 0, 0.06)`;
-                  }}
-                >
-                  <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                    {fundName}
+                return (
+                  <div 
+                    key={fundName} 
+                    className="fund-3d-card"
+                    style={{
+                      backgroundColor: 'white',
+                      border: `1.5px solid ${color.border}`,
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: `0 8px 0 ${color.border}, 0 12px 20px -5px rgba(0, 0, 0, 0.06)`,
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '110px',
+                      cursor: 'default',
+                      position: 'relative'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(3px)';
+                      e.currentTarget.style.boxShadow = `0 5px 0 ${color.border}, 0 8px 12px -3px rgba(0, 0, 0, 0.05)`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = `0 8px 0 ${color.border}, 0 12px 20px -5px rgba(0, 0, 0, 0.06)`;
+                    }}
+                  >
+                    <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      {fundName}
+                    </div>
+                    <div style={{ fontSize: '1.45rem', fontWeight: '800', color: color.text, lineHeight: '1.2' }}>
+                      {formatCurrency(totalCollectedForFund)} <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#94a3b8' }}>đ</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '1.45rem', fontWeight: '800', color: color.text, lineHeight: '1.2' }}>
-                    {formatCurrency(totalCollectedForFund)} <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#94a3b8' }}>đ</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Top toolbar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
