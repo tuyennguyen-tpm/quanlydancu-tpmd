@@ -1028,11 +1028,13 @@ const Finance = () => {
                   (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
                   Ngày 22/12/2014 của Bộ Tài chính)
                 </span>
-                <div style="font-size: 8.5pt; margin-top: 4px; font-weight: normal; text-align: right; line-height: 1.2;">
-                  Quyển số: ....................<br/>
-                  Số: ....................<br/>
-                  Nợ: ....................<br/>
-                  Có: ....................
+                <div style="text-align: right;">
+                  <div style="display: inline-block; text-align: left; font-size: 8.5pt; margin-top: 4px; font-weight: normal; line-height: 1.2;">
+                    Quyển số: ....................<br/>
+                    Số: ....................<br/>
+                    Nợ: ....................<br/>
+                    Có: ....................
+                  </div>
                 </div>
               </div>
             </td>

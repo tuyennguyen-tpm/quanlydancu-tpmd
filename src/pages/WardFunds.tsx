@@ -969,7 +969,15 @@ const WardFunds = () => {
       return `
         <tr>
           <td style="text-align: center;">${index + 1}</td>
-          <td style="font-weight: bold; white-space: nowrap;">${item.full_name}</td>
+          <td style="font-weight: bold; white-space: nowrap;">
+            ${item.full_name}
+            ${(() => {
+              const res = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
+              const hh = res ? households.find(h => h.id === res.household_id) : null;
+              const head = hh ? residents.find(r => r.id === hh.head_of_household_id) : null;
+              return head ? `<div style="font-size: 8.5pt; font-weight: normal; color: #555; margin-top: 2px;">🏡 Chủ hộ: ${head.full_name}</div>` : '';
+            })()}
+          </td>
           <td style="text-align: center;">${item.dob || '-'}</td>
           <td>${item.address || '-'}</td>
           ${fundContributions}
@@ -1307,11 +1315,13 @@ const WardFunds = () => {
                   (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
                   Ngày 22/12/2014 của Bộ Tài chính)
                 </span>
-                <div style="font-size: 8.5pt; margin-top: 4px; font-weight: normal; text-align: right; line-height: 1.2;">
-                  Quyển số: ....................<br/>
-                  Số: ....................<br/>
-                  Nợ: ....................<br/>
-                  Có: ....................
+                <div style="text-align: right;">
+                  <div style="display: inline-block; text-align: left; font-size: 8.5pt; margin-top: 4px; font-weight: normal; line-height: 1.2;">
+                    Quyển số: ....................<br/>
+                    Số: ....................<br/>
+                    Nợ: ....................<br/>
+                    Có: ....................
+                  </div>
                 </div>
               </div>
             </td>
@@ -2162,28 +2172,28 @@ const WardFunds = () => {
               style={{
                 backgroundColor: bgColor,
                 border: `1.5px solid ${isPCTT ? '#d1fae5' : '#fef3c7'}`,
-                borderRadius: '16px',
-                padding: '20px',
-                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01), 0 2px 4px -1px rgba(0,0,0,0.006)',
+                borderRadius: '14px',
+                padding: '14px 18px',
+                boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
                 position: 'relative',
                 overflow: 'hidden'
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <span style={{ fontSize: '0.82rem', fontWeight: '800', color: textColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '800', color: textColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {stat.name}
                   </span>
-                  <h3 style={{ margin: '8px 0 0 0', fontSize: '2rem', fontWeight: '850', color: '#1e293b' }}>
+                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.6rem', fontWeight: '850', color: '#1e293b' }}>
                     {formatCurrency(stat.actual)}
                   </h3>
                 </div>
                 <div style={{
                   backgroundColor: isPCTT ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
                   color: barColor,
-                  borderRadius: '12px',
-                  padding: '8px 12px',
-                  fontSize: '0.88rem',
+                  borderRadius: '10px',
+                  padding: '6px 10px',
+                  fontSize: '0.8rem',
                   fontWeight: '800'
                 }}>
                   Tiến độ {stat.percent}%
@@ -2191,11 +2201,11 @@ const WardFunds = () => {
               </div>
 
               {/* Progress Bar */}
-              <div style={{ width: '100%', height: '8px', backgroundColor: trackColor, borderRadius: '4px', marginTop: '16px', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(stat.percent, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '4px', transition: 'width 0.4s ease-out' }}></div>
+              <div style={{ width: '100%', height: '6px', backgroundColor: trackColor, borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(stat.percent, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>
                 <span>Phải thu: {formatCurrency(stat.expected)}</span>
                 <span style={{ color: stat.remaining > 0 ? '#ef4444' : '#10b981' }}>
                   Còn thiếu: {formatCurrency(stat.remaining)}
@@ -2595,6 +2605,19 @@ const WardFunds = () => {
                       <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>{idx + 1}</td>
                       <td style={{ padding: '12px 10px' }}>
                         <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{item.full_name}</div>
+                        {(() => {
+                          const res = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
+                          const hh = res ? households.find(h => h.id === res.household_id) : null;
+                          const head = hh ? residents.find(r => r.id === hh.head_of_household_id) : null;
+                          if (head) {
+                            return (
+                              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                🏡 <span style={{ fontStyle: 'italic' }}>Chủ hộ:</span> <span style={{ fontWeight: '600' }}>{head.full_name}</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </td>
                       <td style={{ padding: '12px 10px', textAlign: 'center' }}>{item.dob || '—'}</td>
                       <td style={{ padding: '12px 10px' }}>{item.address || '—'}</td>
