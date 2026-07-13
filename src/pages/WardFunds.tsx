@@ -1257,10 +1257,17 @@ const WardFunds = () => {
     const resident = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
     const hhOfRes = resident ? households.find(h => h.id === resident.household_id) : null;
     
-    const totalPaid = activeFunds.reduce((sum, fund) => sum + (item.contributions?.[fund.name]?.actual || 0), 0);
+    const totalTarget = activeFunds.reduce((sum, fund) => {
+      const expectedVal = item.contributions?.[fund.name]?.expected !== undefined 
+        ? item.contributions[fund.name].expected 
+        : fund.target;
+      return sum + expectedVal;
+    }, 0);
 
     const paidFundsRowsHtml = activeFunds.map((fund, idx) => {
-      const amountPaid = item.contributions?.[fund.name]?.actual || 0;
+      const amountToPrint = item.contributions?.[fund.name]?.expected !== undefined 
+        ? item.contributions[fund.name].expected 
+        : fund.target;
       const note = item.contributions?.[fund.name]?.date 
         ? new Date(item.contributions[fund.name].date!).toLocaleDateString('vi-VN') 
         : '—';
@@ -1268,7 +1275,7 @@ const WardFunds = () => {
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
           <td style="font-weight: bold; text-align: left;">Đóng góp ${fund.name} (${selectedYear})</td>
-          <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
+          <td style="text-align: right; font-weight: bold;">${formatCurrency(amountToPrint)} đ</td>
           <td style="text-align: left;">${note}</td>
         </tr>
       `;
@@ -1324,7 +1331,7 @@ const WardFunds = () => {
       return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
     };
 
-    const textAmountWords = docSoTien(totalPaid);
+    const textAmountWords = docSoTien(totalTarget);
 
     // Tải chữ ký động cho Kế toán trưởng & Thủ quỹ
     let keToanName = '';
@@ -1410,7 +1417,7 @@ const WardFunds = () => {
             ${paidFundsRowsHtml.length > 0 ? paidFundsRowsHtml : '<tr><td colspan="4" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản quỹ nào trong năm.</td></tr>'}
             <tr class="receipt-total-row">
               <td colspan="2" style="text-align: center; font-weight: bold;">TỔNG CỘNG</td>
-              <td style="text-align: right; font-weight: bold; color: #15803d;">${formatCurrency(totalPaid)} đ</td>
+              <td style="text-align: right; font-weight: bold; color: #15803d;">${formatCurrency(totalTarget)} đ</td>
               <td></td>
             </tr>
           </tbody>
