@@ -923,38 +923,18 @@ const Finance = () => {
     printWindow.document.close();
   };
 
-  const handlePrintHouseholdReceipt = (hh: Household) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
-      return;
-    }
-
+  const generateStateReceiptHtml = (hh: Household, dateText: string, tdpNameVal: string, wardNameVal: string, leaderName: string, leaderSigUrl: string) => {
     const headName = getHouseholdHeadName(hh);
     const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
     const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
-
-    const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
-    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
-    const today = new Date();
-    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
-
-    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
-    let leaderSigUrl = '';
-    try {
-      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
-      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
-      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
-      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
-    } catch { /* ignore */ }
 
     const paidFundsRowsHtml = hhFunds.map((f, idx) => {
       return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
-          <td style="font-weight: bold;">Đóng góp ${f.fund_name} (${f.year})</td>
+          <td style="font-weight: bold; text-align: left;">Đóng góp ${f.fund_name} (${f.year})</td>
           <td style="text-align: right; font-weight: bold;">${formatCurrency(f.amount)} đ</td>
-          <td>${f.note || '—'}</td>
+          <td style="text-align: left;">${f.note || '—'}</td>
         </tr>
       `;
     }).join('');
@@ -1011,17 +991,150 @@ const Finance = () => {
 
     const textAmountWords = docSoTien(totalPaid);
 
+    return `
+      <div class="receipt-container">
+        <table class="receipt-header-table">
+          <tr>
+            <td style="width: 50%;">
+              <div class="receipt-org-title">
+                Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
+                Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
+                Địa chỉ: ${hh.address || tdpNameVal}
+              </div>
+            </td>
+            <td style="width: 50%; text-align: right;">
+              <div class="receipt-form-title">
+                <strong>Mẫu số 01 - TT</strong><br/>
+                <span style="font-size: 8pt; font-style: italic;">
+                  (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
+                  Ngày 22/12/2014 của Bộ Tài chính)
+                </span>
+                <div style="font-size: 8.5pt; margin-top: 4px; font-weight: normal; text-align: right; line-height: 1.2;">
+                  Quyển số: ....................<br/>
+                  Số: ....................<br/>
+                  Nợ: ....................<br/>
+                  Có: ....................
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="receipt-title-container">
+          <h1 class="receipt-title">PHIẾU THU</h1>
+          <p class="receipt-subtitle">Ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</p>
+        </div>
+
+        <table class="receipt-info-table">
+          <tr>
+            <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
+            <td style="text-align: left;"><strong>${headName}</strong></td>
+          </tr>
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
+            <td style="text-align: left;">${hh.address || tdpNameVal} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
+          </tr>
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
+            <td style="text-align: left;">Nộp các khoản đóng góp năm ${fundYear}</td>
+          </tr>
+        </table>
+
+        <table class="receipt-details-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">STT</th>
+              <th style="text-align: left;">Nội dung quỹ đóng góp</th>
+              <th style="width: 130px; text-align: right;">Số tiền</th>
+              <th style="text-align: left;">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${paidFundsRowsHtml.length > 0 ? paidFundsRowsHtml : '<tr><td colspan="4" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản quỹ nào trong năm.</td></tr>'}
+            <tr class="receipt-total-row">
+              <td colspan="2" style="text-align: center; font-weight: bold;">TỔNG CỘNG</td>
+              <td style="text-align: right; font-weight: bold; color: #15803d;">${formatCurrency(totalPaid)} đ</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="font-size: 10pt; font-style: italic; margin-bottom: 10px; margin-top: 2px; text-align: left;">
+          Số tiền bằng chữ: <strong>${textAmountWords}</strong>
+        </div>
+
+        <table class="receipt-signatures-table">
+          <tr>
+            <td colspan="4"></td>
+            <td style="font-style: italic; font-size: 9pt; padding-bottom: 2px; text-align: center;">
+              ${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ${dateText}
+            </td>
+          </tr>
+          <tr style="font-weight: bold; text-align: center;">
+            <td style="width: 20%;">Thủ trưởng đơn vị</td>
+            <td style="width: 20%;">Kế toán trưởng</td>
+            <td style="width: 20%;">Thủ quỹ</td>
+            <td style="width: 20%;">Người lập phiếu</td>
+            <td style="width: 20%;">Người nộp tiền</td>
+          </tr>
+          <tr style="font-style: italic; font-size: 8pt; color: #555; text-align: center; line-height: 1.1;">
+            <td>(Ký, đóng dấu, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+          </tr>
+          <tr style="text-align: center;">
+            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
+              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${leaderName}</strong>
+            </td>
+            <td style="vertical-align: bottom;"></td>
+            <td style="vertical-align: bottom;"></td>
+            <td style="vertical-align: bottom;"><strong>Ban Quản lý Quỹ</strong></td>
+            <td style="vertical-align: bottom;"><strong>${headName}</strong></td>
+          </tr>
+        </table>
+      </div>
+    `;
+  };
+
+  const handlePrintHouseholdReceipt = (hh: Household) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const receiptHtml = generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Biên lai thu tiền - ${headName}</title>
+        <title>Biên lai thu tiền - ${getHouseholdHeadName(hh)}</title>
         <meta charset="utf-8" />
         <style>
           @media print {
             @page {
               size: A5 landscape;
-              margin: 10mm;
+              margin: 8mm 10mm;
             }
             body {
               margin: 0;
@@ -1030,201 +1143,467 @@ const Finance = () => {
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 11pt;
-            line-height: 1.4;
+            font-size: 10pt;
+            line-height: 1.35;
             color: #000;
-            padding: 10px;
+            padding: 5px;
           }
-          .header-table {
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .receipt-header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
           }
-          .header-table td {
+          .receipt-header-table td {
             border: none;
             padding: 0;
             vertical-align: top;
           }
-          .org-title {
-            text-align: center;
+          .receipt-org-title {
             font-weight: bold;
-            font-size: 10pt;
-            text-transform: uppercase;
+            font-size: 9.5pt;
+            line-height: 1.3;
+            text-align: left;
           }
-          .motto {
-            text-align: center;
-            font-size: 10pt;
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9pt;
+            line-height: 1.2;
           }
-          .motto-main {
-            font-weight: bold;
-            text-transform: uppercase;
-          }
-          .line-separator {
-            width: 60px;
-            height: 1px;
-            background-color: #000;
-            margin: 2px auto 0 auto;
-          }
-          .line-separator-long {
-            width: 120px;
-            height: 1px;
-            background-color: #000;
-            margin: 2px auto 0 auto;
-          }
-          .title-container {
+          .receipt-title-container {
             text-align: center;
             margin-top: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
           }
-          .title {
+          .receipt-title {
             font-size: 14pt;
             font-weight: bold;
             text-transform: uppercase;
-            margin: 0 0 3px 0;
+            margin: 0 0 2px 0;
+            letter-spacing: 0.5px;
           }
-          .subtitle {
+          .receipt-subtitle {
             font-style: italic;
-            font-size: 10pt;
+            font-size: 9.5pt;
             margin: 0;
           }
-          .info-table {
+          .receipt-info-table {
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             border-collapse: collapse;
           }
-          .info-table td {
+          .receipt-info-table td {
             padding: 3px 0;
-            font-size: 11pt;
+            font-size: 10pt;
           }
-          .info-label {
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            margin-bottom: 8px;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-size: 9.5pt;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
             font-weight: bold;
-            width: 140px;
+            text-align: center;
+            background-color: #f2f2f2;
           }
-          .data-table {
+          .receipt-total-row {
+            font-weight: bold;
+            background-color: #fafafa;
+          }
+          .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
-            margin-bottom: 10px;
-          }
-          .data-table th, .data-table td {
-            border: 1px solid #000;
-            padding: 5px 8px;
-            font-size: 10pt;
-            vertical-align: middle;
-          }
-          .data-table th {
-            font-weight: bold;
-            text-align: center;
-            background-color: #f5f5f5;
-          }
-          .signatures-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
             page-break-inside: avoid;
           }
-          .signatures-table td {
+          .receipt-signatures-table td {
             border: none;
             text-align: center;
-            width: 33%;
-            font-size: 10pt;
+            font-size: 9.5pt;
             vertical-align: top;
-          }
-          .sig-title {
-            font-weight: bold;
+            padding: 2px;
           }
         </style>
       </head>
       <body>
-        <table class="header-table">
-          <tr>
-            <td style="width: 45%;">
-              <div class="org-title">
-                UBND ${wardNameVal.toUpperCase()}<br/>
-                TỔ DÂN PHỐ ${tdpNameVal.toUpperCase()}
-                <div class="line-separator"></div>
-              </div>
-            </td>
-            <td style="width: 10%;">&nbsp;</td>
-            <td style="width: 45%;">
-              <div class="motto">
-                <div class="motto-main">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style="font-weight: bold; font-size: 9pt;">Độc lập - Tự do - Hạnh phúc</div>
-                <div class="line-separator-long"></div>
-              </div>
-            </td>
-          </tr>
-        </table>
+        ${receiptHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
 
-        <div class="title-container">
-          <h1 class="title">BIÊN LAI THU TIỀN ĐÓNG GÓP</h1>
-          <p class="subtitle">(Dành cho Hộ gia đình năm ${fundYear})</p>
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handlePrintBulkReceiptsA5 = () => {
+    if (filteredHouseholdsForFunds.length === 0) {
+      showToast('Không có dữ liệu hộ dân nào để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const receiptsHtml = filteredHouseholdsForFunds.map(hh => {
+      const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
+      return generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+    }).join('\n');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>In loạt phiếu thu A5 - ${filteredHouseholdsForFunds.length} hộ</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A5 landscape;
+              margin: 8mm 10mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+            .receipt-container {
+              page-break-after: always;
+            }
+            .receipt-container:last-child {
+              page-break-after: avoid;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+            padding: 5px;
+          }
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 9.5pt;
+            line-height: 1.3;
+            text-align: left;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9pt;
+            line-height: 1.2;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 12px;
+          }
+          .receipt-title {
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 2px 0;
+            letter-spacing: 0.5px;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 9.5pt;
+            margin: 0;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 8px;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 3px 0;
+            font-size: 10pt;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+            margin-bottom: 8px;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-size: 9.5pt;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-total-row {
+            font-weight: bold;
+            background-color: #fafafa;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            page-break-inside: avoid;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 9.5pt;
+            vertical-align: top;
+            padding: 2px;
+          }
+        </style>
+      </head>
+      <body>
+        ${receiptsHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handlePrintBulkReceiptsA4 = () => {
+    if (filteredHouseholdsForFunds.length === 0) {
+      showToast('Không có dữ liệu hộ dân nào để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const pagesHtmlList: string[] = [];
+    for (let i = 0; i < filteredHouseholdsForFunds.length; i += 2) {
+      const hh1 = filteredHouseholdsForFunds[i];
+      const tdpName1 = tdpMap[hh1.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
+      const receipt1 = generateStateReceiptHtml(hh1, dateText, tdpName1, wardNameVal, leaderName, leaderSigUrl);
+
+      const hh2 = filteredHouseholdsForFunds[i + 1];
+      let receipt2 = '';
+      if (hh2) {
+        const tdpName2 = tdpMap[hh2.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
+        receipt2 = generateStateReceiptHtml(hh2, dateText, tdpName2, wardNameVal, leaderName, leaderSigUrl);
+      }
+
+      pagesHtmlList.push(`
+        <div class="page">
+          ${receipt1}
+          ${receipt2 ? `
+            <div class="cut-line">
+              <span>✂ - - - - - - - - - - - Kéo cắt tại đây - - - - - - - - - - - ✂</span>
+            </div>
+            ${receipt2}
+          ` : ''}
         </div>
+      `);
+    }
 
-        <table class="info-table">
-          <tr>
-            <td class="info-label">Số sổ hộ khẩu:</td>
-            <td>${hh.household_number}</td>
-            <td class="info-label" style="width: 110px; text-align: right; padding-right: 15px;">Địa chỉ:</td>
-            <td>${hh.address}</td>
-          </tr>
-          <tr>
-            <td class="info-label">Chủ hộ gia đình:</td>
-            <td colspan="3"><strong>${headName}</strong></td>
-          </tr>
-        </table>
-
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width: 40px;">STT</th>
-              <th>Nội dung đóng góp</th>
-              <th style="width: 150px;">Số tiền đã đóng</th>
-              <th style="width: 180px;">Ghi chú</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${paidFundsRowsHtml.length > 0 ? paidFundsRowsHtml : '<tr><td colspan="4" style="text-align: center;">Chưa ghi nhận đóng góp khoản quỹ nào trong năm nay.</td></tr>'}
-            <tr style="font-weight: bold; background-color: #fafafa;">
-              <td colspan="2" style="text-align: center;">TỔNG CỘNG</td>
-              <td style="text-align: right; font-weight: bold; font-size: 11pt; color: #15803d;">${formatCurrency(totalPaid)} đ</td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="font-size: 10.5pt; font-style: italic; margin-top: 5px;">
-          Số tiền bằng chữ: <strong>${textAmountWords}</strong>
-        </div>
-
-        <table class="signatures-table">
-          <tr>
-            <td colspan="2"></td>
-            <td style="font-style: italic; font-size: 9.5pt; text-align: center;">
-              ${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ${dateText}
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <div class="sig-title">NGƯỜI NỘP TIỀN</div>
-              <div style="font-style: italic; font-size: 9pt; color: #555;">(Ký, ghi rõ họ tên)</div>
-            </td>
-            <td>
-              <div class="sig-title">NGƯỜI THU TIỀN</div>
-              <div style="font-style: italic; font-size: 9pt; color: #555;">(Ký, ghi rõ họ tên)</div>
-              <div style="margin-top: 50px; font-weight: bold;">Ban Quản lý Quỹ</div>
-            </td>
-            <td>
-              <div class="sig-title">TỔ TRƯỞNG DÂN PHỐ</div>
-              <div style="font-style: italic; font-size: 9pt; color: #555;">(Ký, đóng dấu, ghi rõ họ tên)</div>
-              <div style="height: 50px; display: flex; align-items: center; justify-content: center; margin: 2px auto;">
-                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 50px; max-height: 55px; max-width: 140px; object-fit: contain;" />` : ''}
-              </div>
-              <div style="font-weight: bold; margin-top: 2px;">${leaderName}</div>
-            </td>
-          </tr>
-        </table>
-
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>In loạt phiếu thu A4 (2 phiếu/trang) - ${filteredHouseholdsForFunds.length} hộ</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 12mm 15mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+            .page {
+              page-break-after: always;
+              height: 270mm;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              box-sizing: border-box;
+            }
+            .page:last-child {
+              page-break-after: avoid;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+          }
+          .receipt-container {
+            height: 124mm;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 9.5pt;
+            line-height: 1.3;
+            text-align: left;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9pt;
+            line-height: 1.2;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 6px;
+            margin-bottom: 8px;
+          }
+          .receipt-title {
+            font-size: 13.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 2px 0;
+            letter-spacing: 0.5px;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 9.5pt;
+            margin: 0;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 6px;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 2px 0;
+            font-size: 10pt;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+            margin-bottom: 6px;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            font-size: 9.5pt;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-total-row {
+            font-weight: bold;
+            background-color: #fafafa;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            page-break-inside: avoid;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 9.5pt;
+            vertical-align: top;
+            padding: 2px;
+          }
+          .cut-line {
+            border-top: 1px dashed #64748b;
+            text-align: center;
+            font-size: 8pt;
+            color: #64748b;
+            margin: 5mm 0;
+            user-select: none;
+            position: relative;
+          }
+          .cut-line span {
+            position: relative;
+            top: -9px;
+            background: #fff;
+            padding: 0 10px;
+            font-style: italic;
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtmlList.join('\n')}
         <script>
           window.onload = function() {
             setTimeout(function() {
