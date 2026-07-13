@@ -1021,20 +1021,20 @@ const Finance = () => {
                 Địa chỉ: ${hh.address || tdpNameVal}
               </div>
             </td>
-            <td style="width: 50%; text-align: right;">
-              <div class="receipt-form-title">
-                <strong>Mẫu số 01 - TT</strong><br/>
-                <span style="font-size: 8pt; font-style: italic;">
-                  (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
-                  Ngày 22/12/2014 của Bộ Tài chính)
-                </span>
-                <div style="text-align: right;">
-                  <div style="display: inline-block; text-align: left; font-size: 8.5pt; margin-top: 4px; font-weight: normal; line-height: 1.2;">
-                    Quyển số: ....................<br/>
-                    Số: ....................<br/>
-                    Nợ: ....................<br/>
-                    Có: ....................
-                  </div>
+            <td style="width: 50%; text-align: right; vertical-align: top;">
+              <div style="display: inline-block; text-align: center; width: 260px;">
+                <div class="receipt-form-title" style="text-align: center;">
+                  <strong>Mẫu số 01 - TT</strong><br/>
+                  <span style="font-size: 8pt; font-style: italic;">
+                    (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
+                    Ngày 22/12/2014 của Bộ Tài chính)
+                  </span>
+                </div>
+                <div style="text-align: left; font-size: 8.5pt; margin-top: 4px; font-weight: normal; line-height: 1.2; padding-left: 45px;">
+                  Quyển số: ....................<br/>
+                  Số: ....................<br/>
+                  Nợ: ....................<br/>
+                  Có: ....................
                 </div>
               </div>
             </td>
@@ -1490,6 +1490,7 @@ const Finance = () => {
               padding: 12mm 15mm;
             }
             .receipt-container {
+              width: 100% !important;
               page-break-inside: avoid !important;
               page-break-after: always !important;
               box-sizing: border-box;
