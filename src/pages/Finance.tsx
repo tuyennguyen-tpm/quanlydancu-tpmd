@@ -1047,7 +1047,7 @@ const Finance = () => {
         <table class="receipt-info-table">
           <tr>
             <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
-            <td style="text-align: left;"><strong>${headName}</strong></td>
+            <td style="text-align: left;"><strong>${headName}</strong>${hh.self_management_group ? ` - (${hh.self_management_group})` : ''}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
