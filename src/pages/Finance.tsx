@@ -928,13 +928,16 @@ const Finance = () => {
     const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
     const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
 
-    const paidFundsRowsHtml = hhFunds.map((f, idx) => {
+    const paidFundsRowsHtml = fundNames.map((fundName, idx) => {
+      const fundRecord = hhFunds.find(f => f.fund_name === fundName);
+      const amountPaid = fundRecord ? fundRecord.amount : 0;
+      const note = fundRecord ? fundRecord.note || '—' : '—';
       return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
-          <td style="font-weight: bold; text-align: left;">Đóng góp ${f.fund_name} (${f.year})</td>
-          <td style="text-align: right; font-weight: bold;">${formatCurrency(f.amount)} đ</td>
-          <td style="text-align: left;">${f.note || '—'}</td>
+          <td style="font-weight: bold; text-align: left;">Đóng góp ${fundName} (${fundYear})</td>
+          <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
+          <td style="text-align: left;">${note}</td>
         </tr>
       `;
     }).join('');
@@ -2087,8 +2090,8 @@ const Finance = () => {
 
           {/* Top toolbar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
-            {/* Hàng 1: Bộ lọc năm và trạng thái */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            {/* Hàng 1: Bộ lọc năm, trạng thái, tổ và tổng số tiền thu được */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Năm đóng quỹ:</label>
                 <select 
@@ -2114,6 +2117,7 @@ const Finance = () => {
                   <option value="unpaid">Hộ chưa nộp</option>
                 </select>
               </div>
+              
               {/* Lọc Tổ / TDP tùy theo phân quyền */}
               {isWardUser ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2144,11 +2148,24 @@ const Finance = () => {
                   </select>
                 </div>
               )}
+
+              {/* Dòng chữ Tổng thu quỹ địa phương đẩy về bên phải */}
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                  Tổng thu quỹ địa phương {fundYear}: <strong style={{ color: 'var(--success)' }}>
+                    {formatCurrency(
+                      householdFunds
+                        .filter(f => f.year === fundYear)
+                        .reduce((sum, f) => sum + f.amount, 0)
+                    )}
+                  </strong>
+                </span>
+              </div>
             </div>
 
-            {/* Hàng 2: Tìm kiếm bên trái, Tổng thu & Xuất Excel bên phải */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div className="search-box" style={{ minWidth: '320px', flex: 1, position: 'relative' }}>
+            {/* Hàng 2: Tìm kiếm bên trái (ngắn lại) và các nút in ấn / Excel sát ngay bên phải nó */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div className="search-box" style={{ width: '240px', position: 'relative' }}>
                 <Search size={18} />
                 <input
                   type="text"
@@ -2177,114 +2194,102 @@ const Finance = () => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  Tổng thu quỹ địa phương {fundYear}: <strong style={{ color: 'var(--success)' }}>
-                    {formatCurrency(
-                      householdFunds
-                        .filter(f => f.year === fundYear)
-                        .reduce((sum, f) => sum + f.amount, 0)
-                    )}
-                  </strong>
-                </span>
-                {canPrintExport && (
-                  <>
-                    <button 
-                      onClick={handlePrintFundsList}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        backgroundColor: '#fff',
-                        border: '1px solid #cbd5e1',
-                        color: '#334155',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        height: 'auto',
-                        minHeight: '36px',
-                        fontSize: '0.85rem'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f1f5f9';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#fff';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      <Printer size={16} /> In danh sách A4
-                    </button>
+              {canPrintExport && (
+                <>
+                  <button 
+                    onClick={handlePrintFundsList}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#fff',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fff';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Printer size={16} /> In danh sách A4
+                  </button>
 
-                    <button 
-                      onClick={handlePrintBulkReceiptsA4}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        backgroundColor: '#eff6ff',
-                        border: '1px solid #bfdbfe',
-                        color: '#1e40af',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        height: 'auto',
-                        minHeight: '36px',
-                        fontSize: '0.85rem'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#dbeafe';
-                        e.currentTarget.style.borderColor = '#93c5fd';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#eff6ff';
-                        e.currentTarget.style.borderColor = '#bfdbfe';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      <Printer size={16} /> In loạt phiếu A4 (2 phiếu/trang)
-                    </button>
+                  <button 
+                    onClick={handlePrintBulkReceiptsA4}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1e40af',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                      e.currentTarget.style.borderColor = '#93c5fd';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                      e.currentTarget.style.borderColor = '#bfdbfe';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Printer size={16} /> In loạt phiếu A4 (2 phiếu/trang)
+                  </button>
 
-                    <button 
-                      onClick={handlePrintBulkReceiptsA5}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        backgroundColor: '#f0fdf4',
-                        border: '1px solid #bbf7d0',
-                        color: '#166534',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        height: 'auto',
-                        minHeight: '36px',
-                        fontSize: '0.85rem'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#dcfce7';
-                        e.currentTarget.style.borderColor = '#86efac';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f0fdf4';
-                        e.currentTarget.style.borderColor = '#bbf7d0';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      <Printer size={16} /> In loạt phiếu A5
-                    </button>
-                  </>
-                )}
-                {canPrintExport && (
+                  <button 
+                    onClick={handlePrintBulkReceiptsA5}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      color: '#166534',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dcfce7';
+                      e.currentTarget.style.borderColor = '#86efac';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f0fdf4';
+                      e.currentTarget.style.borderColor = '#bbf7d0';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Printer size={16} /> In loạt phiếu A5
+                  </button>
+
                   <button 
                     onClick={handleExportFundsExcel}
                     style={{
@@ -2316,8 +2321,8 @@ const Finance = () => {
                   >
                     <Download size={16} style={{ color: '#16a34a' }} /> Xuất Excel
                   </button>
-                )}
-              </div>
+                </>
+              )}
             </div>
           </div>
 
