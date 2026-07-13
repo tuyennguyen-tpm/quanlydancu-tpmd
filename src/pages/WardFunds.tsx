@@ -1250,10 +1250,12 @@ const WardFunds = () => {
     leaderName: string,
     leaderSigUrl: string
   ) => {
-    // Tìm tổ tự quản từ danh sách nhân khẩu & hộ gia đình
+    // Tìm tổ tự quản & chủ hộ từ danh sách nhân khẩu bằng Map tra cứu siêu tốc
+    const info = findResidentGroupAndHead(item.full_name, item.dob || '');
+    const groupName = info.group;
+    const headName = info.headName;
     const resident = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
     const hhOfRes = resident ? households.find(h => h.id === resident.household_id) : null;
-    const groupName = hhOfRes?.self_management_group || '';
     
     const totalPaid = activeFunds.reduce((sum, fund) => sum + (item.contributions?.[fund.name]?.actual || 0), 0);
 
@@ -1379,7 +1381,11 @@ const WardFunds = () => {
         <table class="receipt-info-table">
           <tr>
             <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
-            <td style="text-align: left;"><strong>${item.full_name}</strong>${groupName ? ` - (${groupName})` : ''}</td>
+            <td style="text-align: left;">
+              <strong>${item.full_name}</strong>
+              ${headName ? ` - (Hộ ông/bà: ${headName})` : ''}
+              ${groupName ? ` - (${groupName})` : ''}
+            </td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
