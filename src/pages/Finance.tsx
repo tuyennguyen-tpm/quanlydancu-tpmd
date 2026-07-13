@@ -11,7 +11,10 @@ import {
   Edit2,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Printer,
+  MapPin,
+  Filter
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -61,6 +64,14 @@ const Finance = () => {
   const [fundSearchTerm, setFundSearchTerm] = useState('');
   const [fundSearchInput, setFundSearchInput] = useState('');
   const [fundFilterStatus, setFundFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [fundGroupFilter, setFundGroupFilter] = useState<string>('all');
+  const [tdpList, setTdpList] = useState<any[]>([]);
+  const [tdpMap, setTdpMap] = useState<Record<string, string>>({});
+  const [tdpFilter, setTdpFilter] = useState<string>('all');
+  const [groups, setGroups] = useState<string[]>(() => {
+    const saved = localStorage.getItem('tdp_groups_config');
+    return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+  });
 
   // Debounce fundSearchInput -> fundSearchTerm
   useEffect(() => {
@@ -177,6 +188,17 @@ const Finance = () => {
       setHouseholds(hList);
       setResidents(rList);
       setHouseholdFunds(fList);
+
+      const wardId = localStorage.getItem('user_ward_id');
+      if (wardId) {
+        const list = await db.getTDPList(wardId);
+        const map: Record<string, string> = {};
+        list.forEach(item => {
+          map[item.id] = item.tdp_name || item.full_name || 'Tổ dân phố';
+        });
+        setTdpMap(map);
+        setTdpList(list);
+      }
     } catch (e) {
       showToast('Lỗi tải dữ liệu tài chính!', 'danger');
     }
@@ -636,6 +658,588 @@ const Finance = () => {
     }
   };
 
+  const handlePrintFundsList = () => {
+    if (filteredHouseholdsForFunds.length === 0) {
+      showToast('Không có dữ liệu để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Trình duyệt đang chặn popup. Vui lòng cho phép popup để in!', 'warning');
+      return;
+    }
+    const tdpNameVal = isWardUser 
+      ? (tdpFilter !== 'all' ? (tdpMap[tdpFilter] || 'Tổ dân phố') : 'Tất cả TDP')
+      : (localStorage.getItem('tdp_name') || 'Tổ dân phố');
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const groupLabel = isWardUser
+      ? (tdpFilter !== 'all' ? ` – ${tdpMap[tdpFilter] || 'TDP'}` : '')
+      : (fundGroupFilter !== 'all' ? ` – ${fundGroupFilter}` : '');
+    const today = new Date().toLocaleDateString('vi-VN');
+    
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const fundHeadersHtml = fundNames.map(name => `<th>${name}</th>`).join('');
+    
+    const rowsHtml = filteredHouseholdsForFunds.map((hh, idx) => {
+      const headName = getHouseholdHeadName(hh);
+      const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+      const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+      
+      const fundCellsHtml = fundNames.map(fundName => {
+        const paidFund = hhFunds.find(f => f.fund_name === fundName);
+        const amountPaid = paidFund ? paidFund.amount : 0;
+        return `<td style="text-align: right;">${amountPaid > 0 ? formatCurrency(amountPaid) : '—'}</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td style="font-weight: bold;">${headName}</td>
+          <td>${hh.address}</td>
+          <td style="text-align: right; font-weight: bold;">${totalPaid > 0 ? formatCurrency(totalPaid) : '—'}</td>
+          ${fundCellsHtml}
+        </tr>
+      `;
+    }).join('');
+
+    let grandTotal = 0;
+    filteredHouseholdsForFunds.forEach(hh => {
+      const hhFundsList = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+      grandTotal += hhFundsList.reduce((sum, f) => sum + f.amount, 0);
+    });
+
+    const fundTotalsCellsHtml = fundNames.map(fundName => {
+      let colSum = 0;
+      filteredHouseholdsForFunds.forEach(hh => {
+        const paid = householdFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
+        if (paid) colSum += paid.amount;
+      });
+      return `<td style="text-align: right; font-weight: bold;">${colSum > 0 ? formatCurrency(colSum) : '—'}</td>`;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Báo cáo thu nộp quỹ ${fundYear} – ${tdpNameVal}</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 landscape;
+              margin-top: 15mm;
+              margin-bottom: 15mm;
+              margin-left: 20mm;
+              margin-right: 15mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13pt;
+            line-height: 1.3;
+            color: #000;
+            padding: 10px;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .org-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 12pt;
+            text-transform: uppercase;
+          }
+          .motto {
+            text-align: center;
+            font-size: 12pt;
+          }
+          .motto-main {
+            font-weight: bold;
+            text-transform: uppercase;
+          }
+          .line-separator {
+            width: 80px;
+            height: 1px;
+            background-color: #000;
+            margin: 4px auto 0 auto;
+          }
+          .line-separator-long {
+            width: 150px;
+            height: 1px;
+            background-color: #000;
+            margin: 4px auto 0 auto;
+          }
+          .doc-title-container {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 20px;
+          }
+          .doc-title {
+            font-size: 16pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 5px 0;
+          }
+          .doc-subtitle {
+            font-style: italic;
+            font-size: 12pt;
+            margin: 0;
+          }
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 25px;
+          }
+          .data-table th, .data-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-size: 11pt;
+            vertical-align: middle;
+          }
+          .data-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+            text-transform: uppercase;
+          }
+          .signature-section {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+            page-break-inside: avoid;
+          }
+          .signature-section td {
+            border: none;
+            text-align: center;
+            width: 50%;
+            font-size: 12pt;
+            vertical-align: top;
+          }
+          .signature-title {
+            font-weight: bold;
+            margin-bottom: 70px;
+          }
+          .signature-name {
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="width: 45%;">
+              <div class="org-title">
+                UBND ${wardNameVal.toUpperCase()}<br/>
+                TỔ DÂN PHỐ ${tdpNameVal.toUpperCase()}
+                <div class="line-separator"></div>
+              </div>
+            </td>
+            <td style="width: 10%;">&nbsp;</td>
+            <td style="width: 45%;">
+              <div class="motto">
+                <div class="motto-main">CỘNG HÒA XÃ HỘI CHỦ NGIĨA VIỆT NAM</div>
+                <div style="font-weight: bold;">Độc lập - Tự do - Hạnh phúc</div>
+                <div class="line-separator-long"></div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="doc-title-container">
+          <h1 class="doc-title">BÁO CÁO THU NỘP CÁC LOẠI QUỸ NĂM ${fundYear}</h1>
+          <p class="doc-subtitle">${tdpNameVal}${groupLabel} &nbsp;|&nbsp; Ngày in: ${today} &nbsp;|&nbsp; Tổng cộng đã thu: <strong>${formatCurrency(grandTotal)} đ</strong></p>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">STT</th>
+              <th style="width: 200px;">Hộ gia đình / Chủ hộ</th>
+              <th>Địa chỉ</th>
+              <th style="width: 110px;">Tổng đã nộp</th>
+              ${fundHeadersHtml}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+            <tr style="font-weight: bold; background-color: #f9fafb;">
+              <td colspan="3" style="text-align: center;">TỔNG CỘNG</td>
+              <td style="text-align: right;">${formatCurrency(grandTotal)}</td>
+              ${fundTotalsCellsHtml}
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="signature-section">
+          <tr>
+            <td>
+              <div class="signature-title">NGƯỜI LẬP PHIẾU</div>
+              <div style="font-style: italic; font-size: 11pt; color: #555; margin-top: -65px; margin-bottom: 50px;">(Ký, ghi rõ họ tên)</div>
+              <div class="signature-name" style="margin-top: 80px;">Ban Quản lý Quỹ</div>
+            </td>
+            <td>
+              <div class="signature-title">TỔ TRƯỞNG TỔ DÂN PHỐ</div>
+              <div style="font-style: italic; font-size: 11pt; color: #555; margin-top: -65px; margin-bottom: 50px;">(Ký, đóng dấu, ghi rõ họ tên)</div>
+              <div style="height: 80px; display: flex; align-items: center; justify-content: center; margin: 0 auto 5px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 80px; max-height: 80px; max-width: 180px; object-fit: contain;" />` : ''}
+              </div>
+              <div class="signature-name">${leaderName}</div>
+            </td>
+          </tr>
+        </table>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handlePrintHouseholdReceipt = (hh: Household) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const headName = getHouseholdHeadName(hh);
+    const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+    const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+
+    const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const paidFundsRowsHtml = hhFunds.map((f, idx) => {
+      return `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td style="font-weight: bold;">Đóng góp ${f.fund_name} (${f.year})</td>
+          <td style="text-align: right; font-weight: bold;">${formatCurrency(f.amount)} đ</td>
+          <td>${f.note || '—'}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const docSoTien = (number: number): string => {
+      if (number === 0) return 'Không đồng';
+      const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+      
+      const readTriple = (n: number, showZero: boolean): string => {
+        let tram = Math.floor(n / 100);
+        let chuc = Math.floor((n % 100) / 10);
+        let donvi = n % 10;
+        let res = "";
+        
+        if (tram > 0 || showZero) {
+          res += arrays[tram] + " trăm ";
+        }
+        
+        if (chuc === 0 && donvi > 0) {
+          res += "lẻ ";
+        } else if (chuc === 1) {
+          res += "mười ";
+        } else if (chuc > 1) {
+          res += arrays[chuc] + " mươi ";
+        }
+        
+        if (donvi === 1 && chuc > 1) {
+          res += "mốt";
+        } else if (donvi === 5 && chuc > 0) {
+          res += "lăm";
+        } else if (donvi > 0) {
+          res += arrays[donvi];
+        }
+        return res.trim();
+      };
+
+      let str = "";
+      let units = ["", " nghìn", " triệu", " tỷ"];
+      let temp = number;
+      let i = 0;
+      
+      while (temp > 0) {
+        let triple = temp % 1000;
+        if (triple > 0) {
+          let s = readTriple(triple, i > 0);
+          str = s + units[i] + " " + str;
+        }
+        temp = Math.floor(temp / 1000);
+        i++;
+      }
+      const finalStr = str.trim();
+      return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+    };
+
+    const textAmountWords = docSoTien(totalPaid);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Biên lai thu tiền - ${headName}</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A5 landscape;
+              margin: 10mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+            padding: 10px;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+          }
+          .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .org-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 10pt;
+            text-transform: uppercase;
+          }
+          .motto {
+            text-align: center;
+            font-size: 10pt;
+          }
+          .motto-main {
+            font-weight: bold;
+            text-transform: uppercase;
+          }
+          .line-separator {
+            width: 60px;
+            height: 1px;
+            background-color: #000;
+            margin: 2px auto 0 auto;
+          }
+          .line-separator-long {
+            width: 120px;
+            height: 1px;
+            background-color: #000;
+            margin: 2px auto 0 auto;
+          }
+          .title-container {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 15px;
+          }
+          .title {
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 0 0 3px 0;
+          }
+          .subtitle {
+            font-style: italic;
+            font-size: 10pt;
+            margin: 0;
+          }
+          .info-table {
+            width: 100%;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+          }
+          .info-table td {
+            padding: 3px 0;
+            font-size: 11pt;
+          }
+          .info-label {
+            font-weight: bold;
+            width: 140px;
+          }
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 10px;
+          }
+          .data-table th, .data-table td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            font-size: 10pt;
+            vertical-align: middle;
+          }
+          .data-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f5f5f5;
+          }
+          .signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            page-break-inside: avoid;
+          }
+          .signatures-table td {
+            border: none;
+            text-align: center;
+            width: 33%;
+            font-size: 10pt;
+            vertical-align: top;
+          }
+          .sig-title {
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="width: 45%;">
+              <div class="org-title">
+                UBND ${wardNameVal.toUpperCase()}<br/>
+                TỔ DÂN PHỐ ${tdpNameVal.toUpperCase()}
+                <div class="line-separator"></div>
+              </div>
+            </td>
+            <td style="width: 10%;">&nbsp;</td>
+            <td style="width: 45%;">
+              <div class="motto">
+                <div class="motto-main">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div style="font-weight: bold; font-size: 9pt;">Độc lập - Tự do - Hạnh phúc</div>
+                <div class="line-separator-long"></div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="title-container">
+          <h1 class="title">BIÊN LAI THU TIỀN ĐÓNG GÓP</h1>
+          <p class="subtitle">(Dành cho Hộ gia đình năm ${fundYear})</p>
+        </div>
+
+        <table class="info-table">
+          <tr>
+            <td class="info-label">Số sổ hộ khẩu:</td>
+            <td>${hh.household_number}</td>
+            <td class="info-label" style="width: 110px; text-align: right; padding-right: 15px;">Địa chỉ:</td>
+            <td>${hh.address}</td>
+          </tr>
+          <tr>
+            <td class="info-label">Chủ hộ gia đình:</td>
+            <td colspan="3"><strong>${headName}</strong></td>
+          </tr>
+        </table>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">STT</th>
+              <th>Nội dung đóng góp</th>
+              <th style="width: 150px;">Số tiền đã đóng</th>
+              <th style="width: 180px;">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${paidFundsRowsHtml.length > 0 ? paidFundsRowsHtml : '<tr><td colspan="4" style="text-align: center;">Chưa ghi nhận đóng góp khoản quỹ nào trong năm nay.</td></tr>'}
+            <tr style="font-weight: bold; background-color: #fafafa;">
+              <td colspan="2" style="text-align: center;">TỔNG CỘNG</td>
+              <td style="text-align: right; font-weight: bold; font-size: 11pt; color: #15803d;">${formatCurrency(totalPaid)} đ</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="font-size: 10.5pt; font-style: italic; margin-top: 5px;">
+          Số tiền bằng chữ: <strong>${textAmountWords}</strong>
+        </div>
+
+        <table class="signatures-table">
+          <tr>
+            <td colspan="2"></td>
+            <td style="font-style: italic; font-size: 9.5pt; text-align: center;">
+              ${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ${dateText}
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <div class="sig-title">NGƯỜI NỘP TIỀN</div>
+              <div style="font-style: italic; font-size: 9pt; color: #555;">(Ký, ghi rõ họ tên)</div>
+            </td>
+            <td>
+              <div class="sig-title">NGƯỜI THU TIỀN</div>
+              <div style="font-style: italic; font-size: 9pt; color: #555;">(Ký, ghi rõ họ tên)</div>
+              <div style="margin-top: 50px; font-weight: bold;">Ban Quản lý Quỹ</div>
+            </td>
+            <td>
+              <div class="sig-title">TỔ TRƯỞNG DÂN PHỐ</div>
+              <div style="font-style: italic; font-size: 9pt; color: #555;">(Ký, đóng dấu, ghi rõ họ tên)</div>
+              <div style="height: 50px; display: flex; align-items: center; justify-content: center; margin: 2px auto;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 50px; max-height: 55px; max-width: 140px; object-fit: contain;" />` : ''}
+              </div>
+              <div style="font-weight: bold; margin-top: 2px;">${leaderName}</div>
+            </td>
+          </tr>
+        </table>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   // Calculations
   const totalIncome = records
     .filter(r => r.type === 'income')
@@ -688,12 +1292,17 @@ const Finance = () => {
     const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
     
     if (fundFilterStatus === 'paid') {
-      return totalPaid > 0;
+      if (totalPaid === 0) return false;
     } else if (fundFilterStatus === 'unpaid') {
-      return totalPaid === 0;
+      if (totalPaid > 0) return false;
     }
-    return true;
-  }), [households, householdFunds, fundSearchTerm, fundYear, fundFilterStatus]);
+
+    // Lọc theo phân quyền Tổ (cấp TDP) hoặc TDP (cấp phường)
+    const matchesTdp = !isWardUser || tdpFilter === 'all' || hh.user_id === tdpFilter;
+    const matchesGroup = isWardUser || fundGroupFilter === 'all' || hh.self_management_group === fundGroupFilter;
+    
+    return matchesTdp && matchesGroup;
+  }), [households, householdFunds, fundSearchTerm, fundYear, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser]);
 
   return (
     <div className="finance-container">
@@ -1094,6 +1703,36 @@ const Finance = () => {
                   <option value="unpaid">Hộ chưa nộp</option>
                 </select>
               </div>
+              {/* Lọc Tổ / TDP tùy theo phân quyền */}
+              {isWardUser ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Tổ dân phố:</label>
+                  <select 
+                    value={tdpFilter} 
+                    onChange={(e) => setTdpFilter(e.target.value)}
+                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'white', fontWeight: '600', outline: 'none', minWidth: '150px' }}
+                  >
+                    <option value="all">Tất cả TDP</option>
+                    {tdpList.map(t => (
+                      <option key={t.id} value={t.id}>{t.tdp_name || t.full_name || 'Tổ dân phố'}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Tổ tự quản:</label>
+                  <select 
+                    value={fundGroupFilter} 
+                    onChange={(e) => setFundGroupFilter(e.target.value)}
+                    style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'white', fontWeight: '600', outline: 'none', minWidth: '130px' }}
+                  >
+                    <option value="all">Tất cả Tổ</option>
+                    {groups.map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Hàng 2: Tìm kiếm bên trái, Tổng thu & Xuất Excel bên phải */}
@@ -1148,6 +1787,37 @@ const Finance = () => {
                 </span>
                 {canPrintExport && (
                   <button 
+                    onClick={handlePrintFundsList}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#fff',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f1f5f9';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fff';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Printer size={16} /> In danh sách A4
+                  </button>
+                )}
+                {canPrintExport && (
+                  <button 
                     onClick={handleExportFundsExcel}
                     style={{
                       padding: '8px 16px',
@@ -1193,6 +1863,7 @@ const Finance = () => {
                   {fundNames.map((name, i) => (
                     <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>{name}</th>
                   ))}
+                  <th style={{ width: '110px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>Biên lai</th>
                 </tr>
               </thead>
               <tbody>
@@ -1211,7 +1882,7 @@ const Finance = () => {
                         {formatCurrency(totalPaid)}
                       </td>
                       {fundNames.map((fundName, idx) => {
-                        const paidFund = hhFunds.find(f => f.fund_name === fundName);
+                        const paidFund = hhFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
                         const amountPaid = paidFund ? paidFund.amount : 0;
                         
                         return (
@@ -1259,12 +1930,39 @@ const Finance = () => {
                           </td>
                         );
                       })}
+                      
+                      {/* Cột in biên lai */}
+                      <td style={{ textAlign: 'center' }}>
+                        <button 
+                          onClick={() => handlePrintHouseholdReceipt(hh)}
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: '1.5px solid #cbd5e1',
+                            backgroundColor: '#fff',
+                            color: '#475569',
+                            fontWeight: '700',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                          title="In biên lai thu quỹ hộ này"
+                        >
+                          <Printer size={13} />
+                          <span>In biên lai</span>
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
                 {filteredHouseholdsForFunds.length === 0 && (
                   <tr>
-                    <td colSpan={2 + fundNames.length} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                    <td colSpan={3 + fundNames.length} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                       {households.length === 0 ? 'Chưa có dữ liệu hộ gia đình nào để thu quỹ.' : 'Không tìm thấy hộ gia đình nào khớp với từ khóa tìm kiếm.'}
                     </td>
                   </tr>
