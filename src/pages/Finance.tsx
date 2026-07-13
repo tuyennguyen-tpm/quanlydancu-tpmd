@@ -1510,6 +1510,15 @@ const Finance = () => {
             box-sizing: border-box;
             padding-top: 5px;
           }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
           .receipt-org-title {
             font-weight: bold;
             font-size: 10pt !important;
