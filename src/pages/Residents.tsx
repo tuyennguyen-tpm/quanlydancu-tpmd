@@ -258,6 +258,24 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
+  
+  // 1. Tối ưu hóa hiệu năng: Map tra cứu hộ gia đình nhanh
+  const householdLookupMap = useMemo(() => {
+    const map = new Map<string, Household>();
+    households.forEach(h => {
+      map.set(h.id, h);
+    });
+    return map;
+  }, [households]);
+
+  // 2. Tối ưu hóa hiệu năng: Map tra cứu nhân khẩu nhanh theo ID
+  const residentsLookupMap = useMemo(() => {
+    const map = new Map<string, Resident>();
+    residents.forEach(r => {
+      map.set(r.id, r);
+    });
+    return map;
+  }, [residents]);
 
 
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military' | 'longevity'>('all');
@@ -1855,7 +1873,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     // Group filter matches
     let matchesGroup = true;
     if (groupFilter !== 'all') {
-      const hh = households.find(h => h.id === r.household_id);
+      const hh = householdLookupMap.get(r.household_id);
       if (!hh || !hh.self_management_group) {
         matchesGroup = false;
       } else {
@@ -1906,8 +1924,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       const idA = a.household_id || '';
       const idB = b.household_id || '';
       if (idA && idB) {
-        const hhA = households.find(h => h.id === idA);
-        const hhB = households.find(h => h.id === idB);
+        const hhA = householdLookupMap.get(idA);
+        const hhB = householdLookupMap.get(idB);
         if (hhA && hhB) {
           const timeA = new Date(hhA.created_at || 0).getTime();
           const timeB = new Date(hhB.created_at || 0).getTime();
@@ -1919,22 +1937,22 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     // Trong cùng hộ: chủ hộ lên đầu
     if (a.is_head && !b.is_head) return -1;
     if (!a.is_head && b.is_head) return 1;
-    // Sau đó theo ngày thêm vào (created_at)
+    // Sắp xếp theo ngày thêm vào (created_at)
     const timeA = new Date(a.created_at || 0).getTime();
     const timeB = new Date(b.created_at || 0).getTime();
     return timeA - timeB;
-  }), [residents, households, searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
+  }), [residents, householdLookupMap, searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
 
   const totalPages = Math.ceil(filteredResidents.length / pageSize) || 1;
   const paginatedResidents = filteredResidents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const getHouseholdAddress = (hId: string) => {
-    const hh = households.find(h => h.id === hId);
+    const hh = householdLookupMap.get(hId);
     return hh ? hh.address : 'Chưa định vị hộ';
   };
 
   const getHouseholdInfo = (hId: string) => {
-    const hh = households.find(h => h.id === hId);
+    const hh = householdLookupMap.get(hId);
     if (!hh) return 'Chưa có hộ';
     const head = residents.find(r => r.id === hh.head_of_household_id);
     const headName = head ? head.full_name : 'Chưa rõ chủ hộ';
@@ -2211,9 +2229,9 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                   </td>
                   <td style={{maxWidth: '200px'}}>
                     {(() => {
-                      const hh = households.find(h => h.id === resident.household_id);
+                      const hh = householdLookupMap.get(resident.household_id);
                       if (!hh) return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Chưa có hộ</span>;
-                      const headRes = residents.find(r => r.id === hh.head_of_household_id);
+                      const headRes = hh.head_of_household_id ? residentsLookupMap.get(hh.head_of_household_id) : undefined;
                       const headName = headRes ? headRes.full_name : 'Chưa rõ chủ hộ';
                       return (
                         <div style={{ lineHeight: '1.4' }}>

@@ -1806,7 +1806,7 @@ const App = () => {
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
     { id: 'meetings', icon: Calendar, label: 'Lịch họp Tổ dân phố', group: 'Điều hành' },
     { id: 'regulations', icon: Check, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
-    { id: 'finance', icon: Wallet, label: 'Thu chi', group: 'Tài chính' },
+    { id: 'finance', icon: Wallet, label: 'Thu chi TDP', group: 'Tài chính' },
     { id: 'ward-funds', icon: Wallet, label: 'Quỹ nộp phường', group: 'Tài chính' },
     { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount, badgeColor: '#ef4444' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },

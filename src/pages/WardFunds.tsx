@@ -135,18 +135,61 @@ const WardFunds = () => {
     return parseInt(clean).toLocaleString('vi-VN');
   };
 
+  // 1. Memoized lookups for rapid O(1) resident search
+  const residentsInfoLookup = useMemo(() => {
+    const hhHeadMap = new Map<string, string>(); // household_id -> headName
+    const hhGroupMap = new Map<string, string>(); // household_id -> self_management_group
+
+    households.forEach(h => {
+      hhGroupMap.set(h.id, (h.self_management_group || '').trim());
+      const head = residents.find(r => r.id === h.head_of_household_id);
+      if (head) {
+        hhHeadMap.set(h.id, head.full_name);
+      }
+    });
+
+    // We store residents by name for quick lookup. If multiple exists, we group them.
+    const nameMap = new Map<string, Array<{ dob: string; group: string; headName: string }>>();
+    residents.forEach(r => {
+      const nameKey = r.full_name.trim().toLowerCase();
+      const info = {
+        dob: (r.dob || '').trim(),
+        group: hhGroupMap.get(r.household_id) || '',
+        headName: hhHeadMap.get(r.household_id) || ''
+      };
+      if (!nameMap.has(nameKey)) {
+        nameMap.set(nameKey, []);
+      }
+      nameMap.get(nameKey)!.push(info);
+    });
+
+    return nameMap;
+  }, [residents, households]);
+
+  // A fast O(1) helper function to find resident info by name and dob
+  const findResidentGroupAndHead = (name: string, dob: string) => {
+    const nameKey = name.trim().toLowerCase();
+    const list = residentsInfoLookup.get(nameKey);
+    if (!list || list.length === 0) return { group: '', headName: '' };
+    
+    // If only one resident matches the name, return it
+    if (list.length === 1) return list[0];
+    
+    // If multiple, try to match by DOB
+    const cleanDob = dob.trim();
+    if (cleanDob) {
+      const matched = list.find(r => r.dob.includes(cleanDob) || cleanDob.includes(r.dob));
+      if (matched) return matched;
+    }
+    return list[0]; // fallback to first match
+  };
+
   // Helper to resolve group/tổ of a fund record
   const getGroupOfFundRecord = (f: WardFund) => {
-    // 1. Cross-reference with database residents
-    const matchedResident = residents.find(r => 
-      r.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase() &&
-      (r.dob && f.dob ? r.dob.includes(f.dob) || f.dob.includes(r.dob) : true)
-    );
-    if (matchedResident) {
-      const hh = households.find(h => h.id === matchedResident.household_id);
-      if (hh && hh.self_management_group) {
-        return hh.self_management_group.trim();
-      }
+    // 1. Cross-reference with database residents using fast map
+    const info = findResidentGroupAndHead(f.full_name, f.dob || '');
+    if (info.group) {
+      return info.group;
     }
     
     // 2. Scan address text for group keywords
@@ -1646,6 +1689,7 @@ const WardFunds = () => {
             color: #000;
           }
           .receipt-container {
+            width: 100%;
             height: 124mm;
             box-sizing: border-box;
             display: flex;
@@ -2606,13 +2650,11 @@ const WardFunds = () => {
                       <td style={{ padding: '12px 10px' }}>
                         <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{item.full_name}</div>
                         {(() => {
-                          const res = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
-                          const hh = res ? households.find(h => h.id === res.household_id) : null;
-                          const head = hh ? residents.find(r => r.id === hh.head_of_household_id) : null;
-                          if (head) {
+                          const info = findResidentGroupAndHead(item.full_name, item.dob || '');
+                          if (info.headName) {
                             return (
                               <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                🏡 <span style={{ fontStyle: 'italic' }}>Chủ hộ:</span> <span style={{ fontWeight: '600' }}>{head.full_name}</span>
+                                🏡 <span style={{ fontStyle: 'italic' }}>Chủ hộ:</span> <span style={{ fontWeight: '600' }}>{info.headName}</span>
                               </div>
                             );
                           }

@@ -1678,6 +1678,7 @@ const Finance = () => {
             color: #000;
           }
           .receipt-container {
+            width: 100%;
             height: 124mm;
             box-sizing: border-box;
             display: flex;
@@ -1838,6 +1839,44 @@ const Finance = () => {
     return new Intl.NumberFormat('vi-VN').format(parseInt(clean));
   };
 
+  // 1. Tối ưu hóa hiệu năng: Tạo Map tra cứu tổng số tiền đã nộp theo householdId & year
+  const totalPaidLookup = useMemo(() => {
+    const map = new Map<string, number>();
+    householdFunds.forEach(f => {
+      const key = `${f.household_id}_${f.year}`;
+      map.set(key, (map.get(key) || 0) + f.amount);
+    });
+    return map;
+  }, [householdFunds]);
+
+  // 2. Tối ưu hóa hiệu năng: Tạo Map tra cứu danh sách các khoản nộp của từng hộ trong năm hiện tại
+  const hhFundsMap = useMemo(() => {
+    const map = new Map<string, typeof householdFunds>();
+    householdFunds.forEach(f => {
+      if (f.year === fundYear) {
+        if (!map.has(f.household_id)) {
+          map.set(f.household_id, []);
+        }
+        map.get(f.household_id)!.push(f);
+      }
+    });
+    return map;
+  }, [householdFunds, fundYear]);
+
+  // 3. Tối ưu hóa hiệu năng: Tạo Map tra cứu nhanh các khoản nộp của hộ để tính toán thống kê
+  const fundPaymentsLookup = useMemo(() => {
+    const map = new Map<string, Map<string, number>>();
+    householdFunds.forEach(f => {
+      if (f.year === fundYear && f.amount > 0) {
+        if (!map.has(f.household_id)) {
+          map.set(f.household_id, new Map());
+        }
+        map.get(f.household_id)!.set(f.fund_name, f.amount);
+      }
+    });
+    return map;
+  }, [householdFunds, fundYear]);
+
   const filteredHouseholdsForFunds = useMemo(() => households.filter(hh => {
     const headName = getHouseholdHeadName(hh).toLowerCase();
     const address = (hh.address || '').toLowerCase();
@@ -1847,8 +1886,7 @@ const Finance = () => {
     
     if (!matchesSearch) return false;
     
-    const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
-    const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+    const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
     
     if (fundFilterStatus === 'paid') {
       if (totalPaid === 0) return false;
@@ -1861,7 +1899,27 @@ const Finance = () => {
     const matchesGroup = isWardUser || fundGroupFilter === 'all' || hh.self_management_group === fundGroupFilter;
     
     return matchesTdp && matchesGroup;
-  }), [households, householdFunds, fundSearchTerm, fundYear, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser]);
+  }), [households, totalPaidLookup, fundSearchTerm, fundYear, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser]);
+
+  // 4. Tối ưu hóa hiệu năng: Tính toán nhanh thông số thống kê cho các thẻ 3D
+  const fundStatistics = useMemo(() => {
+    const stats: Record<string, { paidCount: number; totalCollected: number }> = {};
+    fundNames.forEach(name => {
+      stats[name] = { paidCount: 0, totalCollected: 0 };
+    });
+    filteredHouseholdsForFunds.forEach(hh => {
+      const hhPayments = fundPaymentsLookup.get(hh.id);
+      if (hhPayments) {
+        hhPayments.forEach((amount, fundName) => {
+          if (stats[fundName]) {
+            stats[fundName].paidCount += 1;
+            stats[fundName].totalCollected += amount;
+          }
+        });
+      }
+    });
+    return stats;
+  }, [filteredHouseholdsForFunds, fundNames, fundPaymentsLookup]);
 
   return (
     <div className="finance-container">
@@ -2179,10 +2237,9 @@ const Finance = () => {
               marginBottom: '20px'
             }}>
               {fundNames.map((fundName, index) => {
-                const totalCollectedForFund = filteredHouseholdsForFunds.reduce((sum, hh) => {
-                  const paid = householdFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
-                  return sum + (paid ? paid.amount : 0);
-                }, 0);
+                const stats = fundStatistics[fundName] || { paidCount: 0, totalCollected: 0 };
+                const totalCollectedForFund = stats.totalCollected;
+                const paidCount = stats.paidCount;
 
                 // Tính toán tỷ lệ % thu được
                 const fundList = db.getFundList();
@@ -2195,10 +2252,6 @@ const Finance = () => {
                   if (targetAmount > 0) {
                     percent = Math.round((totalCollectedForFund / (totalHouseholdsInScope * targetAmount)) * 100);
                   } else {
-                    const paidCount = filteredHouseholdsForFunds.filter(hh => {
-                      const paid = householdFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
-                      return paid && paid.amount > 0;
-                    }).length;
                     percent = Math.round((paidCount / totalHouseholdsInScope) * 100);
                   }
                 }
@@ -2551,7 +2604,7 @@ const Finance = () => {
               <tbody>
                 {filteredHouseholdsForFunds.map((hh) => {
                   const headName = getHouseholdHeadName(hh);
-                  const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+                  const hhFunds = hhFundsMap.get(hh.id) || [];
                   const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
                   
                   return (
@@ -2564,7 +2617,7 @@ const Finance = () => {
                         {formatCurrency(totalPaid)}
                       </td>
                       {fundNames.map((fundName, idx) => {
-                        const paidFund = hhFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
+                        const paidFund = hhFunds.find(f => f.fund_name === fundName);
                         const amountPaid = paidFund ? paidFund.amount : 0;
                         
                         return (

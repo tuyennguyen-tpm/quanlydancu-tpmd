@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
+import React, { useState, useEffect, useMemo, useDeferredValue, useCallback } from 'react';
 import { 
   Home, 
   Search, 
@@ -78,6 +78,47 @@ const Households = () => {
   const [tdpMap, setTdpMap] = useState<Record<string, string>>({});
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
+  // 1. Tối ưu hóa hiệu năng: Map lưu trữ danh sách nhân khẩu theo household_id
+  const residentsByHouseholdMap = useMemo(() => {
+    const map = new Map<string, Resident[]>();
+    residents.forEach(r => {
+      if (!map.has(r.household_id)) {
+        map.set(r.household_id, []);
+      }
+      map.get(r.household_id)!.push(r);
+    });
+    return map;
+  }, [residents]);
+
+  // 2. Tối ưu hóa hiệu năng: Map lưu trữ tên chủ hộ của hộ gia đình
+  const householdHeadNameMap = useMemo(() => {
+    const resMap = new Map<string, Resident>();
+    residents.forEach(r => {
+      resMap.set(r.id, r);
+    });
+
+    const hhHeadMap = new Map<string, Resident>();
+    residents.forEach(r => {
+      if (r.is_head) {
+        hhHeadMap.set(r.household_id, r);
+      }
+    });
+
+    const nameMap = new Map<string, string>();
+    households.forEach(h => {
+      let head = h.head_of_household_id ? resMap.get(h.head_of_household_id) : undefined;
+      if (!head) {
+        head = hhHeadMap.get(h.id);
+      }
+      if (head) {
+        const name = head.status === 'deceased' ? `${head.full_name} (Đã mất)` : head.full_name;
+        nameMap.set(h.id, name);
+      } else {
+        nameMap.set(h.id, 'Chưa xác định');
+      }
+    });
+    return nameMap;
+  }, [households, residents]);
 
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
@@ -301,23 +342,10 @@ const Households = () => {
       });
   };
 
-  const getHeadName = (h: Household) => {
-    const head = residents.find(r => r.id === h.head_of_household_id);
-    if (head) {
-      if (head.status === 'deceased') {
-        return `${head.full_name} (Đã mất)`;
-      }
-      return head.full_name;
-    }
-    const fallbackHead = residents.find(r => r.household_id === h.id && r.is_head);
-    if (fallbackHead) {
-      if (fallbackHead.status === 'deceased') {
-        return `${fallbackHead.full_name} (Đã mất)`;
-      }
-      return fallbackHead.full_name;
-    }
-    return 'Chưa xác định';
-  };
+  const getHeadName = useCallback((h: Household | null) => {
+    if (!h) return '';
+    return householdHeadNameMap.get(h.id) || 'Chưa xác định';
+  }, [householdHeadNameMap]);
 
   const handleOpenAdd = () => {
     setEditingHousehold(null);
@@ -1104,13 +1132,13 @@ const Households = () => {
 
   // Filter & Search Logic
   // Trả về tên thành viên khớp với từ khóa (không phải chủ hộ), dùng để hiển thị badge
-  const getMatchedMemberName = (hId: string, query: string): string | null => {
+  const getMatchedMemberName = useCallback((hId: string, query: string): string | null => {
     if (!query.trim()) return null;
     const q = query.toLowerCase();
-    const members = residents.filter(r => r.household_id === hId && !r.is_head);
-    const matched = members.find(r => r.full_name.toLowerCase().includes(q));
+    const members = residentsByHouseholdMap.get(hId) || [];
+    const matched = members.find(r => !r.is_head && r.full_name.toLowerCase().includes(q));
     return matched ? matched.full_name : null;
-  };
+  }, [residentsByHouseholdMap]);
 
   const filteredHouseholds = useMemo(() => households.filter(h => {
     const headName = getHeadName(h).toLowerCase();
