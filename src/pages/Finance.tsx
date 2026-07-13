@@ -2004,6 +2004,25 @@ const Finance = () => {
                   return sum + (paid ? paid.amount : 0);
                 }, 0);
 
+                // Tính toán tỷ lệ % thu được
+                const fundList = db.getFundList();
+                const fundConfig = fundList.find(f => f.name === fundName);
+                const targetAmount = fundConfig ? fundConfig.target : 0;
+                
+                let percent = 0;
+                const totalHouseholdsInScope = filteredHouseholdsForFunds.length;
+                if (totalHouseholdsInScope > 0) {
+                  if (targetAmount > 0) {
+                    percent = Math.round((totalCollectedForFund / (totalHouseholdsInScope * targetAmount)) * 100);
+                  } else {
+                    const paidCount = filteredHouseholdsForFunds.filter(hh => {
+                      const paid = householdFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
+                      return paid && paid.amount > 0;
+                    }).length;
+                    percent = Math.round((paidCount / totalHouseholdsInScope) * 100);
+                  }
+                }
+
                 const colors = [
                   { text: '#1e3a8a', border: '#dbeafe' }, // Blue
                   { text: '#166534', border: '#dcfce7' }, // Green
@@ -2041,8 +2060,21 @@ const Finance = () => {
                       e.currentTarget.style.boxShadow = `0 4px 0 ${color.border}, 0 8px 12px -4px rgba(0, 0, 0, 0.05)`;
                     }}
                   >
-                    <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
-                      {fundName}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#64748b' }}>
+                        {fundName}
+                      </div>
+                      <div style={{
+                        fontSize: '0.7rem',
+                        fontWeight: '700',
+                        backgroundColor: percent >= 100 ? '#dcfce7' : '#eff6ff',
+                        color: percent >= 100 ? '#15803d' : '#1d4ed8',
+                        padding: '2px 6px',
+                        borderRadius: '10px',
+                        border: percent >= 100 ? '1px solid #bbf7d0' : '1px solid #bfdbfe'
+                      }}>
+                        {percent}%
+                      </div>
                     </div>
                     <div style={{ fontSize: '1.2rem', fontWeight: '800', color: color.text, lineHeight: '1.2' }}>
                       {formatCurrency(totalCollectedForFund)} <span style={{ fontSize: '0.78rem', fontWeight: '600', color: '#94a3b8' }}>đ</span>
