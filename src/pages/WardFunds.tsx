@@ -1190,6 +1190,869 @@ const WardFunds = () => {
     printWindow.document.close();
   };
 
+  // --- PRINT RECEIPT HANDLERS FOR WARD FUNDS ---
+  const generateWardStateReceiptHtml = (
+    item: WardFund,
+    dateText: string,
+    tdpNameVal: string,
+    wardNameVal: string,
+    leaderName: string,
+    leaderSigUrl: string
+  ) => {
+    // Tìm tổ tự quản từ danh sách nhân khẩu & hộ gia đình
+    const resident = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
+    const hhOfRes = resident ? households.find(h => h.id === resident.household_id) : null;
+    const groupName = hhOfRes?.self_management_group || '';
+    
+    const totalPaid = activeFunds.reduce((sum, fund) => sum + (item.contributions?.[fund.name]?.actual || 0), 0);
+
+    const paidFundsRowsHtml = activeFunds.map((fund, idx) => {
+      const amountPaid = item.contributions?.[fund.name]?.actual || 0;
+      const note = item.contributions?.[fund.name]?.date 
+        ? new Date(item.contributions[fund.name].date!).toLocaleDateString('vi-VN') 
+        : '—';
+      return `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td style="font-weight: bold; text-align: left;">Đóng góp ${fund.name} (${selectedYear})</td>
+          <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
+          <td style="text-align: left;">${note}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const docSoTien = (number: number): string => {
+      if (number === 0) return 'Không đồng';
+      const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+      
+      const readTriple = (n: number, showZero: boolean): string => {
+        let tram = Math.floor(n / 100);
+        let chuc = Math.floor((n % 100) / 10);
+        let donvi = n % 10;
+        let res = "";
+        
+        if (tram > 0 || showZero) {
+          res += arrays[tram] + " trăm ";
+        }
+        
+        if (chuc === 0 && donvi > 0) {
+          res += "lẻ ";
+        } else if (chuc === 1) {
+          res += "mười ";
+        } else if (chuc > 1) {
+          res += arrays[chuc] + " mươi ";
+        }
+        
+        if (donvi === 1 && chuc > 1) {
+          res += "mốt";
+        } else if (donvi === 5 && chuc > 0) {
+          res += "lăm";
+        } else if (donvi > 0) {
+          res += arrays[donvi];
+        }
+        return res.trim();
+      };
+
+      let str = "";
+      let units = ["", " nghìn", " triệu", " tỷ"];
+      let temp = number;
+      let i = 0;
+      
+      while (temp > 0) {
+        let triple = temp % 1000;
+        if (triple > 0) {
+          let s = readTriple(triple, i > 0);
+          str = s + units[i] + " " + str;
+        }
+        temp = Math.floor(temp / 1000);
+        i++;
+      }
+      const finalStr = str.trim();
+      return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+    };
+
+    const textAmountWords = docSoTien(totalPaid);
+
+    // Tải chữ ký động cho Kế toán trưởng & Thủ quỹ
+    let keToanName = '';
+    let keToanSigUrl = '';
+    let thuQuyName = '';
+    let thuQuySigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const kt = sigs.find((s: any) => s.id === 'ke_toan');
+      if (kt?.name?.trim()) keToanName = kt.name.trim();
+      if (kt?.signatureUrl?.trim()) keToanSigUrl = kt.signatureUrl.trim();
+
+      const tq = sigs.find((s: any) => s.id === 'thu_quy');
+      if (tq?.name?.trim()) thuQuyName = tq.name.trim();
+      if (tq?.signatureUrl?.trim()) thuQuySigUrl = tq.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    return `
+      <div class="receipt-container">
+        <table class="receipt-header-table">
+          <tr>
+            <td style="width: 50%;">
+              <div class="receipt-org-title">
+                Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
+                Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
+                Địa chỉ: ${item.address || hhOfRes?.address || tdpNameVal}
+              </div>
+            </td>
+            <td style="width: 50%; text-align: right;">
+              <div class="receipt-form-title">
+                <strong>Mẫu số 01 - TT</strong><br/>
+                <span style="font-size: 8pt; font-style: italic;">
+                  (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
+                  Ngày 22/12/2014 của Bộ Tài chính)
+                </span>
+                <div style="font-size: 8.5pt; margin-top: 4px; font-weight: normal; text-align: right; line-height: 1.2;">
+                  Quyển số: ....................<br/>
+                  Số: ....................<br/>
+                  Nợ: ....................<br/>
+                  Có: ....................
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="receipt-title-container">
+          <h1 class="receipt-title">PHIẾU THU</h1>
+          <p class="receipt-subtitle">Ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}</p>
+        </div>
+
+        <table class="receipt-info-table">
+          <tr>
+            <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
+            <td style="text-align: left;"><strong>${item.full_name}</strong>${groupName ? ` - (${groupName})` : ''}</td>
+          </tr>
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
+            <td style="text-align: left;">${item.address || hhOfRes?.address || tdpNameVal} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
+          </tr>
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
+            <td style="text-align: left;">Nộp các khoản đóng góp quỹ Phường năm ${selectedYear}</td>
+          </tr>
+        </table>
+
+        <table class="receipt-details-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">STT</th>
+              <th style="text-align: left;">Nội dung quỹ đóng góp</th>
+              <th style="width: 130px; text-align: right;">Số tiền</th>
+              <th style="text-align: left;">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${paidFundsRowsHtml.length > 0 ? paidFundsRowsHtml : '<tr><td colspan="4" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản quỹ nào trong năm.</td></tr>'}
+            <tr class="receipt-total-row">
+              <td colspan="2" style="text-align: center; font-weight: bold;">TỔNG CỘNG</td>
+              <td style="text-align: right; font-weight: bold; color: #15803d;">${formatCurrency(totalPaid)} đ</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="font-size: 10pt; font-style: italic; margin-bottom: 10px; margin-top: 2px; text-align: left;">
+          Số tiền bằng chữ: <strong>${textAmountWords}</strong>
+        </div>
+
+        <table class="receipt-signatures-table">
+          <tr>
+            <td colspan="4"></td>
+            <td style="font-style: italic; font-size: 9pt; padding-bottom: 2px; text-align: center;">
+              ${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ${dateText}
+            </td>
+          </tr>
+          <tr style="font-weight: bold; text-align: center;">
+            <td style="width: 20%;">Thủ trưởng đơn vị</td>
+            <td style="width: 20%;">Kế toán trưởng</td>
+            <td style="width: 20%;">Thủ quỹ</td>
+            <td style="width: 20%;">Người lập phiếu</td>
+            <td style="width: 20%;">Người nộp tiền</td>
+          </tr>
+          <tr style="font-style: italic; font-size: 8pt; color: #555; text-align: center; line-height: 1.1;">
+            <td>(Ký, đóng dấu, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+          </tr>
+          <tr style="text-align: center;">
+            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
+              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${leaderName}</strong>
+            </td>
+            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
+              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${keToanSigUrl ? `<img src="${keToanSigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${keToanName}</strong>
+            </td>
+            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
+              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${thuQuySigUrl ? `<img src="${thuQuySigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${thuQuyName}</strong>
+            </td>
+            <td style="vertical-align: bottom;"><strong>Ban Quản lý Quỹ</strong></td>
+            <td style="vertical-align: bottom;"><strong>${item.full_name}</strong></td>
+          </tr>
+        </table>
+      </div>
+    `;
+  };
+
+  const handlePrintIndividualReceipt_Ward = (item: WardFund) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = localStorage.getItem('tdp_name') || 'Tổ dân phố';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const receiptHtml = generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Biên lai thu tiền - ${item.full_name}</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A5 landscape;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              padding: 8mm 10mm;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+          }
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 10pt !important;
+            line-height: 1.3;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 10px !important;
+            margin-bottom: 10px !important;
+          }
+          .receipt-title {
+            font-size: 15.5pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 10pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 8px !important;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 4px 0 !important;
+            font-size: 10.5pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px !important;
+            margin-bottom: 8px !important;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 4px 6px !important;
+            font-size: 9.5pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px !important;
+            page-break-inside: avoid !important;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 10pt !important;
+            vertical-align: top;
+            padding: 4px !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${receiptHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handlePrintBulkReceiptsA4_Ward = () => {
+    if (filteredFunds.length === 0) {
+      showToast('Không có dữ liệu cá nhân nào để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = localStorage.getItem('tdp_name') || 'Tổ dân phố';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const pagesHtmlList: string[] = [];
+    for (let i = 0; i < filteredFunds.length; i += 2) {
+      const item1 = filteredFunds[i];
+      const receipt1 = generateWardStateReceiptHtml(item1, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+
+      const item2 = filteredFunds[i + 1];
+      let receipt2 = '';
+      if (item2) {
+        receipt2 = generateWardStateReceiptHtml(item2, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+      }
+
+      pagesHtmlList.push(`
+        <div class="page">
+          ${receipt1}
+          ${receipt2 ? `
+            <div class="cut-line">
+              <span>✂ - - - - - - - - - - - Kéo cắt tại đây - - - - - - - - - - - ✂</span>
+            </div>
+            ${receipt2}
+          ` : ''}
+        </div>
+      `);
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>In loạt phiếu thu quỹ phường A4 (2 phiếu/trang) - ${filteredFunds.length} người</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              padding: 12mm 15mm;
+            }
+            .page {
+              page-break-after: always;
+              height: 270mm;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              box-sizing: border-box;
+            }
+            .page:last-child {
+              page-break-after: avoid;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+          }
+          .receipt-container {
+            height: 124mm;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+          }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9pt !important;
+            line-height: 1.2;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 5px !important;
+            margin-bottom: 5px !important;
+          }
+          .receipt-title {
+            font-size: 14pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 2px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 9.5pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 5px !important;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 2px 0 !important;
+            font-size: 9.5pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px !important;
+            margin-bottom: 5px !important;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 3px 5px !important;
+            font-size: 9pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px !important;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 9pt !important;
+            vertical-align: top;
+            padding: 3px !important;
+          }
+          .cut-line {
+            text-align: center;
+            border-top: 1px dashed #666;
+            margin: 10px 0;
+            position: relative;
+          }
+          .cut-line span {
+            position: relative;
+            top: -10px;
+            background: #fff;
+            padding: 0 10px;
+            font-size: 8pt;
+            color: #666;
+            font-style: italic;
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtmlList.join('\n')}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handlePrintBulkReceiptsA4_1PerPage_Ward = () => {
+    if (filteredFunds.length === 0) {
+      showToast('Không có dữ liệu cá nhân nào để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = localStorage.getItem('tdp_name') || 'Tổ dân phố';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const receiptsHtml = filteredFunds.map(item => {
+      return generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+    }).join('\n');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>In loạt phiếu thu quỹ phường A4 (1 phiếu/trang) - ${filteredFunds.length} người</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              padding: 12mm 15mm;
+            }
+            .receipt-container {
+              page-break-inside: avoid !important;
+              page-break-after: always !important;
+              box-sizing: border-box;
+            }
+            .receipt-container:last-child {
+              page-break-after: avoid !important;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+          }
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+            padding-top: 5px;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 10pt !important;
+            line-height: 1.3;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 12px !important;
+            margin-bottom: 12px !important;
+          }
+          .receipt-title {
+            font-size: 15.5pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 10pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 10px !important;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 4px 0 !important;
+            font-size: 10.5pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px !important;
+            margin-bottom: 10px !important;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 5px 8px !important;
+            font-size: 10pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px !important;
+            page-break-inside: avoid !important;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 10pt !important;
+            vertical-align: top;
+            padding: 4px !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${receiptsHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handlePrintBulkReceiptsA5_Ward = () => {
+    if (filteredFunds.length === 0) {
+      showToast('Không có dữ liệu cá nhân nào để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = localStorage.getItem('tdp_name') || 'Tổ dân phố';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const receiptsHtml = filteredFunds.map(item => {
+      return generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+    }).join('\n');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>In loạt phiếu thu quỹ phường A5 - ${filteredFunds.length} người</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A5 landscape;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              padding: 8mm 10mm;
+            }
+            .receipt-container {
+              page-break-after: always;
+            }
+            .receipt-container:last-child {
+              page-break-after: avoid;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+            padding: 5px;
+          }
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 10pt !important;
+            line-height: 1.3;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 10px !important;
+            margin-bottom: 10px !important;
+          }
+          .receipt-title {
+            font-size: 15.5pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 10pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 8px !important;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 4px 0 !important;
+            font-size: 10.5pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px !important;
+            margin-bottom: 8px !important;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 4px 6px !important;
+            font-size: 9.5pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px !important;
+            page-break-inside: avoid !important;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 10pt !important;
+            vertical-align: top;
+            padding: 4px !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${receiptsHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <div style={{ 
       animation: 'fadeIn 0.25s ease-out',
@@ -1513,24 +2376,110 @@ const WardFunds = () => {
           )}
 
           {canPrintExport && (
-            <button
-              onClick={handlePrintList}
-              className="btn btn-secondary"
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#fff',
-                border: '1.5px solid var(--border)',
-                color: 'var(--text-main)',
-                fontWeight: '700',
-                fontSize: '0.85rem'
-              }}
-            >
-              <Printer size={16} /> In danh sách
-            </button>
+            <>
+              <button
+                onClick={handlePrintList}
+                className="btn btn-secondary"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#fff',
+                  border: '1.5px solid var(--border)',
+                  color: 'var(--text-main)',
+                  fontWeight: '700',
+                  fontSize: '0.85rem'
+                }}
+              >
+                <Printer size={16} /> In danh sách A4
+              </button>
+
+              <button 
+                onClick={handlePrintBulkReceiptsA4_Ward}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1e40af',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '0.85rem'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dbeafe';
+                  e.currentTarget.style.borderColor = '#93c5fd';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#eff6ff';
+                  e.currentTarget.style.borderColor = '#bfdbfe';
+                }}
+              >
+                <Printer size={16} /> In loạt phiếu A4 (2 phiếu/trang)
+              </button>
+
+              <button 
+                onClick={handlePrintBulkReceiptsA4_1PerPage_Ward}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#faf5ff',
+                  border: '1px solid #e9d5ff',
+                  color: '#6b21a8',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '0.85rem'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f3e8ff';
+                  e.currentTarget.style.borderColor = '#d8b4fe';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#faf5ff';
+                  e.currentTarget.style.borderColor = '#e9d5ff';
+                }}
+              >
+                <Printer size={16} /> In loạt phiếu A4 (1 phiếu/trang)
+              </button>
+
+              <button 
+                onClick={handlePrintBulkReceiptsA5_Ward}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  color: '#166534',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontSize: '0.85rem'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dcfce7';
+                  e.currentTarget.style.borderColor = '#86efac';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f0fdf4';
+                  e.currentTarget.style.borderColor = '#bbf7d0';
+                }}
+              >
+                <Printer size={16} /> In loạt phiếu A5
+              </button>
+            </>
           )}
 
           {/* Xóa sạch năm */}
@@ -1717,6 +2666,24 @@ const WardFunds = () => {
                               }}
                             >
                               <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handlePrintIndividualReceipt_Ward(item)}
+                              title="In phiếu thu"
+                              style={{
+                                background: '#8b5cf6',
+                                border: 'none',
+                                color: '#fff',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Printer size={14} />
                             </button>
                             <button
                               onClick={() => handleDeleteRecord(item.id, item.full_name)}
