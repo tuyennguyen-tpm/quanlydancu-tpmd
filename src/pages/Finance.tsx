@@ -1416,6 +1416,158 @@ const Finance = () => {
     printWindow.document.close();
   };
 
+  const handlePrintBulkReceiptsA4_1PerPage = () => {
+    if (filteredHouseholdsForFunds.length === 0) {
+      showToast('Không có dữ liệu hộ dân nào để in!', 'warning');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const receiptsHtml = filteredHouseholdsForFunds.map(hh => {
+      const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
+      return generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+    }).join('\n');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>In loạt phiếu thu A4 (1 phiếu/trang) - ${filteredHouseholdsForFunds.length} hộ</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 15mm 20mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+            .receipt-container {
+              page-break-after: always;
+              height: 250mm;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              box-sizing: border-box;
+            }
+            .receipt-container:last-child {
+              page-break-after: avoid;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11pt;
+            line-height: 1.45;
+            color: #000;
+          }
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+            padding-top: 15px;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 11.5pt !important;
+            line-height: 1.4;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 11pt !important;
+            line-height: 1.35;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 35px;
+            margin-bottom: 35px;
+          }
+          .receipt-title {
+            font-size: 19pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 11.5pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 25px;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 7px 0 !important;
+            font-size: 12pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 25px;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 10px 12px !important;
+            font-size: 11.5pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 40px;
+            page-break-inside: avoid;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 11.5pt !important;
+            vertical-align: top;
+            padding: 8px !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${receiptsHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   const handlePrintBulkReceiptsA4 = () => {
     if (filteredHouseholdsForFunds.length === 0) {
       showToast('Không có dữ liệu hộ dân nào để in!', 'warning');
@@ -2256,6 +2408,38 @@ const Finance = () => {
                     }}
                   >
                     <Printer size={16} /> In loạt phiếu A4 (2 phiếu/trang)
+                  </button>
+
+                  <button 
+                    onClick={handlePrintBulkReceiptsA4_1PerPage}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#faf5ff',
+                      border: '1px solid #e9d5ff',
+                      color: '#6b21a8',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3e8ff';
+                      e.currentTarget.style.borderColor = '#d8b4fe';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#faf5ff';
+                      e.currentTarget.style.borderColor = '#e9d5ff';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Printer size={16} /> In loạt phiếu A4 (1 phiếu/trang)
                   </button>
 
                   <button 
