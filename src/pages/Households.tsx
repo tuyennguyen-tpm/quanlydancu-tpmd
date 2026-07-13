@@ -1468,11 +1468,11 @@ const Households = () => {
       </div>
 
       <div className="filter-bar" style={{ flexWrap: 'wrap', gap: '10px' }}>
-        <div className="search-box">
-          <Search size={20} />
+        <div className="search-box" style={{ width: '250px', maxWidth: '100%', height: '36px' }}>
+          <Search size={16} />
           <input 
             type="text" 
-            placeholder="Tìm theo chủ hộ, thành viên, số nhà, số sổ..." 
+            placeholder="Tìm hộ gia đình..." 
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
