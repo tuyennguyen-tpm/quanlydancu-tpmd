@@ -2017,8 +2017,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       </div>
 
       <div className="filter-section">
-          <div className="search-box">
-            <Search size={20} />
+          <div className="search-box" style={{ width: '250px', maxWidth: '100%', height: '36px' }}>
+            <Search size={16} />
             <input 
               type="text" 
               placeholder="Tìm theo tên, số CCCD, Sđt..." 
