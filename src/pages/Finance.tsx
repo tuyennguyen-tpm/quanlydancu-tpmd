@@ -1462,15 +1462,12 @@ const Finance = () => {
               padding: 0;
             }
             .receipt-container {
-              page-break-after: always;
-              height: 250mm;
-              display: flex;
-              flex-direction: column;
-              justify-content: space-between;
+              page-break-inside: avoid !important;
+              page-break-after: always !important;
               box-sizing: border-box;
             }
             .receipt-container:last-child {
-              page-break-after: avoid;
+              page-break-after: avoid !important;
             }
           }
           body {
@@ -1486,49 +1483,49 @@ const Finance = () => {
           }
           .receipt-org-title {
             font-weight: bold;
-            font-size: 11.5pt !important;
+            font-size: 11pt !important;
             line-height: 1.4;
           }
           .receipt-form-title {
             text-align: right;
-            font-size: 11pt !important;
-            line-height: 1.35;
+            font-size: 10.5pt !important;
+            line-height: 1.3;
           }
           .receipt-title-container {
             text-align: center;
-            margin-top: 35px;
-            margin-bottom: 35px;
+            margin-top: 20px !important;
+            margin-bottom: 20px !important;
           }
           .receipt-title {
-            font-size: 19pt !important;
+            font-size: 17pt !important;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 6px !important;
+            margin-bottom: 4px !important;
           }
           .receipt-subtitle {
             font-style: italic;
-            font-size: 11.5pt !important;
+            font-size: 11pt !important;
           }
           .receipt-info-table {
             width: 100%;
-            margin-bottom: 25px;
+            margin-bottom: 15px !important;
             border-collapse: collapse;
           }
           .receipt-info-table td {
-            padding: 7px 0 !important;
-            font-size: 12pt !important;
+            padding: 5px 0 !important;
+            font-size: 11.5pt !important;
           }
           .receipt-details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 25px;
+            margin-top: 10px !important;
+            margin-bottom: 15px !important;
           }
           .receipt-details-table th, .receipt-details-table td {
             border: 1px solid #000;
-            padding: 10px 12px !important;
-            font-size: 11.5pt !important;
+            padding: 8px 10px !important;
+            font-size: 11pt !important;
             vertical-align: middle;
           }
           .receipt-details-table th {
@@ -1539,15 +1536,15 @@ const Finance = () => {
           .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 40px;
-            page-break-inside: avoid;
+            margin-top: 25px !important;
+            page-break-inside: avoid !important;
           }
           .receipt-signatures-table td {
             border: none;
             text-align: center;
-            font-size: 11.5pt !important;
+            font-size: 11pt !important;
             vertical-align: top;
-            padding: 8px !important;
+            padding: 6px !important;
           }
         </style>
       </head>
