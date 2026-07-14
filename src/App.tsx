@@ -122,9 +122,13 @@ const App = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const [docNotification, setDocNotification] = useState<{ title: string, message: string, id: string } | null>(null);
+
   // Global TTS Notification cho công văn phường (Chị Google)
   useEffect(() => {
     let lastSpokenId = localStorage.getItem('last_spoken_doc_id') || '';
+    // Prevent GC of utterance for Chrome
+    (window as any)._globalUtterances = (window as any)._globalUtterances || [];
 
     const checkGlobalUnreadAndSpeak = () => {
       // Chỉ đọc nếu không phải màn hình của phường
@@ -142,8 +146,18 @@ const App = () => {
         else prefix = 'Bạn có công văn mới từ Ủy ban nhân dân Phường.';
 
         const textToSpeak = `${prefix} Nội dung là: ${unread.title}. Vui lòng mở phần mềm để xem chi tiết.`;
+        
+        // Hiện popup trực quan
+        setDocNotification({
+          title: 'Tin nhắn tự động',
+          message: textToSpeak,
+          id: unread.id
+        });
+
         const msg = new SpeechSynthesisUtterance(textToSpeak);
         msg.lang = 'vi-VN';
+        msg.volume = 1;
+        msg.rate = 1;
         
         const voices = window.speechSynthesis.getVoices();
         const viVoices = voices.filter(v => v.lang.includes('vi'));
@@ -154,10 +168,24 @@ const App = () => {
           msg.voice = viVoices[0];
         }
 
+        // Fix GC bug
+        (window as any)._globalUtterances.push(msg);
+
+        msg.onend = () => {
+          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
+        };
+        msg.onerror = (e) => {
+          console.warn('TTS Error or Blocked by Browser:', e);
+          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
+        };
+
         window.speechSynthesis.speak(msg);
         
         lastSpokenId = unread.id;
         localStorage.setItem('last_spoken_doc_id', unread.id);
+        
+        // Tự động ẩn popup sau 15 giây
+        setTimeout(() => setDocNotification(null), 15000);
       }
     };
 
@@ -165,8 +193,8 @@ const App = () => {
       window.speechSynthesis.onvoiceschanged = checkGlobalUnreadAndSpeak;
     }
 
-    // Kiểm tra mỗi 15 giây
-    const ttsInterval = setInterval(checkGlobalUnreadAndSpeak, 15000);
+    // Kiểm tra liên tục mỗi 8 giây
+    const ttsInterval = setInterval(checkGlobalUnreadAndSpeak, 8000);
     return () => clearInterval(ttsInterval);
   }, []);
 
@@ -2072,6 +2100,37 @@ const App = () => {
       {toast && (
         <div className={`toast-notification ${toast.type}`}>
           {toast.message}
+        </div>
+      )}
+      {docNotification && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 99999,
+          background: 'white',
+          borderLeft: '5px solid #3b82f6',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+          padding: '20px',
+          borderRadius: '8px',
+          width: '350px',
+          animation: 'slideInRight 0.5s ease'
+        }}>
+          <h3 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.2rem' }}>🔔</span> {docNotification.title}
+          </h3>
+          <p style={{ margin: 0, color: '#475569', fontSize: '0.95rem', lineHeight: '1.5' }}>
+            {docNotification.message}
+          </p>
+          <button 
+            onClick={() => {
+              setDocNotification(null);
+              window.speechSynthesis.cancel();
+            }}
+            style={{ marginTop: '15px', background: '#f1f5f9', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.85rem', width: '100%' }}
+          >
+            Đóng & Tắt âm
+          </button>
         </div>
       )}
       {/* Sidebar Overlay for Mobile */}
