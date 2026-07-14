@@ -1906,6 +1906,10 @@ const App = () => {
     if (item.id === 'settings') {
       return userRole === 'to_truong' || userRole === 'admin';
     }
+    if (item.id === 'invitation-templates') {
+      const isWardMode = (userRole === 'ward_admin' || userRole === 'super_admin') && selectedTdpUserId === 'all';
+      return !isWardMode;
+    }
     return true;
   });
 
