@@ -729,10 +729,11 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            <div style={{ marginTop: '14px' }}>
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #E2E8F0' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748B', marginBottom: '12px', textTransform: 'uppercase' }}>Độ hoàn thiện dữ liệu</div>
               <div className="progress-item" style={{ marginBottom: '12px' }}>
                 <div className="progress-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                  <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Đã rà soát</span>
+                  <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Nhân khẩu có CCCD/SĐT</span>
                   <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{stats.reviewedPercent}%</span>
                 </div>
                 <div className="progress-bar" style={{ height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
@@ -741,7 +742,7 @@ const Dashboard = () => {
               </div>
               <div className="progress-item">
                 <div className="progress-info" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                  <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Đã cấp hỗ trợ</span>
+                  <span className="p-label" style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '500' }}>Hộ đã xác định Chủ hộ</span>
                   <span className="p-val" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{stats.supportPercent}%</span>
                 </div>
                 <div className="progress-bar" style={{ height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
