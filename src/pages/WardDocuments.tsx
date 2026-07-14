@@ -29,14 +29,6 @@ const WardDocuments = () => {
 
   useEffect(() => {
     loadDocs();
-    
-    // TTS Notification Logic - Kiểm tra định kỳ mỗi 3 phút (180000ms)
-    // Để test nhanh, ta để 10 giây (10000ms)
-    const interval = setInterval(() => {
-      checkUnreadAndSpeak();
-    }, 180000); 
-
-    return () => clearInterval(interval);
   }, []);
 
   const checkUnreadAndSpeak = () => {
@@ -57,6 +49,16 @@ const WardDocuments = () => {
 
       const msg = new SpeechSynthesisUtterance(`${prefix} Nội dung là: ${unread.title}. Vui lòng mở phần mềm để xem chi tiết.`);
       msg.lang = 'vi-VN';
+      
+      const voices = window.speechSynthesis.getVoices();
+      const viVoices = voices.filter(v => v.lang.includes('vi'));
+      const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('online'));
+      if (googleVoice) {
+        msg.voice = googleVoice;
+      } else if (viVoices.length > 0) {
+        msg.voice = viVoices[0];
+      }
+
       window.speechSynthesis.speak(msg);
     }
   };

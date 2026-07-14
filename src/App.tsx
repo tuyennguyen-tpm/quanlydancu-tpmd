@@ -122,6 +122,54 @@ const App = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Global TTS Notification cho công văn phường (Chị Google)
+  useEffect(() => {
+    let lastSpokenId = localStorage.getItem('last_spoken_doc_id') || '';
+
+    const checkGlobalUnreadAndSpeak = () => {
+      // Chỉ đọc nếu không phải màn hình của phường
+      if (localStorage.getItem('is_phuong_mode') === 'true') return;
+
+      const stored = localStorage.getItem('ward_documents');
+      if (!stored) return;
+      const docs = JSON.parse(stored);
+      
+      const unread = docs.find((d: any) => !d.is_read);
+      if (unread && unread.id !== lastSpokenId) {
+        let prefix = '';
+        if (unread.category === 'party') prefix = 'Bạn có công văn, nghị quyết mới từ Chi bộ Phường.';
+        else if (unread.category === 'front') prefix = 'Bạn có công văn từ Ban công tác Mặt trận Phường.';
+        else prefix = 'Bạn có công văn mới từ Ủy ban nhân dân Phường.';
+
+        const textToSpeak = `${prefix} Nội dung là: ${unread.title}. Vui lòng mở phần mềm để xem chi tiết.`;
+        const msg = new SpeechSynthesisUtterance(textToSpeak);
+        msg.lang = 'vi-VN';
+        
+        const voices = window.speechSynthesis.getVoices();
+        const viVoices = voices.filter(v => v.lang.includes('vi'));
+        const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('online'));
+        if (googleVoice) {
+          msg.voice = googleVoice;
+        } else if (viVoices.length > 0) {
+          msg.voice = viVoices[0];
+        }
+
+        window.speechSynthesis.speak(msg);
+        
+        lastSpokenId = unread.id;
+        localStorage.setItem('last_spoken_doc_id', unread.id);
+      }
+    };
+
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = checkGlobalUnreadAndSpeak;
+    }
+
+    // Kiểm tra mỗi 15 giây
+    const ttsInterval = setInterval(checkGlobalUnreadAndSpeak, 15000);
+    return () => clearInterval(ttsInterval);
+  }, []);
+
   const formatVietnameseDateTime = (date: Date) => {
     const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     const dayName = days[date.getDay()];
