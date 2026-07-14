@@ -25,6 +25,7 @@ import CCBElderly from './pages/CCBElderly';
 import FarmersAssociation from './pages/FarmersAssociation';
 import YouthUnion from './pages/YouthUnion';
 import WardDocuments from './pages/WardDocuments';
+import InvitationTemplates from './pages/InvitationTemplates';
 import { 
   Users, 
   Home, 
@@ -64,7 +65,8 @@ import {
   UsersRound,
   FolderOpen,
   Sprout,
-  Zap
+  Zap,
+  Mail
 } from 'lucide-react';
 import './App.css';
 
@@ -1839,6 +1841,8 @@ const App = () => {
         return <Documents />;
       case 'ward-documents':
         return <WardDocuments />;
+      case 'invitation-templates':
+        return <InvitationTemplates />;
       case 'map':
         return <CitizenMap />;
       case 'ai-assistant':
@@ -1883,6 +1887,7 @@ const App = () => {
     { id: 'youth-union', icon: Zap, label: 'Đoàn Thanh niên', group: 'Tổ chức - Đoàn thể' },
     { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết', group: 'Điều hành' },
     { id: 'ward-documents', icon: FileText, label: 'Công văn của Phường', group: 'Điều hành' },
+    { id: 'invitation-templates', icon: Mail, label: 'Mẫu giấy mời', group: 'Điều hành' },
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
     { id: 'meetings', icon: Calendar, label: 'Lịch họp Tổ dân phố', group: 'Điều hành' },
     { id: 'regulations', icon: Check, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
