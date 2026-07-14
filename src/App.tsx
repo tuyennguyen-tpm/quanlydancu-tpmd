@@ -1761,6 +1761,8 @@ const App = () => {
         return <MeetingMinutes />;
       case 'documents':
         return <Documents />;
+      case 'ward-documents':
+        return <WardDocuments />;
       case 'map':
         return <CitizenMap />;
       case 'ai-assistant':
@@ -1804,6 +1806,7 @@ const App = () => {
     { id: 'farmers-association', icon: Sprout, label: 'Hội Nông dân', group: 'Tổ chức - Đoàn thể' },
     { id: 'youth-union', icon: Zap, label: 'Đoàn Thanh niên', group: 'Tổ chức - Đoàn thể' },
     { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết', group: 'Điều hành' },
+    { id: 'ward-documents', icon: FileText, label: 'Công văn của Phường', group: 'Điều hành' },
     { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
     { id: 'meetings', icon: Calendar, label: 'Lịch họp Tổ dân phố', group: 'Điều hành' },
     { id: 'regulations', icon: Check, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
