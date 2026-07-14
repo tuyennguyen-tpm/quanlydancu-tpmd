@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../services/db';
+import { db, partyDb } from '../services/db';
 import type { Household, Resident } from '../types';
+import type { PartyMember } from '../services/db';
 
 interface HouseholdWithHead extends Household {
   headName: string;
@@ -9,7 +10,10 @@ interface HouseholdWithHead extends Household {
 const InvitationTemplates: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leader' | 'party' | 'front'>('leader');
   const [households, setHouseholds] = useState<HouseholdWithHead[]>([]);
+  const [partyMembers, setPartyMembers] = useState<PartyMember[]>([]);
   const [selectedHouseholds, setSelectedHouseholds] = useState<Set<string>>(new Set());
+  const [selectedPartyMembers, setSelectedPartyMembers] = useState<Set<string>>(new Set());
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [meetingContent, setMeetingContent] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
@@ -17,6 +21,14 @@ const InvitationTemplates: React.FC = () => {
   const [meetingLocation, setMeetingLocation] = useState('');
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<'setup' | 'preview'>('setup');
+
+  // Load group list from settings
+  const groupsConfig: string[] = (() => {
+    try {
+      const saved = localStorage.getItem('tdp_groups_config');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  })();
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -56,17 +68,14 @@ const InvitationTemplates: React.FC = () => {
       const tt = sigs.find((s: any) => s.id === 'to_truong');
       if (tt?.name) toTruongName = tt.name;
       const mt = sigs.find((s: any) => s.id === 'mat_tran');
-      if (mt?.name) matTranName = mt.name;
-    } catch (e) {}
-  }
-
-  useEffect(() => {
+      if (mt?.name) matTranName   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        const [hList, rList] = await Promise.all([
+        const [hList, rList, pmList] = await Promise.all([
           db.getHouseholds(),
-          db.getResidents()
+          db.getResidents(),
+          partyDb.getPartyMembers()
         ]);
         const residentMap: Record<string, Resident> = {};
         rList.forEach(r => {
@@ -79,13 +88,18 @@ const InvitationTemplates: React.FC = () => {
         }));
         setHouseholds(mapped);
         setSelectedHouseholds(new Set(mapped.map(h => h.id)));
-        // Default location
+        const activePM = pmList.filter(m => m.status !== 'inactive' && m.status !== 'deceased');
+        setPartyMembers(activePM);
+        setSelectedPartyMembers(new Set(activePM.map(m => m.id)));
         setMeetingLocation(`Nhà văn hóa ${rawTdpName}`);
         setMeetingTime('19:00');
         setMeetingDate(String(currentDay).padStart(2, '0'));
         setMeetingMonth(String(currentMonth).padStart(2, '0'));
       } catch (e) {
         console.error(e);
+      }
+      setLoading(false);
+    };e);
       }
       setLoading(false);
     };
@@ -102,10 +116,43 @@ const InvitationTemplates: React.FC = () => {
     });
   };
 
-  const selectAll = () => setSelectedHouseholds(new Set(households.map(h => h.id)));
-  const clearAll = () => setSelectedHouseholds(new Set());
+  const togglePartyMember = (id: string) => {
+    setSelectedPartyMembers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
-  const selectedList = households.filter(h => selectedHouseholds.has(h.id));
+  // Filtered households by selected group
+  const filteredHouseholds = selectedGroup === 'all'
+    ? households
+    : households.filter(h => h.group_id === selectedGroup);
+
+  const selectAll = () => {
+    if (activeTab === 'party') {
+      setSelectedPartyMembers(new Set(partyMembers.map(m => m.id)));
+    } else {
+      setSelectedHouseholds(new Set(filteredHouseholds.map(h => h.id)));
+    }
+  };
+  const clearAll = () => {
+    if (activeTab === 'party') {
+      setSelectedPartyMembers(new Set());
+    } else {
+      const toRemove = new Set(filteredHouseholds.map(h => h.id));
+      setSelectedHouseholds(prev => {
+        const next = new Set(prev);
+        toRemove.forEach(id => next.delete(id));
+        return next;
+      });
+    }
+  };
+
+  const selectedHouseholdList = households.filter(h => selectedHouseholds.has(h.id));
+  const selectedPartyMemberList = partyMembers.filter(m => selectedPartyMembers.has(m.id));
+  const selectedList = activeTab === 'party' ? [] : selectedHouseholdList; // used for count display
+  const totalSelected = activeTab === 'party' ? selectedPartyMemberList.length : selectedHouseholdList.length;
 
   const signatureName = activeTab === 'party' ? biThuName
     : activeTab === 'front' ? matTranName
@@ -372,13 +419,49 @@ const InvitationTemplates: React.FC = () => {
               </div>
             </div>
 
+            {/* BỘ LỌC TỔ */}
+            {groupsConfig.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
+                <button
+                  onClick={() => setSelectedGroup('all')}
+                  style={{
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                    border: selectedGroup === 'all' ? '1.5px solid #3b82f6' : '1.5px solid #e2e8f0',
+                    background: selectedGroup === 'all' ? '#3b82f6' : 'white',
+                    color: selectedGroup === 'all' ? 'white' : '#64748b'
+                  }}
+                >
+                  Tất cả ({households.length})
+                </button>
+                {groupsConfig.map(g => {
+                  const count = households.filter(h => h.group_id === g).length;
+                  return (
+                    <button
+                      key={g}
+                      onClick={() => setSelectedGroup(g)}
+                      style={{
+                        padding: '4px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                        border: selectedGroup === g ? '1.5px solid #3b82f6' : '1.5px solid #e2e8f0',
+                        background: selectedGroup === g ? '#3b82f6' : 'white',
+                        color: selectedGroup === g ? 'white' : '#64748b'
+                      }}
+                    >
+                      {g} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {loading ? (
               <p style={{ textAlign: 'center', color: '#94a3b8' }}>⏳ Đang tải danh sách hộ gia đình...</p>
-            ) : households.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#94a3b8' }}>Chưa có hộ gia đình nào trong hệ thống.</p>
+            ) : filteredHouseholds.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#94a3b8' }}>
+                {selectedGroup === 'all' ? 'Chưa có hộ gia đình nào trong hệ thống.' : `Tổ "${selectedGroup}" chưa có hộ gia đình nào.`}
+              </p>
             ) : (
-              <div style={{ maxHeight: '380px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {households.map(h => (
+              <div style={{ maxHeight: '340px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {filteredHouseholds.map(h => (
                   <label key={h.id} style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
                     padding: '8px 10px', borderRadius: '8px', cursor: 'pointer',
@@ -394,8 +477,19 @@ const InvitationTemplates: React.FC = () => {
                     />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>{h.headName}</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>{h.address || 'Chưa có địa chỉ'} {h.household_number ? `· HK: ${h.household_number}` : ''}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        {h.address || 'Chưa có địa chỉ'} {h.household_number ? `· HK: ${h.household_number}` : ''}
+                      </div>
                     </div>
+                    {h.group_id && (
+                      <span style={{
+                        fontSize: '10px', padding: '2px 7px', borderRadius: '10px', fontWeight: 600,
+                        background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+                        whiteSpace: 'nowrap', flexShrink: 0
+                      }}>
+                        {h.group_id}
+                      </span>
+                    )}
                   </label>
                 ))}
               </div>
