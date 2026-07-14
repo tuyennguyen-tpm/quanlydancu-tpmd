@@ -156,4 +156,17 @@ export interface WardFund {
   created_at?: string;
 }
 
+export interface WardDocument {
+  id: string;
+  title: string;
+  summary?: string;
+  file_url?: string;
+  file_name?: string;
+  target_scope: 'all' | 'specific';
+  target_tdps?: string[]; // Danh sách các TDP nhận nếu target_scope = 'specific'
+  category: 'party' | 'leader' | 'front'; // Đảng, Tổ trưởng, Mặt trận
+  sender_name?: string;
+  is_read: boolean; // Trạng thái đã xem của tài khoản TDP hiện tại
+  created_at: string;
+}
 

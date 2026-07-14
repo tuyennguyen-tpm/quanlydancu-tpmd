@@ -24,6 +24,7 @@ import WomenAssociation from './pages/WomenAssociation';
 import CCBElderly from './pages/CCBElderly';
 import FarmersAssociation from './pages/FarmersAssociation';
 import YouthUnion from './pages/YouthUnion';
+import WardDocuments from './pages/WardDocuments';
 import { 
   Users, 
   Home, 
