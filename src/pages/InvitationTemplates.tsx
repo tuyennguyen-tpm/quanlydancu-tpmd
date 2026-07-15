@@ -398,7 +398,7 @@ const InvitationTemplates: React.FC = () => {
             position: relative;
             width: ${isLandscape ? '210mm' : '148mm'};
             height: ${isLandscape ? '148mm' : '210mm'};
-            padding: ${isLandscape ? '10mm 15mm 10mm' : '22mm 18mm 18mm'};
+            padding: ${isLandscape ? '8mm 15mm 8mm' : '12mm 15mm 12mm'};
             font-family: "Times New Roman", Times, serif;
             font-size: ${isLandscape ? '11.5pt' : '13pt'};
             line-height: ${isLandscape ? 1.5 : 1.65};
@@ -430,7 +430,7 @@ const InvitationTemplates: React.FC = () => {
   // A5 dimensions based on orientation
   const cardW = orientation === 'portrait' ? '148mm' : '210mm';
   const cardH = orientation === 'portrait' ? '210mm' : '148mm';
-  const cardPad = orientation === 'portrait' ? '22mm 18mm 18mm' : '10mm 15mm 10mm';
+  const cardPad = orientation === 'portrait' ? '12mm 15mm 12mm' : '8mm 15mm 8mm';
   const isLandscape = orientation === 'landscape';
 
   // ── Decorative green border frame ─────────────────────────────────
@@ -537,41 +537,41 @@ const InvitationTemplates: React.FC = () => {
       <h1 style={{ 
         textAlign: 'center', fontWeight: 700, 
         fontSize: isLandscape ? '18pt' : '22pt', 
-        margin: isLandscape ? '4px 0 6px' : '8px 0 10px', 
+        margin: isLandscape ? '4px 0 6px' : '4px 0 8px', 
         letterSpacing: '2px' 
       }}>
         GIẤY MỜI
       </h1>
 
       {/* KÍNH GỬI */}
-      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 8px', fontWeight: 700 }}>
+      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 6px', fontWeight: 700 }}>
         Kính gửi :{' '}
         <span style={{ textDecoration: 'underline' }}>{recipient}</span>
       </p>
 
       {/* BODY */}
-      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 8px', textIndent: '1.5em', textAlign: 'justify' }}>
+      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 6px', textIndent: '1.5em', textAlign: 'justify' }}>
         Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp{' '}
         <span style={{ textDecoration: 'underline' }}>{tdpNameFormatted}</span>,{' '}
         <span style={{ textDecoration: 'underline' }}>{wardNameFormatted}</span>
       </p>
 
-      <p style={{ margin: '0 0 4px' }}>
+      <p style={{ margin: '0 0 3px' }}>
         <span style={{ textDecoration: 'underline' }}>Thời gian</span>{' '}
         <strong>{meetingTime}</strong> ngày <strong>{meetingDay}/{meetingMonth}/{meetingYear}</strong>
       </p>
 
-      <p style={{ margin: '0 0 4px' }}>
+      <p style={{ margin: '0 0 3px' }}>
         <span style={{ textDecoration: 'underline' }}>Địa điểm</span>:{' '}
         <span style={{ textDecoration: 'underline' }}>{location}</span>
       </p>
 
-      <p style={{ margin: '0 0 4px' }}>
+      <p style={{ margin: '0 0 3px' }}>
         <span style={{ textDecoration: 'underline' }}>Nội dung</span>:{' '}
         <span style={{ textDecoration: 'underline', whiteSpace: 'pre-wrap' }}>{content}</span>
       </p>
 
-      <p style={{ margin: isLandscape ? '0 0 10px' : '0 0 18px', textIndent: '1.5em', textAlign: 'justify', whiteSpace: 'pre-wrap' }}>
+      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 10px', textIndent: '1.5em', textAlign: 'justify', whiteSpace: 'pre-wrap' }}>
         <span style={{ textDecoration: 'underline' }}>{closingNote}</span>
       </p>
 
@@ -580,7 +580,7 @@ const InvitationTemplates: React.FC = () => {
         <div style={{ textAlign: 'center', minWidth: '190px' }}>
           <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: isLandscape ? '9.5pt' : '10.5pt' }}>{locationDate}</p>
           <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: isLandscape ? '10.5pt' : '11.5pt' }}>{signerTitle}</p>
-          <div style={{ height: isLandscape ? '32px' : '58px' }} />
+          <div style={{ height: isLandscape ? '25px' : '35px' }} />
           <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: isLandscape ? '10.5pt' : '11.5pt' }}>{signerName}</p>
         </div>
       </div>
