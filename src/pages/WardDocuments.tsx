@@ -601,6 +601,14 @@ const WardDocuments = () => {
   };
 
 
+  const getUnreadCount = (cat: 'all' | 'party' | 'leader' | 'front') => {
+    // Chỉ đếm các công văn nhận từ Phường chưa đọc
+    if (cat === 'all') {
+      return documents.filter(d => !d.is_read).length;
+    }
+    return documents.filter(d => !d.is_read && d.category === cat).length;
+  };
+
   return (
     <div className="content" style={{ padding: '20px' }}>
       <style>{`
@@ -674,6 +682,12 @@ const WardDocuments = () => {
           top: 2px;
           box-shadow: 0 1px 0 #cbd5e1, 0 2px 3px rgba(0, 0, 0, 0.05);
         }
+
+        @keyframes pulse-badge {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
       `}</style>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -723,10 +737,102 @@ const WardDocuments = () => {
 
       {/* Bộ lọc loại văn bản */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '22px', paddingTop: '4px' }}>
-        <button className={activeTab === 'all' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('all')}>Tất cả</button>
-        <button className={activeTab === 'party' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('party')}>Đảng - Chi bộ</button>
-        <button className={activeTab === 'leader' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('leader')}>Chính quyền - Tổ trưởng</button>
-        <button className={activeTab === 'front' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('front')}>Mặt trận Tổ quốc</button>
+        <button className={activeTab === 'all' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('all')}>
+          Tất cả
+          {getUnreadCount('all') > 0 && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#ef4444',
+              color: '#fff',
+              fontSize: '10.5px',
+              fontWeight: 'bold',
+              minWidth: '18px',
+              height: '18px',
+              borderRadius: '9px',
+              padding: '0 5px',
+              marginLeft: '6px',
+              boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)',
+              verticalAlign: 'middle',
+              animation: 'pulse-badge 1.5s infinite alternate'
+            }}>
+              {getUnreadCount('all')}
+            </span>
+          )}
+        </button>
+        <button className={activeTab === 'party' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('party')}>
+          Đảng - Chi bộ
+          {getUnreadCount('party') > 0 && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#ef4444',
+              color: '#fff',
+              fontSize: '10.5px',
+              fontWeight: 'bold',
+              minWidth: '18px',
+              height: '18px',
+              borderRadius: '9px',
+              padding: '0 5px',
+              marginLeft: '6px',
+              boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)',
+              verticalAlign: 'middle',
+              animation: 'pulse-badge 1.5s infinite alternate'
+            }}>
+              {getUnreadCount('party')}
+            </span>
+          )}
+        </button>
+        <button className={activeTab === 'leader' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('leader')}>
+          Chính quyền - Tổ trưởng
+          {getUnreadCount('leader') > 0 && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#ef4444',
+              color: '#fff',
+              fontSize: '10.5px',
+              fontWeight: 'bold',
+              minWidth: '18px',
+              height: '18px',
+              borderRadius: '9px',
+              padding: '0 5px',
+              marginLeft: '6px',
+              boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)',
+              verticalAlign: 'middle',
+              animation: 'pulse-badge 1.5s infinite alternate'
+            }}>
+              {getUnreadCount('leader')}
+            </span>
+          )}
+        </button>
+        <button className={activeTab === 'front' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('front')}>
+          Mặt trận Tổ quốc
+          {getUnreadCount('front') > 0 && (
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#ef4444',
+              color: '#fff',
+              fontSize: '10.5px',
+              fontWeight: 'bold',
+              minWidth: '18px',
+              height: '18px',
+              borderRadius: '9px',
+              padding: '0 5px',
+              marginLeft: '6px',
+              boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)',
+              verticalAlign: 'middle',
+              animation: 'pulse-badge 1.5s infinite alternate'
+            }}>
+              {getUnreadCount('front')}
+            </span>
+          )}
+        </button>
       </div>
 
       {subTab === 'received' ? (
