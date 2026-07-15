@@ -10,6 +10,7 @@ const InvitationTemplates: React.FC = () => {
   const mm  = String(now.getMonth() + 1).padStart(2, '0');
   const yy  = String(now.getFullYear());
 
+  const [invitationNumber, setInvitationNumber] = useState('');
   const [recipientTitle, setRecipientTitle] = useState('hộ gia đình_ông, bà');
   const [meetingTime,    setMeetingTime]    = useState('20 h');
   const [meetingDay,     setMeetingDay]     = useState(dd);
@@ -96,7 +97,7 @@ const InvitationTemplates: React.FC = () => {
         <div style={{ textAlign: 'center', width: '44%' }}>
           {leftOrg}
           <div style={{ width: '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
-          <p style={{ margin: 0, fontSize: '9pt' }}>Số: ...../GM-TDP</p>
+          <p style={{ margin: 0, fontSize: '9pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
         </div>
         <div style={{ textAlign: 'center', width: '52%' }}>
           <p style={{ margin: 0, fontWeight: 700, fontSize: '11pt' }}>
@@ -255,6 +256,13 @@ const InvitationTemplates: React.FC = () => {
         {/* LEFT: Form */}
         <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
           <h3 style={{ margin: '0 0 14px', color: '#1e40af', fontSize: '14px' }}>✏️ Soạn nội dung giấy mời</h3>
+
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Số giấy mời (Số: __/GM-TDP):</label>
+            <input className="inv-input" value={invitationNumber}
+              onChange={e => setInvitationNumber(e.target.value)}
+              placeholder="VD: 01, 15, 28..." />
+          </div>
 
           <div style={{ marginBottom: '11px' }}>
             <label className="inv-label">Kính gửi:</label>
