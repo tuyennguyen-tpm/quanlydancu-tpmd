@@ -322,13 +322,14 @@ const InvitationTemplates: React.FC = () => {
             print-color-adjust: exact;
           }
           .print-card-wrapper {
-            width: ${orientation === 'portrait' ? '148mm' : '210mm'};
-            height: ${orientation === 'portrait' ? '210mm' : '148mm'};
+            width: 100%;
+            height: 100vh;
             box-sizing: border-box;
             position: relative;
             page-break-after: always;
             page-break-inside: avoid;
-            margin: 0 auto;
+            margin: 0;
+            padding: 0;
             overflow: hidden;
             background: white;
           }
@@ -862,7 +863,7 @@ const InvitationTemplates: React.FC = () => {
         </div>
 
         {/* RIGHT COLUMN: Preview & Printing */}
-        <div>
+        <div style={{ position: 'sticky', top: '20px' }}>
           <div style={{
             background: '#f1f5f9', borderRadius: '14px',
             padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px',
@@ -883,8 +884,25 @@ const InvitationTemplates: React.FC = () => {
             </div>
 
             {/* Screen Preview */}
-            <div className="screen-only" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.1)', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
-              <InvitationCard recipient={recipientTitle} />
+            <div className="screen-only" style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              overflow: 'hidden', 
+              width: '100%',
+              height: orientation === 'portrait' ? '490px' : '330px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              background: '#f8fafc',
+              flexShrink: 0
+            }}>
+              <div style={{
+                transform: orientation === 'portrait' ? 'scale(0.6)' : 'scale(0.52)',
+                transformOrigin: 'top center',
+                flexShrink: 0
+              }}>
+                <InvitationCard recipient={recipientTitle} />
+              </div>
             </div>
 
             {/* Print-only Batch Container */}
