@@ -37,8 +37,8 @@ const InvitationTemplates: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
   const [recipientPattern, setRecipientPattern] = useState('Đại diện hộ gia đình ông/bà {ten_chu_ho}');
-  const [showBorder, setShowBorder] = useState(false);
-  const [showLeftHeader, setShowLeftHeader] = useState(false);
+  const [showBorder, setShowBorder] = useState(true);
+  const [showLeftHeader, setShowLeftHeader] = useState(true);
 
   const [groups, setGroups] = useState<string[]>(() => {
     const saved = localStorage.getItem('tdp_groups_config');
@@ -583,7 +583,7 @@ const InvitationTemplates: React.FC = () => {
         }
         .main-grid {
           display: grid;
-          grid-template-columns: 320px 1fr;
+          grid-template-columns: 320px 340px 1fr;
           gap: 20px;
           align-items: start;
         }
@@ -730,7 +730,7 @@ const InvitationTemplates: React.FC = () => {
 
           {/* Scrollable list */}
           <div style={{
-            maxHeight: '160px',
+            maxHeight: '380px',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -796,140 +796,132 @@ const InvitationTemplates: React.FC = () => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Form & Preview stacked */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* Soạn nội dung giấy mời (Nằm ngang) */}
-          <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#1e40af', fontSize: '15px', fontWeight: 700, borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-              ✏️ Soạn nội dung giấy mời
-            </h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '12px' }}>
-              {/* Hàng 1 */}
-              <div style={{ gridColumn: 'span 3' }}>
-                <label className="inv-label">Số giấy mời:</label>
-                <input className="inv-input" value={invitationNumber}
-                  onChange={e => setInvitationNumber(e.target.value)}
-                  placeholder="VD: 01, 15, 28..." />
-              </div>
+        {/* MIDDLE COLUMN: Form */}
+        <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+          <h3 style={{ margin: '0 0 14px', color: '#1e40af', fontSize: '14px', fontWeight: 700, borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+            ✏️ Soạn nội dung giấy mời
+          </h3>
 
-              <div style={{ gridColumn: 'span 5' }}>
-                <label className="inv-label">Định dạng kính gửi tự động:</label>
-                <input className="inv-input" value={recipientPattern}
-                  onChange={e => setRecipientPattern(e.target.value)}
-                  placeholder="Đại diện hộ gia đình ông/bà {ten_chu_ho}" />
-              </div>
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Số giấy mời (Số: __/GM-TDP):</label>
+            <input className="inv-input" value={invitationNumber}
+              onChange={e => setInvitationNumber(e.target.value)}
+              placeholder="VD: 01, 15, 28..." />
+          </div>
 
-              <div style={{ gridColumn: 'span 4' }}>
-                <label className="inv-label">Người nhận (Kính gửi):</label>
-                <input className="inv-input" value={recipientTitle}
-                  onChange={e => setRecipientTitle(e.target.value)}
-                  placeholder="VD: hộ gia đình_ông, bà" />
-              </div>
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Định dạng kính gửi tự động (dùng &#123;ten_chu_ho&#125;):</label>
+            <input className="inv-input" value={recipientPattern}
+              onChange={e => setRecipientPattern(e.target.value)}
+              placeholder="VD: Đại diện hộ gia đình ông/bà {ten_chu_ho}" />
+          </div>
 
-              {/* Hàng 2 */}
-              <div style={{ gridColumn: 'span 2' }}>
-                <label className="inv-label">Giờ họp:</label>
-                <input className="inv-input" value={meetingTime}
-                  onChange={e => setMeetingTime(e.target.value)} placeholder="20 h" />
-              </div>
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Người nhận (Kính gửi):</label>
+            <input className="inv-input" value={recipientTitle}
+              onChange={e => setRecipientTitle(e.target.value)}
+              placeholder="VD: hộ gia đình_ông, bà" />
+          </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
-                <label className="inv-label">Ngày:</label>
-                <input className="inv-input" value={meetingDay}
-                  onChange={e => setMeetingDay(e.target.value)} placeholder="15" />
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginBottom: '11px' }}>
+            <div>
+              <label className="inv-label">Giờ:</label>
+              <input className="inv-input" value={meetingTime}
+                onChange={e => setMeetingTime(e.target.value)} placeholder="20 h" />
+            </div>
+            <div>
+              <label className="inv-label">Ngày:</label>
+              <input className="inv-input" value={meetingDay}
+                onChange={e => setMeetingDay(e.target.value)} placeholder="17" />
+            </div>
+            <div>
+              <label className="inv-label">Tháng:</label>
+              <input className="inv-input" value={meetingMonth}
+                onChange={e => setMeetingMonth(e.target.value)} placeholder="07" />
+            </div>
+            <div>
+              <label className="inv-label">Năm:</label>
+              <input className="inv-input" value={meetingYear}
+                onChange={e => setMeetingYear(e.target.value)} placeholder="2026" />
+            </div>
+          </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
-                <label className="inv-label">Tháng:</label>
-                <input className="inv-input" value={meetingMonth}
-                  onChange={e => setMeetingMonth(e.target.value)} placeholder="07" />
-              </div>
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Địa điểm:</label>
+            <input className="inv-input" value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="Nhà VH Tổ dân phố..." />
+          </div>
 
-              <div style={{ gridColumn: 'span 2' }}>
-                <label className="inv-label">Năm:</label>
-                <input className="inv-input" value={meetingYear}
-                  onChange={e => setMeetingYear(e.target.value)} placeholder="2026" />
-              </div>
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Nội dung cuộc họp:</label>
+            <textarea className="inv-input" value={content}
+              onChange={e => setContent(e.target.value)}
+              rows={4} style={{ resize: 'vertical' }}
+              placeholder="Nội dung hội nghị..." />
+          </div>
 
-              <div style={{ gridColumn: 'span 4' }}>
-                <label className="inv-label">Địa điểm:</label>
-                <input className="inv-input" value={location}
-                  onChange={e => setLocation(e.target.value)}
-                  placeholder="Nhà VH Tổ dân phố..." />
-              </div>
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Lời kết (ghi chú cuối):</label>
+            <textarea className="inv-input" value={closingNote}
+              onChange={e => setClosingNote(e.target.value)}
+              rows={2} style={{ resize: 'vertical' }}
+              placeholder="VD: rất mong ông bà đến đúng giờ" />
+          </div>
 
-              {/* Hàng 3 */}
-              <div style={{ gridColumn: 'span 6' }}>
-                <label className="inv-label">Nội dung cuộc họp:</label>
-                <textarea className="inv-input" value={content}
-                  onChange={e => setContent(e.target.value)}
-                  rows={2} style={{ resize: 'vertical' }}
-                  placeholder="Nội dung hội nghị..." />
-              </div>
-
-              <div style={{ gridColumn: 'span 6' }}>
-                <label className="inv-label">Lời kết (ghi chú cuối):</label>
-                <textarea className="inv-input" value={closingNote}
-                  onChange={e => setClosingNote(e.target.value)}
-                  rows={2} style={{ resize: 'vertical' }}
-                  placeholder="VD: rất mong ông bà đến đúng giờ" />
-              </div>
-
-              {/* Hàng 4 */}
-              <div style={{ gridColumn: 'span 4' }}>
-                <label className="inv-label">Địa danh, ngày ký:</label>
-                <input className="inv-input" value={locationDate}
-                  onChange={e => setLocationDate(e.target.value)}
-                  placeholder="Nam Sầm Sơn, ngày 17/7/2026" />
-              </div>
-
-              <div style={{ gridColumn: 'span 4' }}>
-                <label className="inv-label">Chức danh người ký:</label>
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: '4px' }}>
+            <h4 style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>✍️ Chữ ký</h4>
+            <div style={{ marginBottom: '8px' }}>
+              <label className="inv-label">Địa danh, ngày ký:</label>
+              <input className="inv-input" value={locationDate}
+                onChange={e => setLocationDate(e.target.value)}
+                placeholder="Nam Sầm Sơn, ngày 17/7/2026" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div>
+                <label className="inv-label">Chức danh:</label>
                 <input className="inv-input" value={signerTitle}
                   onChange={e => setSignerTitle(e.target.value)}
                   placeholder="Tổ trưởng tdp" />
               </div>
-
-              <div style={{ gridColumn: 'span 4' }}>
-                <label className="inv-label">Họ và tên (in hoa):</label>
+              <div>
+                <label className="inv-label">Họ và tên:</label>
                 <input className="inv-input" value={signerName}
                   onChange={e => setSignerName(e.target.value)}
                   placeholder="NGUYỄN VIẾT CHÂU" />
               </div>
             </div>
-
-            <div style={{ marginTop: '14px', background: '#f0f9ff', borderRadius: '8px', padding: '10px', fontSize: '11px', color: '#0369a1', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <strong>ℹ️ Cấu hình địa bàn:</strong>
-              <span>Tổ dân phố: <strong>{rawTdpName}</strong></span>
-              <span>Phường: <strong>{rawWardName}</strong></span>
-              <span>Tổ trưởng: <strong>{rawLeader}</strong></span>
-              
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, color: '#0369a1' }}>
-                  <input type="checkbox" checked={showBorder} onChange={e => setShowBorder(e.target.checked)} style={{ cursor: 'pointer' }} />
-                  Khung viền trang trí
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, color: '#0369a1' }}>
-                  <input type="checkbox" checked={showLeftHeader} onChange={e => setShowLeftHeader(e.target.checked)} style={{ cursor: 'pointer' }} />
-                  Đơn vị gửi bên trái
-                </label>
-              </div>
-            </div>
           </div>
 
-          {/* Xem trước & In ấn */}
+          <div style={{ marginTop: '14px', background: '#f0f9ff', borderRadius: '8px', padding: '10px', fontSize: '11px', color: '#0369a1', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ width: '100%' }}>
+              <strong>ℹ️ Địa bàn:</strong> TDP <strong>{rawTdpName}</strong> - Phường <strong>{rawWardName}</strong>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '4px', width: '100%', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: 600, color: '#0369a1' }}>
+                <input type="checkbox" checked={showBorder} onChange={e => setShowBorder(e.target.checked)} style={{ cursor: 'pointer' }} />
+                Khung viền
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontWeight: 600, color: '#0369a1' }}>
+                <input type="checkbox" checked={showLeftHeader} onChange={e => setShowLeftHeader(e.target.checked)} style={{ cursor: 'pointer' }} />
+                Đơn vị gửi trái
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: Preview & Printing */}
+        <div style={{ position: 'sticky', top: '20px' }}>
           <div style={{
             background: '#f1f5f9', borderRadius: '14px',
-            padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px',
-            border: '1px solid #e2e8f0', alignItems: 'center'
+            padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px',
+            minHeight: '400px', border: '1px solid #e2e8f0'
           }}>
             {/* Preview Banner */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
               <div style={{ color: '#475569', fontWeight: 600 }}>
                 {previewHh ? (
-                  <span>👁️ Xem trước giấy mời của hộ: <strong style={{ color: '#1e40af' }}>{getHeadName(previewHh)}</strong></span>
+                  <span>👁️ Xem trước: <strong style={{ color: '#1e40af' }}>{getHeadName(previewHh)}</strong></span>
                 ) : (
                   <span>👁️ Xem trước bản mẫu thủ công</span>
                 )}
@@ -939,17 +931,21 @@ const InvitationTemplates: React.FC = () => {
               </div>
             </div>
 
-            {/* Screen Preview (Full scale or very large) */}
+            {/* Screen Preview */}
             <div className="screen-only" style={{ 
               display: 'flex', 
               justifyContent: 'center', 
               overflow: 'hidden', 
               width: '100%',
-              padding: '10px 0',
+              height: orientation === 'portrait' ? '490px' : '330px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              background: '#f8fafc',
               flexShrink: 0
             }}>
               <div style={{
-                transform: orientation === 'portrait' ? 'scale(0.85)' : 'scale(0.8)',
+                transform: orientation === 'portrait' ? 'scale(0.6)' : 'scale(0.52)',
                 transformOrigin: 'top center',
                 flexShrink: 0
               }}>
@@ -971,16 +967,14 @@ const InvitationTemplates: React.FC = () => {
                 </div>
               )}
             </div>
-
-            <div style={{ width: '100%', background: '#fffbeb', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#b45309', border: '1px solid #fef3c7', lineHeight: 1.5, boxSizing: 'border-box' }}>
-              <strong>💡 Mẹo in đẹp không bị tràn trang:</strong><br />
-              1. Khi bảng in hiện ra, chọn đúng khổ giấy <strong>A5</strong>.<br />
-              2. Chọn hướng in phù hợp (<strong>Dọc</strong> hoặc <strong>Ngang</strong>) giống như nút bạn vừa chọn ở trên.<br />
-              3. Tắt mục <strong>"Tiêu đề đầu trang và chân trang"</strong> (Headers & Footers).<br />
-              4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> để viền xanh được in khít trang và không bị nhảy sang trang 2.
-            </div>
           </div>
-
+          <div style={{ marginTop: '12px', background: '#fffbeb', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#b45309', border: '1px solid #fef3c7', lineHeight: 1.5 }}>
+            <strong>💡 Mẹo in đẹp không bị tràn trang:</strong><br />
+            1. Khi bảng in hiện ra, chọn đúng khổ giấy <strong>A5</strong>.<br />
+            2. Chọn hướng in phù hợp (<strong>Dọc</strong> hoặc <strong>Ngang</strong>) giống như nút bạn vừa chọn ở trên.<br />
+            3. Tắt mục <strong>"Tiêu đề đầu trang và chân trang"</strong> (Headers & Footers).<br />
+            4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> để viền xanh được in khít trang và không bị nhảy sang trang 2.
+          </div>
         </div>
 
       </div>
