@@ -1,516 +1,329 @@
-import React, { useState, useEffect } from 'react';
-import { db, partyDb } from '../services/db';
-import type { Household, Resident } from '../types';
-import type { PartyMember } from '../services/db';
-
-interface HouseholdWithHead extends Household {
-  headName: string;
-}
+import React, { useState, useRef } from 'react';
 
 const InvitationTemplates: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'leader' | 'party' | 'front'>('leader');
-  const [households, setHouseholds] = useState<HouseholdWithHead[]>([]);
-  const [partyMembers, setPartyMembers] = useState<PartyMember[]>([]);
-  const [selectedHouseholds, setSelectedHouseholds] = useState<Set<string>>(new Set());
-  const [selectedPartyMembers, setSelectedPartyMembers] = useState<Set<string>>(new Set());
-  const [selectedGroup, setSelectedGroup] = useState<string>('all');
-  const [meetingContent, setMeetingContent] = useState('');
-  const [meetingTime, setMeetingTime] = useState('');
-  const [meetingDate, setMeetingDate] = useState('');
-  const [meetingMonth, setMeetingMonth] = useState('');
-  const [meetingLocation, setMeetingLocation] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<'setup' | 'preview'>('setup');
+  const rawWardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+  const rawTdpName  = localStorage.getItem('tdp_name')  || 'Quảng Giao';
+  const rawLeader   = localStorage.getItem('leader_name') || 'Nguyễn Viết Châu';
 
-  // Load group list from settings
-  const groupsConfig: string[] = (() => {
-    try {
-      const saved = localStorage.getItem('tdp_groups_config');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  })();
+  const now = new Date();
+  const dd  = String(now.getDate()).padStart(2, '0');
+  const mm  = String(now.getMonth() + 1).padStart(2, '0');
+  const yy  = String(now.getFullYear());
 
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-  const currentDay = new Date().getDate();
+  const [recipientTitle, setRecipientTitle] = useState('hộ gia đình_ông, bà');
+  const [meetingTime,    setMeetingTime]    = useState('20 h');
+  const [meetingDay,     setMeetingDay]     = useState(dd);
+  const [meetingMonth,   setMeetingMonth]   = useState(mm);
+  const [meetingYear,    setMeetingYear]    = useState(yy);
+  const [location, setLocation]             = useState('nhà VH Tổ dân phố việt trung cũ ,nay là tdp ,quảng giao.');
+  const [content, setContent]               = useState('nghe công bố các quyết định của ĐẢNG UY ,HDND,UBND.UBMT TỔ QUỐC VN thành lập tổ dân phố mới và  thống nhất kế hoạch ,hoạt động của tdp trong thời gian tới .');
+  const [closingNote, setClosingNote]       = useState('đây là hội nghị quan trọng và ý nghĩa vậy rất mong ông bà đến đúng giờ');
+  const [signerTitle, setSignerTitle]       = useState('Tổ trưởng tdp');
+  const [signerName, setSignerName]         = useState(rawLeader.toUpperCase());
+  const [locationDate, setLocationDate]     = useState(`${rawWardName}, ngày ${dd}/${mm}/${yy}`);
+  const [activeTab, setActiveTab]           = useState<'leader' | 'party' | 'front'>('leader');
+  const printRef                            = useRef<HTMLDivElement>(null);
 
-  // Load config
-  const rawWardName = localStorage.getItem('ward_name') || 'Quảng Đại';
-  const rawTdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+  // ── Decorative green border frame ─────────────────────────────────
+  const BorderFrame = () => (
+    <div style={{
+      position: 'absolute', inset: 0, pointerEvents: 'none',
+      border: '7px solid #2d6a2d', borderRadius: '4px', boxSizing: 'border-box'
+    }}>
+      <div style={{
+        position: 'absolute', inset: '6px',
+        border: '2px solid #2d6a2d', borderRadius: '2px', boxSizing: 'border-box'
+      }} />
+      {[
+        { top: 0,    left: 0  } as React.CSSProperties,
+        { top: 0,    right: 0 } as React.CSSProperties,
+        { bottom: 0, left: 0  } as React.CSSProperties,
+        { bottom: 0, right: 0 } as React.CSSProperties,
+      ].map((pos, i) => (
+        <div key={i} style={{
+          position: 'absolute', ...pos,
+          width: 38, height: 38,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#2d6a2d', fontSize: 26, lineHeight: 1
+        }}>✿</div>
+      ))}
+      {/* top & bottom center ornament */}
+      <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', color: '#2d6a2d', fontSize: 16 }}>⬦</div>
+      <div style={{ position: 'absolute', bottom: -3, left: '50%', transform: 'translateX(-50%)', color: '#2d6a2d', fontSize: 16 }}>⬦</div>
+    </div>
+  );
 
-  const toUpper = (s: string) => s.toUpperCase();
-
-  const formatTdpHeader = (name: string) => {
-    const u = toUpper(name);
-    if (u.startsWith('TỔ DÂN PHỐ') || u.startsWith('THÔN') || u.startsWith('KHU DÂN CƯ')) return u;
-    return `TỔ DÂN PHỐ ${u}`;
-  };
-  const formatWardHeader = (name: string) => {
-    const u = toUpper(name);
-    if (u.startsWith('PHƯỜNG') || u.startsWith('XÃ') || u.startsWith('THỊ TRẤN')) return u;
-    return `PHƯỜNG ${u}`;
-  };
-
-  const tdpHeader = formatTdpHeader(rawTdpName);
-  const wardHeader = formatWardHeader(rawWardName);
-  const partyTdpHeader = tdpHeader.startsWith('CHI BỘ') ? tdpHeader : `CHI BỘ ${toUpper(rawTdpName)}`;
-
-  // Load official names
-  let biThuName = '';
-  let toTruongName = localStorage.getItem('leader_name') || '';
-  let matTranName = '';
-  const savedSigs = localStorage.getItem('official_signatures');
-  if (savedSigs) {
-    try {
-      const sigs = JSON.parse(savedSigs);
-      const bt = sigs.find((s: any) => s.id === 'bi_thu');
-      if (bt?.name) biThuName = bt.name;
-      const tt = sigs.find((s: any) => s.id === 'to_truong');
-      if (tt?.name) toTruongName = tt.name;
-      const mt = sigs.find((s: any) => s.id === 'mat_tran');
-      if (mt?.name) matTranName   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [hList, rList, pmList] = await Promise.all([
-          db.getHouseholds(),
-          db.getResidents(),
-          partyDb.getPartyMembers()
-        ]);
-        const residentMap: Record<string, Resident> = {};
-        rList.forEach(r => {
-          if (r.is_head) residentMap[r.household_id] = r;
-          else if (!residentMap[r.household_id]) residentMap[r.household_id] = r;
-        });
-        const mapped: HouseholdWithHead[] = hList.map(h => ({
-          ...h,
-          headName: residentMap[h.id]?.full_name || 'Chưa có thông tin'
-        }));
-        setHouseholds(mapped);
-        setSelectedHouseholds(new Set(mapped.map(h => h.id)));
-        const activePM = pmList.filter(m => m.status !== 'inactive' && m.status !== 'deceased');
-        setPartyMembers(activePM);
-        setSelectedPartyMembers(new Set(activePM.map(m => m.id)));
-        setMeetingLocation(`Nhà văn hóa ${rawTdpName}`);
-        setMeetingTime('19:00');
-        setMeetingDate(String(currentDay).padStart(2, '0'));
-        setMeetingMonth(String(currentMonth).padStart(2, '0'));
-      } catch (e) {
-        console.error(e);
-      }
-      setLoading(false);
-    };e);
-      }
-      setLoading(false);
-    };
-    load();
-  }, []);
-
-  const handlePrint = () => window.print();
-
-  const toggleHousehold = (id: string) => {
-    setSelectedHouseholds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const togglePartyMember = (id: string) => {
-    setSelectedPartyMembers(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  // Filtered households by selected group
-  const filteredHouseholds = selectedGroup === 'all'
-    ? households
-    : households.filter(h => h.group_id === selectedGroup);
-
-  const selectAll = () => {
-    if (activeTab === 'party') {
-      setSelectedPartyMembers(new Set(partyMembers.map(m => m.id)));
-    } else {
-      setSelectedHouseholds(new Set(filteredHouseholds.map(h => h.id)));
-    }
-  };
-  const clearAll = () => {
-    if (activeTab === 'party') {
-      setSelectedPartyMembers(new Set());
-    } else {
-      const toRemove = new Set(filteredHouseholds.map(h => h.id));
-      setSelectedHouseholds(prev => {
-        const next = new Set(prev);
-        toRemove.forEach(id => next.delete(id));
-        return next;
-      });
-    }
-  };
-
-  const selectedHouseholdList = households.filter(h => selectedHouseholds.has(h.id));
-  const selectedPartyMemberList = partyMembers.filter(m => selectedPartyMembers.has(m.id));
-  const selectedList = activeTab === 'party' ? [] : selectedHouseholdList; // used for count display
-  const totalSelected = activeTab === 'party' ? selectedPartyMemberList.length : selectedHouseholdList.length;
-
-  const signatureName = activeTab === 'party' ? biThuName
-    : activeTab === 'front' ? matTranName
-    : toTruongName;
-
-  const signerTitle = activeTab === 'party' ? 'BÍ THƯ'
-    : activeTab === 'front' ? 'TRƯỞNG BAN'
-    : 'TỔ TRƯỞNG';
-
-  const signerOrg = activeTab === 'party' ? 'T/M CHI ỦY (CHI BỘ)'
-    : activeTab === 'front' ? 'TM. BAN CÔNG TÁC MẶT TRẬN'
-    : '';
-
-  const subjectLabel = activeTab === 'party' ? 'Dự sinh hoạt Chi bộ định kỳ/chuyên đề'
-    : activeTab === 'front' ? 'V/v: Dự hội nghị họp dân / Đại đoàn kết toàn dân tộc'
-    : `V/v: ${meetingContent || '..........................................................................'}`;
-
-  const openingText = activeTab === 'party'
-    ? `Chi ủy ${partyTdpHeader.toLowerCase()} trân trọng kính mời Đồng chí tới tham dự kỳ họp sinh hoạt Chi bộ định kỳ/chuyên đề với nội dung chi tiết như sau:`
-    : activeTab === 'front'
-    ? `Ban công tác Mặt trận ${tdpHeader.toLowerCase()} trân trọng kính mời Ông/Bà tới tham dự hội nghị họp dân bàn công tác mặt trận với nội dung chi tiết như sau:`
-    : `Tổ trưởng ${tdpHeader.toLowerCase()} trân trọng kính mời Ông/Bà tới tham dự cuộc họp với nội dung chi tiết như sau:`;
-
-  const leftOrgBlock = activeTab === 'party' ? (
+  // ── Left org block (varies by tab) ────────────────────────────────
+  const leftOrg = activeTab === 'party' ? (
     <>
-      <p style={{ margin: 0, textTransform: 'uppercase', fontSize: '11pt' }}>ĐẢNG BỘ {wardHeader}</p>
-      <p style={{ margin: 0, textTransform: 'uppercase', fontWeight: 'bold', fontSize: '11pt' }}>{partyTdpHeader}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>ĐẢNG BỘ {rawWardName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>CHI BỘ {rawTdpName.toUpperCase()}</p>
     </>
   ) : activeTab === 'front' ? (
     <>
-      <p style={{ margin: 0, textTransform: 'uppercase', fontSize: '10pt' }}>UBMTTQ VN {wardHeader}</p>
-      <p style={{ margin: 0, textTransform: 'uppercase', fontWeight: 'bold', fontSize: '10pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
-      <p style={{ margin: 0, textTransform: 'uppercase', fontWeight: 'bold', fontSize: '10pt' }}>{tdpHeader}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '9pt' }}>UBMTTQ VN {rawWardName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '9pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '9pt' }}>{rawTdpName.toUpperCase()}</p>
     </>
   ) : (
     <>
-      <p style={{ margin: 0, textTransform: 'uppercase', fontSize: '11pt' }}>UBND {wardHeader}</p>
-      <p style={{ margin: 0, textTransform: 'uppercase', fontWeight: 'bold', fontSize: '11pt' }}>{tdpHeader}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>UBND {rawWardName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>TỔ DÂN PHỐ {rawTdpName.toUpperCase()}</p>
     </>
   );
 
-  const rightHeaderBlock = activeTab === 'party' ? (
-    <>
-      <p style={{ margin: 0, fontWeight: 'bold', fontSize: '12pt', textTransform: 'uppercase' }}>ĐẢNG CỘNG SẢN VIỆT NAM</p>
-      <div style={{ width: '130px', borderBottom: '1px solid black', margin: '3px auto 5px' }}></div>
-    </>
-  ) : (
-    <>
-      <p style={{ margin: 0, fontWeight: 'bold', fontSize: '11pt' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-      <p style={{ margin: 0, fontWeight: 'bold', fontSize: '12pt', display: 'inline-block' }}>Độc lập - Tự do - Hạnh phúc</p>
-      <div style={{ width: '160px', borderBottom: '1px solid black', margin: '3px auto 5px' }}></div>
-    </>
-  );
-
-  const renderSingleInvitation = (h: HouseholdWithHead, index: number) => (
-    <div key={h.id} className="invitation-page" style={{
-      pageBreakAfter: index < selectedList.length - 1 ? 'always' : 'auto',
-      padding: '50px 60px',
+  // ── A5 card (148 × 210 mm) ────────────────────────────────────────
+  const InvitationCard = () => (
+    <div style={{
+      position: 'relative',
+      width: '148mm', minHeight: '210mm',
+      margin: '0 auto', background: 'white',
+      padding: '22mm 18mm 18mm',
       fontFamily: '"Times New Roman", Times, serif',
-      fontSize: '13pt',
-      lineHeight: '1.6',
-      color: '#000',
-      background: 'white',
-      minHeight: '650px',
-      border: mode === 'preview' ? '1px dashed #ccc' : 'none',
-      marginBottom: mode === 'preview' ? '20px' : '0'
+      fontSize: '11.5pt', lineHeight: 1.6,
+      color: '#111', boxSizing: 'border-box',
     }}>
+      <BorderFrame />
+
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '25px' }}>
-        <div style={{ textAlign: 'center', width: '45%' }}>
-          {leftOrgBlock}
-          <div style={{ width: '60px', borderBottom: '1px solid black', margin: '3px auto 5px' }}></div>
-          <p style={{ margin: 0, fontSize: '10pt' }}>Số: ....../GM-{activeTab === 'party' ? 'CB' : activeTab === 'front' ? 'MTTQ' : 'TDP'}</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
+        <div style={{ textAlign: 'center', width: '44%' }}>
+          {leftOrg}
+          <div style={{ width: '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
+          <p style={{ margin: 0, fontSize: '9pt' }}>Số: ...../GM-TDP</p>
         </div>
-        <div style={{ textAlign: 'center', width: '50%' }}>
-          {rightHeaderBlock}
-          <p style={{ margin: 0, fontStyle: 'italic', fontSize: '12pt' }}>{rawWardName}, ngày {meetingDate} tháng {meetingMonth} năm {currentYear}</p>
+        <div style={{ textAlign: 'center', width: '52%' }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: '11pt' }}>
+            {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
+          </p>
+          {activeTab !== 'party' && (
+            <p style={{ margin: 0, fontWeight: 700, fontSize: '10.5pt', textDecoration: 'underline' }}>
+              Độc lập – Tự do – <strong>Hạnh phúc</strong>
+            </p>
+          )}
+          <div style={{ width: '120px', borderBottom: '1px solid #111', margin: '4px auto' }} />
         </div>
       </div>
 
       {/* TITLE */}
-      <h1 style={{ textAlign: 'center', fontSize: '16pt', fontWeight: 'bold', margin: '20px 0 8px' }}>GIẤY MỜI</h1>
-      <p style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '13pt', margin: '0 0 20px' }}>{subjectLabel}</p>
+      <h1 style={{ textAlign: 'center', fontWeight: 700, fontSize: '19pt', margin: '8px 0 10px', letterSpacing: '2px' }}>
+        GIẤY MỜI
+      </h1>
 
       {/* KÍNH GỬI */}
-      <div style={{ marginBottom: '15px', paddingLeft: '30px' }}>
-        <p style={{ margin: '0 0 5px' }}>
-          <strong>Kính gửi: </strong>
-          {activeTab === 'party' ? `Đồng chí ${h.headName}` : `Ông/Bà: ${h.headName}`}
-        </p>
-        <p style={{ margin: 0, paddingLeft: '20px' }}>
-          Đại diện hộ gia đình tại: <strong>{h.address}</strong>
-        </p>
-      </div>
-
-      {/* NỘI DUNG */}
-      <p style={{ textIndent: '30px', margin: '0 0 12px', textAlign: 'justify' }}>{openingText}</p>
-
-      <div style={{ paddingLeft: '30px', marginBottom: '20px' }}>
-        <p style={{ margin: '0 0 8px' }}>
-          <strong>1. Nội dung {activeTab === 'party' ? 'sinh hoạt' : 'cuộc họp'}:</strong>{' '}
-          {meetingContent || '..........................................................................................'}
-        </p>
-        <p style={{ margin: '0 0 8px' }}>
-          <strong>2. Thời gian:</strong> {meetingTime} giờ, ngày {meetingDate} tháng {meetingMonth} năm {currentYear}
-        </p>
-        <p style={{ margin: '0 0 8px' }}>
-          <strong>3. Địa điểm:</strong> {meetingLocation || `Nhà văn hóa ${rawTdpName}`}
-        </p>
-        {activeTab === 'party' && (
-          <p style={{ margin: 0 }}>
-            <strong>4. Yêu cầu:</strong> Mang theo sổ tay Đảng viên, trang phục chỉnh tề.
-          </p>
-        )}
-      </div>
-
-      <p style={{ textIndent: '30px', margin: '0 0 30px', textAlign: 'justify' }}>
-        {activeTab === 'party'
-          ? 'Đề nghị Đồng chí sắp xếp công việc tham dự đầy đủ và đúng giờ để buổi sinh hoạt đạt chất lượng tốt./.'
-          : 'Sự có mặt của Ông/Bà là yếu tố quan trọng góp phần vào thành công của cuộc họp. Rất mong Ông/Bà sắp xếp thời gian đến dự đúng giờ./.'}
+      <p style={{ margin: '0 0 8px', fontWeight: 700 }}>
+        Kính gửi :{' '}
+        <span style={{ textDecoration: 'underline' }}>{recipientTitle}</span>
       </p>
 
-      {/* FOOTER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <div style={{ width: '45%', paddingLeft: '10px' }}>
-          <p style={{ fontWeight: 'bold', fontStyle: 'italic', margin: '0 0 3px', fontSize: '11pt' }}>Nơi nhận:</p>
-          <p style={{ margin: 0, fontSize: '11pt' }}>
-            - {activeTab === 'party' ? `Đ/c ${h.headName}` : `Ông/Bà ${h.headName}`};
-          </p>
-          <p style={{ margin: 0, fontSize: '11pt' }}>
-            - {activeTab === 'party' ? `Đảng ủy ${wardHeader.toLowerCase()}` : `UBND ${wardHeader.toLowerCase()}`} (b/c);
-          </p>
-          <p style={{ margin: 0, fontSize: '11pt' }}>- Lưu: {activeTab === 'party' ? 'CB' : activeTab === 'front' ? 'Ban CTMT' : 'TDP'}.</p>
-        </div>
-        <div style={{ width: '45%', textAlign: 'center' }}>
-          {signerOrg && <p style={{ fontWeight: 'bold', margin: 0, fontSize: '11pt' }}>{signerOrg}</p>}
-          <p style={{ fontWeight: 'bold', margin: 0, fontSize: '11pt' }}>{signerTitle}</p>
-          <p style={{ fontStyle: 'italic', margin: 0, fontSize: '10pt' }}>(Chữ ký, họ và tên)</p>
-          <div style={{ height: '70px' }}></div>
-          <p style={{ fontWeight: 'bold', margin: 0 }}>{signatureName || '.....................................'}</p>
+      {/* BODY */}
+      <p style={{ margin: '0 0 8px', textIndent: '1.5em', textAlign: 'justify' }}>
+        Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp{' '}
+        <span style={{ textDecoration: 'underline' }}>{rawTdpName}</span>,{' '}
+        <span style={{ textDecoration: 'underline' }}>{rawWardName}</span>
+      </p>
+
+      <p style={{ margin: '0 0 5px' }}>
+        <span style={{ textDecoration: 'underline' }}>Thời gian</span>{' '}
+        <strong>{meetingTime}</strong> ngày <strong>{meetingDay}/{meetingMonth}/{meetingYear}</strong>
+      </p>
+
+      <p style={{ margin: '0 0 5px' }}>
+        <span style={{ textDecoration: 'underline' }}>Địa điểm</span>:{' '}
+        <span style={{ textDecoration: 'underline' }}>{location}</span>
+      </p>
+
+      <p style={{ margin: '0 0 5px' }}>
+        <span style={{ textDecoration: 'underline' }}>Nội dung</span>{' '}
+        <span style={{ textDecoration: 'underline' }}>{content}</span>
+      </p>
+
+      <p style={{ margin: '0 0 18px', textIndent: '1.5em', textAlign: 'justify' }}>
+        <span style={{ textDecoration: 'underline' }}>{closingNote}</span>
+      </p>
+
+      {/* SIGNATURE */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ textAlign: 'center', minWidth: '190px' }}>
+          <p style={{ margin: '0 0 2px', fontStyle: 'italic' }}>{locationDate}</p>
+          <p style={{ margin: '0 0 2px', fontWeight: 700 }}>{signerTitle}</p>
+          <div style={{ height: '58px' }} />
+          <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase' }}>{signerName}</p>
         </div>
       </div>
     </div>
   );
 
+  // ── RENDER ─────────────────────────────────────────────────────────
   return (
     <div className="content" style={{ padding: '20px' }}>
       <style>{`
         @media print {
-          body * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible; }
-          .print-area {
-            position: absolute; left: 0; top: 0; width: 100%;
+          body * { visibility: hidden !important; }
+          .inv-print-area, .inv-print-area * { visibility: visible !important; }
+          .inv-print-area {
+            position: fixed !important;
+            top: 0 !important; left: 0 !important;
+            width: 148mm !important;
           }
-          .invitation-page {
-            border: none !important;
-            margin-bottom: 0 !important;
-          }
+          @page { size: A5 portrait; margin: 0; }
+        }
+        .inv-input {
+          width: 100%; padding: 6px 10px; border-radius: 8px;
+          border: 1px solid #e2e8f0; font-size: 13px;
+          box-sizing: border-box; font-family: inherit;
+          background: #fafafa;
+        }
+        .inv-input:focus {
+          outline: none; border-color: #3b82f6;
+          box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+          background: white;
+        }
+        .inv-label {
+          display: block; font-weight: 600;
+          margin-bottom: 4px; font-size: 12px; color: #374151;
         }
       `}</style>
 
       {/* TOOLBAR */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h2 style={{ margin: 0 }}>📋 Mẫu Giấy Mời</h2>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            className={mode === 'setup' ? 'btn-primary' : 'btn-secondary'}
-            onClick={() => setMode('setup')}
-          >⚙️ Soạn thảo</button>
-          <button
-            className={mode === 'preview' ? 'btn-primary' : 'btn-secondary'}
-            onClick={() => setMode('preview')}
-          >👁️ Xem trước ({selectedList.length} hộ)</button>
-          <button className="btn-primary" onClick={handlePrint} style={{ background: '#10b981' }}>
-            🖨️ In {selectedList.length} giấy mời
-          </button>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+        <h2 style={{ margin: 0, fontSize: '18px' }}>📋 Mẫu Giấy Mời (A5)</h2>
+        <button
+          onClick={() => window.print()}
+          style={{
+            background: 'linear-gradient(135deg,#10b981,#059669)',
+            color: 'white', border: 'none',
+            padding: '9px 22px', borderRadius: '8px',
+            fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
+            transition: 'opacity 0.15s'
+          }}
+        >🖨️ In Giấy Mời (A5)</button>
       </div>
 
-      {/* TAB */}
+      {/* TABS */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        {([['leader', 'Tổ dân phố'], ['party', 'Chi bộ Đảng'], ['front', 'Mặt trận Tổ quốc']] as const).map(([id, label]) => (
-          <button
-            key={id}
-            className={activeTab === id ? 'btn-primary' : 'btn-secondary'}
-            onClick={() => setActiveTab(id)}
-          >{label}</button>
+        {(['leader', 'party', 'front'] as const).map(id => (
+          <button key={id} onClick={() => setActiveTab(id)} style={{
+            padding: '7px 18px', borderRadius: '8px', fontWeight: 600,
+            fontSize: '13px', cursor: 'pointer', border: 'none',
+            background: activeTab === id ? '#1e40af' : '#f1f5f9',
+            color: activeTab === id ? 'white' : '#374151',
+            boxShadow: activeTab === id ? '0 2px 8px rgba(30,64,175,0.25)' : 'none',
+            transition: 'all 0.15s'
+          }}>
+            {id === 'leader' ? '🏘️ Tổ dân phố' : id === 'party' ? '🔴 Chi bộ Đảng' : '🟡 Mặt trận TQ'}
+          </button>
         ))}
       </div>
 
-      {mode === 'setup' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {/* Cột trái: Thông tin cuộc họp */}
-          <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ margin: '0 0 16px', color: '#1e40af' }}>📝 Thông tin cuộc họp</h3>
+      {/* MAIN GRID */}
+      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '24px', alignItems: 'start' }}>
 
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '13px' }}>Nội dung cuộc họp / V/v:</label>
-              <textarea
-                value={meetingContent}
-                onChange={e => setMeetingContent(e.target.value)}
-                placeholder="VD: Tổng kết công tác tháng 7, bàn biện pháp vệ sinh môi trường..."
-                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', resize: 'vertical', minHeight: '70px', boxSizing: 'border-box' }}
-              />
+        {/* LEFT: Form */}
+        <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+          <h3 style={{ margin: '0 0 14px', color: '#1e40af', fontSize: '14px' }}>✏️ Soạn nội dung giấy mời</h3>
+
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Kính gửi:</label>
+            <input className="inv-input" value={recipientTitle}
+              onChange={e => setRecipientTitle(e.target.value)}
+              placeholder="VD: hộ gia đình_ông, bà" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '11px' }}>
+            <div>
+              <label className="inv-label">Giờ họp:</label>
+              <input className="inv-input" value={meetingTime}
+                onChange={e => setMeetingTime(e.target.value)} placeholder="20 h" />
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '13px' }}>Giờ họp:</label>
-                <input
-                  value={meetingTime}
-                  onChange={e => setMeetingTime(e.target.value)}
-                  placeholder="VD: 19:00"
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '13px' }}>Ngày:</label>
-                <input
-                  value={meetingDate}
-                  onChange={e => setMeetingDate(e.target.value)}
-                  placeholder={String(currentDay)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '13px' }}>Tháng:</label>
-                <input
-                  value={meetingMonth}
-                  onChange={e => setMeetingMonth(e.target.value)}
-                  placeholder={String(currentMonth)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box' }}
-                />
-              </div>
+            <div>
+              <label className="inv-label">Ngày:</label>
+              <input className="inv-input" value={meetingDay}
+                onChange={e => setMeetingDay(e.target.value)} placeholder="17" />
             </div>
-
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '4px', fontSize: '13px' }}>Địa điểm:</label>
-              <input
-                value={meetingLocation}
-                onChange={e => setMeetingLocation(e.target.value)}
-                placeholder={`Nhà văn hóa ${rawTdpName}`}
-                style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#0369a1' }}>
-              <strong>ℹ️ Thông tin tự động điền:</strong><br/>
-              • Tên TDP: <strong>{tdpHeader}</strong><br/>
-              • Tên Phường: <strong>{wardHeader}</strong><br/>
-              • Tổ trưởng: <strong>{toTruongName || 'Chưa cài đặt'}</strong><br/>
-              {activeTab === 'party' && <span>• Bí thư: <strong>{biThuName || 'Chưa cài đặt'}</strong><br/></span>}
-              {activeTab === 'front' && <span>• Trưởng ban MTTQ: <strong>{matTranName || 'Chưa cài đặt'}</strong><br/></span>}
+            <div>
+              <label className="inv-label">Tháng/Năm:</label>
+              <input className="inv-input"
+                value={`${meetingMonth}/${meetingYear}`}
+                onChange={e => {
+                  const p = e.target.value.split('/');
+                  setMeetingMonth(p[0] || '');
+                  setMeetingYear(p[1] || '');
+                }}
+                placeholder="7/2026" />
             </div>
           </div>
 
-          {/* Cột phải: Danh sách hộ gia đình */}
-          <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0, color: '#1e40af' }}>🏠 Chọn hộ gia đình ({selectedHouseholds.size}/{households.length})</h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={selectAll} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #3b82f6', background: '#eff6ff', color: '#1d4ed8', fontSize: '12px', cursor: 'pointer' }}>Chọn tất cả</button>
-                <button onClick={clearAll} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}>Bỏ chọn</button>
-              </div>
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Địa điểm:</label>
+            <input className="inv-input" value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="Nhà VH Tổ dân phố..." />
+          </div>
+
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Nội dung cuộc họp:</label>
+            <textarea className="inv-input" value={content}
+              onChange={e => setContent(e.target.value)}
+              rows={4} style={{ resize: 'vertical' }}
+              placeholder="Nội dung hội nghị..." />
+          </div>
+
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Lời kết (ghi chú cuối):</label>
+            <textarea className="inv-input" value={closingNote}
+              onChange={e => setClosingNote(e.target.value)}
+              rows={2} style={{ resize: 'vertical' }}
+              placeholder="VD: rất mong ông bà đến đúng giờ" />
+          </div>
+
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '12px', marginTop: '4px' }}>
+            <h4 style={{ margin: '0 0 10px', fontSize: '12px', color: '#64748b', fontWeight: 600 }}>✍️ Chữ ký</h4>
+            <div style={{ marginBottom: '8px' }}>
+              <label className="inv-label">Địa danh, ngày ký:</label>
+              <input className="inv-input" value={locationDate}
+                onChange={e => setLocationDate(e.target.value)}
+                placeholder="Nam Sầm Sơn, ngày 17/7/2026" />
             </div>
+            <div style={{ marginBottom: '8px' }}>
+              <label className="inv-label">Chức danh người ký:</label>
+              <input className="inv-input" value={signerTitle}
+                onChange={e => setSignerTitle(e.target.value)}
+                placeholder="Tổ trưởng tdp" />
+            </div>
+            <div>
+              <label className="inv-label">Họ và tên (in hoa):</label>
+              <input className="inv-input" value={signerName}
+                onChange={e => setSignerName(e.target.value)}
+                placeholder="NGUYỄN VIẾT CHÂU" />
+            </div>
+          </div>
 
-            {/* BỘ LỌC TỔ */}
-            {groupsConfig.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
-                <button
-                  onClick={() => setSelectedGroup('all')}
-                  style={{
-                    padding: '4px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
-                    border: selectedGroup === 'all' ? '1.5px solid #3b82f6' : '1.5px solid #e2e8f0',
-                    background: selectedGroup === 'all' ? '#3b82f6' : 'white',
-                    color: selectedGroup === 'all' ? 'white' : '#64748b'
-                  }}
-                >
-                  Tất cả ({households.length})
-                </button>
-                {groupsConfig.map(g => {
-                  const count = households.filter(h => h.group_id === g).length;
-                  return (
-                    <button
-                      key={g}
-                      onClick={() => setSelectedGroup(g)}
-                      style={{
-                        padding: '4px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
-                        border: selectedGroup === g ? '1.5px solid #3b82f6' : '1.5px solid #e2e8f0',
-                        background: selectedGroup === g ? '#3b82f6' : 'white',
-                        color: selectedGroup === g ? 'white' : '#64748b'
-                      }}
-                    >
-                      {g} ({count})
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {loading ? (
-              <p style={{ textAlign: 'center', color: '#94a3b8' }}>⏳ Đang tải danh sách hộ gia đình...</p>
-            ) : filteredHouseholds.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#94a3b8' }}>
-                {selectedGroup === 'all' ? 'Chưa có hộ gia đình nào trong hệ thống.' : `Tổ "${selectedGroup}" chưa có hộ gia đình nào.`}
-              </p>
-            ) : (
-              <div style={{ maxHeight: '340px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {filteredHouseholds.map(h => (
-                  <label key={h.id} style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '8px 10px', borderRadius: '8px', cursor: 'pointer',
-                    background: selectedHouseholds.has(h.id) ? '#eff6ff' : '#f8fafc',
-                    border: selectedHouseholds.has(h.id) ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
-                    transition: 'all 0.15s'
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedHouseholds.has(h.id)}
-                      onChange={() => toggleHousehold(h.id)}
-                      style={{ width: '16px', height: '16px', accentColor: '#3b82f6' }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '13px', color: '#1e293b' }}>{h.headName}</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>
-                        {h.address || 'Chưa có địa chỉ'} {h.household_number ? `· HK: ${h.household_number}` : ''}
-                      </div>
-                    </div>
-                    {h.group_id && (
-                      <span style={{
-                        fontSize: '10px', padding: '2px 7px', borderRadius: '10px', fontWeight: 600,
-                        background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
-                        whiteSpace: 'nowrap', flexShrink: 0
-                      }}>
-                        {h.group_id}
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            )}
+          <div style={{ marginTop: '14px', background: '#f0f9ff', borderRadius: '8px', padding: '10px', fontSize: '11px', color: '#0369a1' }}>
+            <strong>ℹ️ Thông tin từ cài đặt:</strong><br />
+            • TDP: <strong>{rawTdpName}</strong><br />
+            • Phường: <strong>{rawWardName}</strong><br />
+            • Tổ trưởng: <strong>{rawLeader}</strong>
           </div>
         </div>
-      ) : (
-        /* PREVIEW / PRINT */
+
+        {/* RIGHT: Preview */}
         <div>
-          {selectedList.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
-              <p style={{ fontSize: '2rem' }}>📋</p>
-              <p>Chưa chọn hộ gia đình nào. Vui lòng quay lại tab <strong>Soạn thảo</strong> để chọn.</p>
+          <div style={{
+            background: '#f1f5f9', borderRadius: '14px',
+            padding: '28px', display: 'flex', justifyContent: 'center',
+            minHeight: '400px'
+          }}>
+            <div className="inv-print-area" ref={printRef}>
+              <InvitationCard />
             </div>
-          ) : (
-            <div className="print-area">
-              {selectedList.map((h, i) => renderSingleInvitation(h, i))}
-            </div>
-          )}
+          </div>
+          <p style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+            Xem trước – nhấn <strong>🖨️ In Giấy Mời (A5)</strong> để in
+          </p>
         </div>
-      )}
+      </div>
     </div>
   );
 };
