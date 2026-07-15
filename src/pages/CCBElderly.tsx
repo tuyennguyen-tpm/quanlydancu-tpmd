@@ -18,11 +18,15 @@ const getLongevityAge = (dobStr: string, targetYear: number) => {
   return targetYear - birthYear;
 };
 
-const CCBElderly = () => {
+interface CCBElderlyProps {
+  type?: 'seniors' | 'veterans' | 'both';
+}
+
+const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
+  const [selectedTab, setSelectedTab] = useState<'seniors' | 'veterans'>(type === 'veterans' ? 'veterans' : 'seniors');
   const [seniors, setSeniors] = useState<Resident[]>([]);
   const [veterans, setVeterans] = useState<Resident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTab, setSelectedTab] = useState<'seniors' | 'veterans'>('seniors');
   const [subFilter, setSubFilter] = useState<'all' | 'senior70' | 'longevity'>('all');
   const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
   const [groupFilter, setGroupFilter] = useState('all');
@@ -773,64 +777,76 @@ const CCBElderly = () => {
       {/* HEADER SECTION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>🎖️ Quản lý Cựu chiến binh & Người cao tuổi</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>Hồ sơ chúc thọ/mừng thọ Người cao tuổi và danh sách hội viên Cựu chiến binh địa bàn</p>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
+            {type === 'seniors' ? '👴 Quản lý Hội Người cao tuổi' : type === 'veterans' ? '🎖️ Quản lý Hội Cựu chiến binh' : '🎖️ Quản lý Cựu chiến binh & Người cao tuổi'}
+          </h2>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            {type === 'seniors' ? 'Hồ sơ chúc thọ/mừng thọ Người cao tuổi địa bàn' : type === 'veterans' ? 'Danh sách hội viên Cựu chiến binh địa bàn' : 'Hồ sơ chúc thọ/mừng thọ Người cao tuổi và danh sách hội viên Cựu chiến binh địa bàn'}
+          </p>
         </div>
       </div>
 
       {/* STATS ROW */}
       <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
-          <span className="label"><span className="dot" style={{ background: 'var(--accent-purple)' }}></span>Tổng số người cao tuổi ($\ge$60)</span>
-          <div className="value">{seniors.length}</div>
-          <div className="change neutral">Chiếm tỷ lệ cao trong cơ cấu dân số</div>
-        </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
-          <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Hội viên Cựu chiến binh</span>
-          <div className="value">{veterans.length}</div>
-          <div className="change neutral">Bộ đội xuất ngũ hoạt động gương mẫu</div>
-        </div>
-        <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-teal)' }}>
-          <span className="label"><span className="dot" style={{ background: 'var(--accent-teal)' }}></span>Cần mừng thọ năm nay ($\ge$70)</span>
-          <div className="value">{seniors.filter(s => getAge(s.dob) >= 70 && getAge(s.dob) % 5 === 0).length}</div>
-          <div className="change neutral">Hội viên tròn tuổi chúc thọ</div>
-        </div>
+        {(type === 'both' || type === 'seniors') && (
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
+            <span className="label"><span className="dot" style={{ background: 'var(--accent-purple)' }}></span>Tổng số người cao tuổi ($\ge$60)</span>
+            <div className="value">{seniors.length}</div>
+            <div className="change neutral">Chiếm tỷ lệ cao trong cơ cấu dân số</div>
+          </div>
+        )}
+        {(type === 'both' || type === 'veterans') && (
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--gov-blue)' }}>
+            <span className="label"><span className="dot" style={{ background: 'var(--gov-blue)' }}></span>Hội viên Cựu chiến binh</span>
+            <div className="value">{veterans.length}</div>
+            <div className="change neutral">Bộ đội xuất ngũ hoạt động gương mẫu</div>
+          </div>
+        )}
+        {(type === 'both' || type === 'seniors') && (
+          <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-teal)' }}>
+            <span className="label"><span className="dot" style={{ background: 'var(--accent-teal)' }}></span>Cần mừng thọ năm nay ($\ge$70)</span>
+            <div className="value">{seniors.filter(s => getAge(s.dob) >= 70 && getAge(s.dob) % 5 === 0).length}</div>
+            <div className="change neutral">Hội viên tròn tuổi chúc thọ</div>
+          </div>
+        )}
       </div>
 
       {/* TABS SELECTOR & ACTIONS BAR */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '10px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button 
-            onClick={() => { setSelectedTab('seniors'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              border: '1px solid var(--border)',
-              background: selectedTab === 'seniors' ? 'var(--gov-blue)' : 'white',
-              color: selectedTab === 'seniors' ? 'white' : 'var(--text-secondary)',
-              fontWeight: '600',
-              fontSize: '12.5px',
-              cursor: 'pointer'
-            }}
-          >
-            👴 Hội Người cao tuổi ({seniors.length})
-          </button>
-          <button 
-            onClick={() => { setSelectedTab('veterans'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '20px',
-              border: '1px solid var(--border)',
-              background: selectedTab === 'veterans' ? 'var(--gov-blue)' : 'white',
-              color: selectedTab === 'veterans' ? 'white' : 'var(--text-secondary)',
-              fontWeight: '600',
-              fontSize: '12.5px',
-              cursor: 'pointer'
-            }}
-          >
-            🎖️ Hội Cựu chiến binh ({veterans.length})
-          </button>
-        </div>
+        {type === 'both' ? (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button 
+              onClick={() => { setSelectedTab('seniors'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: '1px solid var(--border)',
+                background: selectedTab === 'seniors' ? 'var(--gov-blue)' : 'white',
+                color: selectedTab === 'seniors' ? 'white' : 'var(--text-secondary)',
+                fontWeight: '600',
+                fontSize: '12.5px',
+                cursor: 'pointer'
+              }}
+            >
+              👴 Hội Người cao tuổi ({seniors.length})
+            </button>
+            <button 
+              onClick={() => { setSelectedTab('veterans'); setSearchQuery(''); setGroupFilter('all'); setSubFilter('all'); }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: '1px solid var(--border)',
+                background: selectedTab === 'veterans' ? 'var(--gov-blue)' : 'white',
+                color: selectedTab === 'veterans' ? 'white' : 'var(--text-secondary)',
+                fontWeight: '600',
+                fontSize: '12.5px',
+                cursor: 'pointer'
+              }}
+            >
+              🎖️ Hội Cựu chiến binh ({veterans.length})
+            </button>
+          </div>
+        ) : <div />}
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {!isGuest && (

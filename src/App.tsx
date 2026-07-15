@@ -2025,8 +2025,10 @@ const App = () => {
         return <Regulations />;
       case 'women-association':
         return <WomenAssociation />;
-      case 'ccb-elderly':
-        return <CCBElderly />;
+      case 'elderly':
+        return <CCBElderly type="seniors" />;
+      case 'ccb':
+        return <CCBElderly type="veterans" />;
       case 'farmers-association':
         return <FarmersAssociation />;
       case 'youth-union':
@@ -2056,7 +2058,8 @@ const App = () => {
     { id: 'meetings-party', icon: Calendar, label: 'Lịch họp Chi bộ', group: 'Tổ chức - Đoàn thể' },
     { id: 'meetings-front', icon: UserPlus, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
     { id: 'women-association', icon: Heart, label: 'Hội Phụ nữ', group: 'Tổ chức - Đoàn thể' },
-    { id: 'ccb-elderly', icon: UserCircle, label: 'CCB – Người cao tuổi', group: 'Tổ chức - Đoàn thể' },
+    { id: 'elderly', icon: UserCircle, label: 'Hội Người cao tuổi', group: 'Tổ chức - Đoàn thể' },
+    { id: 'ccb', icon: Award, label: 'Chi hội Cựu chiến binh', group: 'Tổ chức - Đoàn thể' },
     { id: 'farmers-association', icon: Sprout, label: 'Hội Nông dân', group: 'Tổ chức - Đoàn thể' },
     { id: 'youth-union', icon: Zap, label: 'Đoàn Thanh niên', group: 'Tổ chức - Đoàn thể' },
     { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết', group: 'Điều hành' },
