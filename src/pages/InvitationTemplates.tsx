@@ -980,6 +980,7 @@ const InvitationTemplates: React.FC = () => {
               4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> để viền xanh được in khít trang và không bị nhảy sang trang 2.
             </div>
           </div>
+        </div>
 
       </div>
     </div>
