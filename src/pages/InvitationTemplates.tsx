@@ -29,16 +29,18 @@ const InvitationTemplates: React.FC = () => {
   // A5 dimensions based on orientation
   const cardW = orientation === 'portrait' ? '148mm' : '210mm';
   const cardH = orientation === 'portrait' ? '210mm' : '148mm';
-  const cardPad = orientation === 'portrait' ? '22mm 18mm 18mm' : '16mm 20mm 14mm';
+  const cardPad = orientation === 'portrait' ? '22mm 18mm 18mm' : '10mm 15mm 10mm';
+  const isLandscape = orientation === 'landscape';
 
   // ── Decorative green border frame ─────────────────────────────────
   const BorderFrame = () => (
     <div style={{
       position: 'absolute', inset: 0, pointerEvents: 'none',
-      border: '7px solid #2d6a2d', borderRadius: '4px', boxSizing: 'border-box'
+      border: isLandscape ? '5px solid #2d6a2d' : '7px solid #2d6a2d', 
+      borderRadius: '4px', boxSizing: 'border-box'
     }}>
       <div style={{
-        position: 'absolute', inset: '6px',
+        position: 'absolute', inset: isLandscape ? '4px' : '6px',
         border: '2px solid #2d6a2d', borderRadius: '2px', boxSizing: 'border-box'
       }} />
       {[
@@ -49,9 +51,9 @@ const InvitationTemplates: React.FC = () => {
       ].map((pos, i) => (
         <div key={i} style={{
           position: 'absolute', ...pos,
-          width: 38, height: 38,
+          width: isLandscape ? 30 : 38, height: isLandscape ? 30 : 38,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#2d6a2d', fontSize: 26, lineHeight: 1
+          color: '#2d6a2d', fontSize: isLandscape ? 20 : 26, lineHeight: 1
         }}>✿</div>
       ))}
       {/* top & bottom center ornament */}
@@ -63,19 +65,19 @@ const InvitationTemplates: React.FC = () => {
   // ── Left org block (varies by tab) ────────────────────────────────
   const leftOrg = activeTab === 'party' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>ĐẢNG BỘ {rawWardName.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>CHI BỘ {rawTdpName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>ĐẢNG BỘ {rawWardName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>CHI BỘ {rawTdpName.toUpperCase()}</p>
     </>
   ) : activeTab === 'front' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '9pt' }}>UBMTTQ VN {rawWardName.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '9pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '9pt' }}>{rawTdpName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>UBMTTQ VN {rawWardName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>{rawTdpName.toUpperCase()}</p>
     </>
   ) : (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>UBND {rawWardName.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '10pt' }}>TỔ DÂN PHỐ {rawTdpName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>UBND {rawWardName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>TỔ DÂN PHỐ {rawTdpName.toUpperCase()}</p>
     </>
   );
 
@@ -83,28 +85,31 @@ const InvitationTemplates: React.FC = () => {
   const InvitationCard = () => (
     <div style={{
       position: 'relative',
-      width: cardW, minHeight: cardH,
+      width: cardW, 
+      height: cardH, // fixed height for printing to prevent overflow
       margin: '0 auto', background: 'white',
       padding: cardPad,
       fontFamily: '"Times New Roman", Times, serif',
-      fontSize: orientation === 'landscape' ? '10.5pt' : '11.5pt', lineHeight: 1.6,
+      fontSize: isLandscape ? '9.5pt' : '11.5pt', 
+      lineHeight: isLandscape ? 1.45 : 1.6,
       color: '#111', boxSizing: 'border-box',
+      overflow: 'hidden' // hide overflow during print preview
     }}>
       <BorderFrame />
 
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isLandscape ? '8px' : '14px' }}>
         <div style={{ textAlign: 'center', width: '44%' }}>
           {leftOrg}
           <div style={{ width: '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
-          <p style={{ margin: 0, fontSize: '9pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
+          <p style={{ margin: 0, fontSize: '8.5pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
         </div>
         <div style={{ textAlign: 'center', width: '52%' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: '11pt' }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '10pt' : '11pt' }}>
             {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
           </p>
           {activeTab !== 'party' && (
-            <p style={{ margin: 0, fontWeight: 700, fontSize: '10.5pt', textDecoration: 'underline' }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9.5pt' : '10.5pt', textDecoration: 'underline' }}>
               Độc lập – Tự do – <strong>Hạnh phúc</strong>
             </p>
           )}
@@ -113,49 +118,54 @@ const InvitationTemplates: React.FC = () => {
       </div>
 
       {/* TITLE */}
-      <h1 style={{ textAlign: 'center', fontWeight: 700, fontSize: '19pt', margin: '8px 0 10px', letterSpacing: '2px' }}>
+      <h1 style={{ 
+        textAlign: 'center', fontWeight: 700, 
+        fontSize: isLandscape ? '16pt' : '19pt', 
+        margin: isLandscape ? '4px 0 6px' : '8px 0 10px', 
+        letterSpacing: '2px' 
+      }}>
         GIẤY MỜI
       </h1>
 
       {/* KÍNH GỬI */}
-      <p style={{ margin: '0 0 8px', fontWeight: 700 }}>
+      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 8px', fontWeight: 700 }}>
         Kính gửi :{' '}
         <span style={{ textDecoration: 'underline' }}>{recipientTitle}</span>
       </p>
 
       {/* BODY */}
-      <p style={{ margin: '0 0 8px', textIndent: '1.5em', textAlign: 'justify' }}>
+      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 8px', textIndent: '1.5em', textAlign: 'justify' }}>
         Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp{' '}
         <span style={{ textDecoration: 'underline' }}>{rawTdpName}</span>,{' '}
         <span style={{ textDecoration: 'underline' }}>{rawWardName}</span>
       </p>
 
-      <p style={{ margin: '0 0 5px' }}>
+      <p style={{ margin: '0 0 4px' }}>
         <span style={{ textDecoration: 'underline' }}>Thời gian</span>{' '}
         <strong>{meetingTime}</strong> ngày <strong>{meetingDay}/{meetingMonth}/{meetingYear}</strong>
       </p>
 
-      <p style={{ margin: '0 0 5px' }}>
+      <p style={{ margin: '0 0 4px' }}>
         <span style={{ textDecoration: 'underline' }}>Địa điểm</span>:{' '}
         <span style={{ textDecoration: 'underline' }}>{location}</span>
       </p>
 
-      <p style={{ margin: '0 0 5px' }}>
+      <p style={{ margin: '0 0 4px' }}>
         <span style={{ textDecoration: 'underline' }}>Nội dung</span>{' '}
         <span style={{ textDecoration: 'underline' }}>{content}</span>
       </p>
 
-      <p style={{ margin: '0 0 18px', textIndent: '1.5em', textAlign: 'justify' }}>
+      <p style={{ margin: isLandscape ? '0 0 10px' : '0 0 18px', textIndent: '1.5em', textAlign: 'justify' }}>
         <span style={{ textDecoration: 'underline' }}>{closingNote}</span>
       </p>
 
       {/* SIGNATURE */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: isLandscape ? '2px' : '0' }}>
         <div style={{ textAlign: 'center', minWidth: '190px' }}>
-          <p style={{ margin: '0 0 2px', fontStyle: 'italic' }}>{locationDate}</p>
-          <p style={{ margin: '0 0 2px', fontWeight: 700 }}>{signerTitle}</p>
-          <div style={{ height: '58px' }} />
-          <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase' }}>{signerName}</p>
+          <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: isLandscape ? '8.5pt' : '9.5pt' }}>{locationDate}</p>
+          <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: isLandscape ? '9.5pt' : '10.5pt' }}>{signerTitle}</p>
+          <div style={{ height: isLandscape ? '32px' : '58px' }} />
+          <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: isLandscape ? '9.5pt' : '10.5pt' }}>{signerName}</p>
         </div>
       </div>
     </div>
@@ -359,9 +369,13 @@ const InvitationTemplates: React.FC = () => {
               <InvitationCard />
             </div>
           </div>
-          <p style={{ textAlign: 'center', fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
-            Xem trước – nhấn <strong>🖨️ In Giấy Mời (A5)</strong> để in
-          </p>
+          <div style={{ marginTop: '12px', background: '#fffbeb', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#b45309', border: '1px solid #fef3c7', lineHeight: 1.5 }}>
+            <strong>💡 Mẹo in đẹp không bị tràn trang:</strong><br />
+            1. Khi bảng in hiện ra, chọn đúng khổ giấy <strong>A5</strong>.<br />
+            2. Chọn hướng in phù hợp (<strong>Dọc</strong> hoặc <strong>Ngang</strong>) giống như nút bạn vừa chọn ở trên.<br />
+            3. Tắt mục <strong>"Tiêu đề đầu trang và chân trang"</strong> (Headers & Footers).<br />
+            4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> để viền xanh được in khít trang và không bị nhảy sang trang 2.
+          </div>
         </div>
       </div>
     </div>
