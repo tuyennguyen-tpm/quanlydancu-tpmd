@@ -322,14 +322,13 @@ const InvitationTemplates: React.FC = () => {
             print-color-adjust: exact;
           }
           .print-card-wrapper {
-            width: 100%;
-            height: 100vh;
+            width: ${orientation === 'portrait' ? '148mm' : '210mm'};
+            height: ${orientation === 'portrait' ? '210mm' : '148mm'};
             box-sizing: border-box;
             position: relative;
             page-break-after: always;
             page-break-inside: avoid;
-            margin: 0;
-            padding: 0;
+            margin: 0 auto;
             overflow: hidden;
             background: white;
           }
@@ -531,10 +530,15 @@ const InvitationTemplates: React.FC = () => {
             display: block !important;
           }
           .print-card-wrapper {
+            width: ${orientation === 'portrait' ? '148mm' : '210mm'} !important;
+            height: ${orientation === 'portrait' ? '210mm' : '148mm'} !important;
+            box-sizing: border-box !important;
+            position: relative !important;
             page-break-after: always !important;
             page-break-inside: avoid !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0 auto !important;
+            overflow: hidden !important;
+            background: white !important;
           }
           .print-card-wrapper:last-child {
             page-break-after: avoid !important;
