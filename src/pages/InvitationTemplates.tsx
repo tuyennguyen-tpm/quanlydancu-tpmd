@@ -22,7 +22,13 @@ const InvitationTemplates: React.FC = () => {
   const [signerName, setSignerName]         = useState(rawLeader.toUpperCase());
   const [locationDate, setLocationDate]     = useState(`${rawWardName}, ngày ${dd}/${mm}/${yy}`);
   const [activeTab, setActiveTab]           = useState<'leader' | 'party' | 'front'>('leader');
+  const [orientation, setOrientation]       = useState<'portrait' | 'landscape'>('portrait');
   const printRef                            = useRef<HTMLDivElement>(null);
+
+  // A5 dimensions based on orientation
+  const cardW = orientation === 'portrait' ? '148mm' : '210mm';
+  const cardH = orientation === 'portrait' ? '210mm' : '148mm';
+  const cardPad = orientation === 'portrait' ? '22mm 18mm 18mm' : '16mm 20mm 14mm';
 
   // ── Decorative green border frame ─────────────────────────────────
   const BorderFrame = () => (
@@ -72,15 +78,15 @@ const InvitationTemplates: React.FC = () => {
     </>
   );
 
-  // ── A5 card (148 × 210 mm) ────────────────────────────────────────
+  // ── A5 card (dimensions depend on orientation) ───────────────────
   const InvitationCard = () => (
     <div style={{
       position: 'relative',
-      width: '148mm', minHeight: '210mm',
+      width: cardW, minHeight: cardH,
       margin: '0 auto', background: 'white',
-      padding: '22mm 18mm 18mm',
+      padding: cardPad,
       fontFamily: '"Times New Roman", Times, serif',
-      fontSize: '11.5pt', lineHeight: 1.6,
+      fontSize: orientation === 'landscape' ? '10.5pt' : '11.5pt', lineHeight: 1.6,
       color: '#111', boxSizing: 'border-box',
     }}>
       <BorderFrame />
@@ -161,12 +167,12 @@ const InvitationTemplates: React.FC = () => {
         @media print {
           body * { visibility: hidden !important; }
           .inv-print-area, .inv-print-area * { visibility: visible !important; }
+          @page { size: A5 ${orientation}; margin: 0; }
           .inv-print-area {
             position: fixed !important;
             top: 0 !important; left: 0 !important;
-            width: 148mm !important;
+            width: ${orientation === 'portrait' ? '148mm' : '210mm'} !important;
           }
-          @page { size: A5 portrait; margin: 0; }
         }
         .inv-input {
           width: 100%; padding: 6px 10px; border-radius: 8px;
@@ -186,19 +192,45 @@ const InvitationTemplates: React.FC = () => {
       `}</style>
 
       {/* TOOLBAR */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
         <h2 style={{ margin: 0, fontSize: '18px' }}>📋 Mẫu Giấy Mời (A5)</h2>
-        <button
-          onClick={() => window.print()}
-          style={{
-            background: 'linear-gradient(135deg,#10b981,#059669)',
-            color: 'white', border: 'none',
-            padding: '9px 22px', borderRadius: '8px',
-            fontWeight: 700, fontSize: '14px', cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
-            transition: 'opacity 0.15s'
-          }}
-        >🖨️ In Giấy Mời (A5)</button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* Orientation toggle */}
+          <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+            <button
+              onClick={() => setOrientation('portrait')}
+              title="In dọc (Portrait)"
+              style={{
+                padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                fontWeight: 600, fontSize: '12px', transition: 'all 0.15s',
+                background: orientation === 'portrait' ? '#1e40af' : 'transparent',
+                color: orientation === 'portrait' ? 'white' : '#64748b',
+              }}
+            >📄 In dọc</button>
+            <button
+              onClick={() => setOrientation('landscape')}
+              title="In ngang (Landscape)"
+              style={{
+                padding: '6px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                fontWeight: 600, fontSize: '12px', transition: 'all 0.15s',
+                background: orientation === 'landscape' ? '#1e40af' : 'transparent',
+                color: orientation === 'landscape' ? 'white' : '#64748b',
+              }}
+            >🖼️ In ngang</button>
+          </div>
+          {/* Print button */}
+          <button
+            onClick={() => window.print()}
+            style={{
+              background: 'linear-gradient(135deg,#10b981,#059669)',
+              color: 'white', border: 'none',
+              padding: '9px 22px', borderRadius: '8px',
+              fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
+              transition: 'opacity 0.15s'
+            }}
+          >🖨️ In A5 ({orientation === 'portrait' ? 'Dọc' : 'Ngang'})</button>
+        </div>
       </div>
 
       {/* TABS */}
