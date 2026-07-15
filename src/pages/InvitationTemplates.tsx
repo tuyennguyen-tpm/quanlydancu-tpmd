@@ -1,4 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { db } from '../services/db';
+import type { Household, Resident } from '../types';
+import { Search, Filter, Users } from 'lucide-react';
 
 const InvitationTemplates: React.FC = () => {
   const rawWardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
@@ -25,6 +28,151 @@ const InvitationTemplates: React.FC = () => {
   const [activeTab, setActiveTab]           = useState<'leader' | 'party' | 'front'>('leader');
   const [orientation, setOrientation]       = useState<'portrait' | 'landscape'>('portrait');
   const printRef                            = useRef<HTMLDivElement>(null);
+
+  // Database loading states
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [residents, setResidents] = useState<Resident[]>([]);
+  const [selectedHhIds, setSelectedHhIds] = useState<Set<string>>(new Set());
+  const [previewHhId, setPreviewHhId] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [groupFilter, setGroupFilter] = useState('all');
+  const [recipientPattern, setRecipientPattern] = useState('Đại diện hộ gia đình ông/bà {ten_chu_ho}');
+
+  const [groups, setGroups] = useState<string[]>(() => {
+    const saved = localStorage.getItem('tdp_groups_config');
+    return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+  });
+
+  useEffect(() => {
+    const handleGroupsChange = () => {
+      const saved = localStorage.getItem('tdp_groups_config');
+      setGroups(saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']);
+    };
+    window.addEventListener('tdp-groups-changed', handleGroupsChange);
+    return () => window.removeEventListener('tdp-groups-changed', handleGroupsChange);
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const [hList, rList] = await Promise.all([
+        db.getHouseholds(),
+        db.getResidents()
+      ]);
+      setHouseholds(hList);
+      setResidents(rList);
+    } catch (e) {
+      console.error('Lỗi tải dữ liệu cho giấy mời:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    window.addEventListener('db-changed', loadData);
+    return () => window.removeEventListener('db-changed', loadData);
+  }, []);
+
+  const householdHeadNameMap = useMemo(() => {
+    const resMap = new Map<string, Resident>();
+    residents.forEach(r => {
+      resMap.set(r.id, r);
+    });
+
+    const hhHeadMap = new Map<string, Resident>();
+    residents.forEach(r => {
+      if (r.is_head) {
+        hhHeadMap.set(r.household_id, r);
+      }
+    });
+
+    const nameMap = new Map<string, string>();
+    households.forEach(h => {
+      let head = h.head_of_household_id ? resMap.get(h.head_of_household_id) : undefined;
+      if (!head) {
+        head = hhHeadMap.get(h.id);
+      }
+      if (head) {
+        const name = head.status === 'deceased' ? `${head.full_name} (Đã mất)` : head.full_name;
+        nameMap.set(h.id, name);
+      } else {
+        nameMap.set(h.id, 'Chưa xác định');
+      }
+    });
+    return nameMap;
+  }, [households, residents]);
+
+  const getHeadName = (h: Household) => {
+    return householdHeadNameMap.get(h.id) || 'Chưa xác định';
+  };
+
+  const filteredHouseholds = useMemo(() => {
+    return households.filter(h => {
+      const headName = getHeadName(h).toLowerCase();
+      const address = h.address.toLowerCase();
+      const query = searchInput.toLowerCase();
+      const matchesSearch = headName.includes(query) || address.includes(query) || h.household_number.toLowerCase().includes(query);
+      
+      const matchesGroup = groupFilter === 'all' || h.self_management_group === groupFilter;
+      return matchesSearch && matchesGroup;
+    }).sort((a, b) => {
+      const numA = parseInt(a.household_number.replace(/\D/g, '') || '0', 10);
+      const numB = parseInt(b.household_number.replace(/\D/g, '') || '0', 10);
+      if (numA !== numB) return numA - numB;
+      return a.id.localeCompare(b.id);
+    });
+  }, [households, householdHeadNameMap, searchInput, groupFilter]);
+
+  useEffect(() => {
+    if (filteredHouseholds.length > 0) {
+      if (!previewHhId || !filteredHouseholds.some(h => h.id === previewHhId)) {
+        setPreviewHhId(filteredHouseholds[0].id);
+      }
+    } else {
+      setPreviewHhId(null);
+    }
+  }, [filteredHouseholds, previewHhId]);
+
+  const getRecipientName = (h: Household) => {
+    const name = getHeadName(h);
+    return recipientPattern.replace(/{ten_chu_ho}/g, name);
+  };
+
+  const selectedHhList = useMemo(() => {
+    return households.filter(h => selectedHhIds.has(h.id));
+  }, [households, selectedHhIds]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const newSelected = new Set(selectedHhIds);
+      filteredHouseholds.forEach(h => newSelected.add(h.id));
+      setSelectedHhIds(newSelected);
+    } else {
+      const newSelected = new Set(selectedHhIds);
+      filteredHouseholds.forEach(h => newSelected.delete(h.id));
+      setSelectedHhIds(newSelected);
+    }
+  };
+
+  const handleToggleHh = (id: string) => {
+    const newSelected = new Set(selectedHhIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedHhIds(newSelected);
+  };
+
+  const handleRowClick = (id: string) => {
+    setPreviewHhId(id);
+  };
+
+  const previewHh = useMemo(() => {
+    return households.find(h => h.id === previewHhId) || null;
+  }, [households, previewHhId]);
+
+  const getHouseholdsToPrint = () => {
+    return selectedHhList;
+  };
 
   // A5 dimensions based on orientation
   const cardW = orientation === 'portrait' ? '148mm' : '210mm';
@@ -82,7 +230,7 @@ const InvitationTemplates: React.FC = () => {
   );
 
   // ── A5 card (dimensions depend on orientation) ───────────────────
-  const InvitationCard = () => (
+  const InvitationCard = ({ recipient }: { recipient: string }) => (
     <div style={{
       position: 'relative',
       width: cardW, 
@@ -130,7 +278,7 @@ const InvitationTemplates: React.FC = () => {
       {/* KÍNH GỬI */}
       <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 8px', fontWeight: 700 }}>
         Kính gửi :{' '}
-        <span style={{ textDecoration: 'underline' }}>{recipientTitle}</span>
+        <span style={{ textDecoration: 'underline' }}>{recipient}</span>
       </p>
 
       {/* BODY */}
@@ -180,9 +328,35 @@ const InvitationTemplates: React.FC = () => {
           .inv-print-area, .inv-print-area * { visibility: visible !important; }
           @page { size: A5 ${orientation}; margin: 0; }
           .inv-print-area {
-            position: fixed !important;
+            position: absolute !important;
             top: 0 !important; left: 0 !important;
             width: ${orientation === 'portrait' ? '148mm' : '210mm'} !important;
+            display: block !important;
+          }
+          .print-card-wrapper {
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .print-card-wrapper:last-child {
+            page-break-after: avoid !important;
+          }
+        }
+        @media screen {
+          .print-only {
+            display: none !important;
+          }
+        }
+        .main-grid {
+          display: grid;
+          grid-template-columns: 320px 340px 1fr;
+          gap: 20px;
+          align-items: start;
+        }
+        @media (max-width: 1024px) {
+          .main-grid {
+            grid-template-columns: 1fr;
           }
         }
         .inv-input {
@@ -240,7 +414,7 @@ const InvitationTemplates: React.FC = () => {
               boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
               transition: 'opacity 0.15s'
             }}
-          >🖨️ In A5 ({orientation === 'portrait' ? 'Dọc' : 'Ngang'})</button>
+          >🖨️ {selectedHhList.length > 0 ? `In hàng loạt (${selectedHhList.length} bản)` : 'In giấy mời'} ({orientation === 'portrait' ? 'Dọc' : 'Ngang'})</button>
         </div>
       </div>
 
@@ -261,9 +435,135 @@ const InvitationTemplates: React.FC = () => {
       </div>
 
       {/* MAIN GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '24px', alignItems: 'start' }}>
+      <div className="main-grid">
 
-        {/* LEFT: Form */}
+        {/* LEFT COLUMN: Household Checklist & Filters */}
+        <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+            <h3 style={{ margin: 0, color: '#1e40af', fontSize: '14px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Users size={16} /> Danh sách chủ hộ
+            </h3>
+            <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>
+              {filteredHouseholds.length} hộ
+            </span>
+          </div>
+
+          {/* Group Filter */}
+          <div>
+            <label className="inv-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              Lọc theo Tổ:
+            </label>
+            <select
+              className="inv-input"
+              value={groupFilter}
+              onChange={e => setGroupFilter(e.target.value)}
+              style={{ cursor: 'pointer' }}
+            >
+              <option value="all">── Tất cả các tổ ──</option>
+              {groups.map((g, i) => (
+                <option key={i} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search input */}
+          <div>
+            <label className="inv-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              Tìm chủ hộ / địa chỉ:
+            </label>
+            <input
+              className="inv-input"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Nhập tên chủ hộ, số hộ khẩu..."
+            />
+          </div>
+
+          {/* Checklist Select All */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+              <input
+                type="checkbox"
+                checked={filteredHouseholds.length > 0 && filteredHouseholds.every(h => selectedHhIds.has(h.id))}
+                onChange={e => handleSelectAll(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              Chọn tất cả
+            </label>
+            <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700 }}>
+              Đã chọn: {selectedHhList.length}
+            </span>
+          </div>
+
+          {/* Scrollable list */}
+          <div style={{
+            maxHeight: '380px',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            paddingRight: '4px',
+            scrollbarWidth: 'thin'
+          }}>
+            {filteredHouseholds.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px 10px', color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>
+                Không tìm thấy hộ dân nào
+              </div>
+            ) : (
+              filteredHouseholds.map(h => {
+                const isSelected = selectedHhIds.has(h.id);
+                const isPreview = h.id === previewHhId;
+                const headName = getHeadName(h);
+                return (
+                  <div
+                    key={h.id}
+                    onClick={() => handleRowClick(h.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid',
+                      borderColor: isPreview ? '#3b82f6' : '#e2e8f0',
+                      background: isPreview ? '#eff6ff' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onClick={e => e.stopPropagation()}
+                      onChange={() => handleToggleHh(h.id)}
+                      style={{ cursor: 'pointer', width: '15px', height: '15px' }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontWeight: 600, fontSize: '13px', color: isPreview ? '#1d4ed8' : '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {headName}
+                        </span>
+                        <span style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0 }}>
+                          {h.household_number}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                        📍 {h.address.replace(', Nam Sầm Sơn, Thanh Hóa', '')}
+                      </div>
+                      {h.self_management_group && (
+                        <div style={{ display: 'inline-block', fontSize: '9px', background: isPreview ? '#dbeafe' : '#f1f5f9', color: isPreview ? '#1e40af' : '#475569', padding: '1px 5px', borderRadius: '4px', marginTop: '4px', fontWeight: 600 }}>
+                          👥 {h.self_management_group}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* MIDDLE COLUMN: Form */}
         <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
           <h3 style={{ margin: '0 0 14px', color: '#1e40af', fontSize: '14px' }}>✏️ Soạn nội dung giấy mời</h3>
 
@@ -275,7 +575,14 @@ const InvitationTemplates: React.FC = () => {
           </div>
 
           <div style={{ marginBottom: '11px' }}>
-            <label className="inv-label">Kính gửi:</label>
+            <label className="inv-label">Định dạng kính gửi (dùng &#123;ten_chu_ho&#125; để tự điền):</label>
+            <input className="inv-input" value={recipientPattern}
+              onChange={e => setRecipientPattern(e.target.value)}
+              placeholder="VD: Đại diện hộ gia đình ông/bà {ten_chu_ho}" />
+          </div>
+
+          <div style={{ marginBottom: '11px' }}>
+            <label className="inv-label">Kính gửi (nếu nhập thủ công không chọn hộ):</label>
             <input className="inv-input" value={recipientTitle}
               onChange={e => setRecipientTitle(e.target.value)}
               placeholder="VD: hộ gia đình_ông, bà" />
@@ -358,15 +665,45 @@ const InvitationTemplates: React.FC = () => {
           </div>
         </div>
 
-        {/* RIGHT: Preview */}
-        <div>
+        {/* RIGHT COLUMN: Preview & Printing */}
+        <div style={{ position: 'sticky', top: '20px' }}>
           <div style={{
             background: '#f1f5f9', borderRadius: '14px',
-            padding: '28px', display: 'flex', justifyContent: 'center',
-            minHeight: '400px'
+            padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px',
+            minHeight: '400px', border: '1px solid #e2e8f0'
           }}>
-            <div className="inv-print-area" ref={printRef}>
-              <InvitationCard />
+            {/* Preview Banner */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}>
+              <div style={{ color: '#475569', fontWeight: 600 }}>
+                {previewHh ? (
+                  <span>👁️ Xem trước: <strong style={{ color: '#1e40af' }}>{getHeadName(previewHh)}</strong></span>
+                ) : (
+                  <span>👁️ Xem trước bản mẫu thủ công</span>
+                )}
+              </div>
+              <div style={{ color: '#64748b', fontSize: '11px' }}>
+                Tổng in: <strong>{getHouseholdsToPrint().length > 0 ? `${getHouseholdsToPrint().length} hộ` : '1 bản'}</strong>
+              </div>
+            </div>
+
+            {/* Screen Preview */}
+            <div className="screen-only" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+              <InvitationCard recipient={previewHh ? getRecipientName(previewHh) : recipientTitle} />
+            </div>
+
+            {/* Print-only Batch Container */}
+            <div className="inv-print-area print-only" ref={printRef}>
+              {getHouseholdsToPrint().length > 0 ? (
+                getHouseholdsToPrint().map(h => (
+                  <div key={h.id} className="print-card-wrapper">
+                    <InvitationCard recipient={getRecipientName(h)} />
+                  </div>
+                ))
+              ) : (
+                <div className="print-card-wrapper">
+                  <InvitationCard recipient={previewHh ? getRecipientName(previewHh) : recipientTitle} />
+                </div>
+              )}
             </div>
           </div>
           <div style={{ marginTop: '12px', background: '#fffbeb', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#b45309', border: '1px solid #fef3c7', lineHeight: 1.5 }}>
@@ -377,6 +714,7 @@ const InvitationTemplates: React.FC = () => {
             4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> để viền xanh được in khít trang và không bị nhảy sang trang 2.
           </div>
         </div>
+
       </div>
     </div>
   );
