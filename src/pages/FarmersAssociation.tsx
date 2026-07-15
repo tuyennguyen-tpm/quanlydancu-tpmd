@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/db';
-import type { Resident } from '../types';
+import type { Resident, Household } from '../types';
 import { Search, Sprout, Users, Phone, FileDown, Printer, UserPlus } from 'lucide-react';
 import ExcelJS from 'exceljs';
 
@@ -9,6 +9,7 @@ const currentYear = new Date().getFullYear();
 const FarmersAssociation = () => {
   const [members, setMembers] = useState<Resident[]>([]);
   const [allResidents, setAllResidents] = useState<Resident[]>([]);
+  const [households, setHouseholds] = useState<Household[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
   const [residentSearchQuery, setResidentSearchQuery] = useState('');
@@ -18,8 +19,12 @@ const FarmersAssociation = () => {
 
   const loadData = async () => {
     try {
-      const residents = await db.getResidents();
+      const [residents, hhList] = await Promise.all([
+        db.getResidents(),
+        db.getHouseholds()
+      ]);
       setAllResidents(residents);
+      setHouseholds(hhList);
       const ndMembers = residents.filter(r => {
         if (r.status === 'deceased') return false;
         const membership = r.association_membership || '';
@@ -52,7 +57,8 @@ const FarmersAssociation = () => {
                         (m.phone && m.phone.includes(searchQuery));
     if (!matchSearch) return false;
     if (groupFilter === 'all') return true;
-    return (m.permanent_address || '').includes(groupFilter);
+    const hh = households.find(h => h.id === m.household_id);
+    return hh?.self_management_group === groupFilter;
   });
 
   const getAge = (dob: string) => {
