@@ -287,10 +287,10 @@ const InvitationTemplates: React.FC = () => {
           </p>
 
           <p style="margin: 0 0 4px;">
-            <span style="text-decoration: underline;">Nội dung</span> <span style="text-decoration: underline;">${content}</span>
+            <span style="text-decoration: underline;">Nội dung</span>: <span style="text-decoration: underline; white-space: pre-wrap;">${content}</span>
           </p>
 
-          <p style="margin: ${isLandscape ? '0 0 10px' : '0 0 18px'}; text-indent: 1.5em; text-align: justify;">
+          <p style="margin: ${isLandscape ? '0 0 10px' : '0 0 18px'}; text-indent: 1.5em; text-align: justify; white-space: pre-wrap;">
             <span style="text-decoration: underline;">${closingNote}</span>
           </p>
 
@@ -527,11 +527,11 @@ const InvitationTemplates: React.FC = () => {
       </p>
 
       <p style={{ margin: '0 0 4px' }}>
-        <span style={{ textDecoration: 'underline' }}>Nội dung</span>{' '}
-        <span style={{ textDecoration: 'underline' }}>{content}</span>
+        <span style={{ textDecoration: 'underline' }}>Nội dung</span>:{' '}
+        <span style={{ textDecoration: 'underline', whiteSpace: 'pre-wrap' }}>{content}</span>
       </p>
 
-      <p style={{ margin: isLandscape ? '0 0 10px' : '0 0 18px', textIndent: '1.5em', textAlign: 'justify' }}>
+      <p style={{ margin: isLandscape ? '0 0 10px' : '0 0 18px', textIndent: '1.5em', textAlign: 'justify', whiteSpace: 'pre-wrap' }}>
         <span style={{ textDecoration: 'underline' }}>{closingNote}</span>
       </p>
 
