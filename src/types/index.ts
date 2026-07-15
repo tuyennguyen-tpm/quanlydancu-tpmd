@@ -168,5 +168,6 @@ export interface WardDocument {
   sender_name?: string;
   is_read: boolean; // Trạng thái đã xem của tài khoản TDP hiện tại
   created_at: string;
+  read_by_tdps?: { tdp_name: string; read_at: string }[];
 }
 
