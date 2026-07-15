@@ -675,7 +675,7 @@ const InvitationTemplates: React.FC = () => {
         </div>
 
         {/* RIGHT COLUMN: Preview & Printing */}
-        <div style={{ position: 'sticky', top: '20px' }}>
+        <div>
           <div style={{
             background: '#f1f5f9', borderRadius: '14px',
             padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px',
