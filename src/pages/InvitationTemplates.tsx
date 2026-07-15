@@ -170,6 +170,15 @@ const InvitationTemplates: React.FC = () => {
     return households.find(h => h.id === previewHhId) || null;
   }, [households, previewHhId]);
 
+  // Synchronize recipientTitle with the resolved name of the preview household
+  useEffect(() => {
+    if (previewHh) {
+      setRecipientTitle(getRecipientName(previewHh));
+    } else {
+      setRecipientTitle('hộ gia đình_ông, bà');
+    }
+  }, [previewHhId, recipientPattern]);
+
   const getHouseholdsToPrint = () => {
     return selectedHhList;
   };
@@ -575,14 +584,14 @@ const InvitationTemplates: React.FC = () => {
           </div>
 
           <div style={{ marginBottom: '11px' }}>
-            <label className="inv-label">Định dạng kính gửi (dùng &#123;ten_chu_ho&#125; để tự điền):</label>
+            <label className="inv-label">Định dạng kính gửi tự động (dùng &#123;ten_chu_ho&#125;):</label>
             <input className="inv-input" value={recipientPattern}
               onChange={e => setRecipientPattern(e.target.value)}
               placeholder="VD: Đại diện hộ gia đình ông/bà {ten_chu_ho}" />
           </div>
 
           <div style={{ marginBottom: '11px' }}>
-            <label className="inv-label">Kính gửi (nếu nhập thủ công không chọn hộ):</label>
+            <label className="inv-label">Người nhận (Kính gửi):</label>
             <input className="inv-input" value={recipientTitle}
               onChange={e => setRecipientTitle(e.target.value)}
               placeholder="VD: hộ gia đình_ông, bà" />
@@ -688,7 +697,7 @@ const InvitationTemplates: React.FC = () => {
 
             {/* Screen Preview */}
             <div className="screen-only" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-              <InvitationCard recipient={previewHh ? getRecipientName(previewHh) : recipientTitle} />
+              <InvitationCard recipient={recipientTitle} />
             </div>
 
             {/* Print-only Batch Container */}
@@ -701,7 +710,7 @@ const InvitationTemplates: React.FC = () => {
                 ))
               ) : (
                 <div className="print-card-wrapper">
-                  <InvitationCard recipient={previewHh ? getRecipientName(previewHh) : recipientTitle} />
+                  <InvitationCard recipient={recipientTitle} />
                 </div>
               )}
             </div>
