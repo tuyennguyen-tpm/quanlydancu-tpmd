@@ -989,7 +989,7 @@ const Households = () => {
           </tr>
           <tr>
             <td class="info-label">Số thành viên:</td>
-            <td>${members.length} nhân khẩu</td>
+            <td>${members.filter(m => m.status !== 'deceased').length} nhân khẩu</td>
           </tr>
         </table>
 
@@ -1250,7 +1250,7 @@ const Households = () => {
     const rows = filteredHouseholds.map((h, idx) => {
       const headName = getHeadName(h);
       const members = getHouseholdMembers(h.id);
-      const memberCount = members.length;
+      const memberCount = members.filter(m => m.status !== 'deceased').length;
       const pLabel = getPolicyLabel(h.policy_type);
       const policyBadge = h.policy_type !== 'none'
         ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${pLabel}</span>`
@@ -1388,7 +1388,7 @@ const Households = () => {
       // Data rows
       filteredHouseholds.forEach((h, idx) => {
         const headName = getHeadName(h);
-        const memberCount = getHouseholdMembers(h.id).length;
+        const memberCount = getHouseholdMembers(h.id).filter(m => m.status !== 'deceased').length;
         const pLabel = getPolicyLabel(h.policy_type);
         const rowData = showTdpCol ? [
           idx + 1,
@@ -1759,7 +1759,7 @@ const Households = () => {
                 </div>
                 <div className="info-row">
                   <Users size={16} />
-                  <span>{members.length} thành viên</span>
+                  <span>{members.filter(m => m.status !== 'deceased').length} thành viên</span>
                 </div>
                 {matchedMember && searchTerm.trim() && (
                   <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
