@@ -156,6 +156,7 @@ const App = () => {
   // Global TTS Notification cho công văn phường (Đồng bộ thời gian thực từ Supabase)
   useEffect(() => {
     (window as any)._globalUtterances = (window as any)._globalUtterances || [];
+    let lastSpokenTime = 0;
 
     const getWardAdminId = async (wardId: string): Promise<string | null> => {
       if (!supabase) return null;
@@ -199,21 +200,32 @@ const App = () => {
 
         // Tải danh sách đã xem của chính Tổ
         const currentUserId = localStorage.getItem('supabase_user_id');
-        if (!currentUserId) return;
-
-        const { data: myReadsConfig } = await supabase
-          .from('app_config')
-          .select('value')
-          .eq('user_id', currentUserId)
-          .eq('key', 'read_doc_ids')
-          .maybeSingle();
-
         let myReads: { doc_id: string; read_at: string }[] = [];
-        if (myReadsConfig && myReadsConfig.value) {
-          try {
-            myReads = JSON.parse(myReadsConfig.value);
-          } catch (e) {
-            console.error(e);
+
+        if (currentUserId) {
+          const { data: myReadsConfig } = await supabase
+            .from('app_config')
+            .select('value')
+            .eq('user_id', currentUserId)
+            .eq('key', 'read_doc_ids')
+            .maybeSingle();
+
+          if (myReadsConfig && myReadsConfig.value) {
+            try {
+              myReads = JSON.parse(myReadsConfig.value);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        } else {
+          // Khách / Demo: đọc từ localStorage
+          const localReads = localStorage.getItem('read_doc_ids');
+          if (localReads) {
+            try {
+              myReads = JSON.parse(localReads);
+            } catch (e) {
+              console.error(e);
+            }
           }
         }
 
@@ -227,15 +239,23 @@ const App = () => {
 
         // Kiểm tra xem có văn bản chưa đọc nào thuộc vai trò hiện tại không
         const currentRole = localStorage.getItem('current_role') || '';
+        const userRole = localStorage.getItem('user_role') || '';
+        const activeRole = currentRole && currentRole !== 'demo' ? currentRole : (userRole === 'tdp_leader' ? 'to_truong' : 'demo');
+
         const unread = syncedDocs.find(d => {
           if (d.is_read) return false;
-          if (currentRole === 'bi_thu') return d.category === 'party';
-          if (currentRole === 'to_truong' || currentRole === 'admin') return d.category === 'leader';
-          if (currentRole === 'mat_tran') return d.category === 'front';
+          if (activeRole === 'bi_thu') return d.category === 'party';
+          if (activeRole === 'to_truong' || activeRole === 'admin') return d.category === 'leader';
+          if (activeRole === 'mat_tran') return d.category === 'front';
           return true;
         });
 
         if (unread) {
+          // Throttling: giới hạn phát âm thanh tối đa 1 lần mỗi 55 giây
+          const now = Date.now();
+          if (now - lastSpokenTime < 55000) return;
+          lastSpokenTime = now;
+
           let prefix = '';
           if (unread.category === 'party') prefix = 'Thông báo. Khối Đảng Chi bộ có công văn nghị quyết mới.';
           else if (unread.category === 'front') prefix = 'Thông báo. Khối Mặt trận Tổ quốc có công văn mới.';
@@ -249,6 +269,41 @@ const App = () => {
             id: unread.id
           });
 
+          // 1. Phát nhạc chuông chime chất lượng cao trước để thu hút chú ý và kích hoạt audio context
+          try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext) {
+              const ctx = new AudioContext();
+              
+              // Nốt thứ nhất (D5)
+              const osc1 = ctx.createOscillator();
+              const gain1 = ctx.createGain();
+              osc1.connect(gain1);
+              gain1.connect(ctx.destination);
+              osc1.type = 'sine';
+              osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+              gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+              gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+              osc1.start(ctx.currentTime);
+              osc1.stop(ctx.currentTime + 0.4);
+              
+              // Nốt thứ hai (A5)
+              const osc2 = ctx.createOscillator();
+              const gain2 = ctx.createGain();
+              osc2.connect(gain2);
+              gain2.connect(ctx.destination);
+              osc2.type = 'sine';
+              osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+              gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.1);
+              gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+              osc2.start(ctx.currentTime + 0.1);
+              osc2.stop(ctx.currentTime + 0.5);
+            }
+          } catch (audioErr) {
+            console.warn('Không thể phát âm thanh chime:', audioErr);
+          }
+
+          // 2. Chuẩn bị giọng nói
           const msg = new SpeechSynthesisUtterance(textToSpeak);
           msg.lang = 'vi-VN';
           msg.volume = 1;
@@ -282,7 +337,15 @@ const App = () => {
             (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
           };
 
-          window.speechSynthesis.speak(msg);
+          // 3. Giải phóng hàng chờ SpeechSynthesis bị kẹt và phát giọng nói
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+          window.speechSynthesis.cancel();
+          setTimeout(() => {
+            window.speechSynthesis.speak(msg);
+          }, 150);
+
           setTimeout(() => setDocNotification(null), 15000);
         }
       } catch (e) {
