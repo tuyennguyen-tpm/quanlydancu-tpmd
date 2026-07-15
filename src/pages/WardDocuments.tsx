@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { db } from '../services/db';
+import { db, supabase } from '../services/db';
 import type { WardDocument } from '../types';
 import { X, Plus, Upload } from 'lucide-react';
 
@@ -12,10 +12,123 @@ const WardDocuments = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<WardDocument | null>(null);
 
+  const getWardAdminUid = async (wardId: string): Promise<string | null> => {
+    if (!supabase) return null;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'ward_admin')
+        .eq('ward_id', wardId)
+        .limit(1);
+      if (!error && data && data.length > 0) {
+        return data[0].id;
+      }
+    } catch (e) {
+      console.error('Lỗi khi lấy ID admin Phường:', e);
+    }
+    return null;
+  };
+
   const loadDocs = async () => {
+    // 1. Tải từ local storage trước làm phương án dự phòng
     const stored = localStorage.getItem('ward_documents');
     let loaded: WardDocument[] = stored ? JSON.parse(stored) : [];
-    
+
+    if (supabase) {
+      try {
+        const myWardId = localStorage.getItem('user_ward_id') || localStorage.getItem('guest_ward_id');
+        if (myWardId) {
+          // Tìm ID của admin Phường
+          const wardAdminUid = await getWardAdminUid(myWardId);
+          if (wardAdminUid) {
+            // Tải danh sách công văn từ app_config của admin Phường
+            const { data: wardConfig, error: configError } = await supabase
+              .from('app_config')
+              .select('value')
+              .eq('user_id', wardAdminUid)
+              .eq('key', 'ward_documents')
+              .maybeSingle();
+
+            if (!configError && wardConfig && wardConfig.value) {
+              try {
+                loaded = JSON.parse(wardConfig.value);
+              } catch (e) {
+                console.error('Lỗi parse ward_documents:', e);
+              }
+            }
+
+            // Đồng bộ trạng thái đã xem (is_read) & nhật ký đã xem (read_by_tdps)
+            const currentUserId = localStorage.getItem('supabase_user_id');
+            const currentUserRole = localStorage.getItem('user_role');
+
+            if (currentUserRole === 'ward_admin' || currentUserRole === 'super_admin' || isPhuongMode) {
+              // Đối với Phường: quét qua app_config của các TDP để lấy danh sách đã xem
+              const tdpProfiles = await db.getTDPList(myWardId);
+              const tdpUserIds = tdpProfiles.map(t => t.id);
+
+              if (tdpUserIds.length > 0) {
+                const { data: allTdpReads } = await supabase
+                  .from('app_config')
+                  .select('user_id, value')
+                  .in('user_id', tdpUserIds)
+                  .eq('key', 'read_doc_ids');
+
+                if (allTdpReads) {
+                  // Ánh xạ lại read_by_tdps cho từng công văn
+                  loaded = loaded.map(doc => {
+                    const readBy: { tdp_name: string; read_at: string }[] = [];
+                    
+                    allTdpReads.forEach(row => {
+                      const tdp = tdpProfiles.find(t => t.id === row.user_id);
+                      if (tdp && row.value) {
+                        try {
+                          const reads: { doc_id: string; read_at: string }[] = JSON.parse(row.value);
+                          const matchedRead = reads.find(r => r.doc_id === doc.id);
+                          if (matchedRead) {
+                            readBy.push({
+                              tdp_name: tdp.tdp_name,
+                              read_at: matchedRead.read_at
+                            });
+                          }
+                        } catch (e) {
+                          console.error('Lỗi parse read_doc_ids:', e);
+                        }
+                      }
+                    });
+
+                    return { ...doc, read_by_tdps: readBy };
+                  });
+                }
+              }
+            } else if (currentUserId) {
+              // Đối với TDP: tải danh sách đã xem của chính mình
+              const { data: myReadsConfig } = await supabase
+                .from('app_config')
+                .select('value')
+                .eq('user_id', currentUserId)
+                .eq('key', 'read_doc_ids')
+                .maybeSingle();
+
+              if (myReadsConfig && myReadsConfig.value) {
+                try {
+                  const myReads: { doc_id: string; read_at: string }[] = JSON.parse(myReadsConfig.value);
+                  loaded = loaded.map(doc => ({
+                    ...doc,
+                    is_read: myReads.some(r => r.doc_id === doc.id)
+                  }));
+                } catch (e) {
+                  console.error('Lỗi parse my reads:', e);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi Supabase loadDocs, dùng dữ liệu local', err);
+      }
+    }
+
     // Khởi tạo data mẫu nếu trống
     if (loaded.length === 0) {
       loaded = [
@@ -31,7 +144,6 @@ const WardDocuments = () => {
     
     setDocuments(loaded);
   };
-
 
   const checkUnreadAndSpeak = () => {
     // Chỉ đọc nếu không phải màn hình của phường
@@ -115,10 +227,10 @@ const WardDocuments = () => {
     };
   }, []);
 
-
-  const handleMarkRead = (id: string) => {
+  const handleMarkRead = async (id: string) => {
     const rawTdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
-    // Cập nhật state trực tiếp
+    
+    // Cập nhật state trực tiếp cục bộ trước
     setDocuments(prevDocs => {
       const updated = prevDocs.map(d => {
         if (d.id === id) {
@@ -135,6 +247,45 @@ const WardDocuments = () => {
       localStorage.setItem('ward_documents', JSON.stringify(updated));
       return updated;
     });
+
+    // Đồng bộ trạng thái đã xem lên Supabase
+    if (supabase) {
+      try {
+        const currentUserId = localStorage.getItem('supabase_user_id');
+        if (currentUserId) {
+          const { data: myReadsConfig } = await supabase
+            .from('app_config')
+            .select('value')
+            .eq('user_id', currentUserId)
+            .eq('key', 'read_doc_ids')
+            .maybeSingle();
+
+          let myReads: { doc_id: string; read_at: string }[] = [];
+          if (myReadsConfig && myReadsConfig.value) {
+            try {
+              myReads = JSON.parse(myReadsConfig.value);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+
+          if (!myReads.some(r => r.doc_id === id)) {
+            myReads.push({ doc_id: id, read_at: new Date().toISOString() });
+            await supabase
+              .from('app_config')
+              .upsert({
+                user_id: currentUserId,
+                key: 'read_doc_ids',
+                value: JSON.stringify(myReads),
+                updated_at: new Date().toISOString()
+              });
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi đồng bộ đã xem lên Supabase:', err);
+      }
+    }
+
     // Dừng âm thanh nếu đang đọc
     window.speechSynthesis.cancel();
   };
@@ -145,7 +296,6 @@ const WardDocuments = () => {
       handleMarkRead(d.id);
     }
   };
-
 
   const filteredDocs = documents.filter(d => {
     if (activeTab === 'all') return true;
@@ -179,7 +329,7 @@ const WardDocuments = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const doc: WardDocument = {
       id: `wd-${Date.now()}`,
       title: newDoc.title || 'Văn bản không tên',
@@ -193,17 +343,37 @@ const WardDocuments = () => {
       read_by_tdps: []
     };
     const updated = [doc, ...documents];
-    // Sắp xếp giảm dần theo thời gian (mới nhất lên đầu)
     updated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     setDocuments(updated);
     localStorage.setItem('ward_documents', JSON.stringify(updated));
 
+    // Đồng bộ lên Supabase
+    if (supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const uId = session?.user?.id;
+        if (uId) {
+          const docsToSave = updated.map(({ read_by_tdps, ...rest }) => rest);
+          await supabase
+            .from('app_config')
+            .upsert({
+              user_id: uId,
+              key: 'ward_documents',
+              value: JSON.stringify(docsToSave),
+              updated_at: new Date().toISOString()
+            });
+        }
+      } catch (err) {
+        console.error('Lỗi khi lưu công văn lên Supabase:', err);
+      }
+    }
+
     setShowAddModal(false);
     setNewDoc({ category: 'party', target_scope: 'all' });
     
-    // Phát âm thanh ngay lập tức cho tổ dân phố (nếu đang ở máy giả lập của tổ)
     setTimeout(() => { checkUnreadAndSpeak(); }, 1500);
   };
+
 
   return (
     <div className="content" style={{ padding: '20px' }}>
