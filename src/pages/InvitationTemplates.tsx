@@ -319,7 +319,7 @@ const InvitationTemplates: React.FC = () => {
             <div style="text-align: center; min-width: 190px;">
               <p style="margin: 0 0 2px; font-style: italic; font-size: ${isLandscape ? '9.5pt' : '10.5pt'};">${locationDate}</p>
               <p style="margin: 0 0 2px; font-weight: 700; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">${signerTitle}</p>
-              <div style="height: ${isLandscape ? '32px' : '58px'};"></div>
+              <div style="height: ${isLandscape ? '20px' : '30px'};"></div>
               <p style="margin: 0; font-weight: 700; text-transform: uppercase; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">${signerName}</p>
             </div>
           </div>
@@ -398,10 +398,10 @@ const InvitationTemplates: React.FC = () => {
             position: relative;
             width: ${isLandscape ? '210mm' : '148mm'};
             height: ${isLandscape ? '148mm' : '210mm'};
-            padding: ${isLandscape ? '8mm 15mm 8mm' : '12mm 15mm 12mm'};
+            padding: ${isLandscape ? '8mm 15mm 8mm' : '10mm 15mm 10mm'};
             font-family: "Times New Roman", Times, serif;
-            font-size: ${isLandscape ? '11.5pt' : '13pt'};
-            line-height: ${isLandscape ? 1.5 : 1.65};
+            font-size: ${isLandscape ? '11.5pt' : '12.5pt'};
+            line-height: ${isLandscape ? 1.4 : 1.45};
             color: #111;
             box-sizing: border-box;
             background: white;
@@ -430,7 +430,7 @@ const InvitationTemplates: React.FC = () => {
   // A5 dimensions based on orientation
   const cardW = orientation === 'portrait' ? '148mm' : '210mm';
   const cardH = orientation === 'portrait' ? '210mm' : '148mm';
-  const cardPad = orientation === 'portrait' ? '12mm 15mm 12mm' : '8mm 15mm 8mm';
+  const cardPad = orientation === 'portrait' ? '10mm 15mm 10mm' : '8mm 15mm 8mm';
   const isLandscape = orientation === 'landscape';
 
   // ── Decorative green border frame ─────────────────────────────────
@@ -491,8 +491,8 @@ const InvitationTemplates: React.FC = () => {
       margin: '0 auto', background: 'white',
       padding: cardPad,
       fontFamily: '"Times New Roman", Times, serif',
-      fontSize: isLandscape ? '11.5pt' : '13pt', 
-      lineHeight: isLandscape ? 1.5 : 1.65,
+      fontSize: isLandscape ? '11.5pt' : '12.5pt', 
+      lineHeight: isLandscape ? 1.4 : 1.45,
       color: '#111', boxSizing: 'border-box',
       overflow: 'hidden', // hide overflow during print preview
       flexShrink: 0
@@ -580,7 +580,7 @@ const InvitationTemplates: React.FC = () => {
         <div style={{ textAlign: 'center', minWidth: '190px' }}>
           <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: isLandscape ? '9.5pt' : '10.5pt' }}>{locationDate}</p>
           <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: isLandscape ? '10.5pt' : '11.5pt' }}>{signerTitle}</p>
-          <div style={{ height: isLandscape ? '25px' : '35px' }} />
+          <div style={{ height: isLandscape ? '20px' : '30px' }} />
           <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: isLandscape ? '10.5pt' : '11.5pt' }}>{signerName}</p>
         </div>
       </div>
