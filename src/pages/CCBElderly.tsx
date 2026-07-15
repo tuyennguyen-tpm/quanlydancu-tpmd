@@ -62,7 +62,7 @@ const CCBElderly = () => {
   const [allResidents, setAllResidents] = useState<Resident[]>([]);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+  const isGuest = localStorage.getItem('guest_mode') === 'true';
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
