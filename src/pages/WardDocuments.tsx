@@ -204,6 +204,12 @@ const WardDocuments = () => {
   }, [isPhuongMode]);
 
   useEffect(() => {
+    // Nghe sự kiện đồng bộ từ service chạy ngầm ở App.tsx
+    const handleSyncEvent = () => {
+      loadDocs();
+    };
+    window.addEventListener('ward-docs-synced', handleSyncEvent);
+
     // Tự động tải lại tài liệu mỗi 3 giây để đồng bộ tức thời giữa các tab / chế độ
     const syncInterval = setInterval(() => {
       loadDocs();
@@ -220,6 +226,7 @@ const WardDocuments = () => {
     }, 60000);
 
     return () => {
+      window.removeEventListener('ward-docs-synced', handleSyncEvent);
       clearInterval(syncInterval);
       clearTimeout(tId);
       clearInterval(voiceIntervalId);

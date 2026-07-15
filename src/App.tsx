@@ -126,78 +126,179 @@ const App = () => {
 
   const [docNotification, setDocNotification] = useState<{ title: string, message: string, id: string } | null>(null);
 
-  // Global TTS Notification cho công văn phường (Chị Google)
+  // Speech Synthesis Unlocker (Mở khóa âm thanh trình duyệt khi người dùng click bất cứ đâu)
+  const [speechUnlocked, setSpeechUnlocked] = useState(false);
+
   useEffect(() => {
-    let lastSpokenId = localStorage.getItem('last_spoken_doc_id') || '';
-    // Prevent GC of utterance for Chrome
+    const unlockSpeech = () => {
+      if (speechUnlocked) return;
+      try {
+        const u = new SpeechSynthesisUtterance('');
+        window.speechSynthesis.speak(u);
+        setSpeechUnlocked(true);
+        console.log('[TTS] Mở khóa âm thanh thành công qua tương tác người dùng.');
+      } catch (e) {
+        console.warn('Không thể mở khóa TTS:', e);
+      }
+      window.removeEventListener('click', unlockSpeech);
+      window.removeEventListener('keydown', unlockSpeech);
+    };
+
+    window.addEventListener('click', unlockSpeech);
+    window.addEventListener('keydown', unlockSpeech);
+    
+    return () => {
+      window.removeEventListener('click', unlockSpeech);
+      window.removeEventListener('keydown', unlockSpeech);
+    };
+  }, [speechUnlocked]);
+
+  // Global TTS Notification cho công văn phường (Đồng bộ thời gian thực từ Supabase)
+  useEffect(() => {
     (window as any)._globalUtterances = (window as any)._globalUtterances || [];
 
-    const checkGlobalUnreadAndSpeak = () => {
-      // Chỉ đọc nếu không phải màn hình của phường
+    const getWardAdminId = async (wardId: string): Promise<string | null> => {
+      if (!supabase) return null;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'ward_admin')
+          .eq('ward_id', wardId)
+          .limit(1);
+        if (data && data.length > 0) return data[0].id;
+      } catch (e) {
+        console.error(e);
+      }
+      return null;
+    };
+
+    const checkGlobalUnreadAndSpeak = async () => {
+      // Không đọc nếu đang ở chế độ gửi của phường
       if (localStorage.getItem('is_phuong_mode') === 'true') return;
+      if (!supabase) return;
+      if (window.speechSynthesis.speaking) return;
 
-      const stored = localStorage.getItem('ward_documents');
-      if (!stored) return;
-      const docs = JSON.parse(stored);
-      
-      const unread = docs.find((d: any) => !d.is_read);
-      if (unread && unread.id !== lastSpokenId) {
-        let prefix = '';
-        if (unread.category === 'party') prefix = 'Bạn có công văn, nghị quyết mới từ Chi bộ Phường.';
-        else if (unread.category === 'front') prefix = 'Bạn có công văn từ Ban công tác Mặt trận Phường.';
-        else prefix = 'Bạn có công văn mới từ Ủy ban nhân dân Phường.';
+      try {
+        const myWardId = localStorage.getItem('user_ward_id') || localStorage.getItem('guest_ward_id');
+        if (!myWardId) return;
 
-        const textToSpeak = `${prefix} Nội dung là: ${unread.title}. Vui lòng mở phần mềm để xem chi tiết.`;
-        
-        // Hiện popup trực quan
-        setDocNotification({
-          title: 'Tin nhắn tự động',
-          message: textToSpeak,
-          id: unread.id
-        });
+        const wardAdminUid = await getWardAdminId(myWardId);
+        if (!wardAdminUid) return;
 
-        const msg = new SpeechSynthesisUtterance(textToSpeak);
-        msg.lang = 'vi-VN';
-        msg.volume = 1;
-        msg.rate = 1;
-        
-        const voices = window.speechSynthesis.getVoices();
-        const viVoices = voices.filter(v => v.lang.includes('vi'));
-        const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('online'));
-        if (googleVoice) {
-          msg.voice = googleVoice;
-        } else if (viVoices.length > 0) {
-          msg.voice = viVoices[0];
+        // Tải danh sách công văn Phường
+        const { data: wardConfig } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('user_id', wardAdminUid)
+          .eq('key', 'ward_documents')
+          .maybeSingle();
+
+        if (!wardConfig || !wardConfig.value) return;
+        const docs: any[] = JSON.parse(wardConfig.value);
+
+        // Tải danh sách đã xem của chính Tổ
+        const currentUserId = localStorage.getItem('supabase_user_id');
+        if (!currentUserId) return;
+
+        const { data: myReadsConfig } = await supabase
+          .from('app_config')
+          .select('value')
+          .eq('user_id', currentUserId)
+          .eq('key', 'read_doc_ids')
+          .maybeSingle();
+
+        let myReads: { doc_id: string; read_at: string }[] = [];
+        if (myReadsConfig && myReadsConfig.value) {
+          try {
+            myReads = JSON.parse(myReadsConfig.value);
+          } catch (e) {
+            console.error(e);
+          }
         }
 
-        // Fix GC bug
-        (window as any)._globalUtterances.push(msg);
+        // Đồng bộ về localStorage cho UI các trang
+        const syncedDocs = docs.map(doc => ({
+          ...doc,
+          is_read: myReads.some(r => r.doc_id === doc.id)
+        }));
+        localStorage.setItem('ward_documents', JSON.stringify(syncedDocs));
+        window.dispatchEvent(new CustomEvent('ward-docs-synced'));
 
-        msg.onend = () => {
-          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
-        };
-        msg.onerror = (e) => {
-          console.warn('TTS Error or Blocked by Browser:', e);
-          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
-        };
+        // Kiểm tra xem có văn bản chưa đọc nào thuộc vai trò hiện tại không
+        const currentRole = localStorage.getItem('current_role') || '';
+        const unread = syncedDocs.find(d => {
+          if (d.is_read) return false;
+          if (currentRole === 'bi_thu') return d.category === 'party';
+          if (currentRole === 'to_truong' || currentRole === 'admin') return d.category === 'leader';
+          if (currentRole === 'mat_tran') return d.category === 'front';
+          return true;
+        });
 
-        window.speechSynthesis.speak(msg);
-        
-        lastSpokenId = unread.id;
-        localStorage.setItem('last_spoken_doc_id', unread.id);
-        
-        // Tự động ẩn popup sau 15 giây
-        setTimeout(() => setDocNotification(null), 15000);
+        if (unread) {
+          let prefix = '';
+          if (unread.category === 'party') prefix = 'Thông báo. Khối Đảng Chi bộ có công văn nghị quyết mới.';
+          else if (unread.category === 'front') prefix = 'Thông báo. Khối Mặt trận Tổ quốc có công văn mới.';
+          else prefix = 'Thông báo. Khối Chính quyền có công văn mới.';
+
+          const textToSpeak = `${prefix} Trích yếu: ${unread.title}. Vui lòng kiểm tra và xử lý.`;
+          
+          setDocNotification({
+            title: 'Tin nhắn tự động',
+            message: textToSpeak,
+            id: unread.id
+          });
+
+          const msg = new SpeechSynthesisUtterance(textToSpeak);
+          msg.lang = 'vi-VN';
+          msg.volume = 1;
+          msg.rate = 0.95;
+
+          const voices = window.speechSynthesis.getVoices();
+          const viVoices = voices.filter(v => {
+            const l = v.lang.toLowerCase().replace('_', '-');
+            return l.includes('vi') || l.includes('vnm');
+          });
+
+          const femaleViVoice = viVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return (
+              (name.includes('google') || name.includes('an') || name.includes('hoaimy') || name.includes('female') || name.includes('nữ')) &&
+              !name.includes('nam') && 
+              !name.includes('male')
+            );
+          }) || viVoices.find(v => !v.name.toLowerCase().includes('nam')) || viVoices[0];
+
+          if (femaleViVoice) {
+            msg.voice = femaleViVoice;
+          }
+
+          (window as any)._globalUtterances.push(msg);
+          msg.onend = () => {
+            (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
+          };
+          msg.onerror = (e) => {
+            console.warn('TTS speak error:', e);
+            (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
+          };
+
+          window.speechSynthesis.speak(msg);
+          setTimeout(() => setDocNotification(null), 15000);
+        }
+      } catch (e) {
+        console.error('Lỗi kiểm tra thông báo ngầm:', e);
       }
     };
 
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = checkGlobalUnreadAndSpeak;
-    }
+    // Chạy đồng bộ & thông báo định kỳ mỗi 60 giây (1 phút)
+    const ttsInterval = setInterval(checkGlobalUnreadAndSpeak, 60000);
+    // Chạy kiểm tra lần đầu sau 6 giây
+    const firstCheckId = setTimeout(checkGlobalUnreadAndSpeak, 6000);
 
-    // Kiểm tra liên tục mỗi 8 giây
-    const ttsInterval = setInterval(checkGlobalUnreadAndSpeak, 8000);
-    return () => clearInterval(ttsInterval);
+    return () => {
+      clearInterval(ttsInterval);
+      clearTimeout(firstCheckId);
+    };
   }, []);
 
   const formatVietnameseDateTime = (date: Date) => {
