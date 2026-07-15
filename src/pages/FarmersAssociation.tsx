@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/db';
 import type { Resident } from '../types';
-import { Search, Sprout, Users, Phone, FileDown, Printer } from 'lucide-react';
+import { Search, Sprout, Users, Phone, FileDown, Printer, UserPlus } from 'lucide-react';
 import ExcelJS from 'exceljs';
 
 const currentYear = new Date().getFullYear();
 
 const FarmersAssociation = () => {
   const [members, setMembers] = useState<Resident[]>([]);
+  const [allResidents, setAllResidents] = useState<Resident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
+  const [residentSearchQuery, setResidentSearchQuery] = useState('');
 
   const savedGroups = localStorage.getItem('tdp_groups_config');
   const groupsList = savedGroups ? JSON.parse(savedGroups) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
@@ -17,6 +19,7 @@ const FarmersAssociation = () => {
   const loadData = async () => {
     try {
       const residents = await db.getResidents();
+      setAllResidents(residents);
       const ndMembers = residents.filter(r => {
         if (r.status === 'deceased') return false;
         const membership = r.association_membership || '';
@@ -34,6 +37,16 @@ const FarmersAssociation = () => {
     return () => window.removeEventListener('db-changed', loadData);
   }, []);
 
+  const residentSearchResults = useMemo(() => {
+    if (residentSearchQuery.trim().length < 2) return [];
+    return allResidents.filter(r => {
+      if (r.status === 'deceased') return false;
+      const codes = (r.association_membership || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (codes.includes('nd')) return false;
+      return r.full_name.toLowerCase().includes(residentSearchQuery.toLowerCase());
+    }).slice(0, 5);
+  }, [residentSearchQuery, allResidents]);
+
   const filteredMembers = members.filter(m => {
     const matchSearch = m.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         (m.phone && m.phone.includes(searchQuery));
@@ -46,6 +59,73 @@ const FarmersAssociation = () => {
     if (!dob) return '—';
     const year = parseInt(dob.substring(0, 4));
     return isNaN(year) ? '—' : `${currentYear - year}`;
+  };
+
+  const currentRole = localStorage.getItem('current_role') || 'demo';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+
+  const handleAddMember = async (resident: Resident) => {
+    if (isGuest) {
+      alert('Tài khoản của bạn không có quyền sửa đổi danh sách!');
+      return;
+    }
+    try {
+      const currentCodes = (resident.association_membership || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+        
+      if (!currentCodes.includes('nd')) {
+        currentCodes.push('nd');
+      }
+      
+      const updatedResident = {
+        ...resident,
+        association_membership: currentCodes.join(',')
+      };
+      
+      await db.saveResident(updatedResident);
+      setResidentSearchQuery(''); // clear search
+      loadData();
+      
+      // Trigger a custom event to notify other components of database change
+      window.dispatchEvent(new Event('db-changed'));
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra khi thêm hội viên: ${err.message || err}`);
+    }
+  };
+
+  const handleRemoveMember = async (resident: Resident) => {
+    if (isGuest) {
+      alert('Tài khoản của bạn không có quyền sửa đổi danh sách!');
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn cho hội viên "${resident.full_name}" thôi tham gia Chi hội Nông dân?`)) {
+      return;
+    }
+    try {
+      const currentCodes = (resident.association_membership || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+        
+      const updatedCodes = currentCodes.filter(c => c !== 'nd');
+      
+      const updatedResident = {
+        ...resident,
+        association_membership: updatedCodes.join(',')
+      };
+      
+      await db.saveResident(updatedResident);
+      loadData();
+      
+      // Trigger custom event
+      window.dispatchEvent(new Event('db-changed'));
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra khi rút tên hội viên: ${err.message || err}`);
+    }
   };
 
   // Printer function
@@ -276,11 +356,86 @@ const FarmersAssociation = () => {
 
       {/* Filter + Search */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Users size={16} style={{ color: '#16a34a' }} />
-          <span style={{ fontSize: '15px', fontWeight: 700, color: '#14532d' }}>
-            Danh sách hội viên Nông dân ({filteredMembers.length})
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={16} style={{ color: '#16a34a' }} />
+            <span style={{ fontSize: '15px', fontWeight: 700, color: '#14532d' }}>
+              Danh sách hội viên Nông dân ({filteredMembers.length})
+            </span>
+          </div>
+
+          {/* Search to Add Dropdown */}
+          {!isGuest && (
+            <div style={{ position: 'relative', width: '280px', display: 'inline-block' }}>
+              <div className="search-box" style={{ width: '100%', border: '1px solid #bbf7d0', background: 'white' }}>
+                <UserPlus size={14} style={{ color: '#16a34a' }} />
+                <input
+                  type="text"
+                  placeholder="Nhập tên nhân khẩu để thêm..."
+                  value={residentSearchQuery}
+                  onChange={e => setResidentSearchQuery(e.target.value)}
+                  style={{ fontSize: '12.5px' }}
+                />
+              </div>
+
+              {residentSearchResults.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'white',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  zIndex: 50,
+                  marginTop: '4px',
+                  maxHeight: '240px',
+                  overflowY: 'auto',
+                  textAlign: 'left'
+                }}>
+                  {residentSearchResults.map(r => {
+                    const age = getAge(r.dob);
+                    return (
+                      <div 
+                        key={r.id} 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          borderBottom: '1px solid #f0fdf4',
+                          fontSize: '12.5px'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#111827' }}>{r.full_name}</div>
+                          <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                            {age} tuổi | {r.gender === 'female' ? 'Nữ' : 'Nam'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddMember(r)}
+                          style={{
+                            padding: '3px 8px',
+                            background: '#16a34a',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Thêm
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button 
@@ -328,24 +483,19 @@ const FarmersAssociation = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f0fdf4' }}>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>STT</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Họ và tên</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ngày sinh</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tuổi</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Điện thoại</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nghề nghiệp</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Địa chỉ</th>
-              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</th>
+              {['STT', 'Họ và tên', 'Ngày sinh', 'Tuổi', 'Điện thoại', 'Nghề nghiệp', 'Địa chỉ', 'Trạng thái', ...(!isGuest ? ['Hành động'] : [])].map(h => (
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af', fontSize: '14px' }}>
+                <td colSpan={!isGuest ? 9 : 8} style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af', fontSize: '14px' }}>
                   <Sprout size={32} style={{ display: 'block', margin: '0 auto 8px', opacity: 0.3 }} />
                   {searchQuery || groupFilter !== 'all'
                     ? 'Không tìm thấy hội viên nào khớp kết quả tìm kiếm.'
-                    : 'Chưa có hội viên nào. Vào trang Nhân khẩu → chỉnh sửa → tích "Chi hội Nông dân" để thêm.'}
+                    : 'Chưa có hội viên nào. Nhập tên nhân khẩu ở ô tìm kiếm bên trên để thêm nhanh.'}
                 </td>
               </tr>
             ) : filteredMembers.map((m, idx) => {
@@ -370,6 +520,28 @@ const FarmersAssociation = () => {
                       {statusLabel}
                     </span>
                   </td>
+                  {!isGuest && (
+                    <td style={{ padding: '8px 16px' }}>
+                      <button
+                        onClick={() => handleRemoveMember(m)}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#fef2f2',
+                          border: '1px solid #fee2e2',
+                          color: '#dc2626',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseOver={e => (e.currentTarget.style.background = '#fee2e2')}
+                        onMouseOut={e => (e.currentTarget.style.background = '#fef2f2')}
+                      >
+                        ❌ Rút
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -381,7 +553,7 @@ const FarmersAssociation = () => {
       <div style={{ marginTop: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px' }}>
         <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: '#14532d' }}>💡 Hướng dẫn</h3>
         <p style={{ margin: 0, fontSize: '13px', color: '#15803d', lineHeight: 1.6 }}>
-          Để thêm hội viên vào Chi hội Nông dân: vào trang <strong>Nhân khẩu</strong> → chọn nhân khẩu → bấm <strong>Chỉnh sửa</strong> → tích chọn <strong>"Chi hội Nông dân"</strong> trong mục "Thành viên Đoàn thể địa phương" → Lưu. Nhân khẩu sẽ tự động xuất hiện trong danh sách này.
+          Nhập tên nhân khẩu ở ô tìm kiếm nhanh bên trên để thêm nhanh hội viên vào Chi hội Nông dân địa bàn.
         </p>
       </div>
     </div>

@@ -52,7 +52,7 @@ const WomenAssociation = () => {
   });
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'chi_hoi_phu_nu' && currentRole !== 'admin');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'chi_hoi_phu_nu' && currentRole !== 'to_truong' && currentRole !== 'admin');
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

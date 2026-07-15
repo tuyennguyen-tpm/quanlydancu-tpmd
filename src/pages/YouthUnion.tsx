@@ -62,7 +62,7 @@ const YouthUnion = () => {
   };
 
   const currentRole = localStorage.getItem('current_role') || 'demo';
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'chi_doan_thanh_nien' && currentRole !== 'admin');
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'chi_doan_thanh_nien' && currentRole !== 'to_truong' && currentRole !== 'admin');
 
   const handleAddMember = async (resident: Resident) => {
     if (isGuest) {

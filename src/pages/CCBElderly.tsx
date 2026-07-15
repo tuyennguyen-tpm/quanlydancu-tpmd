@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '../services/db';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
@@ -26,6 +26,7 @@ const CCBElderly = () => {
   const [subFilter, setSubFilter] = useState<'all' | 'senior70' | 'longevity'>('all');
   const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
   const [groupFilter, setGroupFilter] = useState('all');
+  const [residentSearchQuery, setResidentSearchQuery] = useState('');
   const savedGroups = localStorage.getItem('tdp_groups_config');
   const groupsList = savedGroups ? JSON.parse(savedGroups) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +113,60 @@ const CCBElderly = () => {
     window.addEventListener('db-changed', loadData);
     return () => window.removeEventListener('db-changed', loadData);
   }, []);
+
+  const residentSearchResults = useMemo(() => {
+    if (residentSearchQuery.trim().length < 2) return [];
+    const isSeniorTab = selectedTab === 'seniors';
+    const assocCode = isSeniorTab ? 'nct' : 'ccb';
+    
+    return allResidents.filter(r => {
+      if (r.status === 'deceased') return false;
+      const codes = (r.association_membership || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (codes.includes(assocCode)) return false;
+      return r.full_name.toLowerCase().includes(residentSearchQuery.toLowerCase());
+    }).slice(0, 5);
+  }, [residentSearchQuery, allResidents, selectedTab]);
+
+  const handleAddAssociationMember = async (resident: Resident) => {
+    if (isGuest) {
+      alert('Tài khoản của bạn không có quyền sửa đổi danh sách!');
+      return;
+    }
+    const isSeniorTab = selectedTab === 'seniors';
+    const assocCode = isSeniorTab ? 'nct' : 'ccb';
+    const assocName = isSeniorTab ? 'Hội Người cao tuổi' : 'Hội Cựu chiến binh';
+
+    try {
+      const currentCodes = (resident.association_membership || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+        
+      if (!currentCodes.includes(assocCode)) {
+        currentCodes.push(assocCode);
+      }
+      
+      const updatedResident = {
+        ...resident,
+        association_membership: currentCodes.join(',')
+      };
+      
+      await db.saveResident(updatedResident);
+      setResidentSearchQuery(''); // clear search
+      loadData();
+      
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: `Đã thêm hội viên ${resident.full_name} vào ${assocName} thành công!`, type: 'success' } 
+      });
+      window.dispatchEvent(ev);
+      
+      // Trigger a custom event to notify other components of database change
+      window.dispatchEvent(new Event('db-changed'));
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra khi thêm hội viên: ${err.message || err}`);
+    }
+  };
 
   const displayList = selectedTab === 'seniors' ? seniors : veterans;
   const filteredList = displayList.filter(m => {
@@ -914,6 +969,79 @@ const CCBElderly = () => {
             {selectedTab === 'seniors' ? 'Danh sách Người cao tuổi' : 'Danh sách Hội viên Cựu chiến binh'} ({filteredList.length})
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Search to Add Dropdown */}
+            {!isGuest && (
+              <div style={{ position: 'relative', width: '280px', display: 'inline-block' }}>
+                <div className="search-box" style={{ width: '100%', border: '1px solid var(--border)', background: 'white' }}>
+                  <UserPlus size={14} style={{ color: selectedTab === 'seniors' ? '#1d4ed8' : '#15803d' }} />
+                  <input
+                    type="text"
+                    placeholder={`Thêm hội viên ${selectedTab === 'seniors' ? 'NCT' : 'CCB'}...`}
+                    value={residentSearchQuery}
+                    onChange={e => setResidentSearchQuery(e.target.value)}
+                    style={{ fontSize: '12.5px' }}
+                  />
+                </div>
+
+                {residentSearchResults.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    zIndex: 50,
+                    marginTop: '4px',
+                    maxHeight: '240px',
+                    overflowY: 'auto',
+                    textAlign: 'left'
+                  }}>
+                    {residentSearchResults.map((r: Resident) => {
+                      const age = getAge(r.dob);
+                      return (
+                        <div 
+                          key={r.id} 
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            borderBottom: '1px solid #f1f5f9',
+                            fontSize: '12.5px'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, color: '#111827' }}>{r.full_name}</div>
+                            <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                              {age} tuổi | {r.gender === 'female' ? 'Nữ' : 'Nam'}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleAddAssociationMember(r)}
+                            style={{
+                              padding: '3px 8px',
+                              background: selectedTab === 'seniors' ? '#1d4ed8' : '#15803d',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Thêm
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             <select
               value={groupFilter}
               onChange={(e) => setGroupFilter(e.target.value)}
