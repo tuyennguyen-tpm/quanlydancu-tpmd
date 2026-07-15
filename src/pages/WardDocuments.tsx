@@ -234,6 +234,43 @@ const WardDocuments = () => {
     };
   }, []);
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa/thu hồi công văn này? Sau khi thu hồi, các Tổ dân phố sẽ không còn thấy công văn này trong hệ thống.")) {
+      return;
+    }
+
+    const updated = documents.filter(d => d.id !== id);
+    setDocuments(updated);
+    localStorage.setItem('ward_documents', JSON.stringify(updated));
+
+    // Đồng bộ danh sách công văn mới lên Supabase (xóa phần tử đã chọn)
+    if (supabase) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const uId = session?.user?.id;
+        if (uId) {
+          const docsToSave = updated.map(({ read_by_tdps, ...rest }) => rest);
+          const { error } = await supabase
+            .from('app_config')
+            .upsert({
+              user_id: uId,
+              key: 'ward_documents',
+              value: JSON.stringify(docsToSave),
+              updated_at: new Date().toISOString()
+            });
+          
+          if (!error) {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã thu hồi công văn thành công!', type: 'success' } }));
+          } else {
+            console.error('Lỗi khi đồng bộ xóa Supabase:', error);
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi đồng bộ xóa:', err);
+      }
+    }
+  };
+
   const handleMarkRead = async (id: string) => {
     const rawTdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
     
@@ -553,6 +590,26 @@ const WardDocuments = () => {
                       >
                         👁️ Xem chi tiết
                       </button>
+                      {isPhuongMode && (
+                        <button 
+                          className="btn-danger" 
+                          style={{ 
+                            padding: '4px 10px', 
+                            fontSize: '12px', 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '4px', 
+                            cursor: 'pointer',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px'
+                          }} 
+                          onClick={() => handleDelete(d.id)}
+                        >
+                          🗑️ Thu hồi
+                        </button>
+                      )}
                       {!d.is_read && !isPhuongMode && (
                         <button 
                           className="btn-primary" 
