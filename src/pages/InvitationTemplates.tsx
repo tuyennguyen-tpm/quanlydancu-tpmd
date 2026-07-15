@@ -8,6 +8,26 @@ const InvitationTemplates: React.FC = () => {
   const rawTdpName  = localStorage.getItem('tdp_name')  || 'Quảng Giao';
   const rawLeader   = localStorage.getItem('leader_name') || 'Nguyễn Viết Châu';
 
+  // Format TDP and Ward names nicely to have diacritics and spaces
+  const formatTdpName = (name: string) => {
+    const clean = name.trim().toLowerCase().replace(/\s+/g, '');
+    if (clean === 'tdpquanggiao' || clean === 'quanggiao') {
+      return 'Quảng Giao';
+    }
+    return name;
+  };
+
+  const formatWardName = (name: string) => {
+    const clean = name.trim().toLowerCase().replace(/\s+/g, '');
+    if (clean === 'namsamson' || clean === 'phuongnamsamson') {
+      return 'Phường Nam Sầm Sơn';
+    }
+    return name;
+  };
+
+  const tdpNameFormatted = formatTdpName(rawTdpName);
+  const wardNameFormatted = formatWardName(rawWardName);
+
   const now = new Date();
   const dd  = String(now.getDate()).padStart(2, '0');
   const mm  = String(now.getMonth() + 1).padStart(2, '0');
@@ -19,12 +39,12 @@ const InvitationTemplates: React.FC = () => {
   const [meetingDay,     setMeetingDay]     = useState(dd);
   const [meetingMonth,   setMeetingMonth]   = useState(mm);
   const [meetingYear,    setMeetingYear]    = useState(yy);
-  const [location, setLocation]             = useState('nhà VH Tổ dân phố việt trung cũ ,nay là tdp ,quảng giao.');
+  const [location, setLocation]             = useState(`nhà VH Tổ dân phố việt trung cũ ,nay là tdp ,${tdpNameFormatted.toLowerCase()}.`);
   const [content, setContent]               = useState('nghe công bố các quyết định của ĐẢNG UY ,HDND,UBND.UBMT TỔ QUỐC VN thành lập tổ dân phố mới và  thống nhất kế hoạch ,hoạt động của tdp trong thời gian tới .');
   const [closingNote, setClosingNote]       = useState('đây là hội nghị quan trọng và ý nghĩa vậy rất mong ông bà đến đúng giờ');
   const [signerTitle, setSignerTitle]       = useState('Tổ trưởng tdp');
   const [signerName, setSignerName]         = useState(rawLeader.toUpperCase());
-  const [locationDate, setLocationDate]     = useState(`${rawWardName}, ngày ${dd}/${mm}/${yy}`);
+  const [locationDate, setLocationDate]     = useState(`${wardNameFormatted.replace('Phường ', '')}, ngày ${dd}/${mm}/${yy}`);
   const [activeTab, setActiveTab]           = useState<'leader' | 'party' | 'front'>('leader');
   const [orientation, setOrientation]       = useState<'portrait' | 'landscape'>('portrait');
   const printRef                            = useRef<HTMLDivElement>(null);
@@ -275,7 +295,7 @@ const InvitationTemplates: React.FC = () => {
 
           <!-- Body -->
           <p style="margin: ${isLandscape ? '0 0 6px' : '0 0 8px'}; text-indent: 1.5em; text-align: justify;">
-            Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp <span style="text-decoration: underline;">${rawTdpName}</span>, <span style="text-decoration: underline;">${rawWardName}</span>
+            Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp <span style="text-decoration: underline;">${tdpNameFormatted}</span>, <span style="text-decoration: underline;">${wardNameFormatted}</span>
           </p>
 
           <p style="margin: 0 0 4px;">
@@ -307,19 +327,35 @@ const InvitationTemplates: React.FC = () => {
       `;
     };
 
-    if (cardsToPrint.length > 0) {
-      cardsHtml = cardsToPrint.map(h => `
-        <div class="print-card-wrapper">
-          ${renderCardHtml(getRecipientName(h))}
-        </div>
-      `).join('');
-    } else {
-      cardsHtml = `
-        <div class="print-card-wrapper">
-          ${renderCardHtml(recipientTitle)}
+    const pairs: { card1: string; card2?: string }[] = [];
+    for (let i = 0; i < cardsToPrint.length; i += 2) {
+      pairs.push({
+        card1: getRecipientName(cardsToPrint[i]),
+        card2: cardsToPrint[i + 1] ? getRecipientName(cardsToPrint[i + 1]) : undefined
+      });
+    }
+
+    if (cardsToPrint.length === 0) {
+      pairs.push({ card1: recipientTitle });
+    }
+
+    cardsHtml = pairs.map(pair => {
+      const secondCardHtml = pair.card2 
+        ? renderCardHtml(pair.card2) 
+        : `<div style="width: ${isLandscape ? '210mm' : '148mm'}; height: ${isLandscape ? '148mm' : '210mm'}; flex-shrink: 0;"></div>`;
+        
+      // Add dashed cutting line style to the second element in the A4 sheet
+      const secondCardStyled = pair.card2 
+        ? secondCardHtml.replace('class="card-body"', `class="card-body" style="${isLandscape ? 'border-top: 1px dashed #cbd5e1;' : 'border-left: 1px dashed #cbd5e1;'}"`)
+        : secondCardHtml;
+
+      return `
+        <div class="a4-page-wrapper">
+          ${renderCardHtml(pair.card1)}
+          ${secondCardStyled}
         </div>
       `;
-    }
+    }).join('');
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -329,7 +365,7 @@ const InvitationTemplates: React.FC = () => {
         <meta charset="utf-8" />
         <style>
           @page {
-            size: A5 ${orientation};
+            size: ${isLandscape ? 'A4 portrait' : 'A4 landscape'};
             margin: 0;
           }
           body {
@@ -339,9 +375,9 @@ const InvitationTemplates: React.FC = () => {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
           }
-          .print-card-wrapper {
-            width: ${orientation === 'portrait' ? '148mm' : '210mm'};
-            height: ${orientation === 'portrait' ? '210mm' : '148mm'};
+          .a4-page-wrapper {
+            width: ${isLandscape ? '210mm' : '297mm'};
+            height: ${isLandscape ? '297mm' : '210mm'};
             box-sizing: border-box;
             position: relative;
             page-break-after: always;
@@ -349,23 +385,27 @@ const InvitationTemplates: React.FC = () => {
             margin: 0 auto;
             overflow: hidden;
             background: white;
+            display: flex;
+            flex-direction: ${isLandscape ? 'column' : 'row'};
+            gap: 0;
           }
-          .print-card-wrapper:last-child {
+          .a4-page-wrapper:last-child {
             page-break-after: avoid;
           }
           
-          /* Card inner styles identical to JSX */
+          /* Card inner styles */
           .card-body {
             position: relative;
-            width: 100%;
-            height: 100%;
-            padding: ${orientation === 'portrait' ? '22mm 18mm 18mm' : '10mm 15mm 10mm'};
+            width: ${isLandscape ? '210mm' : '148mm'};
+            height: ${isLandscape ? '148mm' : '210mm'};
+            padding: ${isLandscape ? '10mm 15mm 10mm' : '22mm 18mm 18mm'};
             font-family: "Times New Roman", Times, serif;
             font-size: ${isLandscape ? '11.5pt' : '13pt'};
             line-height: ${isLandscape ? 1.5 : 1.65};
             color: #111;
             box-sizing: border-box;
             background: white;
+            flex-shrink: 0;
           }
         </style>
       </head>
@@ -426,19 +466,19 @@ const InvitationTemplates: React.FC = () => {
   // ── Left org block (varies by tab) ────────────────────────────────
   const leftOrg = activeTab === 'party' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>ĐẢNG BỘ {rawWardName.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>CHI BỘ {rawTdpName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>ĐẢNG BỘ {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>CHI BỘ {tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : activeTab === 'front' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>UBMTTQ VN {rawWardName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>UBMTTQ VN {wardNameFormatted.toUpperCase()}</p>
       <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>{rawTdpName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>{tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>UBND {rawWardName.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>TỔ DÂN PHỐ {rawTdpName.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>UBND {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>TỔ DÂN PHỐ {tdpNameFormatted.toUpperCase()}</p>
     </>
   );
 
@@ -512,8 +552,8 @@ const InvitationTemplates: React.FC = () => {
       {/* BODY */}
       <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 8px', textIndent: '1.5em', textAlign: 'justify' }}>
         Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp{' '}
-        <span style={{ textDecoration: 'underline' }}>{rawTdpName}</span>,{' '}
-        <span style={{ textDecoration: 'underline' }}>{rawWardName}</span>
+        <span style={{ textDecoration: 'underline' }}>{tdpNameFormatted}</span>,{' '}
+        <span style={{ textDecoration: 'underline' }}>{wardNameFormatted}</span>
       </p>
 
       <p style={{ margin: '0 0 4px' }}>
