@@ -436,7 +436,8 @@ const InvitationTemplates: React.FC = () => {
       fontSize: isLandscape ? '9.5pt' : '11.5pt', 
       lineHeight: isLandscape ? 1.45 : 1.6,
       color: '#111', boxSizing: 'border-box',
-      overflow: 'hidden' // hide overflow during print preview
+      overflow: 'hidden', // hide overflow during print preview
+      flexShrink: 0
     }}>
       <BorderFrame />
 
@@ -882,7 +883,7 @@ const InvitationTemplates: React.FC = () => {
             </div>
 
             {/* Screen Preview */}
-            <div className="screen-only" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div className="screen-only" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.1)', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
               <InvitationCard recipient={recipientTitle} />
             </div>
 
