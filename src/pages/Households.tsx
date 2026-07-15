@@ -178,6 +178,8 @@ const Households = () => {
   // State for Transfer / Split Household
   const [transferringMember, setTransferringMember] = useState<Resident | null>(null);
   const [targetHouseholdIdForTransfer, setTargetHouseholdIdForTransfer] = useState<string>('');
+  const [transferType, setTransferType] = useState<'internal' | 'external'>('internal');
+  const [transferReason, setTransferReason] = useState<string>('');
 
   const [splittingMember, setSplittingMember] = useState<Resident | null>(null);
   const [newHkNumberForSplit, setNewHkNumberForSplit] = useState<string>('');
@@ -577,16 +579,41 @@ const Households = () => {
   };
 
   const handleTransferHousehold = async () => {
-    if (!transferringMember || !targetHouseholdIdForTransfer) return;
+    if (!transferringMember) return;
+    if (transferType === 'internal' && !targetHouseholdIdForTransfer) return;
+    if (transferType === 'external' && !transferReason.trim()) {
+      showToast('Vui lòng nhập lý do chuyển đi!', 'warning');
+      return;
+    }
+
     try {
       const oldHh = households.find(h => h.id === transferringMember.household_id);
       
-      const updatedResident: Resident = {
-        ...transferringMember,
-        household_id: targetHouseholdIdForTransfer,
-        is_head: false,
-        relationship_with_head: 'Thành viên'
-      };
+      let updatedResident: Resident;
+      
+      if (transferType === 'internal') {
+        updatedResident = {
+          ...transferringMember,
+          household_id: targetHouseholdIdForTransfer,
+          is_head: false,
+          relationship_with_head: 'Thành viên'
+        };
+      } else {
+        // Chuyển đi nơi khác (ra khỏi tổ/TDP)
+        const oldNotes = transferringMember.notes ? transferringMember.notes.trim() : '';
+        const moveNote = `Chuyển đi: ${transferReason.trim()}`;
+        const updatedNotes = oldNotes ? `${oldNotes} | ${moveNote}` : moveNote;
+        
+        updatedResident = {
+          ...transferringMember,
+          household_id: '', // Clear household_id so they disappear from this household list
+          is_head: false,
+          relationship_with_head: 'Thành viên chuyển đi',
+          status: 'temporary_absent', // Mark as temporary absent
+          notes: updatedNotes
+        };
+      }
+      
       await db.saveResident(updatedResident);
       
       if (oldHh && oldHh.head_of_household_id === transferringMember.id) {
@@ -596,9 +623,16 @@ const Households = () => {
         });
       }
 
-      showToast(`Đã chuyển nhân khẩu ${transferringMember.full_name} sang hộ gia đình mới!`, 'success');
+      if (transferType === 'internal') {
+        showToast(`Đã chuyển nhân khẩu ${transferringMember.full_name} sang hộ gia đình mới!`, 'success');
+      } else {
+        showToast(`Đã chuyển đi nhân khẩu ${transferringMember.full_name} (Lý do: ${transferReason.trim()})!`, 'success');
+      }
+      
       setTransferringMember(null);
       setTargetHouseholdIdForTransfer('');
+      setTransferReason('');
+      setTransferType('internal');
       setViewingMembersHousehold(null);
       loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
@@ -2093,6 +2127,8 @@ const Households = () => {
                                 onClick={() => {
                                   setTransferringMember(member);
                                   setTargetHouseholdIdForTransfer('');
+                                  setTransferType('internal');
+                                  setTransferReason('');
                                 }}
                                 title="Chuyển sang hộ gia đình khác"
                               >
@@ -2148,29 +2184,77 @@ const Households = () => {
             </div>
             <div className="modal-form" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                Chuyển nhân khẩu <strong>{transferringMember.full_name}</strong> sang hộ gia đình khác trong tổ dân phố:
+                Chuyển nhân khẩu <strong>{transferringMember.full_name}</strong>:
               </p>
-              
+
               <div className="form-group">
-                <label>Chọn hộ gia đình chuyển đến *</label>
-                <select 
-                  value={targetHouseholdIdForTransfer} 
-                  onChange={(e) => setTargetHouseholdIdForTransfer(e.target.value)}
-                  required
-                >
-                  <option value="">-- Chọn hộ gia đình --</option>
-                  {households
-                    .filter(h => h.id !== transferringMember.household_id)
-                    .map(h => {
-                      const head = residents.find(r => r.id === h.head_of_household_id);
-                      return (
-                        <option key={h.id} value={h.id}>
-                          Sổ: {h.household_number} - {h.address} (Chủ hộ: {head ? head.full_name : 'Chưa rõ'})
-                        </option>
-                      );
-                    })}
-                </select>
+                <label>Hình thức chuyển *</label>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'normal', cursor: 'pointer', fontSize: '13px' }}>
+                    <input 
+                      type="radio" 
+                      name="transferType" 
+                      checked={transferType === 'internal'} 
+                      onChange={() => setTransferType('internal')}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Trong tổ dân phố
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'normal', cursor: 'pointer', fontSize: '13px' }}>
+                    <input 
+                      type="radio" 
+                      name="transferType" 
+                      checked={transferType === 'external'} 
+                      onChange={() => setTransferType('external')}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Chuyển đi nơi khác (ra ngoài TDP)
+                  </label>
+                </div>
               </div>
+              
+              {transferType === 'internal' ? (
+                <div className="form-group">
+                  <label>Chọn hộ gia đình chuyển đến *</label>
+                  <select 
+                    value={targetHouseholdIdForTransfer} 
+                    onChange={(e) => setTargetHouseholdIdForTransfer(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '13px' }}
+                  >
+                    <option value="">-- Chọn hộ gia đình --</option>
+                    {households
+                      .filter(h => h.id !== transferringMember.household_id)
+                      .map(h => {
+                        const head = residents.find(r => r.id === h.head_of_household_id);
+                        return (
+                          <option key={h.id} value={h.id}>
+                            Sổ: {h.household_number} - {h.address} (Chủ hộ: {head ? head.full_name : 'Chưa rõ'})
+                          </option>
+                        );
+                      })}
+                  </select>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label>Lý do / Địa điểm chuyển đi *</label>
+                  <input 
+                    type="text" 
+                    value={transferReason} 
+                    onChange={(e) => setTransferReason(e.target.value)}
+                    placeholder="Ví dụ: đi lấy chồng ở hà nội, đi nước ngoài..."
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border)',
+                      fontSize: '13px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              )}
 
               <div className="form-actions" style={{ marginTop: '10px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setTransferringMember(null)}>Hủy</button>
@@ -2178,7 +2262,7 @@ const Households = () => {
                   type="button" 
                   className="btn btn-primary" 
                   onClick={handleTransferHousehold}
-                  disabled={!targetHouseholdIdForTransfer}
+                  disabled={transferType === 'internal' ? !targetHouseholdIdForTransfer : !transferReason.trim()}
                 >
                   Xác nhận chuyển
                 </button>
@@ -2187,6 +2271,7 @@ const Households = () => {
           </div>
         </div>
       )}
+
 
       {/* Split Member Modal */}
       {splittingMember && (
