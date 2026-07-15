@@ -58,7 +58,8 @@ const FarmersAssociation = () => {
     if (!matchSearch) return false;
     if (groupFilter === 'all') return true;
     const hh = households.find(h => h.id === m.household_id);
-    return hh?.self_management_group === groupFilter;
+    if (!hh || !hh.self_management_group) return false;
+    return hh.self_management_group.trim().toLowerCase() === groupFilter.trim().toLowerCase();
   });
 
   const getAge = (dob: string) => {
