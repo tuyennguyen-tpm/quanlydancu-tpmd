@@ -943,17 +943,32 @@ const InvitationTemplates: React.FC = () => {
             <div className="screen-only" style={{ 
               display: 'flex', 
               justifyContent: 'center', 
-              overflow: 'hidden', 
+              alignItems: 'center',
               width: '100%',
               padding: '10px 0',
               flexShrink: 0
             }}>
               <div style={{
-                transform: orientation === 'portrait' ? 'scale(0.85)' : 'scale(0.8)',
-                transformOrigin: 'top center',
-                flexShrink: 0
+                width: isLandscape ? '635px' : '475px',
+                height: isLandscape ? '447px' : '675px',
+                overflow: 'hidden',
+                position: 'relative',
+                flexShrink: 0,
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
               }}>
-                <InvitationCard recipient={recipientTitle} />
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  transform: isLandscape ? 'scale(0.8)' : 'scale(0.85)',
+                  transformOrigin: 'top left',
+                  width: isLandscape ? '794px' : '559px',
+                  height: isLandscape ? '559px' : '794px'
+                }}>
+                  <InvitationCard recipient={recipientTitle} />
+                </div>
               </div>
             </div>
 
