@@ -19,15 +19,19 @@ const WardDocuments = () => {
     // Khởi tạo data mẫu nếu trống
     if (loaded.length === 0) {
       loaded = [
-        { id: 'wd-1', title: 'Nghị quyết tháng 7 về vệ sinh môi trường', category: 'party', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'Chi bộ Phường', read_by_tdps: [] },
-        { id: 'wd-2', title: 'Công điện khẩn phòng chống bão', category: 'leader', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'UBND Phường', read_by_tdps: [] },
+        { id: 'wd-1', title: 'Nghị quyết tháng 7 về vệ sinh môi trường', category: 'party', target_scope: 'all', is_read: false, created_at: new Date(Date.now() - 3600000 * 2).toISOString(), sender_name: 'Chi bộ Phường', read_by_tdps: [] },
+        { id: 'wd-2', title: 'Công điện khẩn phòng chống bão', category: 'leader', target_scope: 'all', is_read: false, created_at: new Date(Date.now() - 3600000).toISOString(), sender_name: 'UBND Phường', read_by_tdps: [] },
         { id: 'wd-3', title: 'Kế hoạch tổ chức tết Trung thu', category: 'front', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'Mặt trận Tổ quốc Phường', read_by_tdps: [] }
       ];
       localStorage.setItem('ward_documents', JSON.stringify(loaded));
     }
     
+    // Sắp xếp văn bản mới nhất lên đầu (giảm dần theo thời gian)
+    loaded.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
     setDocuments(loaded);
   };
+
 
   const checkUnreadAndSpeak = () => {
     // Chỉ đọc nếu không phải màn hình của phường
@@ -82,25 +86,35 @@ const WardDocuments = () => {
     }
   };
 
+  // Đồng bộ lại tài liệu khi chuyển chế độ hoặc tự động quét mỗi 3 giây
   useEffect(() => {
     loadDocs();
+  }, [isPhuongMode]);
 
-    // Phát thông báo ngay lập tức sau 3 giây
+  useEffect(() => {
+    // Tự động tải lại tài liệu mỗi 3 giây để đồng bộ tức thời giữa các tab / chế độ
+    const syncInterval = setInterval(() => {
+      loadDocs();
+    }, 3000);
+
+    // Phát thông báo bằng tiếng nói ngay lập tức sau 3 giây
     const tId = setTimeout(() => {
       checkUnreadAndSpeak();
     }, 3000);
 
-    // Lặp lại cứ mỗi 1 phút (60000ms)
-    const intervalId = setInterval(() => {
+    // Lặp lại phát thông báo giọng nói cứ mỗi 1 phút (60000ms)
+    const voiceIntervalId = setInterval(() => {
       checkUnreadAndSpeak();
     }, 60000);
 
     return () => {
+      clearInterval(syncInterval);
       clearTimeout(tId);
-      clearInterval(intervalId);
+      clearInterval(voiceIntervalId);
       window.speechSynthesis.cancel();
     };
   }, []);
+
 
   const handleMarkRead = (id: string) => {
     const rawTdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
@@ -175,11 +189,15 @@ const WardDocuments = () => {
       is_read: false,
       created_at: new Date().toISOString(),
       file_url: newDoc.file_url,
-      file_name: newDoc.file_name
+      file_name: newDoc.file_name,
+      read_by_tdps: []
     };
     const updated = [doc, ...documents];
+    // Sắp xếp giảm dần theo thời gian (mới nhất lên đầu)
+    updated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     setDocuments(updated);
     localStorage.setItem('ward_documents', JSON.stringify(updated));
+
     setShowAddModal(false);
     setNewDoc({ category: 'party', target_scope: 'all' });
     
