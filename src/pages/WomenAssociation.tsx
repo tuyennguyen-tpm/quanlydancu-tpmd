@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { db } from '../services/db';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
@@ -17,6 +17,7 @@ const WomenAssociation = () => {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
+  const [residentSearchQuery, setResidentSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states for adding member
@@ -105,6 +106,57 @@ const WomenAssociation = () => {
     window.addEventListener('db-changed', loadData);
     return () => window.removeEventListener('db-changed', loadData);
   }, []);
+
+  const getAge = (dobString: string) => {
+    if (!dobString) return '—';
+    const year = parseInt(dobString.substring(0, 4));
+    return isNaN(year) ? '—' : `${new Date().getFullYear() - year}`;
+  };
+
+  const residentSearchResults = useMemo(() => {
+    if (residentSearchQuery.trim().length < 2) return [];
+    return allResidents.filter(r => {
+      if (r.status === 'deceased') return false;
+      if (r.gender !== 'female') return false; // Women's Association is for women only!
+      const codes = (r.association_membership || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (codes.includes('pn')) return false;
+      return r.full_name.toLowerCase().includes(residentSearchQuery.toLowerCase());
+    }).slice(0, 5);
+  }, [residentSearchQuery, allResidents]);
+
+  const handleAddPnMember = async (resident: Resident) => {
+    if (isGuest) {
+      alert('Tài khoản của bạn không có quyền sửa đổi danh sách!');
+      return;
+    }
+    try {
+      const currentCodes = (resident.association_membership || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+        
+      if (!currentCodes.includes('pn')) {
+        currentCodes.push('pn');
+      }
+      
+      const updatedResident = {
+        ...resident,
+        association_membership: currentCodes.join(',')
+      };
+      
+      await db.saveResident(updatedResident);
+      setResidentSearchQuery(''); // clear search
+      loadData();
+      
+      const ev = new CustomEvent('show-toast', { 
+        detail: { message: `Đã thêm hội viên ${resident.full_name} vào Hội Phụ nữ thành công!`, type: 'success' } 
+      });
+      window.dispatchEvent(ev);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra khi thêm hội viên: ${err.message || err}`);
+    }
+  };
 
   const filteredMembers = members.filter(m => {
     // Search query match
@@ -767,6 +819,79 @@ const WomenAssociation = () => {
           <div className="card-title"><span className="title-dot"></span>Danh sách hội viên Phụ nữ ({filteredMembers.length})</div>
           
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Search to Add Dropdown */}
+            {!isGuest && (
+              <div style={{ position: 'relative', width: '280px', display: 'inline-block' }}>
+                <div className="search-box" style={{ width: '100%', border: '1px solid var(--border)' }}>
+                  <UserPlus size={14} style={{ color: '#D81B60' }} />
+                  <input
+                    type="text"
+                    placeholder="Nhập tên nhân khẩu để thêm..."
+                    value={residentSearchQuery}
+                    onChange={e => setResidentSearchQuery(e.target.value)}
+                    style={{ fontSize: '12.5px' }}
+                  />
+                </div>
+
+                {residentSearchResults.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                    zIndex: 50,
+                    marginTop: '4px',
+                    maxHeight: '240px',
+                    overflowY: 'auto',
+                    textAlign: 'left'
+                  }}>
+                    {residentSearchResults.map((r: Resident) => {
+                      const age = getAge(r.dob);
+                      return (
+                        <div 
+                          key={r.id} 
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            borderBottom: '1px solid #fce4ec',
+                            fontSize: '12.5px'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, color: '#1e293b' }}>{r.full_name}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>
+                              {age} tuổi | {r.permanent_address || 'Không rõ địa chỉ'}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleAddPnMember(r)}
+                            style={{
+                              padding: '3px 8px',
+                              background: '#D81B60',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Thêm
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Lọc theo tổ */}
             <select
               value={groupFilter}

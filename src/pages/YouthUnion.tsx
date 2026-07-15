@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/db';
 import type { Resident } from '../types';
-import { Search, Zap, Users, Phone, FileDown, Printer } from 'lucide-react';
+import { Search, Zap, Users, Phone, FileDown, Printer, UserPlus } from 'lucide-react';
 import ExcelJS from 'exceljs';
 
 const currentYear = new Date().getFullYear();
 
 const YouthUnion = () => {
   const [members, setMembers] = useState<Resident[]>([]);
+  const [allResidents, setAllResidents] = useState<Resident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
+  const [residentSearchQuery, setResidentSearchQuery] = useState('');
 
   const savedGroups = localStorage.getItem('tdp_groups_config');
   const groupsList = savedGroups ? JSON.parse(savedGroups) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
@@ -17,6 +19,7 @@ const YouthUnion = () => {
   const loadData = async () => {
     try {
       const residents = await db.getResidents();
+      setAllResidents(residents);
       const dtMembers = residents.filter(r => {
         if (r.status === 'deceased') return false;
         const membership = r.association_membership || '';
@@ -34,6 +37,16 @@ const YouthUnion = () => {
     return () => window.removeEventListener('db-changed', loadData);
   }, []);
 
+  const residentSearchResults = useMemo(() => {
+    if (residentSearchQuery.trim().length < 2) return [];
+    return allResidents.filter(r => {
+      if (r.status === 'deceased') return false;
+      const codes = (r.association_membership || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (codes.includes('dt')) return false;
+      return r.full_name.toLowerCase().includes(residentSearchQuery.toLowerCase());
+    }).slice(0, 5);
+  }, [residentSearchQuery, allResidents]);
+
   const filteredMembers = members.filter(m => {
     const matchSearch = m.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         (m.phone && m.phone.includes(searchQuery));
@@ -46,6 +59,73 @@ const YouthUnion = () => {
     if (!dob) return '—';
     const year = parseInt(dob.substring(0, 4));
     return isNaN(year) ? '—' : `${currentYear - year}`;
+  };
+
+  const currentRole = localStorage.getItem('current_role') || 'demo';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'chi_doan_thanh_nien' && currentRole !== 'admin');
+
+  const handleAddMember = async (resident: Resident) => {
+    if (isGuest) {
+      alert('Tài khoản của bạn không có quyền sửa đổi danh sách!');
+      return;
+    }
+    try {
+      const currentCodes = (resident.association_membership || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+        
+      if (!currentCodes.includes('dt')) {
+        currentCodes.push('dt');
+      }
+      
+      const updatedResident = {
+        ...resident,
+        association_membership: currentCodes.join(',')
+      };
+      
+      await db.saveResident(updatedResident);
+      setResidentSearchQuery(''); // clear search
+      loadData();
+      
+      // Trigger a custom event to notify other components of database change
+      window.dispatchEvent(new Event('db-changed'));
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra khi thêm đoàn viên: ${err.message || err}`);
+    }
+  };
+
+  const handleRemoveMember = async (resident: Resident) => {
+    if (isGuest) {
+      alert('Tài khoản của bạn không có quyền sửa đổi danh sách!');
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn cho đoàn viên "${resident.full_name}" thôi tham gia Chi đoàn Thanh niên?`)) {
+      return;
+    }
+    try {
+      const currentCodes = (resident.association_membership || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+        
+      const updatedCodes = currentCodes.filter(c => c !== 'dt');
+      
+      const updatedResident = {
+        ...resident,
+        association_membership: updatedCodes.join(',')
+      };
+      
+      await db.saveResident(updatedResident);
+      loadData();
+      
+      // Trigger custom event
+      window.dispatchEvent(new Event('db-changed'));
+    } catch (err: any) {
+      console.error(err);
+      alert(`Có lỗi xảy ra khi rút tên đoàn viên: ${err.message || err}`);
+    }
   };
 
   // Printer function
@@ -281,11 +361,86 @@ const YouthUnion = () => {
 
       {/* Filter + Search */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Users size={16} style={{ color: '#dc2626' }} />
-          <span style={{ fontSize: '15px', fontWeight: 700, color: '#7f1d1d' }}>
-            Danh sách đoàn viên Thanh niên ({filteredMembers.length})
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Users size={16} style={{ color: '#dc2626' }} />
+            <span style={{ fontSize: '15px', fontWeight: 700, color: '#7f1d1d' }}>
+              Danh sách đoàn viên Thanh niên ({filteredMembers.length})
+            </span>
+          </div>
+
+          {/* Search to Add Dropdown */}
+          {!isGuest && (
+            <div style={{ position: 'relative', width: '280px', display: 'inline-block' }}>
+              <div className="search-box" style={{ width: '100%', border: '1px solid #fecaca', background: 'white' }}>
+                <UserPlus size={14} style={{ color: '#dc2626' }} />
+                <input
+                  type="text"
+                  placeholder="Nhập tên nhân khẩu để thêm..."
+                  value={residentSearchQuery}
+                  onChange={e => setResidentSearchQuery(e.target.value)}
+                  style={{ fontSize: '12.5px' }}
+                />
+              </div>
+
+              {residentSearchResults.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: 'white',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  zIndex: 50,
+                  marginTop: '4px',
+                  maxHeight: '240px',
+                  overflowY: 'auto',
+                  textAlign: 'left'
+                }}>
+                  {residentSearchResults.map(r => {
+                    const age = getAge(r.dob);
+                    return (
+                      <div 
+                        key={r.id} 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 12px',
+                          borderBottom: '1px solid #fff1f2',
+                          fontSize: '12.5px'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#111827' }}>{r.full_name}</div>
+                          <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                            {age} tuổi | {r.gender === 'female' ? 'Nữ' : 'Nam'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAddMember(r)}
+                          style={{
+                            padding: '3px 8px',
+                            background: '#dc2626',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Thêm
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button 
@@ -333,7 +488,7 @@ const YouthUnion = () => {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#fff1f2' }}>
-              {['STT', 'Họ và tên', 'Giới tính', 'Ngày sinh', 'Tuổi', 'Điện thoại', 'Nghề nghiệp', 'Địa chỉ', 'Trạng thái'].map(h => (
+              {['STT', 'Họ và tên', 'Giới tính', 'Ngày sinh', 'Tuổi', 'Điện thoại', 'Nghề nghiệp', 'Địa chỉ', 'Trạng thái', ...(!isGuest ? ['Hành động'] : [])].map(h => (
                 <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
@@ -341,11 +496,11 @@ const YouthUnion = () => {
           <tbody>
             {filteredMembers.length === 0 ? (
               <tr>
-                <td colSpan={9} style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af', fontSize: '14px' }}>
+                <td colSpan={!isGuest ? 10 : 9} style={{ textAlign: 'center', padding: '48px 16px', color: '#9ca3af', fontSize: '14px' }}>
                   <Zap size={32} style={{ display: 'block', margin: '0 auto 8px', opacity: 0.3 }} />
                   {searchQuery || groupFilter !== 'all'
                     ? 'Không tìm thấy đoàn viên nào khớp kết quả tìm kiếm.'
-                    : 'Chưa có đoàn viên nào. Vào trang Nhân khẩu → chỉnh sửa → tích "Chi đoàn Thanh niên" để thêm.'}
+                    : 'Chưa có đoàn viên nào. Nhập tên nhân khẩu ở ô tìm kiếm bên trên để thêm nhanh.'}
                 </td>
               </tr>
             ) : filteredMembers.map((m, idx) => {
@@ -371,6 +526,28 @@ const YouthUnion = () => {
                       {statusLabel}
                     </span>
                   </td>
+                  {!isGuest && (
+                    <td style={{ padding: '8px 14px' }}>
+                      <button
+                        onClick={() => handleRemoveMember(m)}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#fef2f2',
+                          border: '1px solid #fee2e2',
+                          color: '#dc2626',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseOver={e => (e.currentTarget.style.background = '#fee2e2')}
+                        onMouseOut={e => (e.currentTarget.style.background = '#fef2f2')}
+                      >
+                        ❌ Rút
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
