@@ -37,6 +37,8 @@ const InvitationTemplates: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
   const [recipientPattern, setRecipientPattern] = useState('Đại diện hộ gia đình ông/bà {ten_chu_ho}');
+  const [showBorder, setShowBorder] = useState(false);
+  const [showLeftHeader, setShowLeftHeader] = useState(false);
 
   const [groups, setGroups] = useState<string[]>(() => {
     const saved = localStorage.getItem('tdp_groups_config');
@@ -218,6 +220,7 @@ const InvitationTemplates: React.FC = () => {
 
       return `
         <div class="card-body">
+          ${showBorder ? `
           <!-- Border Frame -->
           <div class="border-frame" style="position: absolute; inset: 0; pointer-events: none; border: ${isLandscape ? '5px solid #2d6a2d' : '7px solid #2d6a2d'}; border-radius: 4px; box-sizing: border-box;">
             <div class="border-frame-inner" style="position: absolute; inset: ${isLandscape ? '4px' : '6px'}; border: 2px solid #2d6a2d; border-radius: 2px; box-sizing: border-box;"></div>
@@ -228,8 +231,10 @@ const InvitationTemplates: React.FC = () => {
             <div class="top-center-ornament" style="position: absolute; top: -3px; left: 50%; transform: translateX(-50%); color: #2d6a2d; font-size: 16px;">⬦</div>
             <div class="bottom-center-ornament" style="position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); color: #2d6a2d; font-size: 16px;">⬦</div>
           </div>
+          ` : ''}
 
           <!-- Header -->
+          ${showLeftHeader ? `
           <div style="display: flex; justify-content: space-between; margin-bottom: ${isLandscape ? '8px' : '14px'};">
             <div style="text-align: center; width: 44%;">
               ${leftOrgHtml}
@@ -244,6 +249,19 @@ const InvitationTemplates: React.FC = () => {
               <div style="width: 120px; border-bottom: 1px solid #111; margin: 4px auto;"></div>
             </div>
           </div>
+          ` : `
+          <div style="text-align: center; margin-bottom: ${isLandscape ? '10px' : '16px'}; width: 100%;">
+            <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '10.5pt' : '12pt'};">
+              ${docTitle}
+            </p>
+            ${activeTab !== 'party' ? `
+              <p style="margin: 2px 0 0; font-weight: 700; font-size: ${isLandscape ? '10pt' : '11pt'}; text-decoration: underline;">
+                Độc lập – Tự do – Hạnh phúc
+              </p>
+            ` : ''}
+            <div style="width: 150px; border-bottom: 1px solid #111; margin: 6px auto 0;"></div>
+          </div>
+          `}
 
           <!-- Title -->
           <h1 style="text-align: center; font-weight: 700; font-size: ${isLandscape ? '16pt' : '19pt'}; margin: ${isLandscape ? '4px 0 6px' : '8px 0 10px'}; letter-spacing: 2px;">
@@ -439,27 +457,41 @@ const InvitationTemplates: React.FC = () => {
       overflow: 'hidden', // hide overflow during print preview
       flexShrink: 0
     }}>
-      <BorderFrame />
+      {showBorder && <BorderFrame />}
 
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isLandscape ? '8px' : '14px' }}>
-        <div style={{ textAlign: 'center', width: '44%' }}>
-          {leftOrg}
-          <div style={{ width: '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
-          <p style={{ margin: 0, fontSize: '8.5pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
+      {showLeftHeader ? (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isLandscape ? '8px' : '14px' }}>
+          <div style={{ textAlign: 'center', width: '44%' }}>
+            {leftOrg}
+            <div style={{ width: '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
+            <p style={{ margin: 0, fontSize: '8.5pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
+          </div>
+          <div style={{ textAlign: 'center', width: '52%' }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '10pt' : '11pt' }}>
+              {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
+            </p>
+            {activeTab !== 'party' && (
+              <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9.5pt' : '10.5pt', textDecoration: 'underline' }}>
+                Độc lập – Tự do – <strong>Hạnh phúc</strong>
+              </p>
+            )}
+            <div style={{ width: '120px', borderBottom: '1px solid #111', margin: '4px auto' }} />
+          </div>
         </div>
-        <div style={{ textAlign: 'center', width: '52%' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '10pt' : '11pt' }}>
+      ) : (
+        <div style={{ textAlign: 'center', marginBottom: isLandscape ? '10px' : '16px', width: '100%' }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '10.5pt' : '12pt' }}>
             {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
           </p>
           {activeTab !== 'party' && (
-            <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9.5pt' : '10.5pt', textDecoration: 'underline' }}>
-              Độc lập – Tự do – <strong>Hạnh phúc</strong>
+            <p style={{ margin: '2px 0 0', fontWeight: 700, fontSize: isLandscape ? '10pt' : '11pt', textDecoration: 'underline' }}>
+              Độc lập – Tự do – Hạnh phúc
             </p>
           )}
-          <div style={{ width: '120px', borderBottom: '1px solid #111', margin: '4px auto' }} />
+          <div style={{ width: '150px', borderBottom: '1px solid #111', margin: '6px auto 0' }} />
         </div>
-      </div>
+      )}
 
       {/* TITLE */}
       <h1 style={{ 
@@ -698,7 +730,7 @@ const InvitationTemplates: React.FC = () => {
 
           {/* Scrollable list */}
           <div style={{
-            maxHeight: '380px',
+            maxHeight: '160px',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -868,11 +900,22 @@ const InvitationTemplates: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ marginTop: '14px', background: '#f0f9ff', borderRadius: '8px', padding: '10px', fontSize: '11px', color: '#0369a1', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ marginTop: '14px', background: '#f0f9ff', borderRadius: '8px', padding: '10px', fontSize: '11px', color: '#0369a1', display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
               <strong>ℹ️ Cấu hình địa bàn:</strong>
               <span>Tổ dân phố: <strong>{rawTdpName}</strong></span>
               <span>Phường: <strong>{rawWardName}</strong></span>
               <span>Tổ trưởng: <strong>{rawLeader}</strong></span>
+              
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, color: '#0369a1' }}>
+                  <input type="checkbox" checked={showBorder} onChange={e => setShowBorder(e.target.checked)} style={{ cursor: 'pointer' }} />
+                  Khung viền trang trí
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 600, color: '#0369a1' }}>
+                  <input type="checkbox" checked={showLeftHeader} onChange={e => setShowLeftHeader(e.target.checked)} style={{ cursor: 'pointer' }} />
+                  Đơn vị gửi bên trái
+                </label>
+              </div>
             </div>
           </div>
 
