@@ -10,6 +10,7 @@ const WardDocuments = () => {
   const [newDoc, setNewDoc] = useState<Partial<WardDocument>>({ category: 'party', target_scope: 'all' });
   const [isPhuongMode, setIsPhuongMode] = useState(localStorage.getItem('is_phuong_mode') === 'true'); // Simulate Phường mode
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState<WardDocument | null>(null);
 
   const loadDocs = async () => {
     const stored = localStorage.getItem('ward_documents');
@@ -18,9 +19,9 @@ const WardDocuments = () => {
     // Khởi tạo data mẫu nếu trống
     if (loaded.length === 0) {
       loaded = [
-        { id: 'wd-1', title: 'Nghị quyết tháng 7 về vệ sinh môi trường', category: 'party', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'Chi bộ Phường' },
-        { id: 'wd-2', title: 'Công điện khẩn phòng chống bão', category: 'leader', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'UBND Phường' },
-        { id: 'wd-3', title: 'Kế hoạch tổ chức tết Trung thu', category: 'front', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'Mặt trận Tổ quốc Phường' }
+        { id: 'wd-1', title: 'Nghị quyết tháng 7 về vệ sinh môi trường', category: 'party', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'Chi bộ Phường', read_by_tdps: [] },
+        { id: 'wd-2', title: 'Công điện khẩn phòng chống bão', category: 'leader', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'UBND Phường', read_by_tdps: [] },
+        { id: 'wd-3', title: 'Kế hoạch tổ chức tết Trung thu', category: 'front', target_scope: 'all', is_read: false, created_at: new Date().toISOString(), sender_name: 'Mặt trận Tổ quốc Phường', read_by_tdps: [] }
       ];
       localStorage.setItem('ward_documents', JSON.stringify(loaded));
     }
@@ -58,12 +59,23 @@ const WardDocuments = () => {
       msg.lang = 'vi-VN';
       
       const voices = window.speechSynthesis.getVoices();
-      const viVoices = voices.filter(v => v.lang.includes('vi'));
-      const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('online'));
-      if (googleVoice) {
-        msg.voice = googleVoice;
-      } else if (viVoices.length > 0) {
-        msg.voice = viVoices[0];
+      const viVoices = voices.filter(v => {
+        const l = v.lang.toLowerCase().replace('_', '-');
+        return l.includes('vi') || l.includes('vnm');
+      });
+      
+      // Lọc tìm giọng nữ Việt Nam (Google, An, HoaiMy, Nữ) và loại trừ giọng Nam (male)
+      const femaleViVoice = viVoices.find(v => {
+        const name = v.name.toLowerCase();
+        return (
+          (name.includes('google') || name.includes('an') || name.includes('hoaimy') || name.includes('female') || name.includes('nữ')) &&
+          !name.includes('nam') && 
+          !name.includes('male')
+        );
+      }) || viVoices.find(v => !v.name.toLowerCase().includes('nam')) || viVoices[0];
+
+      if (femaleViVoice) {
+        msg.voice = femaleViVoice;
       }
 
       window.speechSynthesis.speak(msg);
@@ -91,15 +103,35 @@ const WardDocuments = () => {
   }, []);
 
   const handleMarkRead = (id: string) => {
+    const rawTdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
     // Cập nhật state trực tiếp
     setDocuments(prevDocs => {
-      const updated = prevDocs.map(d => d.id === id ? { ...d, is_read: true } : d);
+      const updated = prevDocs.map(d => {
+        if (d.id === id) {
+          const currentReads = d.read_by_tdps || [];
+          const alreadyRead = currentReads.some(r => r.tdp_name === rawTdpName);
+          const newReads = alreadyRead 
+            ? currentReads 
+            : [...currentReads, { tdp_name: rawTdpName, read_at: new Date().toISOString() }];
+          
+          return { ...d, is_read: true, read_by_tdps: newReads };
+        }
+        return d;
+      });
       localStorage.setItem('ward_documents', JSON.stringify(updated));
       return updated;
     });
     // Dừng âm thanh nếu đang đọc
     window.speechSynthesis.cancel();
   };
+
+  const handleViewDoc = (d: WardDocument) => {
+    setViewingDoc(d);
+    if (!d.is_read && !isPhuongMode) {
+      handleMarkRead(d.id);
+    }
+  };
+
 
   const filteredDocs = documents.filter(d => {
     if (activeTab === 'all') return true;
@@ -157,6 +189,79 @@ const WardDocuments = () => {
 
   return (
     <div className="content" style={{ padding: '20px' }}>
+      <style>{`
+        .btn-3d-primary {
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+          color: white;
+          border: none;
+          padding: 8px 18px;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+          box-shadow: 0 4px 0 #1e3a8a, 0 6px 10px rgba(37, 99, 235, 0.25);
+          transition: all 0.1s ease;
+          position: relative;
+          top: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          outline: none;
+        }
+        .btn-3d-primary:hover {
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+          box-shadow: 0 4px 0 #1e3a8a, 0 8px 12px rgba(37, 99, 235, 0.35);
+        }
+        .btn-3d-primary:active {
+          top: 3px;
+          box-shadow: 0 1px 0 #1e3a8a, 0 2px 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .btn-3d-tab-active {
+          background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+          color: white;
+          border: none;
+          padding: 8px 18px;
+          border-radius: 8px;
+          font-weight: 750;
+          font-size: 12.5px;
+          cursor: pointer;
+          box-shadow: 0 3px 0 #172554, 0 4px 6px rgba(0, 0, 0, 0.15);
+          position: relative;
+          top: 0;
+          transition: all 0.1s ease;
+          outline: none;
+        }
+        .btn-3d-tab-active:active {
+          top: 2px;
+          box-shadow: 0 1px 0 #172554, 0 2px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-3d-tab-inactive {
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          color: #475569;
+          border: 1.5px solid #cbd5e1;
+          padding: 7px 18px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 12.5px;
+          cursor: pointer;
+          box-shadow: 0 3px 0 #cbd5e1, 0 4px 6px rgba(0, 0, 0, 0.06);
+          position: relative;
+          top: 0;
+          transition: all 0.1s ease;
+          outline: none;
+        }
+        .btn-3d-tab-inactive:hover {
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+          color: #1e293b;
+        }
+        .btn-3d-tab-inactive:active {
+          top: 2px;
+          box-shadow: 0 1px 0 #cbd5e1, 0 2px 3px rgba(0, 0, 0, 0.05);
+        }
+      `}</style>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>Công văn của Phường</h2>
         <div>
@@ -168,16 +273,16 @@ const WardDocuments = () => {
             Chế độ gửi (Của Phường)
           </label>
           {isPhuongMode && (
-            <button className="btn-primary" onClick={() => setShowAddModal(true)}>+ Gửi công văn mới</button>
+            <button className="btn-3d-primary" onClick={() => setShowAddModal(true)}>+ Gửi công văn mới</button>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button className={activeTab === 'all' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('all')}>Tất cả</button>
-        <button className={activeTab === 'party' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('party')}>Đảng - Chi bộ</button>
-        <button className={activeTab === 'leader' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('leader')}>Chính quyền - Tổ trưởng</button>
-        <button className={activeTab === 'front' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('front')}>Mặt trận Tổ quốc</button>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '22px', paddingTop: '4px' }}>
+        <button className={activeTab === 'all' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('all')}>Tất cả</button>
+        <button className={activeTab === 'party' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('party')}>Đảng - Chi bộ</button>
+        <button className={activeTab === 'leader' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('leader')}>Chính quyền - Tổ trưởng</button>
+        <button className={activeTab === 'front' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('front')}>Mặt trận Tổ quốc</button>
       </div>
 
       <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
@@ -232,12 +337,37 @@ const WardDocuments = () => {
                   </td>
                   <td style={{ padding: '12px 15px', fontSize: '13px' }}>{new Date(d.created_at).toLocaleString('vi-VN')}</td>
                   <td style={{ padding: '12px 15px' }}>
-                    {d.is_read ? <span style={{ color: '#10b981', fontSize: '12px' }}>Đã xem</span> : <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>Chưa xem</span>}
+                    {isPhuongMode ? (
+                      d.read_by_tdps && d.read_by_tdps.length > 0 ? (
+                        <div style={{ color: '#10b981', fontSize: '12px', fontWeight: '600' }}>
+                          🟢 {d.read_by_tdps.length} TDP đã xem
+                        </div>
+                      ) : (
+                        <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>🔴 Chưa TDP nào xem</span>
+                      )
+                    ) : (
+                      d.is_read ? <span style={{ color: '#10b981', fontSize: '12px' }}>Đã xem</span> : <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>Chưa xem</span>
+                    )}
                   </td>
                   <td style={{ padding: '12px 15px', textAlign: 'right' }}>
-                    {!d.is_read && !isPhuongMode && (
-                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => handleMarkRead(d.id)}>Đánh dấu đã xem</button>
-                    )}
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                      <button 
+                        className="btn-secondary" 
+                        style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} 
+                        onClick={() => handleViewDoc(d)}
+                      >
+                        👁️ Xem chi tiết
+                      </button>
+                      {!d.is_read && !isPhuongMode && (
+                        <button 
+                          className="btn-primary" 
+                          style={{ padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }} 
+                          onClick={() => handleMarkRead(d.id)}
+                        >
+                          Đánh dấu đã xem
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -282,9 +412,103 @@ const WardDocuments = () => {
           </div>
         </div>
       )}
+
+      {viewingDoc && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }}>
+          <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '500px', maxWidth: '90%', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', color: '#1e3a8a' }}>📋 Chi tiết công văn Phường</h3>
+              <button onClick={() => setViewingDoc(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={20} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <strong style={{ fontSize: '13px', color: '#475569' }}>Trích yếu / Nội dung:</strong>
+                <div style={{ marginTop: '4px', fontSize: '15px', fontWeight: 'bold', color: '#1e293b', lineHeight: '1.4' }}>{viewingDoc.title}</div>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <strong style={{ fontSize: '13px', color: '#475569' }}>Khối nhận:</strong>
+                  <div style={{ marginTop: '4px', fontSize: '13.5px', fontWeight: '600' }}>
+                    {viewingDoc.category === 'party' ? '🔴 Đảng - Chi bộ' : viewingDoc.category === 'front' ? '🟡 Mặt trận Tổ quốc' : '🔵 Chính quyền - Tổ trưởng'}
+                  </div>
+                </div>
+                <div>
+                  <strong style={{ fontSize: '13px', color: '#475569' }}>Ngày nhận:</strong>
+                  <div style={{ marginTop: '4px', fontSize: '13.5px' }}>
+                    {new Date(viewingDoc.created_at).toLocaleString('vi-VN')}
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <strong style={{ fontSize: '13px', color: '#475569' }}>Người gửi:</strong>
+                <div style={{ marginTop: '4px', fontSize: '13.5px' }}>{viewingDoc.sender_name || 'Cán bộ Phường'}</div>
+              </div>
+
+              {viewingDoc.file_url && (
+                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
+                  <strong style={{ fontSize: '13px', color: '#475569' }}>Tệp đính kèm:</strong>
+                  <div style={{ marginTop: '8px' }}>
+                    {viewingDoc.file_name && (viewingDoc.file_name.toLowerCase().endsWith('.png') || viewingDoc.file_name.toLowerCase().endsWith('.jpg') || viewingDoc.file_name.toLowerCase().endsWith('.jpeg') || viewingDoc.file_name.toLowerCase().endsWith('.gif') || viewingDoc.file_name.toLowerCase().endsWith('.webp')) ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <img 
+                          src={viewingDoc.file_url} 
+                          alt={viewingDoc.file_name} 
+                          style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px', background: '#f8fafc' }} 
+                        />
+                        <a 
+                          href={viewingDoc.file_url} 
+                          download={viewingDoc.file_name}
+                          className="btn-3d-primary"
+                          style={{ textDecoration: 'none', justifyContent: 'center' }}
+                        >
+                          📎 Tải ảnh xuống ({viewingDoc.file_name})
+                        </a>
+                      </div>
+                    ) : (
+                      <a 
+                        href={viewingDoc.file_url} 
+                        download={viewingDoc.file_name}
+                        className="btn-3d-primary"
+                        style={{ textDecoration: 'none', display: 'inline-flex', width: '100%', justifyContent: 'center' }}
+                      >
+                        📎 Tải tệp xuống ({viewingDoc.file_name})
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isPhuongMode && (
+                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
+                  <strong style={{ fontSize: '13px', color: '#475569' }}>Nhật ký các TDP đã xem:</strong>
+                  <div style={{ marginTop: '8px', maxHeight: '120px', overflowY: 'auto', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {viewingDoc.read_by_tdps && viewingDoc.read_by_tdps.length > 0 ? (
+                      viewingDoc.read_by_tdps.map((r, i) => (
+                        <div key={i} style={{ padding: '6px 0', borderBottom: i < (viewingDoc.read_by_tdps?.length || 0) - 1 ? '1px solid #e2e8f0' : 'none', fontSize: '11.5px', color: '#334155' }}>
+                          🟢 <strong>TDP {r.tdp_name}</strong> - đã xem lúc {new Date(r.read_at).toLocaleTimeString('vi-VN')} ngày {new Date(r.read_at).toLocaleDateString('vi-VN')}
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: '11.5px', color: '#ef4444', fontStyle: 'italic' }}>Chưa có tổ dân phố nào xem.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
+              <button className="btn-secondary" onClick={() => setViewingDoc(null)}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default WardDocuments;
+
 
