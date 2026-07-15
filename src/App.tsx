@@ -3056,7 +3056,7 @@ const App = () => {
               )}
 
                   {/* ─── Phần 1c: Bảo mật truy cập công cộng ─── */}
-                  {userRole === 'admin' && !(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
+                  {userRole === 'admin' && (
                     <div style={{
                       background: 'linear-gradient(135deg, rgba(245,158,11,0.06), rgba(245,158,11,0.02))',
                       border: '1.5px solid rgba(245,158,11,0.18)',
