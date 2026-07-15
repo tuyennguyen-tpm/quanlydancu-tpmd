@@ -12,6 +12,13 @@ const WardDocuments = () => {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<WardDocument | null>(null);
 
+  // Các state phục vụ hai chiều: TDP gửi báo cáo/công văn lên Phường
+  const [subTab, setSubTab] = useState<'received' | 'sent'>('received');
+  const [tdpReports, setTdpReports] = useState<WardDocument[]>([]);
+  const [showAddReportModal, setShowAddReportModal] = useState(false);
+  const [newReport, setNewReport] = useState<Partial<WardDocument>>({ category: 'party' });
+  const [uploadingReportFile, setUploadingReportFile] = useState(false);
+
   const getWardAdminUid = async (wardId: string): Promise<string | null> => {
     if (!supabase) return null;
     try {
@@ -145,6 +152,178 @@ const WardDocuments = () => {
     setDocuments(loaded);
   };
 
+  const loadTdpReports = async () => {
+    const stored = localStorage.getItem('tdp_reports');
+    let loaded: WardDocument[] = stored ? JSON.parse(stored) : [];
+
+    if (supabase) {
+      try {
+        const myWardId = localStorage.getItem('user_ward_id') || localStorage.getItem('guest_ward_id');
+        if (myWardId) {
+          const currentUserId = localStorage.getItem('supabase_user_id');
+          const currentUserRole = localStorage.getItem('user_role');
+
+          if (currentUserRole === 'ward_admin' || currentUserRole === 'super_admin' || isPhuongMode) {
+            // Phường: Tải báo cáo của tất cả các TDP
+            const tdpProfiles = await db.getTDPList(myWardId);
+            const tdpUserIds = tdpProfiles.map(t => t.id);
+
+            if (tdpUserIds.length > 0) {
+              const { data: allTdpConfig } = await supabase
+                .from('app_config')
+                .select('user_id, value')
+                .in('user_id', tdpUserIds)
+                .eq('key', 'tdp_reports');
+
+              if (allTdpConfig) {
+                const combinedReports: WardDocument[] = [];
+                allTdpConfig.forEach(row => {
+                  const tdp = tdpProfiles.find(t => t.id === row.user_id);
+                  if (tdp && row.value) {
+                    try {
+                      const reports: WardDocument[] = JSON.parse(row.value);
+                      reports.forEach(rep => {
+                        combinedReports.push({
+                          ...rep,
+                          sender_name: tdp.tdp_name
+                        });
+                      });
+                    } catch (e) {
+                      console.error('Lỗi parse tdp_reports:', e);
+                    }
+                  }
+                });
+                loaded = combinedReports;
+              }
+            }
+          } else if (currentUserId) {
+            // TDP: Tải báo cáo của chính mình
+            const { data: myConfig } = await supabase
+              .from('app_config')
+              .select('value')
+              .eq('user_id', currentUserId)
+              .eq('key', 'tdp_reports')
+              .maybeSingle();
+
+            if (myConfig && myConfig.value) {
+              try {
+                loaded = JSON.parse(myConfig.value);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải báo cáo từ Supabase:', err);
+      }
+    }
+
+    loaded.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setTdpReports(loaded);
+  };
+
+  const handleAddReport = async () => {
+    const rawTdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+    const report: WardDocument = {
+      id: `rep-${Date.now()}`,
+      title: newReport.title || 'Báo cáo không tên',
+      category: newReport.category as any,
+      target_scope: 'all',
+      sender_name: rawTdpName,
+      is_read: false,
+      created_at: new Date().toISOString(),
+      file_url: newReport.file_url,
+      file_name: newReport.file_name,
+      read_by_tdps: []
+    };
+
+    const updated = [report, ...tdpReports];
+    updated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setTdpReports(updated);
+    localStorage.setItem('tdp_reports', JSON.stringify(updated));
+
+    if (supabase) {
+      try {
+        const currentUserId = localStorage.getItem('supabase_user_id');
+        if (currentUserId) {
+          await supabase
+            .from('app_config')
+            .upsert({
+              user_id: currentUserId,
+              key: 'tdp_reports',
+              value: JSON.stringify(updated),
+              updated_at: new Date().toISOString()
+            });
+          
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã gửi báo cáo lên Phường thành công!', type: 'success' } }));
+        }
+      } catch (err) {
+        console.error('Lỗi gửi báo cáo lên Supabase:', err);
+      }
+    }
+
+    setShowAddReportModal(false);
+    setNewReport({ category: 'party' });
+  };
+
+  const handleDeleteReport = async (id: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa/thu hồi báo cáo này? Phường sẽ không còn nhìn thấy tệp này nữa.")) {
+      return;
+    }
+
+    const updated = tdpReports.filter(r => r.id !== id);
+    setTdpReports(updated);
+    localStorage.setItem('tdp_reports', JSON.stringify(updated));
+
+    if (supabase) {
+      try {
+        const currentUserId = localStorage.getItem('supabase_user_id');
+        if (currentUserId) {
+          await supabase
+            .from('app_config')
+            .upsert({
+              user_id: currentUserId,
+              key: 'tdp_reports',
+              value: JSON.stringify(updated),
+              updated_at: new Date().toISOString()
+            });
+          
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã thu hồi báo cáo thành công!', type: 'success' } }));
+        }
+      } catch (err) {
+        console.error('Lỗi khi thu hồi báo cáo:', err);
+      }
+    }
+  };
+
+  const handleReportFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Kích thước tệp quá lớn! Vui lòng chọn tệp dưới 5MB.");
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingReportFile(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setNewReport(prev => ({
+        ...prev,
+        file_url: event.target?.result as string,
+        file_name: file.name
+      }));
+      setUploadingReportFile(false);
+    };
+    reader.onerror = () => {
+      alert("Lỗi khi đọc tệp.");
+      setUploadingReportFile(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const checkUnreadAndSpeak = () => {
     // Chỉ đọc nếu không phải màn hình của phường
     if (localStorage.getItem('is_phuong_mode') === 'true') return;
@@ -201,18 +380,21 @@ const WardDocuments = () => {
   // Đồng bộ lại tài liệu khi chuyển chế độ hoặc tự động quét mỗi 3 giây
   useEffect(() => {
     loadDocs();
+    loadTdpReports();
   }, [isPhuongMode]);
 
   useEffect(() => {
     // Nghe sự kiện đồng bộ từ service chạy ngầm ở App.tsx
     const handleSyncEvent = () => {
       loadDocs();
+      loadTdpReports();
     };
     window.addEventListener('ward-docs-synced', handleSyncEvent);
 
     // Tự động tải lại tài liệu mỗi 3 giây để đồng bộ tức thời giữa các tab / chế độ
     const syncInterval = setInterval(() => {
       loadDocs();
+      loadTdpReports();
     }, 3000);
 
     // Phát thông báo bằng tiếng nói ngay lập tức sau 3 giây
@@ -495,7 +677,7 @@ const WardDocuments = () => {
       `}</style>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>Công văn của Phường</h2>
+        <h2>Công văn & Báo cáo hai chiều</h2>
         <div>
           <label style={{ marginRight: '15px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
             <input type="checkbox" checked={isPhuongMode} onChange={(e) => {
@@ -504,12 +686,42 @@ const WardDocuments = () => {
             }} />
             Chế độ gửi (Của Phường)
           </label>
-          {isPhuongMode && (
+          {isPhuongMode && subTab === 'received' && (
             <button className="btn-3d-primary" onClick={() => setShowAddModal(true)}>+ Gửi công văn mới</button>
+          )}
+          {!isPhuongMode && subTab === 'sent' && (
+            <button className="btn-3d-primary" onClick={() => setShowAddReportModal(true)}>+ Gửi báo cáo lên Phường</button>
           )}
         </div>
       </div>
 
+      {/* Sub Tabs: Nhận từ Phường / Gửi lên Phường */}
+      <div style={{ display: 'flex', gap: '15px', borderBottom: '2px solid #e2e8f0', marginBottom: '20px', paddingBottom: '2px' }}>
+        <button 
+          style={{
+            background: 'none', border: 'none', padding: '10px 16px', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+            color: subTab === 'received' ? '#1e40af' : '#64748b',
+            borderBottom: subTab === 'received' ? '3px solid #1e40af' : 'none',
+            outline: 'none'
+          }} 
+          onClick={() => setSubTab('received')}
+        >
+          📥 Công văn từ Phường
+        </button>
+        <button 
+          style={{
+            background: 'none', border: 'none', padding: '10px 16px', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+            color: subTab === 'sent' ? '#1e40af' : '#64748b',
+            borderBottom: subTab === 'sent' ? '3px solid #1e40af' : 'none',
+            outline: 'none'
+          }} 
+          onClick={() => setSubTab('sent')}
+        >
+          📤 Báo cáo gửi lên Phường
+        </button>
+      </div>
+
+      {/* Bộ lọc loại văn bản */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '22px', paddingTop: '4px' }}>
         <button className={activeTab === 'all' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('all')}>Tất cả</button>
         <button className={activeTab === 'party' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('party')}>Đảng - Chi bộ</button>
@@ -517,21 +729,22 @@ const WardDocuments = () => {
         <button className={activeTab === 'front' ? 'btn-3d-tab-active' : 'btn-3d-tab-inactive'} onClick={() => setActiveTab('front')}>Mặt trận Tổ quốc</button>
       </div>
 
-      <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '12px 15px', fontWeight: '600' }}>Tên công văn</th>
-              <th style={{ padding: '12px 15px', fontWeight: '600' }}>Khối nhận</th>
-              <th style={{ padding: '12px 15px', fontWeight: '600' }}>Ngày nhận</th>
-              <th style={{ padding: '12px 15px', fontWeight: '600' }}>Trạng thái</th>
-              <th style={{ padding: '12px 15px', fontWeight: '600', textAlign: 'right' }}>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredDocs.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Không có công văn nào</td></tr>
-            ) : (
+      {subTab === 'received' ? (
+        <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Tên công văn</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Khối nhận</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Ngày nhận</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Trạng thái</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600', textAlign: 'right' }}>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDocs.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Không có công văn nào</td></tr>
+              ) : (
               filteredDocs.map(d => (
                 <tr key={d.id} style={{ borderBottom: '1px solid #e2e8f0', background: d.is_read ? 'transparent' : '#fef2f2' }}>
                   <td style={{ padding: '12px 15px', fontWeight: d.is_read ? '400' : '600' }}>
@@ -625,13 +838,122 @@ const WardDocuments = () => {
               ))
             )}
           </tbody>
-        </table>
-      </div>
+          </table>
+        </div>
+      ) : (
+        /* Báo cáo của Tổ gửi lên Phường (subTab === 'sent') */
+        <div style={{ background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Tên báo cáo / Văn bản gửi Phường</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Nguồn gửi</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Khối chuyên môn</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600' }}>Ngày gửi</th>
+                <th style={{ padding: '12px 15px', fontWeight: '600', textAlign: 'right' }}>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tdpReports.filter(r => activeTab === 'all' || r.category === activeTab).length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>Không có báo cáo nào được gửi</td></tr>
+              ) : (
+                tdpReports.filter(r => activeTab === 'all' || r.category === activeTab).map(r => (
+                  <tr key={r.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '12px 15px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <span style={{ fontWeight: '600' }}>{r.title}</span>
+                        {r.file_url && (
+                          <div style={{ marginTop: '4px' }}>
+                            <a 
+                              href={r.file_url} 
+                              download={r.file_name} 
+                              style={{ 
+                                textDecoration: 'none', 
+                                color: '#047857', 
+                                fontWeight: 700, 
+                                fontSize: '12px',
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '6px',
+                                padding: '4px 10px',
+                                background: '#ecfdf5',
+                                borderRadius: '6px',
+                                border: '1px solid #a7f3d0',
+                                width: 'fit-content'
+                              }}
+                            >
+                              📎 Tải về tệp: {r.file_name}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px 15px', fontWeight: '600', color: '#2563eb' }}>
+                      🏢 {r.sender_name || 'Tổ dân phố'}
+                    </td>
+                    <td style={{ padding: '12px 15px' }}>
+                      {r.category === 'party' ? 'Đảng - Chi bộ' : r.category === 'front' ? 'Mặt trận' : 'Chính quyền'}
+                    </td>
+                    <td style={{ padding: '12px 15px', fontSize: '13px' }}>
+                      {new Date(r.created_at).toLocaleString('vi-VN')}
+                    </td>
+                    <td style={{ padding: '12px 15px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                        <button 
+                          className="btn-secondary" 
+                          style={{ padding: '4px 10px', fontSize: '12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }} 
+                          onClick={() => handleViewDoc(r)}
+                        >
+                          👁️ Xem chi tiết
+                        </button>
+                        {(!isPhuongMode || localStorage.getItem('user_role') === 'super_admin') && (
+                          <button 
+                            className="btn-danger" 
+                            style={{ 
+                              padding: '4px 10px', 
+                              fontSize: '12px', 
+                              cursor: 'pointer',
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }} 
+                            onClick={() => handleDeleteReport(r.id)}
+                          >
+                            🗑️ Thu hồi
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {showAddModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '400px' }}>
             <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Gửi công văn mới</h3>
+            {localStorage.getItem('user_role') !== 'ward_admin' && localStorage.getItem('user_role') !== 'super_admin' && (
+              <div style={{
+                background: '#fffbeb',
+                border: '1.5px dashed #d97706',
+                borderRadius: '8px',
+                padding: '10px',
+                fontSize: '11.5px',
+                color: '#b45309',
+                marginBottom: '15px',
+                lineHeight: 1.4
+              }}>
+                ⚠️ <strong>Lưu ý Giả lập:</strong> Bạn đang đăng nhập bằng tài khoản Tổ dân phố. Công văn gửi đi sẽ được lưu và hiển thị cục bộ trên trình duyệt này. Để đồng bộ qua Internet tới các thiết bị của Tổ dân phố khác, vui lòng đăng nhập bằng tài khoản <strong>Quản trị Phường</strong>.
+              </div>
+            )}
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Trích yếu / Nội dung</label>
               <input type="text" className="input-field" style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} 
@@ -753,6 +1075,59 @@ const WardDocuments = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
               <button className="btn-secondary" onClick={() => setViewingDoc(null)}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddReportModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#047857' }}>📤 Gửi báo cáo lên Phường</h3>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Tên báo cáo / Trích yếu nội dung</label>
+              <input 
+                type="text" 
+                className="input-field" 
+                style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} 
+                value={newReport.title || ''} 
+                onChange={e => setNewReport({...newReport, title: e.target.value})} 
+                placeholder="Nhập trích yếu báo cáo gửi lên Phường"
+              />
+            </div>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Khối chuyên môn</label>
+              <select 
+                className="input-field" 
+                style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                value={newReport.category} 
+                onChange={e => setNewReport({...newReport, category: e.target.value as any})}
+              >
+                <option value="party">Đảng - Chi bộ</option>
+                <option value="leader">Chính quyền - Tổ dân phố</option>
+                <option value="front">Mặt trận Tổ quốc</option>
+              </select>
+            </div>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600' }}>Đính kèm tài liệu (Word, Excel, PDF, Ảnh...)</label>
+              <input 
+                type="file" 
+                accept=".doc,.docx,.xls,.xlsx,.pdf,.png,.jpg,.jpeg,.gif"
+                onChange={handleReportFileChange}
+                style={{ width: '100%', padding: '4px', boxSizing: 'border-box' }}
+              />
+              {uploadingReportFile && <div style={{ fontSize: '11px', color: '#059669', marginTop: '4px' }}>Đang nạp tệp...</div>}
+              {newReport.file_name && <div style={{ fontSize: '11.5px', color: '#16a34a', marginTop: '4px', fontWeight: '600' }}>✅ Đã nạp: {newReport.file_name}</div>}
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
+              <button className="btn-secondary" onClick={() => setShowAddReportModal(false)}>Hủy</button>
+              <button className="btn-primary" onClick={handleAddReport} disabled={uploadingReportFile || !newReport.title}>
+                Gửi báo cáo
+              </button>
             </div>
           </div>
         </div>

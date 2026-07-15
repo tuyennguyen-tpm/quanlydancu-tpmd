@@ -773,7 +773,8 @@ const App = () => {
       logo_url: '',
       support_name: 'Lê Thị Dung',
       support_phone: '0912 083 018 - 0899 661 982',
-      welcome_setup_completed: 'false'
+      welcome_setup_completed: 'false',
+      user_ward_id: '00000000-0000-0000-0000-000000000000'
     };
     
     Object.keys(defaults).forEach(key => {
@@ -1140,6 +1141,15 @@ const App = () => {
       localStorage.removeItem('offline_mode');
       setGuestMode(true);
       setOfflineMode(false);
+      
+      // Tự động truy vấn ward_id của Tổ này để đồng bộ công văn Phường
+      db.getUserProfile(tenant).then(profile => {
+        if (profile && profile.ward_id) {
+          localStorage.setItem('guest_ward_id', profile.ward_id);
+          localStorage.setItem('guest_tdp_name', profile.tdp_name || '');
+          window.dispatchEvent(new CustomEvent('db-changed'));
+        }
+      });
     }
   }, []);
 
