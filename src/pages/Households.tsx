@@ -528,7 +528,7 @@ const Households = () => {
             } else if (prevRel.includes('em')) {
               // Chủ hộ mới trước đây là Em (Em trai/Em gái/Em)
               if (member.id === editingHousehold.head_of_household_id || curRel === 'chủ hộ') {
-                newRel = member.gender === 'female' ? 'Chị gái' : 'Anh trai';
+                newRel = member.gender === 'female' ? 'Chị' : 'Anh';
               } else if (curRel === 'vợ') {
                 newRel = 'Chị dâu';
               } else if (curRel === 'chồng') {
@@ -541,7 +541,7 @@ const Households = () => {
             } else if (prevRel.includes('anh') || prevRel.includes('chị')) {
               // Chủ hộ mới trước đây là Anh/Chị
               if (member.id === editingHousehold.head_of_household_id || curRel === 'chủ hộ') {
-                newRel = member.gender === 'female' ? 'Em gái' : 'Em trai';
+                newRel = 'Em';
               } else if (curRel === 'vợ') {
                 newRel = 'Em dâu';
               } else if (curRel === 'chồng') {
@@ -875,7 +875,7 @@ const Households = () => {
           } else if (prevRel.includes('em')) {
             // Chủ hộ mới trước đây là Em (Em trai/Em gái/Em)
             if (member.id === hh.head_of_household_id || curRel === 'chủ hộ') {
-              newRel = member.gender === 'female' ? 'Chị gái' : 'Anh trai';
+              newRel = member.gender === 'female' ? 'Chị' : 'Anh';
             } else if (curRel === 'vợ') {
               newRel = 'Chị dâu';
             } else if (curRel === 'chồng') {
@@ -888,7 +888,7 @@ const Households = () => {
           } else if (prevRel.includes('anh') || prevRel.includes('chị')) {
             // Chủ hộ mới trước đây là Anh/Chị
             if (member.id === hh.head_of_household_id || curRel === 'chủ hộ') {
-              newRel = member.gender === 'female' ? 'Em gái' : 'Em trai';
+              newRel = 'Em';
             } else if (curRel === 'vợ') {
               newRel = 'Em dâu';
             } else if (curRel === 'chồng') {
@@ -935,9 +935,8 @@ const Households = () => {
 
   const RELATIONSHIP_OPTIONS = [
     'Chủ hộ', 'Vợ', 'Chồng', 'Con', 'Con dâu', 'Con rể',
-    'Bố', 'Mẹ', 'Anh trai', 'Chị gái', 'Em trai', 'Em gái',
-    'Anh', 'Chị', 'Em', 'Chị dâu', 'Anh rể', 'Em dâu', 'Em rể',
-    'Cháu', 'Ông', 'Bà', 'Nội', 'Ngoại', 'Thành viên'
+    'Bố', 'Mẹ', 'Anh', 'Chị', 'Em', 'Chị dâu', 'Anh rể', 'Em dâu', 'Em rể',
+    'Cháu', 'Ông', 'Bà', 'Ông ngoại', 'Bà ngoại', 'Thành viên'
   ];
 
   const handleUpdateRelationship = async (member: Resident, newRelationship: string) => {
