@@ -127,6 +127,18 @@ const Dashboard = () => {
   const [dynamicNotifs, setDynamicNotifs] = useState<any[]>([]);
   const [dynamicTasks, setDynamicTasks] = useState<any[]>([]);
 
+  const isAdmin = localStorage.getItem('user_role') === 'admin' || 
+                  localStorage.getItem('user_role') === 'super_admin' || 
+                  localStorage.getItem('user_role') === 'ward_admin';
+
+  const [hiddenTaskIds, setHiddenTaskIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('tdp_hidden_task_ids') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
   const loadDashboardData = async () => {
     try {
       const [
@@ -437,10 +449,36 @@ const Dashboard = () => {
         badgeClass: 'done'
       });
 
-      setDynamicTasks(tasks.slice(0, 5));
+      const hiddenIds = JSON.parse(localStorage.getItem('tdp_hidden_task_ids') || '[]');
+      const filteredTasks = tasks.filter(t => !hiddenIds.includes(t.id));
+      setDynamicTasks(filteredTasks.slice(0, 5));
 
     } catch (e) {
       console.error('Failed to load dashboard data:', e);
+    }
+  };
+
+  const handleHideTask = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Bạn có chắc chắn muốn xóa/ẩn công việc này khỏi danh sách không?')) {
+      const hiddenIds = JSON.parse(localStorage.getItem('tdp_hidden_task_ids') || '[]');
+      if (!hiddenIds.includes(taskId)) {
+        const updated = [...hiddenIds, taskId];
+        localStorage.setItem('tdp_hidden_task_ids', JSON.stringify(updated));
+        setHiddenTaskIds(updated);
+        // Trigger reload to pick up new task from queue if available
+        loadDashboardData();
+      }
+    }
+  };
+
+  const handleRestoreTasks = () => {
+    if (window.confirm('Bạn có muốn hiển thị lại tất cả các công việc đã ẩn không?')) {
+      localStorage.removeItem('tdp_hidden_task_ids');
+      setHiddenTaskIds([]);
+      setTimeout(() => {
+        loadDashboardData();
+      }, 50);
     }
   };
 
@@ -795,8 +833,36 @@ const Dashboard = () => {
 
         {/* 2. CÔNG VIỆC CẦN LÀM */}
         <div className="card-gov">
-          <div className="card-gov-header">
-            <div className="card-title"><span className="title-dot" style={{ background: '#E65100' }}></span>Công việc cần làm</div>
+          <div className="card-gov-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="title-dot" style={{ background: '#E65100' }}></span>
+              Công việc cần làm
+              {isAdmin && hiddenTaskIds.length > 0 && (
+                <button 
+                  onClick={handleRestoreTasks} 
+                  title="Khôi phục các công việc đã ẩn"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: '600',
+                    marginLeft: '8px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: '#f1f5f9'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e2e8f0'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                >
+                  🔄 Khôi phục
+                </button>
+              )}
+            </div>
             <div className="view-all" onClick={() => handleQuickAction('regulations')}>Xem tất cả →</div>
           </div>
           <div className="card-gov-body" style={{ padding: '8px 18px' }}>
@@ -831,6 +897,31 @@ const Dashboard = () => {
                   <div className="task-status" style={{ width: '8px', height: '8px', borderRadius: '50%', background: t.color, flexShrink: 0 }}></div>
                   <div className="task-title" style={{ fontSize: '12.5px', color: 'var(--text-primary)', flex: 1, textAlign: 'left' }}>{t.title}</div>
                   <span className={`task-badge ${t.badgeClass}`} style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10.5px', fontWeight: '600' }}>{t.badgeText}</span>
+                  {isAdmin && (
+                    <button 
+                      onClick={(e) => handleHideTask(t.id, e)} 
+                      title="Xóa/Ẩn công việc này"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '4px',
+                        marginLeft: '6px',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               );
             })}
