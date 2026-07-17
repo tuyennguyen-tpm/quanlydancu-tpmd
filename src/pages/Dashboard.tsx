@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db, partyDb } from '../services/db';
+import ExcelJS from 'exceljs';
+import { showToast } from '../utils/toast';
 
 const Dashboard = () => {
   const isGuest = localStorage.getItem('guest_mode') === 'true';
@@ -508,38 +510,218 @@ const Dashboard = () => {
     }
   };
 
-  // Functional CSV report exporter
+  // Professional Excel report exporter using ExcelJS
   const handleExportReport = async () => {
     try {
+      const tdpNameText = localStorage.getItem('tdp_name') || 'Quảng Giao';
       const [hList, rList] = await Promise.all([
         db.getHouseholds(),
         db.getResidents()
       ]);
+
+      const workbook = new ExcelJS.Workbook();
       
-      let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-      csvContent += "Danh sach Ho gia dinh va Nhan khau\n\n";
+      // --- SHEET 1: DANH SÁCH HỘ GIA ĐÌNH ---
+      const wsHouseholds = workbook.addWorksheet('Danh sách Hộ gia đình');
+
+      // Title block
+      wsHouseholds.mergeCells('A1:E2');
+      const titleCellH = wsHouseholds.getCell('A1');
+      titleCellH.value = `DANH SÁCH HỘ GIA ĐÌNH - TỔ DÂN PHỐ ${tdpNameText.toUpperCase()}`;
+      titleCellH.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF0F766E' } };
+      titleCellH.alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // Headers setup
+      const headersH = ['STT', 'Số sổ hộ khẩu', 'Địa chỉ', 'Phân loại Hộ chính sách', 'Tổ quản lý'];
+      wsHouseholds.getRow(3).height = 10;
       
-      csvContent += "THÔNG TIN HỘ GIA ĐÌNH\n";
-      csvContent += "Mã Hộ,Địa chỉ,Phân loại Hộ,Tổ\n";
-      hList.forEach(h => {
-        csvContent += `"${h.household_number}","${h.address}","${h.policy_type}","${h.group_id}"\n`;
+      const realHeaderRowH = wsHouseholds.getRow(4);
+      realHeaderRowH.height = 28;
+      headersH.forEach((h, idx) => {
+        const cell = realHeaderRowH.getCell(idx + 1);
+        cell.value = h;
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF0F766E' }
+        };
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Segoe UI', size: 11 };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
       });
-      
-      csvContent += "\nTHÔNG TIN NHÂN KHẨU\n";
-      csvContent += "Họ và tên,Giới tính,Ngày sinh,CCCD,Số điện thoại,Nghề nghiệp,Trạng thái\n";
-      rList.forEach(r => {
-        csvContent += `"${r.full_name}","${r.gender === 'male' ? 'Nam' : 'Nữ'}","${r.dob}","${r.cccd || ''}","${r.phone || ''}","${r.occupation || ''}","${r.status}"\n`;
+
+      // Add household rows
+      hList.forEach((h, index) => {
+        const rowData = [
+          index + 1,
+          h.household_number || '',
+          h.address || '',
+          h.policy_type === 'poor' ? 'Hộ nghèo' : h.policy_type === 'near_poor' ? 'Hộ cận nghèo' : h.policy_type === 'policy' ? 'Gia đình chính sách' : 'Bình thường',
+          h.group_id || ''
+        ];
+        const addedRow = wsHouseholds.addRow(rowData);
+        addedRow.height = 22;
+        addedRow.eachCell(cell => {
+          cell.font = { name: 'Segoe UI', size: 10.5 };
+          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        });
+        addedRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(5).alignment = { vertical: 'middle', horizontal: 'center' };
       });
+
+      // Borders for Sheet 1
+      wsHouseholds.eachRow((row, rowNumber) => {
+        if (rowNumber > 3) {
+          row.eachCell(cell => {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+            };
+          });
+        }
+      });
+
+      wsHouseholds.columns = [
+        { width: 8 },  // STT
+        { width: 22 }, // Số sổ hộ khẩu
+        { width: 38 }, // Địa chỉ
+        { width: 28 }, // Phân loại Hộ
+        { width: 18 }  // Tổ quản lý
+      ];
+
+      // --- SHEET 2: DANH SÁCH NHÂN KHẨU ---
+      const wsResidents = workbook.addWorksheet('Danh sách Nhân khẩu');
+
+      // Title block
+      wsResidents.mergeCells('A1:J2');
+      const titleCellR = wsResidents.getCell('A1');
+      titleCellR.value = `DANH SÁCH NHÂN KHẨU - TỔ DÂN PHỐ ${tdpNameText.toUpperCase()}`;
+      titleCellR.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF0F766E' } };
+      titleCellR.alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // Headers setup
+      const headersR = ['STT', 'Họ và tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'Số điện thoại', 'Nghề nghiệp', 'Trạng thái cư trú', 'Ghi chú'];
+      wsResidents.getRow(3).height = 10;
       
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `Bao_cao_tong_quan_TDP_${tdpName}.csv`);
+      const realHeaderRowR = wsResidents.getRow(4);
+      realHeaderRowR.height = 28;
+      headersR.forEach((h, idx) => {
+        const cell = realHeaderRowR.getCell(idx + 1);
+        cell.value = h;
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF0F766E' }
+        };
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Segoe UI', size: 11 };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      });
+
+      // Helper date formatter
+      const formatToDisplayDate = (dStr: string) => {
+        if (!dStr) return '';
+        try {
+          const d = new Date(dStr);
+          if (isNaN(d.getTime())) return dStr;
+          return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        } catch {
+          return dStr;
+        }
+      };
+
+      // Add resident rows
+      rList.forEach((r, index) => {
+        const rowData = [
+          index + 1,
+          r.full_name || '',
+          r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
+          r.dob ? formatToDisplayDate(r.dob) : '',
+          r.relationship_with_head || '',
+          r.cccd || '',
+          r.phone || '',
+          r.occupation || '',
+          r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : r.status === 'stay' ? 'Lưu trú' : 'Đã mất',
+          r.notes || ''
+        ];
+        const addedRow = wsResidents.addRow(rowData);
+        addedRow.height = 22;
+
+        const isHead = r.is_head || r.relationship_with_head === 'Chủ hộ' || r.relationship_with_head === 'CHỦ HỘ';
+        addedRow.eachCell((cell, colNumber) => {
+          if (isHead) {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFE6F4EA' } // Xanh lá nhạt #E6F4EA
+            };
+            cell.font = {
+              bold: true,
+              color: { argb: 'FF137333' }, // Xanh lá đậm #137333
+              name: 'Segoe UI',
+              size: 10.5
+            };
+          } else {
+            cell.font = { name: 'Segoe UI', size: 10.5 };
+          }
+          cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        });
+
+        addedRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(3).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(5).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(6).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(7).alignment = { vertical: 'middle', horizontal: 'center' };
+        addedRow.getCell(9).alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+
+      // Borders for Sheet 2
+      wsResidents.eachRow((row, rowNumber) => {
+        if (rowNumber > 3) {
+          row.eachCell(cell => {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+            };
+          });
+        }
+      });
+
+      wsResidents.columns = [
+        { width: 8 },  // STT
+        { width: 24 }, // Họ và tên
+        { width: 12 }, // Giới tính
+        { width: 15 }, // Ngày sinh
+        { width: 20 }, // Quan hệ chủ hộ
+        { width: 20 }, // CCCD
+        { width: 18 }, // SĐT
+        { width: 22 }, // Nghề nghiệp
+        { width: 18 }, // Trạng thái
+        { width: 25 }  // Ghi chú
+      ];
+
+      // Generate buffer and trigger download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      
+      const filenameTdp = tdpNameText.toLowerCase().replace(/\s+/g, '_');
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `bao_cao_tong_quan_tdp_${filenameTdp}_${new Date().toISOString().slice(0, 10)}.xlsx`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (e) {
-      console.error('Failed to export data:', e);
+      window.URL.revokeObjectURL(url);
+      
+      showToast('Xuất báo cáo Excel tổng quan thành công!', 'success');
+    } catch (err) {
+      console.error('Failed to export data to ExcelJS:', err);
+      showToast('Có lỗi xảy ra khi xuất tệp Excel.', 'danger');
     }
   };
 
