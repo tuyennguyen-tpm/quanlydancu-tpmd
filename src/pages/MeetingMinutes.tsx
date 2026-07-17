@@ -129,7 +129,7 @@ const MeetingMinutes = () => {
   const [content, setContent] = useState('');
   const [isFullscreenEdit, setIsFullscreenEdit] = useState(false);
 
-  const [orgLevel1, setOrgLevel1] = useState(`ỦY BAN NHÂN DÂN ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
+  const [orgLevel1, setOrgLevel1] = useState(`UBND ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
   const [orgLevel2, setOrgLevel2] = useState(`TỔ DÂN PHỐ ${(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn').toUpperCase()}`);
   const [nationLevel1, setNationLevel1] = useState('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
   const [nationLevel2, setNationLevel2] = useState('Độc lập - Tự do - Hạnh phúc');
@@ -160,7 +160,7 @@ const MeetingMinutes = () => {
     if (match) {
       try {
         const meta = JSON.parse(match[1]);
-        setOrgLevel1(meta.orgLevel1 || `ỦY BAN NHÂN DÂN ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
+        setOrgLevel1(meta.orgLevel1 || `UBND ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
         setOrgLevel2(meta.orgLevel2 || `TỔ DÂN PHỐ ${(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn').toUpperCase()}`);
         setNationLevel1(meta.nationLevel1 || 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
         setNationLevel2(meta.nationLevel2 || 'Độc lập - Tự do - Hạnh phúc');
@@ -436,7 +436,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       setMeetingType('general');
       setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', defaults.chairman, defaults.secretary));
       
-      setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+      setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
       setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
       setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
       setNationLevel2('Độc lập - Tự do - Hạnh phúc');
@@ -472,7 +472,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         setSecretaryTitle('THƯ KÝ CUỘC HỌP');
         setChairmanTitle('TRƯỞNG BAN');
       } else {
-        setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+        setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
         setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
         setDocTitle('BIÊN BẢN CUỘC HỌP');
         setSecretaryTitle('THƯ KÝ CUỘC HỌP');
@@ -688,7 +688,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         setSecretaryTitle('THƯ KÝ CUỘC HỌP');
         setChairmanTitle('TRƯỞNG BAN');
       } else {
-        setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+        setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
         setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
         setDocTitle('BIÊN BẢN CUỘC HỌP');
         setSecretaryTitle('THƯ KÝ CUỘC HỌP');
@@ -715,7 +715,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     setAttendance('85');
     setMeetingType('general');
     setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
-    setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+    setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
     setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
     setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
     setNationLevel2('Độc lập - Tự do - Hạnh phúc');
@@ -1007,7 +1007,9 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           div.Section1 { page: Section1; }
           body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.6; color: #000; }
           .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
-          .header-table td { vertical-align: top; text-align: center; width: 50%; }
+          .header-table td { vertical-align: top; text-align: center; }
+          .header-table td.org-col { width: 38%; }
+          .header-table td.nation-col { width: 62%; }
           .org-title { font-weight: bold; text-transform: uppercase; font-size: 12pt; }
           .org-sub { font-size: 11pt; font-weight: bold; }
           .nation-title { font-weight: bold; font-size: 11.5pt; }
@@ -1027,13 +1029,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         <div class="Section1">
           <table class="header-table">
             <tr>
-              <td>
-                <div class="org-title">${orgLevel1 || 'ỦY BAN NHÂN DÂN'}</div>
+              <td class="org-col">
+                <div class="org-title">${orgLevel1 || 'UBND'}</div>
                 <div class="org-sub">${orgLevel2 || `TỔ DÂN PHỐ ${tdpName.toUpperCase()}`}</div>
                 <div style="border-bottom: 1.5px solid #000; width: 80px; margin: 4px auto 8px auto;"></div>
                 <div class="doc-num">${docNumDisplay}</div>
               </td>
-              <td>
+              <td class="nation-col">
                 <div class="nation-title">${nationLevel1 || 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}</div>
                 <div class="nation-sub">${nationLevel2 || 'Độc lập - Tự do - Hạnh phúc'}</div>
                 <div style="border-bottom: 1.5px solid #000; width: 140px; margin: 4px auto 8px auto;"></div>
@@ -1313,7 +1315,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
                   setChairmanTitle('BÍ THƯ CHI ĐOÀN');
                 } else {
-                  setOrgLevel1(`ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}`);
+                  setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
                   setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
                   setDocTitle('BIÊN BẢN CUỘC HỌP');
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
@@ -1607,13 +1609,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <div style={{ textAlign: 'center', width: '45%' }}>
+              <div style={{ textAlign: 'center', width: '38%' }}>
                 <div style={{ fontSize: '8.5pt', textTransform: 'uppercase' }}>{orgLevel1}</div>
                 <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>{orgLevel2}</div>
                 <div style={{ borderBottom: '1px solid #000', width: '45px', margin: '3px auto 4px auto', height: '1px' }}></div>
                 <div style={{ fontSize: '8.5pt' }}>Số: {docNumber}{getDocNumberSuffix(meetingType)}</div>
               </div>
-              <div style={{ textAlign: 'center', width: '55%' }}>
+              <div style={{ textAlign: 'center', width: '62%' }}>
                 <div style={{ fontWeight: 'bold', fontSize: '9pt', textTransform: 'uppercase' }}>{nationLevel1}</div>
                 <div style={{ fontWeight: 'bold', fontSize: '9pt' }}>{nationLevel2}</div>
                 <div style={{ borderBottom: '1px solid #000', width: '90px', margin: '4px auto 0 auto', height: '1px' }}></div>
@@ -1851,7 +1853,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ textAlign: 'center', width: '38%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <input
                     type="text"
                     value={orgLevel1}
@@ -1915,7 +1917,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   </div>
                 </div>
                 
-                <div style={{ textAlign: 'center', width: '55%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ textAlign: 'center', width: '62%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <input
                     type="text"
                     value={nationLevel1}

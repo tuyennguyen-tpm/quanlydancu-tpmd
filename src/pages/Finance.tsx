@@ -847,17 +847,17 @@ const Finance = () => {
       <body>
         <table class="header-table">
           <tr>
-            <td style="width: 45%;">
+            <td style="width: 38%;">
               <div class="org-title">
                 UBND ${wardNameVal.toUpperCase()}<br/>
                 TỔ DÂN PHỐ ${tdpNameVal.toUpperCase()}
                 <div class="line-separator"></div>
               </div>
             </td>
-            <td style="width: 10%;">&nbsp;</td>
-            <td style="width: 45%;">
+            <td style="width: 2%;">&nbsp;</td>
+            <td style="width: 60%;">
               <div class="motto">
-                <div class="motto-main">CỘNG HÒA XÃ HỘI CHỦ NGIĨA VIỆT NAM</div>
+                <div class="motto-main">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
                 <div style="font-weight: bold;">Độc lập - Tự do - Hạnh phúc</div>
                 <div class="line-separator-long"></div>
               </div>

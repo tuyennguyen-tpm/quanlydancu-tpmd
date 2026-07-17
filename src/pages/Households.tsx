@@ -947,15 +947,15 @@ const Households = () => {
       <body>
         <table class="header-table">
           <tr>
-            <td style="width: 45%;">
+            <td style="width: 38%;">
               <div class="org-title">
                 UBND ${wardName.toUpperCase()}<br/>
                 TỔ DÂN PHỐ ${tdpName.toUpperCase()}
                 <div class="line-separator"></div>
               </div>
             </td>
-            <td style="width: 10%;">&nbsp;</td>
-            <td style="width: 45%;">
+            <td style="width: 2%;">&nbsp;</td>
+            <td style="width: 60%;">
               <div class="motto">
                 <div class="motto-main">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
                 <div class="motto-sub">Độc lập - Tự do - Hạnh phúc</div>

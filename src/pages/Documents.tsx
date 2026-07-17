@@ -109,7 +109,7 @@ const Documents = () => {
     return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
 Độc lập - Tự do - Hạnh phúc
 ---
-ỦY BAN NHÂN DÂN ${wardName.toUpperCase()}
+UBND ${wardName.toUpperCase()}
 Ban cán sự Tổ dân phố ${tdpName}
 
 Hồ sơ văn bản lưu trữ số: ${d.id}
