@@ -800,13 +800,40 @@ const Dashboard = () => {
             <div className="view-all" onClick={() => handleQuickAction('regulations')}>Xem tất cả →</div>
           </div>
           <div className="card-gov-body" style={{ padding: '8px 18px' }}>
-            {dynamicTasks.map(t => (
-              <div key={t.id} className="task-item" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-                <div className="task-status" style={{ width: '8px', height: '8px', borderRadius: '50%', background: t.color, flexShrink: 0 }}></div>
-                <div className="task-title" style={{ fontSize: '12.5px', color: 'var(--text-primary)', flex: 1, textAlign: 'left' }}>{t.title}</div>
-                <span className={`task-badge ${t.badgeClass}`} style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10.5px', fontWeight: '600' }}>{t.badgeText}</span>
-              </div>
-            ))}
+            {dynamicTasks.map(t => {
+              const tabIdMap: Record<string, string> = {
+                't-comp': 'complaints',
+                't-meet': 'meetings',
+                't-funds': 'finance',
+                't-res': 'residents',
+                't-san': 'environment'
+              };
+              const targetTab = tabIdMap[t.id];
+              return (
+                <div 
+                  key={t.id} 
+                  className="task-item" 
+                  onClick={() => targetTab && handleQuickAction(targetTab)}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '10px', 
+                    padding: '10px 12px', 
+                    borderBottom: '1px solid var(--border)',
+                    cursor: targetTab ? 'pointer' : 'default',
+                    transition: 'background 0.2s',
+                    borderRadius: '8px',
+                    margin: '2px 0'
+                  }}
+                  onMouseOver={(e) => { if (targetTab) e.currentTarget.style.backgroundColor = '#f1f5f9'; }}
+                  onMouseOut={(e) => { if (targetTab) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <div className="task-status" style={{ width: '8px', height: '8px', borderRadius: '50%', background: t.color, flexShrink: 0 }}></div>
+                  <div className="task-title" style={{ fontSize: '12.5px', color: 'var(--text-primary)', flex: 1, textAlign: 'left' }}>{t.title}</div>
+                  <span className={`task-badge ${t.badgeClass}`} style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '10.5px', fontWeight: '600' }}>{t.badgeText}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
