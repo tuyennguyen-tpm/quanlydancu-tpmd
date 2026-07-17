@@ -527,7 +527,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     setTemporaryAddress('');
     setRelationshipWithHead('Con');
     setIsHead(false);
-    setStatus('resident');
+    setStatus(viewMode === 'temp' ? 'temporary_resident' : 'resident');
     setHouseholdId('');
     setPob('');
     setNotes('');
@@ -2052,14 +2052,20 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
               className="household-select-filter"
             >
               <option value="all">Tất cả hộ gia đình</option>
-              {households.map(h => {
-                const headRes = residents.find(r => r.id === h.head_of_household_id);
-                return (
-                  <option key={h.id} value={h.id}>
-                    {h.address} ({headRes ? `Chủ hộ: ${headRes.full_name}` : `Hộ số: ${h.household_number}`})
-                  </option>
-                );
-              })}
+              {households
+                .filter(h => {
+                  if (viewMode !== 'temp') return true;
+                  const members = residents.filter(r => r.household_id === h.id);
+                  return members.some(r => r.status === 'temporary_resident' || r.status === 'temporary_absent' || r.status === 'stay');
+                })
+                .map(h => {
+                  const headRes = residents.find(r => r.id === h.head_of_household_id);
+                  return (
+                    <option key={h.id} value={h.id}>
+                      {h.address} ({headRes ? `Chủ hộ: ${headRes.full_name}` : `Hộ số: ${h.household_number}`})
+                    </option>
+                  );
+                })}
             </select>
           </div>
 
@@ -2121,32 +2127,32 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
               ))}
             </select>
             {viewMode !== 'temp' && (
-              <button 
-                className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
-                onClick={() => setCategoryFilter('senior')}
-              >
-                <UserCheck size={16} /> Người cao tuổi (≥70)
-              </button>
-            )}
-            <button 
-              className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('child')}
-            >
-              <Baby size={16} /> Trẻ em (&lt;16)
-            </button>
-            <button 
-              className={`filter-btn filter-btn-military ${categoryFilter === 'military' ? 'active' : ''}`}
-              onClick={() => setCategoryFilter('military')}
-            >
-              <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
-            </button>
-            {viewMode !== 'temp' && (
-              <button 
-                className={`filter-btn filter-btn-longevity ${categoryFilter === 'longevity' ? 'active' : ''}`}
-                onClick={() => setCategoryFilter('longevity')}
-              >
-                🎉 Mừng thọ (70-150)
-              </button>
+              <>
+                <button 
+                  className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter('senior')}
+                >
+                  <UserCheck size={16} /> Người cao tuổi (≥70)
+                </button>
+                <button 
+                  className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter('child')}
+                >
+                  <Baby size={16} /> Trẻ em (&lt;16)
+                </button>
+                <button 
+                  className={`filter-btn filter-btn-military ${categoryFilter === 'military' ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter('military')}
+                >
+                  <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
+                </button>
+                <button 
+                  className={`filter-btn filter-btn-longevity ${categoryFilter === 'longevity' ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter('longevity')}
+                >
+                  🎉 Mừng thọ (70-150)
+                </button>
+              </>
             )}
 
             {categoryFilter === 'longevity' && (

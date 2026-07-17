@@ -1388,7 +1388,14 @@ const Households = () => {
     const matchesByMember = !!getMatchedMemberName(h.id, searchTerm);
     const matchesSearch = matchesByHead || matchesByMember;
 
-    const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
+    const matchesPolicy = (() => {
+      if (policyFilter === 'all') return true;
+      if (policyFilter === 'has_temp') {
+        const members = residentsByHouseholdMap.get(h.id) || [];
+        return members.some(m => m.status === 'temporary_resident' || m.status === 'stay');
+      }
+      return h.policy_type === policyFilter;
+    })();
     
     // Phân quyền lọc: tài khoản phường thì lọc theo tổ dân phố, tài khoản TDP thì lọc theo tổ
     const matchesTdp = !isWardAdmin || tdpFilter === 'all' || h.user_id === tdpFilter;
@@ -1402,7 +1409,7 @@ const Households = () => {
     if (numA !== numB) return numA - numB;
     // Fallback nếu trùng số
     return a.id.localeCompare(b.id);
-  }), [households, residents, searchTerm, policyFilter, groupFilter, isWardAdmin, tdpFilter]);
+  }), [households, residents, residentsByHouseholdMap, searchTerm, policyFilter, groupFilter, isWardAdmin, tdpFilter]);
 
   const stats = useMemo(() => {
     const totalH = filteredHouseholds.length;
@@ -1434,6 +1441,7 @@ const Households = () => {
     const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
       : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
       : policyFilter === 'policy_family' ? 'Gia đình chính sách'
+      : policyFilter === 'has_temp' ? 'Có tạm trú/lưu trú'
       : 'Tất cả các loại';
     const groupLabel = groupFilter !== 'all' ? ` – ${groupFilter}` : '';
     const today = new Date().toLocaleDateString('vi-VN');
@@ -1544,6 +1552,7 @@ const Households = () => {
       const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
         : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
         : policyFilter === 'policy_family' ? 'Gia đình chính sách'
+        : policyFilter === 'has_temp' ? 'Có tạm trú/lưu trú'
         : 'Tất cả';
       const groupLabel = isWardAdmin
         ? (tdpFilter !== 'all' ? ` - ${tdpMap[tdpFilter] || 'TDP'}` : '')
@@ -1745,6 +1754,7 @@ const Households = () => {
         
         <div className="filter-tabs" style={{ flexWrap: 'wrap' }}>
           <button className={`tab-mini ${policyFilter === 'all' ? 'active' : ''}`} onClick={() => setPolicyFilter('all')}>Tất cả</button>
+          <button className={`tab-mini ${policyFilter === 'has_temp' ? 'active' : ''}`} onClick={() => setPolicyFilter('has_temp')}>Có tạm trú/lưu trú</button>
           <button className={`tab-mini ${policyFilter === 'poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('poor')}>Hộ nghèo</button>
           <button className={`tab-mini ${policyFilter === 'near_poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('near_poor')}>Hộ cận nghèo</button>
           <button className={`tab-mini ${policyFilter === 'policy_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('policy_family')}>Gia đình chính sách</button>
