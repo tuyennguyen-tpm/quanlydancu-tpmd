@@ -296,6 +296,16 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   }, [searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
 
   useEffect(() => {
+    // Reset filters when switching tabs (viewMode changes)
+    setSearchInput('');
+    setCategoryFilter('all');
+    setHouseholdFilter('all');
+    setShowDeceased(false);
+    setGroupFilter('all');
+    setCurrentPage(1);
+  }, [viewMode]);
+
+  useEffect(() => {
     const handleGroupsChange = () => {
       const saved = localStorage.getItem('tdp_groups_config');
       setGroups(saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']);
@@ -1920,7 +1930,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     const timeA = new Date(a.created_at || 0).getTime();
     const timeB = new Date(b.created_at || 0).getTime();
     return timeA - timeB;
-  }), [residents, householdLookupMap, searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
+  }), [residents, householdLookupMap, searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear, viewMode]);
 
   const totalPages = Math.ceil(filteredResidents.length / pageSize) || 1;
   const paginatedResidents = filteredResidents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
