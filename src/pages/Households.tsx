@@ -740,6 +740,143 @@ const Households = () => {
     } catch (e) {
       showToast('Lỗi khi thực hiện báo mất!', 'danger');
     }
+  const handleSetNewHead = async (newHead: Resident) => {
+    if (isGuest) {
+      showToast('Bạn không có quyền thực hiện thao tác này!', 'warning');
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn đặt ${newHead.full_name} làm Chủ hộ mới?`)) {
+      return;
+    }
+
+    try {
+      const hhId = newHead.household_id;
+      const hh = households.find(h => h.id === hhId);
+      if (!hh) return;
+
+      // 1. Cập nhật head_of_household_id của hộ trong bảng households
+      await db.saveHousehold({
+        ...hh,
+        head_of_household_id: newHead.id
+      });
+
+      // 2. Cập nhật các nhân khẩu trong hộ
+      const hhMembers = residents.filter(r => r.household_id === hhId);
+      
+      const cleanRel = (str: string) => {
+        return (str || '')
+          .normalize('NFC')
+          .toLowerCase()
+          .trim();
+      };
+      const prevRel = cleanRel(newHead.relationship_with_head || 'Con');
+
+      for (const member of hhMembers) {
+        let needsUpdate = false;
+        let updatedIsHead = member.is_head;
+        let updatedRelationship = member.relationship_with_head || 'Thành viên';
+        const curRel = cleanRel(updatedRelationship);
+
+        if (member.id === newHead.id) {
+          if (!member.is_head || curRel !== 'chủ hộ') {
+            updatedIsHead = true;
+            updatedRelationship = 'Chủ hộ';
+            needsUpdate = true;
+          }
+        } else {
+          // Tự động suy luận mối quan hệ mới cho các thành viên dựa trên chủ hộ mới
+          let newRel = updatedRelationship;
+          if (prevRel.includes('con')) {
+            // Chủ hộ mới trước đây là Con
+            if (member.id === hh.head_of_household_id || curRel === 'chủ hộ' || curRel === 'chồng') {
+              newRel = 'Bố';
+            } else if (curRel === 'vợ') {
+              newRel = 'Mẹ';
+            } else if (curRel.includes('con')) {
+              const getYear = (dStr: string) => {
+                if (!dStr) return 0;
+                const pts = dStr.split('-');
+                return pts.length === 3 ? parseInt(pts[0], 10) : 0;
+              };
+              const headY = getYear(newHead.dob || '');
+              const memberY = getYear(member.dob || '');
+              if (headY && memberY) {
+                if (memberY < headY) {
+                  newRel = member.gender === 'female' ? 'Chị' : 'Anh';
+                } else {
+                  newRel = 'Em';
+                }
+              } else {
+                newRel = 'Anh/Chị/Em';
+              }
+            } else if (curRel.includes('cháu')) {
+              newRel = 'Cháu';
+            }
+          } else if (prevRel === 'vợ') {
+            // Chủ hộ mới trước đây là Vợ
+            if (member.id === hh.head_of_household_id || curRel === 'chủ hộ') {
+              newRel = 'Chồng';
+            } else if (curRel.includes('con')) {
+              newRel = 'Con';
+            } else if (curRel.includes('cháu')) {
+              newRel = 'Cháu';
+            }
+          } else if (prevRel === 'chồng') {
+            // Chủ hộ mới trước đây là Chồng
+            if (member.id === hh.head_of_household_id || curRel === 'chủ hộ') {
+              newRel = 'Vợ';
+            } else if (curRel.includes('con')) {
+              newRel = 'Con';
+            }
+          } else if (prevRel.includes('cháu')) {
+            // Chủ hộ mới trước đây là Cháu
+            if (member.id === hh.head_of_household_id || curRel === 'chủ hộ') {
+              newRel = member.gender === 'female' ? 'Bà' : 'Ông';
+            }
+          } else if (prevRel === 'bố' || prevRel === 'mẹ') {
+            // Chủ hộ mới trước đây là Bố hoặc Mẹ
+            if (member.id === hh.head_of_household_id || curRel === 'chủ hộ') {
+              newRel = 'Con';
+            } else if (curRel === 'mẹ' && prevRel === 'bố') {
+              newRel = 'Vợ';
+            } else if (curRel === 'bố' && prevRel === 'mẹ') {
+              newRel = 'Chồng';
+            } else if (curRel === 'anh' || curRel === 'chị' || curRel === 'em') {
+              newRel = 'Con';
+            }
+          } else {
+            newRel = 'Thành viên';
+          }
+
+          if (member.is_head || cleanRel(updatedRelationship) !== cleanRel(newRel)) {
+            updatedIsHead = false;
+            updatedRelationship = newRel;
+            needsUpdate = true;
+          }
+        }
+
+        if (needsUpdate) {
+          await db.saveResident({
+            ...member,
+            is_head: updatedIsHead,
+            relationship_with_head: updatedRelationship
+          });
+        }
+      }
+
+      showToast(`Đã thay đổi chủ hộ thành công sang ${newHead.full_name}!`, 'success');
+      loadData();
+      
+      // Cập nhật lại state của modal xem chi tiết
+      setViewingMembersHousehold({
+        ...hh,
+        head_of_household_id: newHead.id
+      });
+      
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Lỗi khi thay đổi chủ hộ!', 'danger');
+    }
   };
 
   const RELATIONSHIP_OPTIONS = [
@@ -2122,6 +2259,16 @@ const Households = () => {
                               >
                                 Sửa
                               </button>
+                              {!member.is_head && !isDeceased && (
+                                <button 
+                                  className="action-btn-sm head" 
+                                  onClick={() => handleSetNewHead(member)}
+                                  title="Đặt làm chủ hộ mới"
+                                  style={{ backgroundColor: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }}
+                                >
+                                  Đặt chủ hộ
+                                </button>
+                              )}
                               <button 
                                 className="action-btn-sm transfer" 
                                 onClick={() => {

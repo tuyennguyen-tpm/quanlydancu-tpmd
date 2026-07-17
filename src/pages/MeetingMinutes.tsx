@@ -1018,15 +1018,23 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         </xml>
         <![endif]-->
         <style>
+          @page {
+            size: auto;
+            margin: 0;
+          }
           @page Section1 {
             size: 595.3pt 841.9pt;
-            margin: 72.0pt 54.0pt 72.0pt 86.4pt;
+            margin: 0;
             mso-header-margin: 36.0pt;
             mso-footer-margin: 36.0pt;
             mso-paper-source: 0;
           }
-          div.Section1 { page: Section1; }
-          body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.6; color: #000; }
+          div.Section1 { 
+            page: Section1; 
+            padding: 72.0pt 54.0pt 72.0pt 86.4pt;
+            box-sizing: border-box;
+          }
+          body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.6; color: #000; margin: 0; padding: 0; }
           .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
           .header-table td { vertical-align: top; text-align: center; }
           .header-table td.org-col { width: 38%; }
