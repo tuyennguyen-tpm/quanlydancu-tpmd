@@ -555,7 +555,7 @@ const Dashboard = () => {
           index + 1,
           h.household_number || '',
           h.address || '',
-          h.policy_type === 'poor' ? 'Hộ nghèo' : h.policy_type === 'near_poor' ? 'Hộ cận nghèo' : h.policy_type === 'policy' ? 'Gia đình chính sách' : 'Bình thường',
+          h.policy_type === 'poor' ? 'Hộ nghèo' : h.policy_type === 'near_poor' ? 'Hộ cận nghèo' : h.policy_type === 'policy_family' ? 'Gia đình chính sách' : 'Bình thường',
           h.group_id || ''
         ];
         const addedRow = wsHouseholds.addRow(rowData);
