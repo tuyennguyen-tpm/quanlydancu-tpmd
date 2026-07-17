@@ -127,7 +127,18 @@ const Dashboard = () => {
   const [dynamicNotifs, setDynamicNotifs] = useState<any[]>([]);
   const [dynamicTasks, setDynamicTasks] = useState<any[]>([]);
 
-  const isAdmin = localStorage.getItem('user_role') === 'admin' || 
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
+
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'demo');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
+
+  const isAdmin = currentRole === 'admin' || 
                   localStorage.getItem('user_role') === 'super_admin' || 
                   localStorage.getItem('user_role') === 'ward_admin';
 
