@@ -568,6 +568,8 @@ const App = () => {
 
   // Settings modal states
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [settingsTab, setSettingsTab] = useState<'general' | 'keys'>('general');
   const [allTdpProfiles, setAllTdpProfiles] = useState<any[]>([]);
   const [transferTargetWards, setTransferTargetWards] = useState<Record<string, string>>({});
@@ -1955,26 +1957,13 @@ const App = () => {
     }
   };
 
-  const handleDeleteAll = async () => {
+  const handleDeleteAllTrigger = () => {
     if (localStorage.getItem('guest_mode') === 'true') {
       window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Tài khoản của bạn không có quyền xóa toàn bộ dữ liệu!', type: 'warning' } }));
       return;
     }
-    if (window.confirm('CẢNH BÁO NGUY HIỂM: Bạn có chắc chắn muốn XÓA SẠCH TOÀN BỘ dữ liệu nhân khẩu và hộ gia đình khỏi hệ thống không? Hành động này KHÔNG THỂ PHỤC HỒI!')) {
-      const confirmText = window.prompt('Vui lòng gõ chữ XOA (viết hoa, không dấu) vào ô bên dưới để xác nhận xóa toàn bộ dữ liệu:');
-      if (confirmText === 'XOA') {
-        try {
-          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đang tiến hành xóa toàn bộ dữ liệu...', type: 'warning' } }));
-          await db.deleteAllData();
-          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã xóa sạch toàn bộ dữ liệu thành công!', type: 'success' } }));
-          window.dispatchEvent(new CustomEvent('db-changed'));
-        } catch (e) {
-          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lỗi khi xóa dữ liệu!', type: 'danger' } }));
-        }
-      } else {
-        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã hủy thao tác xóa vì xác nhận không chính xác.', type: 'info' } }));
-      }
-    }
+    setDeleteConfirmInput('');
+    setIsDeleteAllModalOpen(true);
   };
 
   const handleLogout = async () => {
@@ -3822,7 +3811,7 @@ const App = () => {
                       type="button"
                       className="btn btn-danger"
                       style={{ flex: 1, justifyContent: 'center', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5' }}
-                      onClick={handleDeleteAll}
+                      onClick={handleDeleteAllTrigger}
                     >
                       🗑️ Xóa toàn bộ dữ liệu CSDL
                     </button>
@@ -3837,6 +3826,92 @@ const App = () => {
                 <button type="submit" className="btn btn-primary">💾 Lưu cấu hình</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete All Data Confirmation Modal */}
+      {isDeleteAllModalOpen && (
+        <div className="modal-overlay" style={{ zIndex: 11000, background: 'rgba(15, 23, 42, 0.7)' }}>
+          <div className="modal-content" style={{ maxWidth: '450px', border: '2px solid #ef4444', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(239, 68, 68, 0.2)' }}>
+            <div className="modal-header" style={{ backgroundColor: '#fef2f2', borderBottom: '1px solid #fee2e2', padding: '16px 24px', borderTopLeftRadius: '14px', borderTopRightRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ color: '#dc2626', margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ⚠️ CẢNH BÁO NGUY HIỂM
+              </h2>
+              <button className="close-btn" style={{ color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setIsDeleteAllModalOpen(false)}><X size={24} /></button>
+            </div>
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '0.92rem', color: '#475569', lineHeight: '1.6', textAlign: 'left' }}>
+                Bạn đang thực hiện thao tác <strong>XÓA SẠCH TOÀN BỘ DỮ LIỆU</strong> nhân khẩu và hộ gia đình khỏi cơ sở dữ liệu hệ thống.
+                <br />
+                <span style={{ color: '#dc2626', fontWeight: 'bold' }}>Hành động này KHÔNG THỂ PHỤC HỒI!</span>
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', textAlign: 'left' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#475569' }}>
+                  Nhập chữ <strong>XOA</strong> để xác nhận:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Gõ chữ XOA viết hoa..."
+                  value={deleteConfirmInput}
+                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    outline: 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsDeleteAllModalOpen(false)}
+                  style={{ flex: 1, height: '40px', fontWeight: '600' }}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  disabled={deleteConfirmInput !== 'XOA'}
+                  onClick={async () => {
+                    try {
+                      setIsDeleteAllModalOpen(false);
+                      setSettingsOpen(false);
+                      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đang tiến hành xóa toàn bộ dữ liệu...', type: 'warning' } }));
+                      await db.deleteAllData();
+                      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã xóa sạch toàn bộ dữ liệu thành công!', type: 'success' } }));
+                      window.dispatchEvent(new CustomEvent('db-changed'));
+                    } catch (e) {
+                      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lỗi khi xóa dữ liệu!', type: 'danger' } }));
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '40px',
+                    backgroundColor: deleteConfirmInput === 'XOA' ? '#dc2626' : '#fca5a5',
+                    borderColor: deleteConfirmInput === 'XOA' ? '#dc2626' : '#fca5a5',
+                    color: 'white',
+                    fontWeight: '600',
+                    cursor: deleteConfirmInput === 'XOA' ? 'pointer' : 'not-allowed'
+                  }}
+                >
+                  Xác nhận Xóa
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
