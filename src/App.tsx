@@ -1947,6 +1947,28 @@ const App = () => {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (localStorage.getItem('guest_mode') === 'true') {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Tài khoản của bạn không có quyền xóa toàn bộ dữ liệu!', type: 'warning' } }));
+      return;
+    }
+    if (window.confirm('CẢNH BÁO NGUY HIỂM: Bạn có chắc chắn muốn XÓA SẠCH TOÀN BỘ dữ liệu nhân khẩu và hộ gia đình khỏi hệ thống không? Hành động này KHÔNG THỂ PHỤC HỒI!')) {
+      const confirmText = window.prompt('Vui lòng gõ chữ XOA (viết hoa, không dấu) vào ô bên dưới để xác nhận xóa toàn bộ dữ liệu:');
+      if (confirmText === 'XOA') {
+        try {
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đang tiến hành xóa toàn bộ dữ liệu...', type: 'warning' } }));
+          await db.deleteAllData();
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã xóa sạch toàn bộ dữ liệu thành công!', type: 'success' } }));
+          window.dispatchEvent(new CustomEvent('db-changed'));
+        } catch (e) {
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lỗi khi xóa dữ liệu!', type: 'danger' } }));
+        }
+      } else {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã hủy thao tác xóa vì xác nhận không chính xác.', type: 'info' } }));
+      }
+    }
+  };
+
   const handleLogout = async () => {
     if (window.confirm('Bạn muốn đăng xuất và đặt lại phiên làm việc? Cấu hình Supabase sẽ được giữ nguyên.')) {
       const ev = new CustomEvent('show-toast', { detail: { message: 'Đang đăng xuất...', type: 'info' } });
@@ -3774,15 +3796,30 @@ const App = () => {
               )}
 
               {/* ─── Phần 3: Nguy hiểm ─── */}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ flex: 1, justifyContent: 'center', borderColor: 'var(--danger)', color: 'var(--danger)' }}
-                  onClick={handleClearDatabase}
-                >
-                  🔄 Khôi phục dữ liệu mẫu
-                </button>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexDirection: 'column' }}>
+                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: 'var(--danger)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                  ⚠️ Vùng nguy hiểm
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ flex: 1, justifyContent: 'center', borderColor: 'var(--danger)', color: 'var(--danger)' }}
+                    onClick={handleClearDatabase}
+                  >
+                    🔄 Khôi phục dữ liệu mẫu (Reset App)
+                  </button>
+                  {(userRole === 'admin' || userRole === 'super_admin') && (
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ flex: 1, justifyContent: 'center', backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5' }}
+                      onClick={handleDeleteAll}
+                    >
+                      🗑️ Xóa toàn bộ dữ liệu CSDL
+                    </button>
+                  )}
+                </div>
               </div>
                 </>
               )}

@@ -693,28 +693,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     setActiveMenuId(null);
   };
 
-  const handleDeleteAll = async () => {
-    if (isGuest) {
-      showToast('Tài khoản của bạn không có quyền xóa toàn bộ dữ liệu!', 'warning');
-      return;
-    }
-    if (window.confirm('CẢNH BÁO NGUY HIỂM: Bạn có chắc chắn muốn XÓA SẠCH TOÀN BỘ dữ liệu nhân khẩu và hộ gia đình khỏi hệ thống không? Hành động này KHÔNG THỂ PHỤC HỒI!')) {
-      const confirmText = window.prompt('Vui lòng gõ chữ XOA (viết hoa, không dấu) vào ô bên dưới để xác nhận xóa toàn bộ dữ liệu:');
-      if (confirmText === 'XOA') {
-        try {
-          showToast('Đang tiến hành xóa toàn bộ dữ liệu...', 'warning');
-          await (db as any).deleteAllData();
-          showToast('Đã xóa sạch toàn bộ dữ liệu thành công!', 'success');
-          loadData();
-          window.dispatchEvent(new CustomEvent('db-changed'));
-        } catch (e) {
-          showToast('Lỗi khi xóa dữ liệu!', 'danger');
-        }
-      } else {
-        showToast('Đã hủy thao tác xóa vì xác nhận không chính xác.', 'info');
-      }
-    }
-  };
+
 
   // Export to Excel/CSV Functionality
   const handleExportCSV = async () => {
@@ -2813,16 +2792,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         </div>
       )}
 
-      {/* Danger Zone: Xoá toàn bộ */}
-      {!isGuest && (
-        <div style={{ marginTop: '40px', padding: '20px', borderTop: '1px dashed #ef4444', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          <p style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: '600', margin: 0 }}>Vùng Nguy Hiểm: Dọn dẹp rác hệ thống</p>
-          <button className="btn btn-danger" onClick={handleDeleteAll} style={{ backgroundColor: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5', padding: '6px 16px', fontSize: '0.85rem' }}>
-            <Trash2 size={14} />
-            Xóa Toàn Bộ Dữ Liệu
-          </button>
-        </div>
-      )}
+
 
       {importAlertData && importAlertData.isOpen && (
         <div style={{
