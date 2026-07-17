@@ -584,7 +584,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       setTitle('Họp Tổ dân phố thường kỳ');
       setDate(new Date().toISOString().slice(0, 10));
       setTime('19:30');
-      setLocation('Nhà văn hóa Tổ dân phố');
+      setLocation('Nhà văn hóa');
       setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
       setSecretary('Lê Thị Dung - Thư ký');
       setAttendance('85');
@@ -730,7 +730,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     setTitle('Họp Tổ dân phố thường kỳ');
     setDate(new Date().toISOString().slice(0, 10));
     setTime('19:30');
-    setLocation('Nhà văn hóa Tổ dân phố');
+    setLocation('Nhà văn hóa');
     setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
     setSecretary('Lê Thị Dung - Thư ký');
     setAttendance('85');
@@ -1408,7 +1408,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="Nhà văn hóa Tổ dân phố"
+              placeholder="Nhà văn hóa"
               disabled={isGuest}
               style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
             />
