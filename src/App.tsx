@@ -1935,15 +1935,23 @@ const App = () => {
 
 
   const handleClearDatabase = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa tất cả dữ liệu trong LocalStorage và đặt lại dữ liệu mẫu ban đầu?')) {
-      localStorage.clear();
-      const ev = new CustomEvent('show-toast', { 
-        detail: { message: 'Đã khôi phục dữ liệu mẫu! Đang tải lại...', type: 'info' } 
-      });
-      window.dispatchEvent(ev);
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+    if (window.confirm('Bạn có chắc chắn muốn xóa tất cả cấu hình địa bàn trong LocalStorage và đặt lại dữ liệu mẫu ban đầu không?')) {
+      const confirmText = window.prompt('Vui lòng gõ chữ XOA (viết hoa, không dấu) vào ô bên dưới để xác nhận khôi phục dữ liệu mẫu:');
+      if (confirmText === 'XOA') {
+        localStorage.clear();
+        const ev = new CustomEvent('show-toast', { 
+          detail: { message: 'Đã khôi phục dữ liệu mẫu! Đang tải lại...', type: 'info' } 
+        });
+        window.dispatchEvent(ev);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        const ev = new CustomEvent('show-toast', { 
+          detail: { message: 'Đã hủy thao tác khôi phục dữ liệu mẫu.', type: 'info' } 
+        });
+        window.dispatchEvent(ev);
+      }
     }
   };
 
