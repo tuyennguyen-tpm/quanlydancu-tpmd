@@ -740,6 +740,8 @@ const Households = () => {
     } catch (e) {
       showToast('Lỗi khi thực hiện báo mất!', 'danger');
     }
+  };
+
   const handleSetNewHead = async (newHead: Resident) => {
     if (isGuest) {
       showToast('Bạn không có quyền thực hiện thao tác này!', 'warning');
