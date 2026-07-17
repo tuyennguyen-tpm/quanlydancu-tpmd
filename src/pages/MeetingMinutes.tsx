@@ -630,6 +630,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
   const handleDeleteMinutes = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    const isAdmin = currentRole === 'admin' || 
+                    localStorage.getItem('user_role') === 'super_admin' || 
+                    localStorage.getItem('user_role') === 'ward_admin';
+    if (!isAdmin) {
+      showToast('Chỉ Quản trị viên (Admin) mới có quyền xóa biên bản đã lưu!', 'warning');
+      return;
+    }
     if (isGuest) {
       showToast('Khách không có quyền xóa biên bản!', 'warning');
       return;
@@ -1218,7 +1225,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     <Calendar size={10} /> {new Date(m.date).toLocaleDateString('vi-VN')}
                   </div>
                 </div>
-                {!isGuest && (
+                {(currentRole === 'admin' || localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
                   <button 
                     onClick={(e) => handleDeleteMinutes(m.id, e)}
                     style={{
