@@ -934,9 +934,21 @@ const Households = () => {
   };
 
   const RELATIONSHIP_OPTIONS = [
-    'Chủ hộ', 'Vợ', 'Chồng', 'Con', 'Con dâu', 'Con rể',
-    'Bố', 'Mẹ', 'Anh', 'Chị', 'Em', 'Chị dâu', 'Anh rể', 'Em dâu', 'Em rể',
-    'Cháu', 'Ông', 'Bà', 'Ông ngoại', 'Bà ngoại', 'Thành viên'
+    'Chủ hộ',
+    // Thế hệ 1: Ông bà
+    'Ông', 'Bà', 'Ông ngoại', 'Bà ngoại',
+    // Thế hệ 2: Bố mẹ
+    'Bố', 'Mẹ',
+    // Thế hệ 3: Vợ chồng & Anh chị em
+    'Vợ', 'Chồng',
+    'Anh', 'Chị', 'Em',
+    'Chị dâu', 'Anh rể', 'Em dâu', 'Em rể',
+    // Thế hệ 4: Con cái
+    'Con', 'Con dâu', 'Con rể', 'Con nuôi',
+    // Thế hệ 5: Cháu chắt
+    'Cháu', 'Cháu ngoại', 'Cháu dâu', 'Cháu rể', 'Cháu nuôi',
+    // Khác
+    'Thành viên'
   ];
 
   const handleUpdateRelationship = async (member: Resident, newRelationship: string) => {
