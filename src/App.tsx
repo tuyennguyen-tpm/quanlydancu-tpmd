@@ -1783,6 +1783,13 @@ const App = () => {
             configItems.push({ user_id: uId, key: 'ward_fund_list', value: JSON.stringify(mappedWardFunds) });
           }
           await supabase.from('app_config').upsert(configItems);
+
+          // Cập nhật trường tdp_name trong bảng profiles nếu là Tổ trưởng để tránh bị ghi đè khi reload
+          const currentUserRole = localStorage.getItem('user_role');
+          if (currentUserRole === 'tdp_leader') {
+            await supabase.from('profiles').update({ tdp_name: newName }).eq('id', uId);
+            localStorage.setItem('user_tdp_name', newName);
+          }
         }
       } catch (err) {
         console.error('Failed to sync config settings to Supabase:', err);

@@ -553,6 +553,27 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     loadSavedMinutes();
   }, []);
 
+  useEffect(() => {
+    const handleTdpNameChange = () => {
+      const newTdpName = localStorage.getItem('tdp_name') || 'Nam Sầm Sơn';
+      setTdpName(newTdpName);
+      setOrgLevel2(`TỔ DÂN PHỐ ${newTdpName.toUpperCase()}`);
+    };
+    
+    const handleWardNameChange = () => {
+      const newWardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+      setOrgLevel1(`UBND ${newWardName.toUpperCase()}`);
+    };
+
+    window.addEventListener('tdp-name-changed', handleTdpNameChange);
+    window.addEventListener('ward-name-changed', handleWardNameChange);
+    
+    return () => {
+      window.removeEventListener('tdp-name-changed', handleTdpNameChange);
+      window.removeEventListener('ward-name-changed', handleWardNameChange);
+    };
+  }, []);
+
   const handleReset = () => {
     if (isGuest) {
       showToast('Khách không có quyền đặt lại nội dung biên bản!', 'warning');
