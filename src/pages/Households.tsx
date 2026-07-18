@@ -202,7 +202,7 @@ const Households = () => {
   // Form fields
   const [householdNumber, setHouseholdNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [policyType, setPolicyType] = useState<'none' | 'poor' | 'near_poor' | 'policy_family' | 'martyr_family'>('none');
+  const [policyType, setPolicyType] = useState<'none' | 'poor' | 'near_poor' | 'policy_family' | 'martyr_family' | 'meritorious_family'>('none');
   const [headId, setHeadId] = useState('');
   const [lat, setLat] = useState('19.7420');
   const [lng, setLng] = useState('105.9230');
@@ -1470,7 +1470,7 @@ const Households = () => {
     const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
       : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
       : policyFilter === 'policy_family' ? 'Gia đình chính sách'
-      : policyFilter === 'martyr_family' ? 'Gia đình liệt sỹ 27/07'
+      : policyFilter === 'martyr_family' ? 'Người có công/ Thân nhân liệt sỹ'
       : policyFilter === 'has_temp' ? 'Tạm trú, tạm vắng'
       : 'Tất cả các loại';
     const groupLabel = groupFilter !== 'all' ? ` – ${groupFilter}` : '';
@@ -1507,7 +1507,7 @@ const Households = () => {
       }).join('');
 
       const martyrHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
-      <title>Danh sách Gia đình liệt sỹ – ${tdpNameVal}</title>
+      <title>Danh sách Người có công/ Thân nhân liệt sỹ – ${tdpNameVal}</title>
       <style>
         body { font-family: 'Times New Roman', serif; font-size: 12pt; margin: 20px; color: #000; }
         h2 { text-align:center; font-size:15pt; font-weight:bold; margin:0 0 2px; text-transform:uppercase; letter-spacing:1px; color:#000; }
@@ -1522,7 +1522,7 @@ const Households = () => {
         }
       </style>
       </head><body>
-      <h2>Danh sách Gia đình liệt sỹ 27/07</h2>
+      <h2>Danh sách Người có công/ Thân nhân liệt sỹ</h2>
       <div class="subtitle">${tdpNameVal} – ${wardNameVal} &nbsp;|&nbsp; Ngày in: ${today} &nbsp;|&nbsp; Tổng số: <strong>${formatNumber(filteredHouseholds.length)}</strong> hộ</div>
       <table>
         <thead><tr>
@@ -1657,7 +1657,7 @@ const Households = () => {
       const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
         : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
         : policyFilter === 'policy_family' ? 'Gia đình chính sách'
-        : policyFilter === 'martyr_family' ? 'Gia đình liệt sỹ 27/07'
+        : policyFilter === 'martyr_family' ? 'Người có công/ Thân nhân liệt sỹ'
         : policyFilter === 'has_temp' ? 'Tạm trú, tạm vắng'
         : 'Tất cả';
       const groupLabel = isWardAdmin
@@ -1674,7 +1674,7 @@ const Households = () => {
         // Tiêu đề
         ws.mergeCells(`A1:${totalCols}1`);
         const titleCell = ws.getCell('A1');
-        titleCell.value = 'DANH SÁCH GIA ĐÌNH LIỆT SỸ 27/07';
+        titleCell.value = 'DANH SÁCH NGƯỜI CÓ CÔNG/ THÂN NHÂN LIỆT SỸ';
         titleCell.font = { name: 'Times New Roman', size: 14, bold: true, color: { argb: 'FF4C1D95' } };
         titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(1).height = 32;
@@ -1930,7 +1930,8 @@ const Households = () => {
       case 'poor': return 'Hộ nghèo';
       case 'near_poor': return 'Hộ cận nghèo';
       case 'policy_family': return 'Gia đình chính sách';
-      case 'martyr_family': return 'Gia đình liệt sỹ 27/07';
+      case 'martyr_family': return 'Người có công/ Thân nhân liệt sỹ';
+      case 'meritorious_family': return 'Người có công/ Thân nhân liệt sỹ';
       default: return 'Bình thường';
     }
   };
@@ -1981,7 +1982,7 @@ const Households = () => {
           <button className={`tab-mini ${policyFilter === 'poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('poor')}>Hộ nghèo</button>
           <button className={`tab-mini ${policyFilter === 'near_poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('near_poor')}>Hộ cận nghèo</button>
           <button className={`tab-mini ${policyFilter === 'policy_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('policy_family')}>Gia đình chính sách</button>
-          <button className={`tab-mini ${policyFilter === 'martyr_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('martyr_family')}>Gia đình liệt sỹ 27/07</button>
+          <button className={`tab-mini ${policyFilter === 'martyr_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('martyr_family')}>Người có công/ Thân nhân liệt sỹ</button>
         </div>
 
         {/* Lọc theo phân quyền & Nút in/xuất */}
@@ -2358,8 +2359,8 @@ const Households = () => {
                   <option value="none">Bình thường</option>
                   <option value="poor">Hộ nghèo</option>
                   <option value="near_poor">Hộ cận nghèo</option>
-                  <option value="policy_family">Gia đình chính sách (Thương binh...)</option>
-                  <option value="martyr_family">Gia đình liệt sỹ 27/07</option>
+                  <option value="policy_family">Gia đình chính sách</option>
+                  <option value="martyr_family">Người có công/ Thân nhân liệt sỹ</option>
                 </select>
               </div>
 
@@ -2377,7 +2378,7 @@ const Households = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '1.1rem' }}>🎖️</span>
-                    <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#7c3aed' }}>Thông tin Gia đình liệt sỹ 27/07</span>
+                    <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#7c3aed' }}>Thông tin Người có công/ Thân nhân liệt sỹ</span>
                   </div>
 
                   <div className="form-row">

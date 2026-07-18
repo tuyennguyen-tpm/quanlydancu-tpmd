@@ -16,7 +16,7 @@ export interface Household {
   group_id: string;
   latitude?: number;
   longitude?: number;
-  policy_type: 'none' | 'poor' | 'near_poor' | 'policy_family' | 'martyr_family';
+  policy_type: 'none' | 'poor' | 'near_poor' | 'policy_family' | 'martyr_family' | 'meritorious_family';
   fire_safety_group?: string; // Tổ liên gia an toàn PCCC
   self_management_group?: string; // Tổ tự quản
   created_at: string;
