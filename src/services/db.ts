@@ -1863,10 +1863,9 @@ export const db = {
       const households = await self.getHouseholds();
       const hh = households.find((h: any) => h.id === householdId);
       if (hh) {
-        await self.saveHousehold({
-          ...hh,
-          head_of_household_id: null
-        });
+        // Tự động xóa hộ dân ra khỏi danh sách vì không còn ai
+        await self.deleteHousehold(householdId);
+        console.log(`Đã tự động xóa hộ gia đình ${householdId} do không còn thành viên nào.`);
       }
       return null;
     }
