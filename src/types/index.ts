@@ -19,6 +19,7 @@ export interface Household {
   policy_type: 'none' | 'poor' | 'near_poor' | 'policy_family' | 'martyr_family' | 'meritorious_family';
   fire_safety_group?: string; // Tổ liên gia an toàn PCCC
   self_management_group?: string; // Tổ tự quản
+  status?: 'active' | 'moved_out';
   created_at: string;
   user_id?: string;
   ward_id?: string;

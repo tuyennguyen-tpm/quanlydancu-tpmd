@@ -1436,7 +1436,20 @@ const Households = () => {
         type: 'ok'
       });
 
-      await db.deleteHousehold(h.id);
+      // 2. Chuyển trạng thái hộ thành 'moved_out'
+      await db.saveHousehold({
+        ...h,
+        status: 'moved_out'
+      });
+
+      // 3. Cập nhật trạng thái các thành viên thành 'temporary_absent' (tạm vắng) và quan hệ 'Thành viên chuyển đi'
+      for (const member of members) {
+        await db.saveResident({
+          ...member,
+          status: 'temporary_absent',
+          relationship_with_head: 'Thành viên chuyển đi'
+        });
+      }
 
       showToast('Báo chuyển đi cả hộ thành công và đã lưu vết lịch sử!', 'success');
       setIsTransferModalOpen(false);
@@ -1460,6 +1473,7 @@ const Households = () => {
   }, [residentsByHouseholdMap]);
 
   const filteredHouseholds = useMemo(() => households.filter(h => {
+    if (h.status === 'moved_out') return false;
     const headName = getHeadName(h).toLowerCase();
     const addr = h.address.toLowerCase();
     const num = h.household_number.toLowerCase();
