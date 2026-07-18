@@ -191,6 +191,11 @@ const Households = () => {
   // Suggested replacement head after a head is reported deceased
   const [suggestedNewHead, setSuggestedNewHead] = useState<{ household: Household; candidate: Resident } | null>(null);
 
+  // State cho Báo chuyển đi cả hộ
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferTargetHousehold, setTransferTargetHousehold] = useState<Household | null>(null);
+  const [transferDestination, setTransferDestination] = useState('');
+
   // New Head of Household details (for quick add)
   const [createNewHead, setCreateNewHead] = useState(false);
   const [newHeadName, setNewHeadName] = useState('');
@@ -1397,9 +1402,23 @@ const Households = () => {
     setActiveMenuId(null);
   };
 
-  const handleTransferEntireHousehold = async (h: Household) => {
+  const handleTransferEntireHousehold = (h: Household) => {
     if (isGuest) {
       showToast('Tài khoản của bạn không có quyền thực hiện hành động này!', 'warning');
+      return;
+    }
+    setTransferTargetHousehold(h);
+    setTransferDestination('');
+    setIsTransferModalOpen(true);
+    setActiveMenuId(null);
+  };
+
+  const confirmTransferEntireHousehold = async () => {
+    if (!transferTargetHousehold) return;
+    const h = transferTargetHousehold;
+    const cleanDestination = transferDestination.trim();
+    if (!cleanDestination) {
+      showToast('Vui lòng nhập nơi chuyển đến!', 'warning');
       return;
     }
 
@@ -1407,41 +1426,27 @@ const Households = () => {
     const members = getHouseholdMembers(h.id).filter(m => m.status !== 'deceased');
     const memberCount = members.length;
 
-    const destination = window.prompt(
-      `Hộ của ông/bà ${headName} có ${memberCount} nhân khẩu đang thường trú.\nNhập nơi chuyển đến của hộ gia đình (Ví dụ: Phường Quảng Vinh, TP Sầm Sơn):`,
-      ""
-    );
+    try {
+      const memberList = members.map(m => m.full_name).join(', ');
+      await db.saveSecurityLog({
+        id: generateUUID(),
+        title: `Cả hộ chuyển đi - Sổ ${h.household_number}`,
+        description: `Chủ hộ: ${headName}. Địa chỉ cũ: ${h.address}. Số thành viên chuyển đi: ${memberCount} (${memberList}). Nơi chuyển đến: ${cleanDestination}.`,
+        date: new Date().toISOString().split('T')[0],
+        type: 'ok'
+      });
 
-    if (destination === null) return; // User clicked Cancel
+      await db.deleteHousehold(h.id);
 
-    const cleanDestination = destination.trim();
-    if (!cleanDestination) {
-      showToast('Bạn phải nhập nơi chuyển đến để tiếp tục!', 'warning');
-      return;
+      showToast('Báo chuyển đi cả hộ thành công và đã lưu vết lịch sử!', 'success');
+      setIsTransferModalOpen(false);
+      setTransferTargetHousehold(null);
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (err) {
+      showToast('Lỗi khi thực hiện chuyển đi cả hộ!', 'danger');
+      console.error(err);
     }
-
-    if (window.confirm(`Xác nhận báo chuyển đi cho cả hộ ông/bà ${headName} đến: "${cleanDestination}"?\nTất cả nhân khẩu và hộ dân này sẽ được xóa khỏi danh sách hiện tại.`)) {
-      try {
-        const memberList = members.map(m => m.full_name).join(', ');
-        await db.saveSecurityLog({
-          id: generateUUID(),
-          title: `Cả hộ chuyển đi - Sổ ${h.household_number}`,
-          description: `Chủ hộ: ${headName}. Địa chỉ cũ: ${h.address}. Số thành viên chuyển đi: ${memberCount} (${memberList}). Nơi chuyển đến: ${cleanDestination}.`,
-          date: new Date().toISOString().split('T')[0],
-          type: 'ok'
-        });
-
-        await db.deleteHousehold(h.id);
-
-        showToast('Báo chuyển đi cả hộ thành công và đã lưu vết lịch sử!', 'success');
-        loadData();
-        window.dispatchEvent(new CustomEvent('db-changed'));
-      } catch (err) {
-        showToast('Lỗi khi thực hiện chuyển đi cả hộ!', 'danger');
-        console.error(err);
-      }
-    }
-    setActiveMenuId(null);
   };
 
   // Filter & Search Logic
@@ -3150,6 +3155,49 @@ const Households = () => {
               <div className="form-actions">
                 <button type="button" className="btn btn-secondary" onClick={() => { setIsAddMemberOpen(false); setEditingMember(null); }}>Hủy bỏ</button>
                 <button type="submit" className="btn btn-primary">{editingMember ? 'Cập nhật thành viên' : 'Thêm thành viên'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isTransferModalOpen && transferTargetHousehold && (
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '460px' }}>
+            <div className="modal-header">
+              <h3>Báo chuyển đi cả hộ</h3>
+              <button className="close-btn" onClick={() => { setIsTransferModalOpen(false); setTransferTargetHousehold(null); }}><X size={24} /></button>
+            </div>
+            
+            <form onSubmit={(e) => { e.preventDefault(); confirmTransferEntireHousehold(); }}>
+              <div style={{ marginBottom: '16px', fontSize: '0.92rem', color: '#475569', lineHeight: '1.6' }}>
+                Hộ của ông/bà <strong>{getHeadName(transferTargetHousehold)}</strong> có <strong>{getHouseholdMembers(transferTargetHousehold.id).filter(m => m.status !== 'deceased').length}</strong> nhân khẩu đang thường trú.
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>Nhập nơi chuyển đến của hộ gia đình:</label>
+                <input 
+                  type="text" 
+                  value={transferDestination} 
+                  onChange={(e) => setTransferDestination(e.target.value)} 
+                  placeholder="Ví dụ: Chuyển đi thành phố HCM"
+                  required
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid var(--border)',
+                    fontSize: '0.95rem',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+              </div>
+
+              <div className="form-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => { setIsTransferModalOpen(false); setTransferTargetHousehold(null); }}>Hủy bỏ</button>
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#d97706', borderColor: '#d97706', color: 'white' }}>Xác nhận chuyển</button>
               </div>
             </form>
           </div>
