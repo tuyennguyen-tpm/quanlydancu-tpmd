@@ -14,7 +14,8 @@ import {
   Printer,
   UserPlus,
   FileSpreadsheet,
-  Filter
+  Filter,
+  LogOut
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -1396,6 +1397,53 @@ const Households = () => {
     setActiveMenuId(null);
   };
 
+  const handleTransferEntireHousehold = async (h: Household) => {
+    if (isGuest) {
+      showToast('Tài khoản của bạn không có quyền thực hiện hành động này!', 'warning');
+      return;
+    }
+
+    const headName = getHeadName(h);
+    const members = getHouseholdMembers(h.id).filter(m => m.status !== 'deceased');
+    const memberCount = members.length;
+
+    const destination = window.prompt(
+      `Hộ của ông/bà ${headName} có ${memberCount} nhân khẩu đang thường trú.\nNhập nơi chuyển đến của hộ gia đình (Ví dụ: Phường Quảng Vinh, TP Sầm Sơn):`,
+      ""
+    );
+
+    if (destination === null) return; // User clicked Cancel
+
+    const cleanDestination = destination.trim();
+    if (!cleanDestination) {
+      showToast('Bạn phải nhập nơi chuyển đến để tiếp tục!', 'warning');
+      return;
+    }
+
+    if (window.confirm(`Xác nhận báo chuyển đi cho cả hộ ông/bà ${headName} đến: "${cleanDestination}"?\nTất cả nhân khẩu và hộ dân này sẽ được xóa khỏi danh sách hiện tại.`)) {
+      try {
+        const memberList = members.map(m => m.full_name).join(', ');
+        await db.saveSecurityLog({
+          id: generateUUID(),
+          title: `Cả hộ chuyển đi - Sổ ${h.household_number}`,
+          description: `Chủ hộ: ${headName}. Địa chỉ cũ: ${h.address}. Số thành viên chuyển đi: ${memberCount} (${memberList}). Nơi chuyển đến: ${cleanDestination}.`,
+          date: new Date().toISOString().split('T')[0],
+          type: 'ok'
+        });
+
+        await db.deleteHousehold(h.id);
+
+        showToast('Báo chuyển đi cả hộ thành công và đã lưu vết lịch sử!', 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (err) {
+        showToast('Lỗi khi thực hiện chuyển đi cả hộ!', 'danger');
+        console.error(err);
+      }
+    }
+    setActiveMenuId(null);
+  };
+
   // Filter & Search Logic
   // Trả về tên thành viên khớp với từ khóa (không phải chủ hộ), dùng để hiển thị badge
   const getMatchedMemberName = useCallback((hId: string, query: string): string | null => {
@@ -2165,6 +2213,7 @@ const Households = () => {
                     {activeMenuId === h.id && (
                       <div className="dropdown-menu">
                         <button onClick={() => handleOpenEdit(h)}><Edit2 size={14} /> Chỉnh sửa</button>
+                        <button onClick={() => handleTransferEntireHousehold(h)}><LogOut size={14} /> Báo chuyển đi cả hộ</button>
                         <button className="delete-opt" onClick={() => handleDelete(h.id)}><Trash2 size={14} /> Xóa hộ</button>
                       </div>
                     )}
