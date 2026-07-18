@@ -709,8 +709,26 @@ export const db = {
       });
       const { data, error } = await supabase.from('households').upsert(payload).select().single();
       if (error) {
-        handleDbError('lưu hộ dân', error);
-        throw new Error(`Không thể lưu hộ dân: ${error.message}`);
+        // Nếu lỗi do cột chưa tồn tại (các cột liệt sỹ chưa được migrate),
+        // thử lại với payload cơ bản không có các cột mới
+        const isMissingColumn = error.message?.toLowerCase().includes('column') || 
+                                 error.code === '42703' ||
+                                 error.message?.toLowerCase().includes('does not exist');
+        if (isMissingColumn) {
+          console.warn('Một số cột mới chưa được tạo trên Supabase. Lưu tạm không có thông tin liệt sỹ. Hãy chạy SQL migration.');
+          const { martyr_name, martyr_object_type, bank_account_number, bank_name,
+                  bank_account_holder, bank_account_holder_cccd, martyr_relation,
+                  ...basePayload } = payload as any;
+          const { data: data2, error: error2 } = await supabase.from('households').upsert(basePayload).select().single();
+          if (error2) {
+            handleDbError('lưu hộ dân', error2);
+            throw new Error(`Không thể lưu hộ dân: ${error2.message}`);
+          }
+          if (data2) return data2;
+        } else {
+          handleDbError('lưu hộ dân', error);
+          throw new Error(`Không thể lưu hộ dân: ${error.message}`);
+        }
       }
       if (data) return data;
     }
@@ -725,6 +743,7 @@ export const db = {
     setStorageItem('households', households);
     return fullHousehold;
   },
+
   deleteHousehold: async (id: string): Promise<boolean> => {
     if (supabase) {
       try {
