@@ -3197,7 +3197,8 @@ const Households = () => {
         .tab-mini:nth-of-type(2),
         .tab-mini:nth-of-type(3),
         .tab-mini:nth-of-type(4),
-        .tab-mini:nth-of-type(5) {
+        .tab-mini:nth-of-type(5),
+        .tab-mini:nth-of-type(6) {
           background-color: #eff6ff !important;
           color: #0369a1 !important;
           border: 1px solid #bae6fd !important;
@@ -3220,7 +3221,8 @@ const Households = () => {
         }
 
         .tab-mini:nth-of-type(3).active,
-        .tab-mini:nth-of-type(5).active {
+        .tab-mini:nth-of-type(5).active,
+        .tab-mini:nth-of-type(6).active {
           background-color: #d97706 !important;
           color: white !important;
           border-color: #d97706 !important;
