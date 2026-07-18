@@ -1820,6 +1820,177 @@ export const db = {
     const filtered = list.filter(f => f.year !== year);
     setStorageItem('ward_funds', filtered);
     return true;
+  },
+
+  async autoReassignHeadOfHousehold(householdId: string, oldHeadId: string): Promise<Resident | null> {
+    const self = this as any;
+    const allResidents = await self.getResidents();
+    const hhMembers = allResidents.filter((r: any) => r.household_id === householdId);
+    
+    const cleanRel = (str: string) => {
+      return (str || '')
+        .normalize('NFC')
+        .toLowerCase()
+        .trim();
+    };
+
+    const eligibleMembers = hhMembers.filter((r: any) => 
+      r.id !== oldHeadId && 
+      r.status !== 'deceased' && 
+      cleanRel(r.relationship_with_head) !== 'thành viên chuyển đi'
+    );
+
+    if (eligibleMembers.length === 0) {
+      const households = await self.getHouseholds();
+      const hh = households.find((h: any) => h.id === householdId);
+      if (hh) {
+        await self.saveHousehold({
+          ...hh,
+          head_of_household_id: null
+        });
+      }
+      return null;
+    }
+
+    let newHead = eligibleMembers.find((r: any) => {
+      const rel = cleanRel(r.relationship_with_head);
+      return rel === 'vợ' || rel === 'chồng';
+    });
+
+    if (!newHead) {
+      newHead = [...eligibleMembers].sort((a: any, b: any) => {
+        const timeA = a.dob ? new Date(a.dob).getTime() : Infinity;
+        const timeB = b.dob ? new Date(b.dob).getTime() : Infinity;
+        return timeA - timeB;
+      })[0];
+    }
+
+    if (!newHead) return null;
+
+    const prevRel = cleanRel(newHead.relationship_with_head || 'Con');
+    
+    newHead.is_head = true;
+    newHead.relationship_with_head = 'Chủ hộ';
+    
+    await self.saveResident(newHead);
+
+    const households = await self.getHouseholds();
+    const hh = households.find((h: any) => h.id === householdId);
+    if (hh) {
+      await self.saveHousehold({
+        ...hh,
+        head_of_household_id: newHead.id
+      });
+    }
+
+    for (const member of hhMembers) {
+      if (member.id === oldHeadId) continue;
+      
+      let needsUpdate = false;
+      let updatedIsHead = member.is_head;
+      let updatedRelationship = member.relationship_with_head || 'Thành viên';
+      const curRel = cleanRel(updatedRelationship);
+
+      if (member.id === newHead.id) {
+        continue;
+      } else {
+        let newRel = updatedRelationship;
+        if (prevRel.includes('con')) {
+          if (curRel === 'chủ hộ' || curRel === 'chồng') {
+            newRel = 'Bố';
+          } else if (curRel === 'vợ') {
+            newRel = 'Mẹ';
+          } else if (curRel.includes('con')) {
+            const getYear = (dStr: string) => {
+              if (!dStr) return 0;
+              const pts = dStr.split('-');
+              return pts.length === 3 ? parseInt(pts[0], 10) : 0;
+            };
+            const headY = getYear(newHead.dob || '');
+            const memberY = getYear(member.dob || '');
+            if (headY && memberY) {
+              if (memberY < headY) {
+                newRel = member.gender === 'female' ? 'Chị' : 'Anh';
+              } else {
+                newRel = 'Em';
+              }
+            } else {
+              newRel = 'Anh/Chị/Em';
+            }
+          } else if (curRel.includes('cháu')) {
+            newRel = 'Cháu';
+          }
+        } else if (prevRel === 'vợ') {
+          if (curRel === 'chủ hộ') {
+            newRel = 'Chồng';
+          } else if (curRel.includes('con')) {
+            newRel = 'Con';
+          } else if (curRel.includes('cháu')) {
+            newRel = 'Cháu';
+          }
+        } else if (prevRel === 'chồng') {
+          if (curRel === 'chủ hộ') {
+            newRel = 'Vợ';
+          } else if (curRel.includes('con')) {
+            newRel = 'Con';
+          }
+        } else if (prevRel.includes('cháu')) {
+          if (curRel === 'chủ hộ') {
+            newRel = member.gender === 'female' ? 'Bà' : 'Ông';
+          }
+        } else if (prevRel === 'bố' || prevRel === 'mẹ') {
+          if (curRel === 'chủ hộ') {
+            newRel = 'Con';
+          } else if (curRel === 'mẹ' && prevRel === 'bố') {
+            newRel = 'Vợ';
+          } else if (curRel === 'bố' && prevRel === 'mẹ') {
+            newRel = 'Chồng';
+          } else if (curRel === 'anh' || curRel === 'chị' || curRel === 'em') {
+            newRel = 'Con';
+          }
+        } else if (prevRel.includes('em')) {
+          if (curRel === 'chủ hộ') {
+            newRel = member.gender === 'female' ? 'Chị' : 'Anh';
+          } else if (curRel === 'vợ') {
+            newRel = 'Chị dâu';
+          } else if (curRel === 'chồng') {
+            newRel = 'Anh rể';
+          } else if (curRel.includes('con')) {
+            newRel = 'Cháu';
+          } else {
+            newRel = 'Thành viên';
+          }
+        } else if (prevRel.includes('anh') || prevRel.includes('chị')) {
+          if (curRel === 'chủ hộ') {
+            newRel = 'Em';
+          } else if (curRel === 'vợ') {
+            newRel = 'Em dâu';
+          } else if (curRel === 'chồng') {
+            newRel = 'Em rể';
+          } else if (curRel.includes('con')) {
+            newRel = 'Cháu';
+          } else {
+            newRel = 'Thành viên';
+          }
+        }
+
+        if (member.is_head || cleanRel(updatedRelationship) !== cleanRel(newRel)) {
+          updatedIsHead = false;
+          updatedRelationship = newRel;
+          needsUpdate = true;
+        }
+      }
+
+      if (needsUpdate) {
+        await self.saveResident({
+          ...member,
+          is_head: updatedIsHead,
+          relationship_with_head: updatedRelationship
+        });
+      }
+    }
+
+    return newHead;
   }
 };
 

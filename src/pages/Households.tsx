@@ -202,12 +202,22 @@ const Households = () => {
   // Form fields
   const [householdNumber, setHouseholdNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [policyType, setPolicyType] = useState<'none' | 'poor' | 'near_poor' | 'policy_family'>('none');
+  const [policyType, setPolicyType] = useState<'none' | 'poor' | 'near_poor' | 'policy_family' | 'martyr_family'>('none');
   const [headId, setHeadId] = useState('');
   const [lat, setLat] = useState('19.7420');
   const [lng, setLng] = useState('105.9230');
   const [fireSafetyGroup, setFireSafetyGroup] = useState('');
   const [selfManagementGroup, setSelfManagementGroup] = useState('');
+
+  // State cho thông tin Gia đình liệt sỹ 27/07
+  const [martyrName, setMartyrName] = useState('');
+  const [martyrObjectType, setMartyrObjectType] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccountHolder, setBankAccountHolder] = useState('');
+  const [bankAccountHolderCccd, setBankAccountHolderCccd] = useState('');
+  const [martyrRelation, setMartyrRelation] = useState('');
+
   const [groups, setGroups] = useState<string[]>(() => {
     const saved = localStorage.getItem('tdp_groups_config');
     return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
@@ -359,6 +369,13 @@ const Households = () => {
     setLng((105.920 + Math.random() * 0.005).toFixed(4));
     setFireSafetyGroup('');
     setSelfManagementGroup('');
+    setMartyrName('');
+    setMartyrObjectType('');
+    setBankAccountNumber('');
+    setBankName('');
+    setBankAccountHolder('');
+    setBankAccountHolderCccd('');
+    setMartyrRelation('');
     setCreateNewHead(false);
     setNewHeadName('');
     setNewHeadGender('male');
@@ -379,6 +396,13 @@ const Households = () => {
     setLng(h.longitude?.toString() || '105.9230');
     setFireSafetyGroup(h.fire_safety_group || '');
     setSelfManagementGroup(h.self_management_group || '');
+    setMartyrName(h.martyr_name || '');
+    setMartyrObjectType(h.martyr_object_type || '');
+    setBankAccountNumber(h.bank_account_number || '');
+    setBankName(h.bank_name || '');
+    setBankAccountHolder(h.bank_account_holder || '');
+    setBankAccountHolderCccd(h.bank_account_holder_cccd || '');
+    setMartyrRelation(h.martyr_relation || '');
     setCreateNewHead(false);
     setNewHeadName('');
     setNewHeadGender('male');
@@ -428,6 +452,14 @@ const Households = () => {
         policy_type: policyType,
         fire_safety_group: fireSafetyGroup || undefined,
         self_management_group: selfManagementGroup || undefined,
+        // Thông tin liệt sỹ 27/07
+        martyr_name: policyType === 'martyr_family' ? (martyrName.trim() || undefined) : undefined,
+        martyr_object_type: policyType === 'martyr_family' ? (martyrObjectType.trim() || undefined) : undefined,
+        bank_account_number: policyType === 'martyr_family' ? (bankAccountNumber.trim() || undefined) : undefined,
+        bank_name: policyType === 'martyr_family' ? (bankName.trim() || undefined) : undefined,
+        bank_account_holder: policyType === 'martyr_family' ? (bankAccountHolder.trim() || undefined) : undefined,
+        bank_account_holder_cccd: policyType === 'martyr_family' ? (bankAccountHolderCccd.trim() || undefined) : undefined,
+        martyr_relation: policyType === 'martyr_family' ? (martyrRelation.trim() || undefined) : undefined,
         created_at: editingHousehold ? editingHousehold.created_at : new Date().toISOString()
       };
       await db.saveHousehold(payload);
@@ -643,10 +675,7 @@ const Households = () => {
       await db.saveResident(updatedResident);
       
       if (oldHh && oldHh.head_of_household_id === transferringMember.id) {
-        await db.saveHousehold({
-          ...oldHh,
-          head_of_household_id: null
-        });
+        await db.autoReassignHeadOfHousehold(oldHh.id, transferringMember.id);
       }
 
       if (transferType === 'internal') {
@@ -1441,6 +1470,7 @@ const Households = () => {
     const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
       : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
       : policyFilter === 'policy_family' ? 'Gia đình chính sách'
+      : policyFilter === 'martyr_family' ? 'Gia đình liệt sỹ 27/07'
       : policyFilter === 'has_temp' ? 'Tạm trú, tạm vắng'
       : 'Tất cả các loại';
     const groupLabel = groupFilter !== 'all' ? ` – ${groupFilter}` : '';
@@ -1458,6 +1488,79 @@ const Households = () => {
     const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
     const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
 
+    // Nếu đang lọc Gia đình liệt sỹ 27/07 → dùng bảng cột chuyên biệt
+    if (policyFilter === 'martyr_family') {
+      const martyrRows = filteredHouseholds.map((h, idx) => {
+        const headName = getHeadName(h);
+        return `<tr style="border-bottom:1px solid #e2e8f0">
+          <td style="padding:7px 8px;text-align:center;color:#64748b">${idx + 1}</td>
+          <td style="padding:7px 8px;font-weight:600">${headName}</td>
+          <td style="padding:7px 8px">${h.address}</td>
+          <td style="padding:7px 8px;text-align:center">${h.martyr_object_type || ''}</td>
+          <td style="padding:7px 8px;font-weight:600">${h.martyr_name || ''}</td>
+          <td style="padding:7px 8px;font-family:monospace">${h.bank_account_number || ''}</td>
+          <td style="padding:7px 8px">${h.bank_name || ''}</td>
+          <td style="padding:7px 8px">${h.bank_account_holder || ''}</td>
+          <td style="padding:7px 8px;font-family:monospace">${h.bank_account_holder_cccd || ''}</td>
+          <td style="padding:7px 8px;text-align:center">${h.martyr_relation || ''}</td>
+        </tr>`;
+      }).join('');
+
+      const martyrHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+      <title>Danh sách Gia đình liệt sỹ – ${tdpNameVal}</title>
+      <style>
+        body { font-family: 'Times New Roman', serif; font-size: 12pt; margin: 20px; color: #000; }
+        h2 { text-align:center; font-size:15pt; font-weight:bold; margin:0 0 2px; text-transform:uppercase; letter-spacing:1px; color:#000; }
+        .subtitle { text-align:center; font-size:12pt; color:#000; margin-bottom:16px; }
+        table { width:100%; border-collapse:collapse; border: 1px solid #000; }
+        thead tr { background:transparent; color:#000; }
+        thead th { padding:7px 5px; font-size:11pt; text-align:center; border: 1px solid #000; font-weight:bold; vertical-align:middle; }
+        tbody td { padding:7px 5px; font-size:11pt; border: 1px solid #000; vertical-align:middle; }
+        @media print {
+          @page { size: A4 landscape; margin-top:15mm; margin-bottom:15mm; margin-left:15mm; margin-right:10mm; }
+          body { margin: 0; }
+        }
+      </style>
+      </head><body>
+      <h2>Danh sách Gia đình liệt sỹ 27/07</h2>
+      <div class="subtitle">${tdpNameVal} – ${wardNameVal} &nbsp;|&nbsp; Ngày in: ${today} &nbsp;|&nbsp; Tổng số: <strong>${formatNumber(filteredHouseholds.length)}</strong> hộ</div>
+      <table>
+        <thead><tr>
+          <th style="width:35px">STT</th>
+          <th>Họ và tên<br/>(chủ hộ)</th>
+          <th>Trú quán</th>
+          <th style="width:100px">Loại đối tượng</th>
+          <th>Họ và tên<br/>liệt sỹ</th>
+          <th style="width:130px">Số tài khoản</th>
+          <th style="width:110px">Tên Ngân hàng</th>
+          <th>Họ và tên người<br/>đứng tên tài khoản</th>
+          <th style="width:120px">Số CCCD<br/>của chủ TK</th>
+          <th style="width:90px">Mối quan hệ</th>
+        </tr></thead>
+        <tbody>${martyrRows}</tbody>
+      </table>
+      <table style="width: 100%; border: none; margin-top: 30px; page-break-inside: avoid;">
+        <tr>
+          <td style="width: 60%; border: none;"></td>
+          <td style="width: 40%; border: none; text-align: center; font-family: 'Times New Roman', serif;">
+            <div style="font-style: italic; color: #000; font-size: 12pt; margin-bottom: 5px;">${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ngày ${today}</div>
+            <div style="font-weight: bold; font-size: 13pt; text-transform: uppercase;">Tổ trưởng dân phố</div>
+            <div style="font-style: italic; font-size: 12pt; margin-top: 4px; margin-bottom: 5px;">(Ký, đóng dấu, ghi rõ họ tên)</div>
+            <div style="height: 110px; display: flex; align-items: center; justify-content: center; margin: 5px auto;">
+              ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
+            </div>
+            <div style="font-weight: bold; font-size: 13pt;">${leaderName}</div>
+          </td>
+        </tr>
+      </table>
+      <script>window.onload = function() { window.print(); }<\/script>
+      </body></html>`;
+      printWindow.document.write(martyrHtml);
+      printWindow.document.close();
+      return;
+    }
+
+    // ── Bảng thông thường (không phải liệt sỹ) ──
     const rows = filteredHouseholds.map((h, idx) => {
       const headName = getHeadName(h);
       const members = getHouseholdMembers(h.id);
@@ -1538,6 +1641,8 @@ const Households = () => {
     printWindow.document.close();
   };
 
+
+
   // ─── Hàm xuất Excel danh sách ───
   const handleExportListExcel = async () => {
     if (filteredHouseholds.length === 0) {
@@ -1552,6 +1657,7 @@ const Households = () => {
       const policyLabel = policyFilter === 'poor' ? 'Hộ nghèo'
         : policyFilter === 'near_poor' ? 'Hộ cận nghèo'
         : policyFilter === 'policy_family' ? 'Gia đình chính sách'
+        : policyFilter === 'martyr_family' ? 'Gia đình liệt sỹ 27/07'
         : policyFilter === 'has_temp' ? 'Tạm trú, tạm vắng'
         : 'Tất cả';
       const groupLabel = isWardAdmin
@@ -1559,9 +1665,123 @@ const Households = () => {
         : (groupFilter !== 'all' ? ` - ${groupFilter}` : '');
 
       const workbook = new ExcelJS.Workbook();
-      const ws = workbook.addWorksheet('Danh sach ho dan');
 
-      // Tiêu đề
+      // ── Xuất Excel chuyên biệt cho Gia đình liệt sỹ 27/07 ──
+      if (policyFilter === 'martyr_family') {
+        const ws = workbook.addWorksheet('DS Gia dinh liet sy');
+        const totalCols = 'J'; // 10 cột: A→J
+
+        // Tiêu đề
+        ws.mergeCells(`A1:${totalCols}1`);
+        const titleCell = ws.getCell('A1');
+        titleCell.value = 'DANH SÁCH GIA ĐÌNH LIỆT SỸ 27/07';
+        titleCell.font = { name: 'Times New Roman', size: 14, bold: true, color: { argb: 'FF4C1D95' } };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(1).height = 32;
+
+        ws.mergeCells(`A2:${totalCols}2`);
+        const subCell = ws.getCell('A2');
+        subCell.value = `${tdpNameVal} – ${wardNameVal}  |  Ngày xuất: ${new Date().toLocaleDateString('vi-VN')}  |  Tổng số: ${filteredHouseholds.length} hộ`;
+        subCell.font = { name: 'Times New Roman', size: 11, italic: true, color: { argb: 'FF475569' } };
+        subCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        ws.getRow(2).height = 22;
+
+        // Header row – 10 cột
+        const martyrHeaders = [
+          'STT',
+          'Họ và tên (chủ hộ)',
+          'Trú quán',
+          'Loại đối tượng',
+          'Họ và tên liệt sỹ',
+          'Số tài khoản',
+          'Tên Ngân hàng',
+          'Họ và tên người đứng tên tài khoản',
+          'Số CCCD của chủ TK',
+          'Mối quan hệ'
+        ];
+        const martyrHeaderRow = ws.addRow(martyrHeaders);
+        martyrHeaderRow.height = 32;
+        martyrHeaderRow.eachCell(cell => {
+          cell.font = { name: 'Times New Roman', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4C1D95' } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          cell.border = {
+            top: { style: 'thin' }, bottom: { style: 'thin' },
+            left: { style: 'thin' }, right: { style: 'thin' }
+          };
+        });
+
+        // Data rows
+        filteredHouseholds.forEach((h, idx) => {
+          const headName = getHeadName(h);
+          const rowData = [
+            idx + 1,
+            headName,
+            h.address,
+            h.martyr_object_type || '',
+            h.martyr_name || '',
+            h.bank_account_number || '',
+            h.bank_name || '',
+            h.bank_account_holder || '',
+            h.bank_account_holder_cccd || '',
+            h.martyr_relation || ''
+          ];
+          const dataRow = ws.addRow(rowData);
+          dataRow.height = 22;
+          dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(7).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(10).alignment = { horizontal: 'center', vertical: 'middle' };
+
+          dataRow.eachCell(cell => {
+            if (!cell.font) cell.font = { name: 'Times New Roman', size: 11 };
+            else cell.font = { ...cell.font, name: 'Times New Roman', size: 11 };
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+            };
+          });
+          if (idx % 2 === 1) {
+            dataRow.eachCell(cell => {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAF5FF' } };
+            });
+          }
+        });
+
+        // Column widths
+        ws.columns = [
+          { width: 6 },   // STT
+          { width: 26 },  // Họ tên chủ hộ
+          { width: 32 },  // Trú quán
+          { width: 18 },  // Loại đối tượng
+          { width: 26 },  // Tên liệt sỹ
+          { width: 18 },  // Số TK
+          { width: 18 },  // Tên NH
+          { width: 32 },  // Tên người đứng tên
+          { width: 18 },  // CCCD chủ TK
+          { width: 16 }   // Mối quan hệ
+        ];
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `DanhSach_GiaDinhLietSy_${tdpNameVal}_${new Date().getFullYear()}.xlsx`;
+        link.click();
+        showToast(`Xuất Excel thành công! ${formatNumber(filteredHouseholds.length)} hộ gia đình liệt sỹ.`, 'success');
+        return;
+      }
+
+      // ── Xuất Excel thông thường ──
+      const ws = workbook.addWorksheet('Danh sach ho dan');
       const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
       const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
       const maxCol = showTdpCol ? 'I' : 'H';
@@ -1627,16 +1847,17 @@ const Households = () => {
 
         if (showTdpCol) {
           dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-          dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }; // TDP
-          dataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }; // Sổ
-          dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' }; // Chủ hộ
-          dataRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' }; // Địa chỉ
-          dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' }; // Số NK
-          dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' }; // Tổ tự quản
-          dataRow.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' }; // Chính sách
+          dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' };
           if (h.policy_type !== 'none') {
             const color = h.policy_type === 'poor' ? 'FFEF4444'
               : h.policy_type === 'near_poor' ? 'FFF97316'
+              : h.policy_type === 'policy_family' ? 'FF3B82F6'
               : 'FF8B5CF6';
             dataRow.getCell(8).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
           }
@@ -1651,6 +1872,7 @@ const Households = () => {
           if (h.policy_type !== 'none') {
             const color = h.policy_type === 'poor' ? 'FFEF4444'
               : h.policy_type === 'near_poor' ? 'FFF97316'
+              : h.policy_type === 'policy_family' ? 'FF3B82F6'
               : 'FF8B5CF6';
             dataRow.getCell(7).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
           }
@@ -1666,7 +1888,6 @@ const Households = () => {
             right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
           };
         });
-        // Tô màu xen kẽ
         if (idx % 2 === 1) {
           dataRow.eachCell(cell => {
             if (!cell.fill || (cell.fill as any).fgColor?.argb === 'FFFFFFFF') {
@@ -1703,11 +1924,13 @@ const Households = () => {
     }
   };
 
+
   const getPolicyLabel = (type: string) => {
     switch (type) {
       case 'poor': return 'Hộ nghèo';
       case 'near_poor': return 'Hộ cận nghèo';
       case 'policy_family': return 'Gia đình chính sách';
+      case 'martyr_family': return 'Gia đình liệt sỹ 27/07';
       default: return 'Bình thường';
     }
   };
@@ -1758,6 +1981,7 @@ const Households = () => {
           <button className={`tab-mini ${policyFilter === 'poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('poor')}>Hộ nghèo</button>
           <button className={`tab-mini ${policyFilter === 'near_poor' ? 'active' : ''}`} onClick={() => setPolicyFilter('near_poor')}>Hộ cận nghèo</button>
           <button className={`tab-mini ${policyFilter === 'policy_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('policy_family')}>Gia đình chính sách</button>
+          <button className={`tab-mini ${policyFilter === 'martyr_family' ? 'active' : ''}`} onClick={() => setPolicyFilter('martyr_family')}>Gia đình liệt sỹ 27/07</button>
         </div>
 
         {/* Lọc theo phân quyền & Nút in/xuất */}
@@ -2009,7 +2233,7 @@ const Households = () => {
               </div>
 
               <div className="card-footer">
-                 <span className={`type-tag ${h.policy_type === 'poor' ? 'danger' : h.policy_type === 'near_poor' ? 'warning' : h.policy_type === 'policy_family' ? 'info' : ''}`}>
+                 <span className={`type-tag ${h.policy_type === 'poor' ? 'danger' : h.policy_type === 'near_poor' ? 'warning' : h.policy_type === 'policy_family' ? 'info' : h.policy_type === 'martyr_family' ? 'martyr' : ''}`}>
                    {getPolicyLabel(h.policy_type)}
                  </span>
                  <button className="btn-detail" onClick={() => setViewingMembersHousehold(h)}>
@@ -2134,9 +2358,104 @@ const Households = () => {
                   <option value="none">Bình thường</option>
                   <option value="poor">Hộ nghèo</option>
                   <option value="near_poor">Hộ cận nghèo</option>
-                  <option value="policy_family">Gia đình chính sách (Thương binh, Liệt sĩ...)</option>
+                  <option value="policy_family">Gia đình chính sách (Thương binh...)</option>
+                  <option value="martyr_family">Gia đình liệt sỹ 27/07</option>
                 </select>
               </div>
+
+              {/* Phần nhập thông tin liệt sỹ – chỉ hiện khi chọn Gia đình liệt sỹ 27/07 */}
+              {policyType === 'martyr_family' && (
+                <div style={{
+                  backgroundColor: '#faf5ff',
+                  border: '1.5px solid #e9d5ff',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>🎖️</span>
+                    <span style={{ fontWeight: '700', fontSize: '0.92rem', color: '#7c3aed' }}>Thông tin Gia đình liệt sỹ 27/07</span>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Họ và tên liệt sỹ</label>
+                      <input
+                        type="text"
+                        value={martyrName}
+                        onChange={(e) => setMartyrName(e.target.value)}
+                        placeholder="Ví dụ: Nguyễn Văn B"
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Loại đối tượng</label>
+                      <input
+                        type="text"
+                        value={martyrObjectType}
+                        onChange={(e) => setMartyrObjectType(e.target.value)}
+                        placeholder="Ví dụ: Con liệt sỹ, Vợ liệt sỹ..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Mối quan hệ của người nhận với liệt sỹ</label>
+                    <input
+                      type="text"
+                      value={martyrRelation}
+                      onChange={(e) => setMartyrRelation(e.target.value)}
+                      placeholder="Ví dụ: Con gái, Vợ, Bố..."
+                    />
+                  </div>
+
+                  <div style={{ borderTop: '1px dashed #d8b4fe', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#9333ea', marginBottom: '-4px' }}>💳 Thông tin tài khoản ngân hàng</div>
+                    <div className="form-row">
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Số tài khoản</label>
+                        <input
+                          type="text"
+                          value={bankAccountNumber}
+                          onChange={(e) => setBankAccountNumber(e.target.value)}
+                          placeholder="Ví dụ: 0123456789012"
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Tên Ngân hàng</label>
+                        <input
+                          type="text"
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          placeholder="Ví dụ: Agribank, Vietcombank..."
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Họ tên người đứng tên tài khoản</label>
+                        <input
+                          type="text"
+                          value={bankAccountHolder}
+                          onChange={(e) => setBankAccountHolder(e.target.value)}
+                          placeholder="Tên người đứng tên TK"
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Số CCCD người đứng tên TK</label>
+                        <input
+                          type="text"
+                          value={bankAccountHolderCccd}
+                          onChange={(e) => setBankAccountHolderCccd(e.target.value)}
+                          placeholder="Ví dụ: 038065001234"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {!editingHousehold && (
                 <div className="form-group" style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '16px' }}>
@@ -3032,6 +3351,7 @@ const Households = () => {
         .type-tag.danger { background-color: rgba(239, 68, 68, 0.1); color: var(--danger); }
         .type-tag.warning { background-color: rgba(245, 158, 11, 0.1); color: var(--warning); }
         .type-tag.info { background-color: rgba(59, 130, 246, 0.1); color: var(--info); }
+        .type-tag.martyr { background-color: rgba(168, 85, 247, 0.1); color: #a855f7; }
 
         .btn-detail {
           display: flex;

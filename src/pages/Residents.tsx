@@ -662,6 +662,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       created_at: editingResident ? editingResident.created_at : new Date().toISOString()
     };
 
+    const wasHeadOfHousehold = editingResident?.is_head && editingResident.household_id;
+
     try {
       const saved = await db.saveResident(payload);
       
@@ -673,6 +675,14 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             ...hh,
             head_of_household_id: saved.id
           });
+        }
+      }
+
+      // Tự động chuyển giao chủ hộ mới nếu chủ hộ cũ thay đổi trạng thái (qua đời, chuyển hộ, hoặc thôi làm chủ hộ)
+      if (wasHeadOfHousehold && editingResident) {
+        const isNoLongerHead = status === 'deceased' || householdId !== editingResident.household_id || !householdId || !isHead;
+        if (isNoLongerHead) {
+          await db.autoReassignHeadOfHousehold(editingResident.household_id, editingResident.id);
         }
       }
 
@@ -690,9 +700,15 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       showToast('Tài khoản của bạn không có quyền xóa nhân khẩu!', 'warning');
       return;
     }
+    const residentToDelete = residents.find(r => r.id === id);
+    const wasHead = residentToDelete?.is_head && residentToDelete.household_id;
+
     if (window.confirm('Bạn có chắc chắn muốn xóa nhân khẩu này khỏi hệ thống?')) {
       try {
         await db.deleteResident(id);
+        if (wasHead && residentToDelete) {
+          await db.autoReassignHeadOfHousehold(residentToDelete.household_id, residentToDelete.id);
+        }
         showToast('Xóa nhân khẩu thành công!', 'success');
         loadData();
         window.dispatchEvent(new CustomEvent('db-changed'));

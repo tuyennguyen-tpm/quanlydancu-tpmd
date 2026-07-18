@@ -16,12 +16,21 @@ export interface Household {
   group_id: string;
   latitude?: number;
   longitude?: number;
-  policy_type: 'none' | 'poor' | 'near_poor' | 'policy_family';
+  policy_type: 'none' | 'poor' | 'near_poor' | 'policy_family' | 'martyr_family';
   fire_safety_group?: string; // Tổ liên gia an toàn PCCC
   self_management_group?: string; // Tổ tự quản
   created_at: string;
   user_id?: string;
   ward_id?: string;
+
+  // Thông tin Gia đình liệt sỹ 27/07
+  martyr_name?: string;               // Họ và tên liệt sỹ
+  martyr_object_type?: string;        // Loại đối tượng (Bố/Mẹ/Con/Vợ/Chồng liệt sỹ...)
+  bank_account_number?: string;       // Số tài khoản ngân hàng
+  bank_name?: string;                 // Tên ngân hàng
+  bank_account_holder?: string;       // Họ và tên người đứng tên tài khoản
+  bank_account_holder_cccd?: string;  // Số CCCD người đứng tên tài khoản
+  martyr_relation?: string;           // Mối quan hệ với liệt sỹ
 }
 
 export interface Resident {
