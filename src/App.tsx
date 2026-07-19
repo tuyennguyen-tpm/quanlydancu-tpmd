@@ -3846,22 +3846,24 @@ const App = () => {
                       </div>
                     ) : null}
 
-                    <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
-                      <label>Hạn sử dụng</label>
-                      <select
-                        value={newKeyExpiration}
-                        onChange={(e) => setNewKeyExpiration(e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
-                      >
-                        <option value="permanent">♾️ Không giới hạn</option>
-                        <option value="3days">🕒 3 ngày</option>
-                        <option value="7days">📅 7 ngày</option>
-                        <option value="30days">🗓️ 30 ngày</option>
-                        <option value="custom">📅 Chọn ngày...</option>
-                      </select>
-                    </div>
+                    {isHighestAdmin && (
+                      <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                        <label>Hạn sử dụng</label>
+                        <select
+                          value={newKeyExpiration}
+                          onChange={(e) => setNewKeyExpiration(e.target.value)}
+                          style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
+                        >
+                          <option value="permanent">♾️ Không giới hạn</option>
+                          <option value="3days">🕒 3 ngày</option>
+                          <option value="7days">📅 7 ngày</option>
+                          <option value="30days">🗓️ 30 ngày</option>
+                          <option value="custom">📅 Chọn ngày...</option>
+                        </select>
+                      </div>
+                    )}
 
-                    {newKeyExpiration === 'custom' && (
+                    {isHighestAdmin && newKeyExpiration === 'custom' && (
                       <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                         <label>Ngày hết hạn</label>
                         <input
