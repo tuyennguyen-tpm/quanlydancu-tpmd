@@ -255,65 +255,42 @@ const App = () => {
         console.warn('Không thể phát âm thanh chime:', audioErr);
       }
 
-      // 2. Chuẩn bị và phát giọng nói tiếng Việt chuẩn (chị Google)
-      const speakNow = () => {
+      // 2. Phát giọng nói tiếng Việt - dùng polling để chắc chắn giọng đã được tải
+      const doSpeak = (voice: SpeechSynthesisVoice | null) => {
         const msg = new SpeechSynthesisUtterance(textToSpeak);
         msg.lang = 'vi-VN';
         msg.volume = 1;
-        msg.rate = 0.95;
-
-        const voices = window.speechSynthesis.getVoices();
-        const viVoices = voices.filter(v => {
-          const l = v.lang.toLowerCase().replace('_', '-');
-          return l.includes('vi') || l.includes('vnm');
-        });
-
-        // Ưu tiên tìm giọng Google vi-VN (chị Google)
-        const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google'));
-        const femaleViVoice = googleVoice || viVoices.find(v => {
-          const name = v.name.toLowerCase();
-          return (
-            (name.includes('an') || name.includes('hoaimy') || name.includes('female') || name.includes('nữ')) &&
-            !name.includes('nam') && 
-            !name.includes('male')
-          );
-        }) || viVoices.find(v => !v.name.toLowerCase().includes('nam')) || viVoices[0];
-
-        if (femaleViVoice) {
-          msg.voice = femaleViVoice;
-          console.log('[TTS] Selected voice:', femaleViVoice.name);
+        msg.rate = 0.9;
+        msg.pitch = 1;
+        if (voice) {
+          msg.voice = voice;
+          console.log('[TTS] Giọng đọc:', voice.name, voice.lang);
         }
-
-        if (!(window as any)._globalUtterances) {
-          (window as any)._globalUtterances = [];
-        }
+        if (!(window as any)._globalUtterances) (window as any)._globalUtterances = [];
         (window as any)._globalUtterances.push(msg);
-        msg.onend = () => {
-          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
-        };
-        msg.onerror = (e) => {
-          console.warn('TTS speak error:', e);
-          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
-        };
-
-        // 3. Giải phóng hàng chờ SpeechSynthesis bị kẹt và phát giọng nói
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
+        msg.onend = () => { (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg); };
+        msg.onerror = () => { (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg); };
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
         window.speechSynthesis.cancel();
-        setTimeout(() => {
-          window.speechSynthesis.speak(msg);
-        }, 150);
+        setTimeout(() => window.speechSynthesis.speak(msg), 200);
       };
 
-      if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = () => {
-          speakNow();
-          window.speechSynthesis.onvoiceschanged = null;
-        };
-      } else {
-        speakNow();
-      }
+      const findViVoice = (): SpeechSynthesisVoice | null => {
+        const voices = window.speechSynthesis.getVoices();
+        const vi = voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'));
+        return vi.find(v => v.name.toLowerCase().includes('google'))
+          || vi.find(v => !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('nam'))
+          || vi[0] || null;
+      };
+
+      // Polling: thử tìm giọng tối đa 20 lần x 300ms = 6 giây
+      let attempts = 0;
+      const trySpeak = () => {
+        const voice = findViVoice();
+        if (voice || attempts >= 20) { doSpeak(voice); }
+        else { attempts++; setTimeout(trySpeak, 300); }
+      };
+      trySpeak();
     };
 
     const checkGlobalUnreadAndSpeak = async () => {

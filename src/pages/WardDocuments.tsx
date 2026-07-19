@@ -350,51 +350,36 @@ const WardDocuments = () => {
       else if (unread.category === 'front') prefix = 'Thông báo. Khối Mặt trận Tổ quốc có công văn mới.';
       else prefix = 'Thông báo. Khối Chính quyền có công văn mới.';
 
-      const speakNow = () => {
+      const doSpeak = (voice: SpeechSynthesisVoice | null) => {
         const msg = new SpeechSynthesisUtterance(`${prefix} Trích yếu: ${unread.title}. Vui lòng mở phần mềm để xem chi tiết.`);
         msg.lang = 'vi-VN';
         msg.volume = 1;
-        msg.rate = 0.95;
-        
-        const voices = window.speechSynthesis.getVoices();
-        const viVoices = voices.filter(v => {
-          const l = v.lang.toLowerCase().replace('_', '-');
-          return l.includes('vi') || l.includes('vnm');
-        });
-        
-        // Ưu tiên tìm giọng Google vi-VN (chị Google)
-        const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google'));
-        const femaleViVoice = googleVoice || viVoices.find(v => {
-          const name = v.name.toLowerCase();
-          return (
-            (name.includes('an') || name.includes('hoaimy') || name.includes('female') || name.includes('nữ')) &&
-            !name.includes('nam') && 
-            !name.includes('male')
-          );
-        }) || viVoices.find(v => !v.name.toLowerCase().includes('nam')) || viVoices[0];
-
-        if (femaleViVoice) {
-          msg.voice = femaleViVoice;
-          console.log('[TTS WardDocuments] Selected voice:', femaleViVoice.name);
+        msg.rate = 0.9;
+        msg.pitch = 1;
+        if (voice) {
+          msg.voice = voice;
+          console.log('[TTS WardDocs] Giọng đọc:', voice.name);
         }
-
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
+        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
         window.speechSynthesis.cancel();
-        setTimeout(() => {
-          window.speechSynthesis.speak(msg);
-        }, 150);
+        setTimeout(() => window.speechSynthesis.speak(msg), 200);
       };
 
-      if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = () => {
-          speakNow();
-          window.speechSynthesis.onvoiceschanged = null;
-        };
-      } else {
-        speakNow();
-      }
+      const findViVoice = (): SpeechSynthesisVoice | null => {
+        const voices = window.speechSynthesis.getVoices();
+        const vi = voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'));
+        return vi.find(v => v.name.toLowerCase().includes('google'))
+          || vi.find(v => !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('nam'))
+          || vi[0] || null;
+      };
+
+      let attempts = 0;
+      const trySpeak = () => {
+        const voice = findViVoice();
+        if (voice || attempts >= 20) { doSpeak(voice); }
+        else { attempts++; setTimeout(trySpeak, 300); }
+      };
+      trySpeak();
     }
   };
 
