@@ -390,34 +390,45 @@ const WardDocuments = () => {
   }, [isPhuongMode]);
 
   useEffect(() => {
-    // Nghe sự kiện đồng bộ từ service chạy ngầm ở App.tsx
-    const handleSyncEvent = () => {
-      loadDocs();
-      loadTdpReports();
+    // Lắng nghe sự kiện đồng bộ từ service chạy ngầm ở App.tsx
+    // - 'ward-docs-synced': dành cho Tổ dân phố nhận công văn từ Phường
+    // - 'tdp-reports-synced': dành cho Phường nhận báo cáo từ Tổ dân phố
+    const handleWardDocsSynced = () => {
+      // Chỉ reload cho bên Tổ dân phố
+      if (localStorage.getItem('is_phuong_mode') !== 'true') {
+        loadDocs();
+      }
     };
-    window.addEventListener('ward-docs-synced', handleSyncEvent);
 
-    // Tự động tải lại tài liệu mỗi 3 giây để đồng bộ tức thời giữa các tab / chế độ
+    const handleTdpReportsSynced = () => {
+      // Chỉ reload cho bên Phường
+      if (localStorage.getItem('is_phuong_mode') === 'true') {
+        loadTdpReports();
+      }
+    };
+
+    window.addEventListener('ward-docs-synced', handleWardDocsSynced);
+    window.addEventListener('tdp-reports-synced', handleTdpReportsSynced);
+
+    // Tự động tải lại dữ liệu mỗi 5 giây để đồng bộ tức thời
     const syncInterval = setInterval(() => {
       loadDocs();
       loadTdpReports();
-    }, 3000);
+    }, 5000);
 
-    // Phát thông báo bằng tiếng nói ngay lập tức sau 3 giây
+    // Phát thông báo giọng nói 1 lần sau 3 giây kể từ khi mở trang
+    // (chỉ áp dụng cho Tổ dân phố — Phường được xử lý bởi App.tsx)
     const tId = setTimeout(() => {
-      checkUnreadAndSpeak();
+      if (localStorage.getItem('is_phuong_mode') !== 'true') {
+        checkUnreadAndSpeak();
+      }
     }, 3000);
-
-    // Lặp lại phát thông báo giọng nói cứ mỗi 1 phút (60000ms)
-    const voiceIntervalId = setInterval(() => {
-      checkUnreadAndSpeak();
-    }, 60000);
 
     return () => {
-      window.removeEventListener('ward-docs-synced', handleSyncEvent);
+      window.removeEventListener('ward-docs-synced', handleWardDocsSynced);
+      window.removeEventListener('tdp-reports-synced', handleTdpReportsSynced);
       clearInterval(syncInterval);
       clearTimeout(tId);
-      clearInterval(voiceIntervalId);
       window.speechSynthesis.cancel();
     };
   }, []);
