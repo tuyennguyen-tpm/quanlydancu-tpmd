@@ -515,6 +515,9 @@ export const db = {
       if (data.is_used) {
         return { valid: false, message: 'Mã kích hoạt này đã được sử dụng.' };
       }
+      if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+        return { valid: false, message: 'Mã kích hoạt này đã hết hạn sử dụng.' };
+      }
       return { 
         valid: true, 
         role: data.role, 
@@ -630,7 +633,7 @@ export const db = {
       return false;
     }
   },
-  generateRegistrationKey: async (wardId: string, role: string, tdpName?: string): Promise<string> => {
+  generateRegistrationKey: async (wardId: string, role: string, tdpName?: string, expiresAt?: string | null): Promise<string> => {
     if (!supabase) return '';
     try {
       const key = `REG-${role === 'ward_admin' ? 'WARD' : 'TDP'}-${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -640,7 +643,8 @@ export const db = {
           key,
           ward_id: wardId,
           role,
-          tdp_name: tdpName || null
+          tdp_name: tdpName || null,
+          expires_at: expiresAt || null
         });
       if (error) throw error;
       return key;
@@ -678,7 +682,7 @@ export const db = {
     }
   },
 
-  updateRegistrationKey: async (keyText: string, updates: { role: string; tdp_name: string | null; ward_id: string }): Promise<boolean> => {
+  updateRegistrationKey: async (keyText: string, updates: { role: string; tdp_name: string | null; ward_id: string; expires_at: string | null }): Promise<boolean> => {
     if (!supabase) return false;
     try {
       const { error } = await supabase
@@ -2375,6 +2379,7 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
   sql += `    tdp_name TEXT,\n`;
   sql += `    is_used BOOLEAN DEFAULT FALSE,\n`;
   sql += `    used_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,\n`;
+  sql += `    expires_at TIMESTAMP WITH TIME ZONE,\n`;
   sql += `    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL\n`;
   sql += `);\n\n`;
 
@@ -2444,6 +2449,13 @@ export const getSqlPatchForMissingTables = (missingTables: string[]): string => 
     sql += `    END IF;\n`;
     sql += `END $$;\n\n`;
   });
+
+  sql += `DO $$\n`;
+  sql += `BEGIN\n`;
+  sql += `    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'registration_keys') THEN\n`;
+  sql += `        ALTER TABLE public.registration_keys ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;\n`;
+  sql += `    END IF;\n`;
+  sql += `END $$;\n\n`;
   
   sql += `-- ─── THÊM PHƯỜNG MẶC ĐỊNH & KHÓA MASTER ───\n`;
   sql += `INSERT INTO public.wards (id, name) VALUES ('00000000-0000-0000-0000-000000000000', 'Quảng Giao') ON CONFLICT (id) DO NOTHING;\n`;

@@ -625,6 +625,8 @@ const App = () => {
   const [newWardNameInput, setNewWardNameInput] = useState('');
   const [showNewWardInput, setShowNewWardInput] = useState(false);
   const [editingKey, setEditingKey] = useState<any | null>(null);
+  const [newKeyExpiration, setNewKeyExpiration] = useState<string>('permanent');
+  const [newKeyCustomExpirationDate, setNewKeyCustomExpirationDate] = useState<string>('');
 
   const loadGeneratedKeys = async () => {
     if (!supabase) return;
@@ -718,10 +720,28 @@ const App = () => {
       return;
     }
 
+    let expiresAt: string | null = null;
+    if (newKeyExpiration !== 'permanent') {
+      const d = new Date();
+      if (newKeyExpiration === '3days') {
+        d.setDate(d.getDate() + 3);
+        expiresAt = d.toISOString();
+      } else if (newKeyExpiration === '7days') {
+        d.setDate(d.getDate() + 7);
+        expiresAt = d.toISOString();
+      } else if (newKeyExpiration === '30days') {
+        d.setDate(d.getDate() + 30);
+        expiresAt = d.toISOString();
+      } else if (newKeyExpiration === 'custom' && newKeyCustomExpirationDate) {
+        expiresAt = new Date(newKeyCustomExpirationDate).toISOString();
+      }
+    }
+
     const key = await db.generateRegistrationKey(
       targetWardId, 
       finalRole, 
-      finalRole === 'ward_admin' ? 'Ban quản trị Phường' : newKeyTdpName
+      finalRole === 'ward_admin' ? 'Ban quản trị Phường' : newKeyTdpName,
+      expiresAt
     );
     if (key) {
       setGeneratedKeyResult(key);
@@ -731,6 +751,8 @@ const App = () => {
       window.dispatchEvent(ev);
       loadGeneratedKeys();
       setNewKeyTdpName('');
+      setNewKeyExpiration('permanent');
+      setNewKeyCustomExpirationDate('');
     } else {
       const ev = new CustomEvent('show-toast', { 
         detail: { message: 'Lỗi khi tạo mã kích hoạt.', type: 'danger' } 
@@ -774,6 +796,13 @@ const App = () => {
     setSelectedKeyWardId(k.ward_id);
     setNewKeyTdpName(k.tdp_name === 'Ban quản trị Phường' ? '' : k.tdp_name || '');
     setShowNewWardInput(false);
+    if (k.expires_at) {
+      setNewKeyExpiration('custom');
+      setNewKeyCustomExpirationDate(new Date(k.expires_at).toISOString().slice(0, 10));
+    } else {
+      setNewKeyExpiration('permanent');
+      setNewKeyCustomExpirationDate('');
+    }
   };
 
   const handleCancelEditKey = () => {
@@ -781,6 +810,8 @@ const App = () => {
     setNewKeyRole('tdp_leader');
     setNewKeyTdpName('');
     setGeneratedKeyResult('');
+    setNewKeyExpiration('permanent');
+    setNewKeyCustomExpirationDate('');
   };
 
   const handleSaveKeyEdit = async () => {
@@ -810,10 +841,28 @@ const App = () => {
         return;
       }
 
+      let expiresAt: string | null = null;
+      if (newKeyExpiration !== 'permanent') {
+        const d = new Date();
+        if (newKeyExpiration === '3days') {
+          d.setDate(d.getDate() + 3);
+          expiresAt = d.toISOString();
+        } else if (newKeyExpiration === '7days') {
+          d.setDate(d.getDate() + 7);
+          expiresAt = d.toISOString();
+        } else if (newKeyExpiration === '30days') {
+          d.setDate(d.getDate() + 30);
+          expiresAt = d.toISOString();
+        } else if (newKeyExpiration === 'custom' && newKeyCustomExpirationDate) {
+          expiresAt = new Date(newKeyCustomExpirationDate).toISOString();
+        }
+      }
+
       const updates = {
         role: newKeyRole,
         tdp_name: newKeyRole === 'ward_admin' ? 'Ban quản trị Phường' : newKeyTdpName,
-        ward_id: targetWardId
+        ward_id: targetWardId,
+        expires_at: expiresAt
       };
 
       const success = await db.updateRegistrationKey(editingKey.key, updates);
@@ -3645,9 +3694,37 @@ const App = () => {
                       </div>
                     ) : null}
 
+                    <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                      <label>Hạn sử dụng</label>
+                      <select
+                        value={newKeyExpiration}
+                        onChange={(e) => setNewKeyExpiration(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white' }}
+                      >
+                        <option value="permanent">♾️ Không giới hạn</option>
+                        <option value="3days">🕒 3 ngày</option>
+                        <option value="7days">📅 7 ngày</option>
+                        <option value="30days">🗓️ 30 ngày</option>
+                        <option value="custom">📅 Chọn ngày...</option>
+                      </select>
+                    </div>
+
+                    {newKeyExpiration === 'custom' && (
+                      <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                        <label>Ngày hết hạn</label>
+                        <input
+                          type="date"
+                          value={newKeyCustomExpirationDate}
+                          onChange={(e) => setNewKeyCustomExpirationDate(e.target.value)}
+                          min={new Date().toISOString().slice(0, 10)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                    )}
+
                     {((localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) ? newKeyRole === 'tdp_leader' : true) ? (
                       <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
-                        <label>Tên Tổ dân phố (Nếu cấp cho Tổ trưởng)</label>
+                        <label>Tên Tổ dân phố</label>
                         <input
                           type="text"
                           placeholder="Ví dụ: Tổ dân phố Quảng Giao..."
@@ -3758,6 +3835,7 @@ const App = () => {
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Đối tượng</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Tên địa bàn</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Trạng thái</th>
+                            <th style={{ padding: '6px 10px', color: '#475569' }}>Hạn dùng</th>
                             <th style={{ padding: '6px 10px', color: '#475569', textAlign: 'right' }}>Thao tác</th>
                           </tr>
                         </thead>
@@ -3772,12 +3850,27 @@ const App = () => {
                                 {k.is_used ? (
                                   <span style={{ color: '#ef4444', fontWeight: '600' }}>🔴 Đã dùng</span>
                                 ) : (
-                                  <span style={{ color: '#22c55e', fontWeight: '600' }}>🟢 Chưa dùng</span>
+                                  k.expires_at && new Date(k.expires_at).getTime() < Date.now() ? (
+                                    <span style={{ color: '#ef4444', fontWeight: '600' }}>🔴 Hết hạn</span>
+                                  ) : (
+                                    <span style={{ color: '#22c55e', fontWeight: '600' }}>🟢 Chưa dùng</span>
+                                  )
+                                )}
+                              </td>
+                              <td style={{ padding: '6px 10px' }}>
+                                {k.expires_at ? (
+                                  new Date(k.expires_at).getTime() < Date.now() ? (
+                                    <span style={{ color: '#ef4444', fontWeight: 'bold' }}>Hết hạn ({new Date(k.expires_at).toLocaleDateString('vi-VN')})</span>
+                                  ) : (
+                                    <span style={{ color: '#475569' }}>Hạn: {new Date(k.expires_at).toLocaleDateString('vi-VN')}</span>
+                                  )
+                                ) : (
+                                  <span style={{ color: '#64748b' }}>Không giới hạn</span>
                                 )}
                               </td>
                               <td style={{ padding: '6px 10px', textAlign: 'right' }}>
                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-                                  {k.is_used && (
+                                  {(k.is_used || (k.expires_at && new Date(k.expires_at).getTime() < Date.now())) && (
                                     <button
                                       type="button"
                                       onClick={() => handleResetKey(k.key)}
@@ -3794,7 +3887,7 @@ const App = () => {
                                         alignItems: 'center',
                                         gap: '2px'
                                       }}
-                                      title="Khôi phục mã về trạng thái Chưa dùng để đăng ký lại"
+                                      title="Khôi phục mã về trạng thái Chưa dùng và gia hạn lại"
                                     >
                                       🔄 Gia hạn
                                     </button>
@@ -3815,7 +3908,7 @@ const App = () => {
                                       alignItems: 'center',
                                       gap: '2px'
                                     }}
-                                    title="Sửa thông tin mã"
+                                    title="Sửa thông tin mã hoặc gia hạn ngày"
                                   >
                                     ✏️ Sửa
                                   </button>
@@ -3845,7 +3938,7 @@ const App = () => {
                           ))}
                           {generatedKeysList.length === 0 && (
                             <tr>
-                              <td colSpan={6} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
+                              <td colSpan={7} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
                             </tr>
                           )}
                         </tbody>
