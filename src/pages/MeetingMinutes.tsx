@@ -459,8 +459,11 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       let initialChairman = defaults.chairman;
       let initialSecretary = defaults.secretary;
       if (mType === 'party') {
-        setOrgLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+        const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+        setOrgLevel1(`ĐẢNG BỘ PHƯỜNG ${cleanWard}`);
         setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+        setNationLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+        setNationLevel2(`${wardName.replace(/Phường/gi, '').trim()}, ngày ${meetingDate.getDate()} tháng ${meetingDate.getMonth() + 1} năm ${meetingDate.getFullYear()}`);
         setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
         setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
         setChairmanTitle('BÍ THƯ CHI BỘ');
@@ -468,18 +471,20 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
         setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
         setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
+        setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+        setNationLevel2('Độc lập - Tự do - Hạnh phúc');
         setDocTitle('BIÊN BẢN CUỘC HỌP');
         setSecretaryTitle('THƯ KÝ CUỘC HỌP');
         setChairmanTitle('TRƯỞNG BAN');
       } else {
         setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
         setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+        setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+        setNationLevel2('Độc lập - Tự do - Hạnh phúc');
         setDocTitle('BIÊN BẢN CUỘC HỌP');
         setSecretaryTitle('THƯ KÝ CUỘC HỌP');
         setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
       }
-      setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
-      setNationLevel2('Độc lập - Tự do - Hạnh phúc');
       setDocNumber('.....');
       setEndTime('...... giờ');
       
@@ -524,9 +529,26 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           if (preSelectedType === 'party') {
             defaultTitle = 'Họp Chi bộ Tổ dân phố thường kỳ';
             defaultAttendance = '15';
+            const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+            setOrgLevel1(`ĐẢNG BỘ PHƯỜNG ${cleanWard}`);
+            setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+            setNationLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+            const dateObj = new Date();
+            setNationLevel2(`${wardName.replace(/Phường/gi, '').trim()}, ngày ${dateObj.getDate()} tháng ${dateObj.getMonth() + 1} năm ${dateObj.getFullYear()}`);
+            setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
+            setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
+            setChairmanTitle('BÍ THƯ CHI BỘ');
           } else if (preSelectedType === 'front') {
             defaultTitle = 'Họp Ban công tác Mặt trận thường kỳ';
             defaultAttendance = '12';
+            const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+            setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
+            setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
+            setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+            setNationLevel2('Độc lập - Tự do - Hạnh phúc');
+            setDocTitle('BIÊN BẢN CUỘC HỌP');
+            setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+            setChairmanTitle('TRƯỞNG BAN');
           }
           
           setTitle(defaultTitle);
@@ -1310,8 +1332,12 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 setSecretary(defaults.secretary);
                 
                 if (newType === 'party') {
-                  setOrgLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+                  const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+                  setOrgLevel1(`ĐẢNG BỘ PHƯỜNG ${cleanWard}`);
                   setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+                  setNationLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+                  const dateObj = new Date(date);
+                  setNationLevel2(`${wardName.replace(/Phường/gi, '').trim()}, ngày ${dateObj.getDate()} tháng ${dateObj.getMonth() + 1} năm ${dateObj.getFullYear()}`);
                   setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
                   setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
                   setChairmanTitle('BÍ THƯ CHI BỘ');
@@ -1319,6 +1345,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
                   setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
                   setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
+                  setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+                  setNationLevel2('Độc lập - Tự do - Hạnh phúc');
                   setDocTitle('BIÊN BẢN CUỘC HỌP');
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
                   setChairmanTitle('TRƯỞNG BAN');
@@ -1326,6 +1354,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
                   setOrgLevel1(`HỘI LHPN PHƯỜNG ${cleanWard}`);
                   setOrgLevel2(`CHI HỘI PHỤ NỮ TDP ${tdpName.toUpperCase()}`);
+                  setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+                  setNationLevel2('Độc lập - Tự do - Hạnh phúc');
                   setDocTitle('BIÊN BẢN CUỘC HỌP');
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
                   setChairmanTitle('CHI HỘI TRƯỞNG');
@@ -1333,6 +1363,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
                   setOrgLevel1(`HỘI CỰU CHIẾN BINH PHƯỜNG ${cleanWard}`);
                   setOrgLevel2(`CHI HỘI CỰU CHIẾN BINH TDP ${tdpName.toUpperCase()}`);
+                  setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+                  setNationLevel2('Độc lập - Tự do - Hạnh phúc');
                   setDocTitle('BIÊN BẢN CUỘC HỌP');
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
                   setChairmanTitle('CHI HỘI TRƯỞNG');
@@ -1340,6 +1372,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
                   setOrgLevel1(`HỘI NGƯỜI CAO TUỔI PHƯỜNG ${cleanWard}`);
                   setOrgLevel2(`CHI HỘI NGƯỜI CAO TUỔI TDP ${tdpName.toUpperCase()}`);
+                  setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+                  setNationLevel2('Độc lập - Tự do - Hạnh phúc');
                   setDocTitle('BIÊN BẢN CUỘC HỌP');
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
                   setChairmanTitle('CHI HỘI TRƯỞNG');
@@ -1347,12 +1381,16 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
                   setOrgLevel1(`ĐOÀN TNCS HỒ CHÍ MINH PHƯỜNG ${cleanWard}`);
                   setOrgLevel2(`CHI ĐOÀN TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+                  setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+                  setNationLevel2('Độc lập - Tự do - Hạnh phúc');
                   setDocTitle('BIÊN BẢN CUỘC HỌP');
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
                   setChairmanTitle('BÍ THƯ CHI ĐOÀN');
                 } else {
                   setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
                   setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+                  setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+                  setNationLevel2('Độc lập - Tự do - Hạnh phúc');
                   setDocTitle('BIÊN BẢN CUỘC HỌP');
                   setSecretaryTitle('THƯ KÝ CUỘC HỌP');
                   setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
@@ -1399,7 +1437,19 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               <input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setDate(newDate);
+                  if (meetingType === 'party') {
+                    try {
+                      const dateObj = new Date(newDate);
+                      const day = dateObj.getDate();
+                      const month = dateObj.getMonth() + 1;
+                      const year = dateObj.getFullYear();
+                      setNationLevel2(`${wardName.replace(/Phường/gi, '').trim()}, ngày ${day} tháng ${month} năm ${year}`);
+                    } catch { /* ignore */ }
+                  }
+                }}
                 disabled={isGuest}
                 style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
               />
@@ -2092,7 +2142,19 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    setDate(newDate);
+                    if (meetingType === 'party') {
+                      try {
+                        const dateObj = new Date(newDate);
+                        const day = dateObj.getDate();
+                        const month = dateObj.getMonth() + 1;
+                        const year = dateObj.getFullYear();
+                        setNationLevel2(`${wardName.replace(/Phường/gi, '').trim()}, ngày ${day} tháng ${month} năm ${year}`);
+                      } catch { /* ignore */ }
+                    }
+                  }}
                   disabled={isGuest}
                   style={{
                     border: 'none',

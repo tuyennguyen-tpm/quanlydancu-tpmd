@@ -112,6 +112,19 @@ const formatInputNumber = (val: string) => {
   return new Intl.NumberFormat('vi-VN').format(parseInt(clean));
 };
 
+const mapWeatherCode = (code: number): { text: string; icon: string } => {
+  if (code === 0) return { text: 'Nắng', icon: 'sun' };
+  if (code === 1) return { text: 'Ít mây', icon: 'cloud-sun' };
+  if (code === 2) return { text: 'Nửa mây', icon: 'cloud-sun' };
+  if (code === 3) return { text: 'Nhiều mây', icon: 'cloud' };
+  if (code >= 45 && code <= 48) return { text: 'Sương mù', icon: 'cloud-fog' };
+  if (code >= 51 && code <= 55) return { text: 'Mưa phùn', icon: 'cloud-drizzle' };
+  if (code >= 61 && code <= 65) return { text: 'Mưa', icon: 'cloud-rain' };
+  if (code >= 80 && code <= 82) return { text: 'Mưa rào', icon: 'cloud-rain' };
+  if (code >= 95 && code <= 99) return { text: 'Giông bão', icon: 'cloud-lightning' };
+  return { text: 'Nắng', icon: 'sun' };
+};
+
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -122,6 +135,35 @@ const App = () => {
   useEffect(() => {
     const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  const [weatherTemp, setWeatherTemp] = useState<number>(32);
+  const [weatherDesc, setWeatherDesc] = useState<string>('Nắng');
+  const [weatherIcon, setWeatherIcon] = useState<string>('sun');
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=19.7420&longitude=105.9230&current=temperature_2m,weather_code');
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.current) {
+            const temp = Math.round(data.current.temperature_2m);
+            const code = data.current.weather_code;
+            const weather = mapWeatherCode(code);
+            setWeatherTemp(temp);
+            setWeatherDesc(weather.text);
+            setWeatherIcon(weather.icon);
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải thời tiết:', err);
+      }
+    };
+
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 15 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const [docNotification, setDocNotification] = useState<{ title: string, message: string, id: string } | null>(null);
@@ -2590,8 +2632,18 @@ const App = () => {
             {activeTab !== 'Bảng điều khiển' && (
               <>
                 <div className="header-weather">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke-width="2"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke-width="2"/></svg>
-                  <span>32°C – Nắng</span>
+                  {weatherIcon === 'cloud' ? (
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '4px' }}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                  ) : weatherIcon === 'cloud-sun' ? (
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '4px' }}><path d="M12 2v2M4.22 4.22l1.42 1.42M18.36 5.64l1.42-1.42M22 17a5 5 0 0 1-5 5H7a6 6 0 0 1-1.25-11.87A8 8 0 0 1 20 12c0 .34-.02.68-.07 1A5 5 0 0 1 22 17z"/></svg>
+                  ) : weatherIcon === 'cloud-rain' || weatherIcon === 'cloud-drizzle' ? (
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '4px' }}><path d="M16 13a4 4 0 0 0-8 0a4 4 0 0 0-8 0v2a8 8 0 0 0 16 0zM8 19v3M12 19v3"/></svg>
+                  ) : weatherIcon === 'cloud-lightning' ? (
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '4px' }}><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 8.58M13 11l-4 6h6l-3 5"/></svg>
+                  ) : (
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '4px' }}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                  )}
+                  <span>{weatherTemp}°C – {weatherDesc}</span>
                 </div>
                 
                 {(() => {
