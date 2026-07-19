@@ -220,20 +220,20 @@ const InvitationTemplates: React.FC = () => {
     
     const renderCardHtml = (recipientName: string) => {
       const leftOrgHtml = activeTab === 'party' ? `
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">ĐẢNG BỘ ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">CHI BỘ ${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">ĐẢNG BỘ ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">CHI BỘ ${rawTdpName.toUpperCase()}</p>
       ` : activeTab === 'front' ? `
-        <p style="margin: 0; font-weight: 700; font-size: 10pt;">UBMTTQ VN ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: 10pt;">BAN CÔNG TÁC MẶT TRẬN</p>
-        <p style="margin: 0; font-weight: 700; font-size: 10pt;">${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: 12pt;">UBMTTQ VN ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: 12pt;">BAN CÔNG TÁC MẶT TRẬN</p>
+        <p style="margin: 0; font-weight: 700; font-size: 12pt;">${rawTdpName.toUpperCase()}</p>
       ` : `
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">UBND ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">TỔ DÂN PHỐ ${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">UBND ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">TỔ DÂN PHỐ ${rawTdpName.toUpperCase()}</p>
       `;
 
       const docTitle = activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
       const docSubtitleHtml = activeTab !== 'party' ? `
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11pt' : '12pt'}; text-decoration: underline;">
+        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '12.5pt' : '14pt'}; text-decoration: underline;">
           Độc lập – Tự do – Hạnh phúc
         </p>
       ` : '';
@@ -259,10 +259,10 @@ const InvitationTemplates: React.FC = () => {
             <div style="text-align: center; width: 44%;">
               ${leftOrgHtml}
               <div style="width: 50px; border-bottom: 1px solid #111; margin: 3px auto 4px;"></div>
-              <p style="margin: 0; font-size: 9.5pt;">Số: ${invitationNumber || '.....'}/GM-TDP</p>
+              <p style="margin: 0; font-size: 11pt;">Số: ${invitationNumber || '.....'}/GM-TDP</p>
             </div>
             <div style="text-align: center; width: 52%;">
-              <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '12.5pt'};">
+              <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '13pt' : '15pt'};">
                 ${docTitle}
               </p>
               ${docSubtitleHtml}
@@ -271,11 +271,11 @@ const InvitationTemplates: React.FC = () => {
           </div>
           ` : `
           <div style="text-align: center; margin-bottom: ${isLandscape ? '10px' : '16px'}; width: 100%;">
-            <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '12pt' : '13.5pt'};">
+            <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '13.5pt' : '15.5pt'};">
               ${docTitle}
             </p>
             ${activeTab !== 'party' ? `
-              <p style="margin: 2px 0 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '12.5pt'}; text-decoration: underline;">
+              <p style="margin: 2px 0 0; font-weight: 700; font-size: ${isLandscape ? '12.5pt' : '14.5pt'}; text-decoration: underline;">
                 Độc lập – Tự do – Hạnh phúc
               </p>
             ` : ''}
@@ -284,7 +284,7 @@ const InvitationTemplates: React.FC = () => {
           `}
 
           <!-- Title -->
-          <h1 style="text-align: center; font-weight: 700; font-size: ${isLandscape ? '18pt' : '22pt'}; margin: ${isLandscape ? '4px 0 6px' : '8px 0 10px'}; letter-spacing: 2px;">
+          <h1 style="text-align: center; font-weight: 700; font-size: ${isLandscape ? '22pt' : '26pt'}; margin: ${isLandscape ? '4px 0 6px' : '8px 0 10px'}; letter-spacing: 2px;">
             GIẤY MỜI
           </h1>
 
@@ -317,10 +317,10 @@ const InvitationTemplates: React.FC = () => {
           <!-- Signature -->
           <div style="display: flex; justify-content: flex-end; margin-top: ${isLandscape ? '2px' : '0'};">
             <div style="text-align: center; min-width: 190px;">
-              <p style="margin: 0 0 2px; font-style: italic; font-size: ${isLandscape ? '9.5pt' : '10.5pt'};">${locationDate}</p>
-              <p style="margin: 0 0 2px; font-weight: 700; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">${signerTitle}</p>
+              <p style="margin: 0 0 2px; font-style: italic; font-size: ${isLandscape ? '11pt' : '12pt'};">${locationDate}</p>
+              <p style="margin: 0 0 2px; font-weight: 700; font-size: ${isLandscape ? '12pt' : '13.5pt'};">${signerTitle}</p>
               <div style="height: ${isLandscape ? '20px' : '30px'};"></div>
-              <p style="margin: 0; font-weight: 700; text-transform: uppercase; font-size: ${isLandscape ? '10.5pt' : '11.5pt'};">${signerName}</p>
+              <p style="margin: 0; font-weight: 700; text-transform: uppercase; font-size: ${isLandscape ? '12pt' : '13.5pt'};">${signerName}</p>
             </div>
           </div>
         </div>
@@ -400,7 +400,7 @@ const InvitationTemplates: React.FC = () => {
             height: ${isLandscape ? '148mm' : '210mm'};
             padding: ${isLandscape ? '8mm 15mm 8mm' : '10mm 15mm 10mm'};
             font-family: "Times New Roman", Times, serif;
-            font-size: ${isLandscape ? '11.5pt' : '12.5pt'};
+            font-size: ${isLandscape ? '13pt' : '14.5pt'};
             line-height: ${isLandscape ? 1.4 : 1.45};
             color: #111;
             box-sizing: border-box;
@@ -466,19 +466,19 @@ const InvitationTemplates: React.FC = () => {
   // ── Left org block (varies by tab) ────────────────────────────────
   const leftOrg = activeTab === 'party' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>ĐẢNG BỘ {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>CHI BỘ {tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>ĐẢNG BỘ {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>CHI BỘ {tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : activeTab === 'front' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>UBMTTQ VN {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '8.5pt' }}>{tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '12pt' }}>UBMTTQ VN {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '12pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: '12pt' }}>{tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>UBND {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '9pt' : '10pt' }}>TỔ DÂN PHỐ {tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>UBND {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>TỔ DÂN PHỐ {tdpNameFormatted.toUpperCase()}</p>
     </>
   );
 
@@ -491,7 +491,7 @@ const InvitationTemplates: React.FC = () => {
       margin: '0 auto', background: 'white',
       padding: cardPad,
       fontFamily: '"Times New Roman", Times, serif',
-      fontSize: isLandscape ? '11.5pt' : '12.5pt', 
+      fontSize: isLandscape ? '13pt' : '14.5pt', 
       lineHeight: isLandscape ? 1.4 : 1.45,
       color: '#111', boxSizing: 'border-box',
       overflow: 'hidden', // hide overflow during print preview
@@ -505,14 +505,14 @@ const InvitationTemplates: React.FC = () => {
           <div style={{ textAlign: 'center', width: '44%' }}>
             {leftOrg}
             <div style={{ width: '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
-            <p style={{ margin: 0, fontSize: '9.5pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
+            <p style={{ margin: 0, fontSize: '11pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
           </div>
           <div style={{ textAlign: 'center', width: '52%' }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '12.5pt' }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '13pt' : '15pt' }}>
               {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
             </p>
             {activeTab !== 'party' && (
-              <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11pt' : '12pt', textDecoration: 'underline' }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '12.5pt' : '14pt', textDecoration: 'underline' }}>
                 Độc lập – Tự do – <strong>Hạnh phúc</strong>
               </p>
             )}
@@ -521,11 +521,11 @@ const InvitationTemplates: React.FC = () => {
         </div>
       ) : (
         <div style={{ textAlign: 'center', marginBottom: isLandscape ? '10px' : '16px', width: '100%' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '12pt' : '13.5pt' }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '13.5pt' : '15.5pt' }}>
             {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
           </p>
           {activeTab !== 'party' && (
-            <p style={{ margin: '2px 0 0', fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '12.5pt', textDecoration: 'underline' }}>
+            <p style={{ margin: '2px 0 0', fontWeight: 700, fontSize: isLandscape ? '12.5pt' : '14.5pt', textDecoration: 'underline' }}>
               Độc lập – Tự do – Hạnh phúc
             </p>
           )}
@@ -536,7 +536,7 @@ const InvitationTemplates: React.FC = () => {
       {/* TITLE */}
       <h1 style={{ 
         textAlign: 'center', fontWeight: 700, 
-        fontSize: isLandscape ? '18pt' : '22pt', 
+        fontSize: isLandscape ? '22pt' : '26pt', 
         margin: isLandscape ? '4px 0 6px' : '4px 0 8px', 
         letterSpacing: '2px' 
       }}>
@@ -578,10 +578,10 @@ const InvitationTemplates: React.FC = () => {
       {/* SIGNATURE */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: isLandscape ? '2px' : '0' }}>
         <div style={{ textAlign: 'center', minWidth: '190px' }}>
-          <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: isLandscape ? '9.5pt' : '10.5pt' }}>{locationDate}</p>
-          <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: isLandscape ? '10.5pt' : '11.5pt' }}>{signerTitle}</p>
+          <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: isLandscape ? '11pt' : '12pt' }}>{locationDate}</p>
+          <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: isLandscape ? '12pt' : '13.5pt' }}>{signerTitle}</p>
           <div style={{ height: isLandscape ? '20px' : '30px' }} />
-          <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: isLandscape ? '10.5pt' : '11.5pt' }}>{signerName}</p>
+          <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: isLandscape ? '12pt' : '13.5pt' }}>{signerName}</p>
         </div>
       </div>
     </div>
