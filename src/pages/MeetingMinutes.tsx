@@ -119,6 +119,7 @@ const MeetingMinutes = () => {
 
   const [chairman, setChairman] = useState(() => getDefaultChairmanAndSecretary('general').chairman);
   const [secretary, setSecretary] = useState(() => getDefaultChairmanAndSecretary('general').secretary);
+  const [secretary2, setSecretary2] = useState('');
   const [attendance, setAttendance] = useState('85');
   const [meetingType, setMeetingType] = useState<string>('general');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
@@ -149,7 +150,8 @@ const MeetingMinutes = () => {
       secretaryTitle,
       chairmanTitle,
       docNumber,
-      endTime
+      endTime,
+      secretary2
     };
     return `${rawContent}\n\n<!--METADATA:${JSON.stringify(metadata)}-->`;
   };
@@ -169,6 +171,7 @@ const MeetingMinutes = () => {
         setChairmanTitle(meta.chairmanTitle || 'CHỦ TRÌ CUỘC HỌP');
         setDocNumber(meta.docNumber || '.....');
         setEndTime(meta.endTime || '...... giờ');
+        setSecretary2(meta.secretary2 || '');
         return fullContent.replace(regex, '');
       } catch (e) {
         console.error('Lỗi parse metadata:', e);
@@ -609,6 +612,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       setLocation('Nhà văn hóa');
       setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
       setSecretary('Lê Thị Dung - Thư ký');
+      setSecretary2('');
       setAttendance('85');
       setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
       showToast('Đã khôi phục mặc định!', 'info');
@@ -762,6 +766,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     setLocation('Nhà văn hóa');
     setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
     setSecretary('Lê Thị Dung - Thư ký');
+    setSecretary2('');
     setAttendance('85');
     setMeetingType('general');
     setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
@@ -793,6 +798,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
     const chairmanSigUrl = getSigUrlForNameOrRole(chairman, fallbackRoleId);
     const secretarySigUrl = getSigUrlForNameOrRole(secretary, 'thu_ky');
+    const secretary2SigUrl = getSigUrlForNameOrRole(secretary2, 'thu_ky2');
 
     const dateObj = new Date(date);
     const day = dateObj.getDate();
@@ -944,10 +950,10 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               Hôm nay, vào hồi <strong>${time}</strong> ngày <strong>${day}</strong> tháng <strong>${month}</strong> năm <strong>${year}</strong>, tại <strong>${location}</strong>, Tổ dân phố ${tdpName} đã tiến hành tổ chức cuộc họp với nội dung chính như sau:
             </div>
 
-            <div class="section-title">I. THÀNH PHẦN THAM DỰ</div>
+            <div class="section-title">I. PHẦN THỦ TỤC</div>
             <div class="content-p">
               1. <strong>Chủ trì cuộc họp:</strong> Ông/Bà ${chairman}<br/>
-              2. <strong>Thư ký ghi biên bản:</strong> Ông/Bà ${secretary}<br/>
+              2. <strong>Thư ký ghi biên bản:</strong> Ông/Bà ${secretary}${secretary2 ? ` và Ông/Bà ${secretary2}` : ''}<br/>
               3. <strong>Đại diện tham dự:</strong> Đại diện của <strong>${attendance}</strong> ${getAttendanceLabel(meetingType)} trên địa bàn Tổ dân phố tham gia đầy đủ.
             </div>
 
@@ -964,22 +970,49 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
             <table class="footer-table" style="margin-top: 10px;">
               <tr>
-                 <td>
-                   <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
-                   <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
-                   <div class="signature-space">
-                      ${secretarySigUrl ? `<img src="${secretarySigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
-                   </div>
-                   <div class="signature-name">${secretary.split('-')[0].trim()}</div>
-                 </td>
-                 <td>
-                   <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
-                   <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
-                   <div class="signature-space">
-                      ${chairmanSigUrl ? `<img src="${chairmanSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
-                   </div>
-                   <div class="signature-name">${chairman.split('-')[0].trim()}</div>
-                 </td>
+                 ${secretary2 ? `
+                   <td style="width: 33%;">
+                     <div style="font-weight: bold; text-transform: uppercase;">Thư ký cuộc họp (1)</div>
+                     <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
+                     <div class="signature-space">
+                        ${secretarySigUrl ? `<img src="${secretarySigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
+                     </div>
+                     <div class="signature-name">${secretary.split('-')[0].trim()}</div>
+                   </td>
+                   <td style="width: 33%;">
+                     <div style="font-weight: bold; text-transform: uppercase;">Thư ký cuộc họp (2)</div>
+                     <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
+                     <div class="signature-space">
+                        ${secretary2SigUrl ? `<img src="${secretary2SigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
+                     </div>
+                     <div class="signature-name">${secretary2.split('-')[0].trim()}</div>
+                   </td>
+                   <td style="width: 33%;">
+                     <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
+                     <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
+                     <div class="signature-space">
+                        ${chairmanSigUrl ? `<img src="${chairmanSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
+                     </div>
+                     <div class="signature-name">${chairman.split('-')[0].trim()}</div>
+                   </td>
+                 ` : `
+                   <td>
+                     <div style="font-weight: bold; text-transform: uppercase;">${secretaryTitle}</div>
+                     <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
+                     <div class="signature-space">
+                        ${secretarySigUrl ? `<img src="${secretarySigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
+                     </div>
+                     <div class="signature-name">${secretary.split('-')[0].trim()}</div>
+                   </td>
+                   <td>
+                     <div style="font-weight: bold; text-transform: uppercase;">${chairmanTitle}</div>
+                     <div style="font-style: italic; font-size: 13pt;">(Ký, ghi rõ họ tên)</div>
+                     <div class="signature-space">
+                        ${chairmanSigUrl ? `<img src="${chairmanSigUrl}" alt="Chữ ký" style="height: 110px; max-height: 120px; max-width: 220px; object-fit: contain;" />` : ''}
+                     </div>
+                     <div class="signature-name">${chairman.split('-')[0].trim()}</div>
+                   </td>
+                 `}
                </tr>
             </table>
           </div>
@@ -1012,6 +1045,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
     const chairmanSigUrl = getSigUrlForNameOrRole(chairman, fallbackRoleId);
     const secretarySigUrl = getSigUrlForNameOrRole(secretary, 'thu_ky');
+    const secretary2SigUrl = getSigUrlForNameOrRole(secretary2, 'thu_ky2');
 
     const suffix = getDocNumberSuffix(meetingType);
     const docNumDisplay = docNumber ? `Số: ${docNumber}${suffix}` : `Số: .....${suffix}`;
@@ -1491,7 +1525,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               />
             </div>
             <div className="form-group">
-              <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>Thư ký ghi chép</label>
+              <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>Thư ký ghi chép (1)</label>
               <input
                 type="text"
                 value={secretary}
@@ -1500,6 +1534,18 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
               />
             </div>
+          </div>
+
+          <div className="form-group" style={{ marginTop: '12px' }}>
+            <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>Thư ký ghi chép (2) - Không bắt buộc</label>
+            <input
+              type="text"
+              value={secretary2}
+              onChange={(e) => setSecretary2(e.target.value)}
+              placeholder="Nhập tên thư ký thứ hai nếu cuộc họp có 2 thư ký..."
+              disabled={isGuest}
+              style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%' }}
+            />
           </div>
 
           <div className="form-group">
@@ -1743,7 +1789,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             <div style={{ fontWeight: 'bold', fontSize: '11pt', margin: '10px 0 4px 0' }}>I. THÀNH PHẦN THAM DỰ</div>
             <div style={{ fontSize: '10.5pt', paddingLeft: '8px', marginBottom: '12px', textAlign: 'justify' }}>
               1. Chủ trì cuộc họp: Ông/Bà {chairman}<br/>
-              2. Thư ký ghi biên bản: Ông/Bà {secretary}<br/>
+              2. Thư ký ghi biên bản: Ông/Bà {secretary}{secretary2 ? ` và Ông/Bà ${secretary2}` : ''}<br/>
               3. Đại diện tham dự: Đại diện của <strong>{attendance}</strong> {getAttendanceLabel(meetingType)}.
             </div>
 
@@ -1771,16 +1817,38 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
             {/* Signatures */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10.5pt' }}>
-              <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{secretaryTitle}</div>
-                <div style={{ height: '55px' }}></div>
-                <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
-              </div>
-              <div style={{ textAlign: 'center', width: '45%' }}>
-                <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{chairmanTitle}</div>
-                <div style={{ height: '55px' }}></div>
-                <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
-              </div>
+              {secretary2 ? (
+                <>
+                  <div style={{ textAlign: 'center', width: '30%' }}>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '9pt' }}>Thư ký cuộc họp (1)</div>
+                    <div style={{ height: '55px' }}></div>
+                    <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', width: '30%' }}>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '9pt' }}>Thư ký cuộc họp (2)</div>
+                    <div style={{ height: '55px' }}></div>
+                    <div style={{ fontWeight: 'bold' }}>{secretary2.split('-')[0].trim()}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', width: '35%' }}>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '9pt' }}>{chairmanTitle}</div>
+                    <div style={{ height: '55px' }}></div>
+                    <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ textAlign: 'center', width: '45%' }}>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{secretaryTitle}</div>
+                    <div style={{ height: '55px' }}></div>
+                    <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', width: '45%' }}>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{chairmanTitle}</div>
+                    <div style={{ height: '55px' }}></div>
+                    <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -2219,7 +2287,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   />
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                   <span>2. Thư ký ghi biên bản: Ông/Bà</span>
                   <input
                     type="text"
@@ -2230,7 +2298,28 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                       border: 'none',
                       background: 'transparent',
                       borderBottom: '1px dashed #cbd5e1',
-                      width: '320px',
+                      width: '200px',
+                      fontFamily: 'inherit',
+                      fontWeight: 'bold',
+                      fontSize: '12pt',
+                      outline: 'none',
+                      color: '#000',
+                      padding: '2px 4px'
+                    }}
+                    className="word-input"
+                  />
+                  <span>và Ông/Bà (Thư ký 2)</span>
+                  <input
+                    type="text"
+                    value={secretary2}
+                    onChange={(e) => setSecretary2(e.target.value)}
+                    placeholder="Không bắt buộc..."
+                    disabled={isGuest}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      borderBottom: '1px dashed #cbd5e1',
+                      width: '200px',
                       fontFamily: 'inherit',
                       fontWeight: 'bold',
                       fontSize: '12pt',
@@ -2329,56 +2418,100 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
 
               {/* Signatures */}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '12pt', marginBottom: '20px' }}>
-                <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={secretaryTitle}
-                    onChange={(e) => setSecretaryTitle(e.target.value)}
-                    disabled={isGuest}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      borderBottom: '1px dashed #cbd5e1',
-                      fontWeight: 'bold',
-                      fontSize: '12pt',
-                      width: '180px',
-                      textAlign: 'center',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      textTransform: 'uppercase',
-                      color: '#000'
-                    }}
-                    className="word-input"
-                  />
-                  <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
-                  <div style={{ height: '65px' }}></div>
-                  <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
-                </div>
-                <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={chairmanTitle}
-                    onChange={(e) => setChairmanTitle(e.target.value)}
-                    disabled={isGuest}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      borderBottom: '1px dashed #cbd5e1',
-                      fontWeight: 'bold',
-                      fontSize: '12pt',
-                      width: '220px',
-                      textAlign: 'center',
-                      fontFamily: 'inherit',
-                      outline: 'none',
-                      textTransform: 'uppercase',
-                      color: '#000'
-                    }}
-                    className="word-input"
-                  />
-                  <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
-                  <div style={{ height: '65px' }}></div>
-                  <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
-                </div>
+                {secretary2 ? (
+                  <>
+                    <div style={{ textAlign: 'center', width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '12pt' }}>Thư ký cuộc họp (1)</div>
+                      <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
+                      <div style={{ height: '65px' }}></div>
+                      <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <div style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '12pt' }}>Thư ký cuộc họp (2)</div>
+                      <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
+                      <div style={{ height: '65px' }}></div>
+                      <div style={{ fontWeight: 'bold' }}>{secretary2.split('-')[0].trim()}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', width: '35%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        value={chairmanTitle}
+                        onChange={(e) => setChairmanTitle(e.target.value)}
+                        disabled={isGuest}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          borderBottom: '1px dashed #cbd5e1',
+                          fontWeight: 'bold',
+                          fontSize: '12pt',
+                          width: '180px',
+                          textAlign: 'center',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          textTransform: 'uppercase',
+                          color: '#000'
+                        }}
+                        className="word-input"
+                      />
+                      <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
+                      <div style={{ height: '65px' }}></div>
+                      <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        value={secretaryTitle}
+                        onChange={(e) => setSecretaryTitle(e.target.value)}
+                        disabled={isGuest}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          borderBottom: '1px dashed #cbd5e1',
+                          fontWeight: 'bold',
+                          fontSize: '12pt',
+                          width: '180px',
+                          textAlign: 'center',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          textTransform: 'uppercase',
+                          color: '#000'
+                        }}
+                        className="word-input"
+                      />
+                      <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
+                      <div style={{ height: '65px' }}></div>
+                      <div style={{ fontWeight: 'bold' }}>{secretary.split('-')[0].trim()}</div>
+                    </div>
+                    <div style={{ textAlign: 'center', width: '45%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        value={chairmanTitle}
+                        onChange={(e) => setChairmanTitle(e.target.value)}
+                        disabled={isGuest}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          borderBottom: '1px dashed #cbd5e1',
+                          fontWeight: 'bold',
+                          fontSize: '12pt',
+                          width: '220px',
+                          textAlign: 'center',
+                          fontFamily: 'inherit',
+                          outline: 'none',
+                          textTransform: 'uppercase',
+                          color: '#000'
+                        }}
+                        className="word-input"
+                      />
+                      <div style={{ fontStyle: 'italic', fontSize: '10.5pt', color: '#475569' }}>(Ký, ghi rõ họ tên)</div>
+                      <div style={{ height: '65px' }}></div>
+                      <div style={{ fontWeight: 'bold' }}>{chairman.split('-')[0].trim()}</div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
