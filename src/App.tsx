@@ -3911,7 +3911,7 @@ const App = () => {
                         <tbody>
                           {filteredGeneratedKeys.map((k) => (
                             <tr key={k.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 'bold' }}>{k.key}</td>
+                              <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{k.key}</td>
                               <td style={{ padding: '6px 10px' }}>{k.wards?.name || '—'}</td>
                               <td style={{ padding: '6px 10px' }}>{k.role === 'ward_admin' ? '🏛️ Phường Admin' : '🏢 Tổ trưởng'}</td>
                               <td style={{ padding: '6px 10px' }}>{k.tdp_name || '—'}</td>

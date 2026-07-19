@@ -504,10 +504,11 @@ export const db = {
   validateRegistrationKey: async (keyText: string): Promise<{ valid: boolean; role?: string; tdp_name?: string; ward_id?: string; message: string }> => {
     if (!supabase) return { valid: false, message: 'Cơ sở dữ liệu chưa được kết nối.' };
     try {
+      const cleanKey = keyText.replace(/\s+/g, '');
       const { data, error } = await supabase
         .from('registration_keys')
         .select('*, wards(name)')
-        .eq('key', keyText.trim())
+        .eq('key', cleanKey)
         .single();
       if (error || !data) {
         return { valid: false, message: 'Mã kích hoạt không chính xác.' };
@@ -532,10 +533,11 @@ export const db = {
   useRegistrationKey: async (keyText: string, userId: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
+      const cleanKey = keyText.replace(/\s+/g, '');
       const { error } = await supabase
         .from('registration_keys')
         .update({ is_used: true, used_by: userId })
-        .eq('key', keyText.trim());
+        .eq('key', cleanKey);
       return !error;
     } catch (e) {
       console.error('Failed to use key:', e);
@@ -609,14 +611,14 @@ export const db = {
         .update({ ward_id: newWardId })
         .eq('id', tdpUserId);
       if (profileErr) throw profileErr;
-
+ 
       // 2. Update all associated entities
       const tables = [
         'households', 'residents', 'financial_records', 'complaints', 
         'meetings', 'documents', 'security_logs', 'environment_logs', 
         'policy_activities', 'meeting_minutes', 'household_funds', 'ward_funds'
       ];
-
+ 
       await Promise.all(tables.map(async (table) => {
         const { error } = await client
           .from(table)
@@ -626,7 +628,7 @@ export const db = {
           console.warn(`[DB] Failed to update ward_id in table ${table}:`, error);
         }
       }));
-
+ 
       return true;
     } catch (e) {
       console.error('Failed to transfer TDP:', e);
@@ -653,42 +655,45 @@ export const db = {
       return '';
     }
   },
-
+ 
   deleteRegistrationKey: async (keyText: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
+      const cleanKey = keyText.replace(/\s+/g, '');
       const { error } = await supabase
         .from('registration_keys')
         .delete()
-        .eq('key', keyText);
+        .eq('key', cleanKey);
       return !error;
     } catch (e) {
       console.error('Failed to delete key:', e);
       return false;
     }
   },
-
+ 
   resetRegistrationKey: async (keyText: string): Promise<boolean> => {
     if (!supabase) return false;
     try {
+      const cleanKey = keyText.replace(/\s+/g, '');
       const { error } = await supabase
         .from('registration_keys')
         .update({ is_used: false, used_by: null })
-        .eq('key', keyText);
+        .eq('key', cleanKey);
       return !error;
     } catch (e) {
       console.error('Failed to reset key:', e);
       return false;
     }
   },
-
+ 
   updateRegistrationKey: async (keyText: string, updates: { role: string; tdp_name: string | null; ward_id: string; expires_at: string | null }): Promise<boolean> => {
     if (!supabase) return false;
     try {
+      const cleanKey = keyText.replace(/\s+/g, '');
       const { error } = await supabase
         .from('registration_keys')
         .update(updates)
-        .eq('key', keyText);
+        .eq('key', cleanKey);
       return !error;
     } catch (e) {
       console.error('Failed to update key:', e);
