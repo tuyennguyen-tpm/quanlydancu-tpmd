@@ -131,6 +131,9 @@ const App = () => {
   const [isOfflineMode, setOfflineMode] = useState<boolean>(localStorage.getItem('offline_mode') === 'true');
   const [isGuestMode, setGuestMode] = useState<boolean>(localStorage.getItem('guest_mode') === 'true');
 
+  const isHighestAdmin = localStorage.getItem('user_role') === 'super_admin' || 
+                         (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
+
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   useEffect(() => {
     const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
@@ -628,6 +631,18 @@ const App = () => {
   const [newKeyExpiration, setNewKeyExpiration] = useState<string>('permanent');
   const [newKeyCustomExpirationDate, setNewKeyCustomExpirationDate] = useState<string>('');
 
+  const currentKeyWardId = selectedKeyWardId || localStorage.getItem('user_ward_id') || '';
+
+  const existingTdps = Array.from(
+    new Set(
+      allTdpProfiles
+        .filter(p => p.ward_id === currentKeyWardId && p.tdp_name)
+        .map(p => p.tdp_name.trim())
+    )
+  );
+
+  const isExistingTdp = existingTdps.includes(newKeyTdpName.trim());
+
   const loadGeneratedKeys = async () => {
     if (!supabase) return;
     try {
@@ -672,6 +687,9 @@ const App = () => {
       setGeneratedKeyResult('');
       setShowNewWardInput(false);
       setNewWardNameInput('');
+      db.getAllTDPProfiles().then((profiles) => {
+        setAllTdpProfiles(profiles);
+      }).catch(console.error);
     }
   }, [isSettingsOpen]);
 
@@ -762,6 +780,10 @@ const App = () => {
   };
 
   const handleDeleteKey = async (keyText: string) => {
+    if (!isHighestAdmin) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Bạn không có quyền thực hiện hành động này!', type: 'danger' } }));
+      return;
+    }
     if (!window.confirm(`Bạn có chắc chắn muốn xóa mã kích hoạt "${keyText}"? Hành động này không thể hoàn tác.`)) {
       return;
     }
@@ -778,6 +800,10 @@ const App = () => {
   };
 
   const handleResetKey = async (keyText: string) => {
+    if (!isHighestAdmin) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Bạn không có quyền thực hiện hành động này!', type: 'danger' } }));
+      return;
+    }
     if (!window.confirm(`Bạn có muốn gia hạn/khôi phục mã "${keyText}" về trạng thái Chưa sử dụng? Mã này sẽ có thể được dùng lại để đăng ký.`)) {
       return;
     }
@@ -791,6 +817,7 @@ const App = () => {
   };
 
   const handleStartEditKey = (k: any) => {
+    if (!isHighestAdmin) return;
     setEditingKey(k);
     setNewKeyRole(k.role);
     setSelectedKeyWardId(k.ward_id);
@@ -815,7 +842,7 @@ const App = () => {
   };
 
   const handleSaveKeyEdit = async () => {
-    if (!supabase || !editingKey) return;
+    if (!supabase || !editingKey || !isHighestAdmin) return;
     try {
       let targetWardId = '';
       if (showNewWardInput && newWardNameInput.trim()) {
@@ -3725,13 +3752,46 @@ const App = () => {
                     {((localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) ? newKeyRole === 'tdp_leader' : true) ? (
                       <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
                         <label>Tên Tổ dân phố</label>
-                        <input
-                          type="text"
-                          placeholder="Ví dụ: Tổ dân phố Quảng Giao..."
-                          value={newKeyTdpName}
-                          onChange={(e) => setNewKeyTdpName(e.target.value)}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
-                        />
+                        {existingTdps.length > 0 ? (
+                          <>
+                            <select
+                              value={isExistingTdp ? newKeyTdpName : 'new'}
+                              onChange={(e) => {
+                                if (e.target.value === 'new') {
+                                  setNewKeyTdpName('');
+                                } else {
+                                  setNewKeyTdpName(e.target.value);
+                                }
+                              }}
+                              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', width: '100%', background: 'white', fontSize: '0.9rem' }}
+                            >
+                              <option value="">-- Chọn Tổ dân phố --</option>
+                              {existingTdps.map(name => (
+                                <option key={name} value={name}>🏢 {name}</option>
+                              ))}
+                              <option value="new">➕ Nhập Tổ mới...</option>
+                            </select>
+                            {(!isExistingTdp || newKeyTdpName === '') && (
+                              <div style={{ marginTop: '6px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="Nhập tên Tổ dân phố mới..."
+                                  value={newKeyTdpName}
+                                  onChange={(e) => setNewKeyTdpName(e.target.value)}
+                                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                                />
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="Ví dụ: Tổ dân phố Quảng Giao..."
+                            value={newKeyTdpName}
+                            onChange={(e) => setNewKeyTdpName(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                          />
+                        )}
                       </div>
                     ) : (
                       <div className="form-group" style={{ flex: 1.5, minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '8px' }}>
@@ -3836,7 +3896,7 @@ const App = () => {
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Tên địa bàn</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Trạng thái</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Hạn dùng</th>
-                            <th style={{ padding: '6px 10px', color: '#475569', textAlign: 'right' }}>Thao tác</th>
+                            {isHighestAdmin && <th style={{ padding: '6px 10px', color: '#475569', textAlign: 'right' }}>Thao tác</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -3868,18 +3928,40 @@ const App = () => {
                                   <span style={{ color: '#64748b' }}>Không giới hạn</span>
                                 )}
                               </td>
-                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
-                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-                                  {(k.is_used || (k.expires_at && new Date(k.expires_at).getTime() < Date.now())) && (
+                              {isHighestAdmin && (
+                                <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                                    {(k.is_used || (k.expires_at && new Date(k.expires_at).getTime() < Date.now())) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleResetKey(k.key)}
+                                        style={{
+                                          padding: '2px 6px',
+                                          fontSize: '0.7rem',
+                                          background: '#f0fdf4',
+                                          color: '#16a34a',
+                                          border: '1px solid #bbf7d0',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          fontWeight: '600',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '2px'
+                                        }}
+                                        title="Khôi phục mã về trạng thái Chưa dùng và gia hạn lại"
+                                      >
+                                        🔄 Gia hạn
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
-                                      onClick={() => handleResetKey(k.key)}
+                                      onClick={() => handleStartEditKey(k)}
                                       style={{
                                         padding: '2px 6px',
                                         fontSize: '0.7rem',
-                                        background: '#f0fdf4',
-                                        color: '#16a34a',
-                                        border: '1px solid #bbf7d0',
+                                        background: '#eff6ff',
+                                        color: '#2563eb',
+                                        border: '1px solid #bfdbfe',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
                                         fontWeight: '600',
@@ -3887,58 +3969,38 @@ const App = () => {
                                         alignItems: 'center',
                                         gap: '2px'
                                       }}
-                                      title="Khôi phục mã về trạng thái Chưa dùng và gia hạn lại"
+                                      title="Sửa thông tin mã hoặc gia hạn ngày"
                                     >
-                                      🔄 Gia hạn
+                                      ✏️ Sửa
                                     </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartEditKey(k)}
-                                    style={{
-                                      padding: '2px 6px',
-                                      fontSize: '0.7rem',
-                                      background: '#eff6ff',
-                                      color: '#2563eb',
-                                      border: '1px solid #bfdbfe',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      fontWeight: '600',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '2px'
-                                    }}
-                                    title="Sửa thông tin mã hoặc gia hạn ngày"
-                                  >
-                                    ✏️ Sửa
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteKey(k.key)}
-                                    style={{
-                                      padding: '2px 6px',
-                                      fontSize: '0.7rem',
-                                      background: '#fef2f2',
-                                      color: '#dc2626',
-                                      border: '1px solid #fecaca',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      fontWeight: '600',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '2px'
-                                    }}
-                                    title="Xóa mã kích hoạt"
-                                  >
-                                    🗑️ Xóa
-                                  </button>
-                                </div>
-                              </td>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteKey(k.key)}
+                                      style={{
+                                        padding: '2px 6px',
+                                        fontSize: '0.7rem',
+                                        background: '#fef2f2',
+                                        color: '#dc2626',
+                                        border: '1px solid #fecaca',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '2px'
+                                      }}
+                                      title="Xóa mã kích hoạt"
+                                    >
+                                      🗑️ Xóa
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           ))}
                           {generatedKeysList.length === 0 && (
                             <tr>
-                              <td colSpan={7} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
+                              <td colSpan={isHighestAdmin ? 7 : 6} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
                             </tr>
                           )}
                         </tbody>
