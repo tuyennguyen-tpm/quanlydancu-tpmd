@@ -976,6 +976,7 @@ const App = () => {
     { id: 'ke_toan',  title: 'Kế toán trưởng',       name: '', signatureUrl: '' },
     { id: 'thu_quy',  title: 'Thủ quỹ',               name: '', signatureUrl: '' },
     { id: 'thu_ky',   title: 'Thư ký',               name: '', signatureUrl: '' },
+    { id: 'thu_ky2',  title: 'Thư ký (2)',           name: '', signatureUrl: '' },
     { id: 'women',    title: 'Chi hội trưởng Phụ nữ', name: '', signatureUrl: '' },
     { id: 'veterans', title: 'Chi hội trưởng Cựu chiến binh', name: '', signatureUrl: '' },
     { id: 'seniors',  title: 'Chi hội trưởng Người cao tuổi', name: '', signatureUrl: '' },

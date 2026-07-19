@@ -119,7 +119,7 @@ const MeetingMinutes = () => {
 
   const [chairman, setChairman] = useState(() => getDefaultChairmanAndSecretary('general').chairman);
   const [secretary, setSecretary] = useState(() => getDefaultChairmanAndSecretary('general').secretary);
-  const [secretary2, setSecretary2] = useState('');
+  const [secretary2, setSecretary2] = useState(() => getOfficialNameFromConfig('thu_ky2', ''));
   const [attendance, setAttendance] = useState('85');
   const [meetingType, setMeetingType] = useState<string>('general');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
@@ -612,7 +612,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       setLocation('Nhà văn hóa');
       setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
       setSecretary('Lê Thị Dung - Thư ký');
-      setSecretary2('');
+      setSecretary2(getOfficialNameFromConfig('thu_ky2', ''));
       setAttendance('85');
       setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
       showToast('Đã khôi phục mặc định!', 'info');
@@ -766,7 +766,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     setLocation('Nhà văn hóa');
     setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
     setSecretary('Lê Thị Dung - Thư ký');
-    setSecretary2('');
+    setSecretary2(getOfficialNameFromConfig('thu_ky2', ''));
     setAttendance('85');
     setMeetingType('general');
     setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
