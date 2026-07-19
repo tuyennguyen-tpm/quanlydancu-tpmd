@@ -1480,30 +1480,28 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <label style={{ fontWeight: '600', fontSize: '0.85rem', margin: 0 }}>Nội dung diễn biến chi tiết</label>
-              {!isGuest && (
-                <button
-                  type="button"
-                  onClick={() => setIsFullscreenEdit(true)}
-                  style={{
-                    background: 'rgba(79, 70, 229, 0.08)',
-                    border: 'none',
-                    color: '#4f46e5',
-                    padding: '3px 8px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '0.78rem',
-                    fontWeight: '600',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.15)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.08)'}
-                >
-                  <Maximize2 size={12} /> Phóng to soạn thảo (Word)
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setIsFullscreenEdit(true)}
+                style={{
+                  background: 'rgba(79, 70, 229, 0.08)',
+                  border: 'none',
+                  color: '#4f46e5',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.78rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.15)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.08)'}
+              >
+                <Maximize2 size={12} /> Phóng to soạn thảo (Word)
+              </button>
             </div>
             <textarea
               value={content}
@@ -1533,27 +1531,25 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 <RotateCcw size={14} /> Reset form
               </button>
             )}
-            {!isGuest && (
-              <button
-                onClick={() => setIsFullscreenEdit(true)}
-                className="btn btn-secondary"
-                style={{
-                  flex: '1.2 1 140px',
-                  padding: '9px',
-                  fontSize: '0.82rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
-                  boxShadow: '0 4px 10px rgba(79, 70, 229, 0.25)',
-                  color: 'white',
-                  border: 'none'
-                }}
-              >
-                <Maximize2 size={14} /> Phóng to soạn thảo (Word)
-              </button>
-            )}
+            <button
+              onClick={() => setIsFullscreenEdit(true)}
+              className="btn btn-secondary"
+              style={{
+                flex: '1.2 1 140px',
+                padding: '9px',
+                fontSize: '0.82rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                boxShadow: '0 4px 10px rgba(79, 70, 229, 0.25)',
+                color: 'white',
+                border: 'none'
+              }}
+            >
+              <Maximize2 size={14} /> Phóng to soạn thảo (Word)
+            </button>
             {!isGuest && (
               <button
                 onClick={handleSaveMinutes}
@@ -1630,29 +1626,27 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FileText size={18} color="var(--primary)" /> Xem trước văn bản in ấn
             </h3>
-            {!isGuest && (
-              <button
-                onClick={() => setIsFullscreenEdit(true)}
-                style={{
-                  background: 'rgba(79, 70, 229, 0.1)',
-                  border: 'none',
-                  color: '#4f46e5',
-                  padding: '5px 10px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.8rem',
-                  fontWeight: '600',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.2)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.1)'}
-              >
-                <Maximize2 size={13} /> Phóng to soạn thảo (Word)
-              </button>
-            )}
+            <button
+              onClick={() => setIsFullscreenEdit(true)}
+              style={{
+                background: 'rgba(79, 70, 229, 0.1)',
+                border: 'none',
+                color: '#4f46e5',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.1)'}
+            >
+              <Maximize2 size={13} /> Phóng to soạn thảo (Word)
+            </button>
           </div>
           
           {/* Mock A4 Page Sheet */}
@@ -1781,47 +1775,51 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             </div>
             
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={handleReset}
-                style={{
-                  background: 'rgba(255,255,255,0.15)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'white',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-              >
-                <RotateCcw size={14} /> Khôi phục mặc định
-              </button>
+              {!isGuest && (
+                <button
+                  onClick={handleReset}
+                  style={{
+                    background: 'rgba(255,255,255,0.15)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.88rem',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+                >
+                  <RotateCcw size={14} /> Khôi phục mặc định
+                </button>
+              )}
               
-              <button
-                onClick={handleSaveMinutes}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '8px 18px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)'
-                }}
-              >
-                <FileText size={14} /> {currentMinutesId ? 'Cập nhật (Lưu)' : 'Lưu biên bản'}
-              </button>
+              {!isGuest && (
+                <button
+                  onClick={handleSaveMinutes}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    color: 'white',
+                    padding: '8px 18px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.88rem',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.2)'
+                  }}
+                >
+                  <FileText size={14} /> {currentMinutesId ? 'Cập nhật (Lưu)' : 'Lưu biên bản'}
+                </button>
+              )}
               
               <button
                 onClick={handlePrint}
