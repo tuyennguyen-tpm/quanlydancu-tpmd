@@ -813,17 +813,14 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             @media print {
               @page {
                 size: A4 portrait;
-                margin-top: 20mm;
-                margin-bottom: 20mm;
-                margin-left: 30mm;
-                margin-right: 15mm;
+                margin: 0; /* Hides browser default header (date, title) and footer (URL, page numbers) */
               }
               body {
                 font-family: "Times New Roman", Times, serif;
                 font-size: 14pt;
                 line-height: 1.6;
                 color: #000;
-                margin: 0 !important;
+                margin: 20mm 15mm 20mm 30mm !important; /* Restores standard margins: Top: 20mm, Right: 15mm, Bottom: 20mm, Left: 30mm */
                 padding: 0 !important;
               }
               .no-print { display: none; }
