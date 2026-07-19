@@ -220,196 +220,281 @@ const App = () => {
       return null;
     };
 
+    const playChimeAndSpeak = async (textToSpeak: string) => {
+      // 1. Phát nhạc chuông chime chất lượng cao trước để thu hút chú ý và kích hoạt audio context
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          
+          // Nốt thứ nhất (D5)
+          const osc1 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          osc1.connect(gain1);
+          gain1.connect(ctx.destination);
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+          gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          osc1.start(ctx.currentTime);
+          osc1.stop(ctx.currentTime + 0.4);
+          
+          // Nốt thứ hai (A5)
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+          gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.1);
+          gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+          osc2.start(ctx.currentTime + 0.1);
+          osc2.stop(ctx.currentTime + 0.5);
+        }
+      } catch (audioErr) {
+        console.warn('Không thể phát âm thanh chime:', audioErr);
+      }
+
+      // 2. Chuẩn bị và phát giọng nói tiếng Việt chuẩn (chị Google)
+      const speakNow = () => {
+        const msg = new SpeechSynthesisUtterance(textToSpeak);
+        msg.lang = 'vi-VN';
+        msg.volume = 1;
+        msg.rate = 0.95;
+
+        const voices = window.speechSynthesis.getVoices();
+        const viVoices = voices.filter(v => {
+          const l = v.lang.toLowerCase().replace('_', '-');
+          return l.includes('vi') || l.includes('vnm');
+        });
+
+        // Ưu tiên tìm giọng Google vi-VN (chị Google)
+        const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google'));
+        const femaleViVoice = googleVoice || viVoices.find(v => {
+          const name = v.name.toLowerCase();
+          return (
+            (name.includes('an') || name.includes('hoaimy') || name.includes('female') || name.includes('nữ')) &&
+            !name.includes('nam') && 
+            !name.includes('male')
+          );
+        }) || viVoices.find(v => !v.name.toLowerCase().includes('nam')) || viVoices[0];
+
+        if (femaleViVoice) {
+          msg.voice = femaleViVoice;
+          console.log('[TTS] Selected voice:', femaleViVoice.name);
+        }
+
+        if (!(window as any)._globalUtterances) {
+          (window as any)._globalUtterances = [];
+        }
+        (window as any)._globalUtterances.push(msg);
+        msg.onend = () => {
+          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
+        };
+        msg.onerror = (e) => {
+          console.warn('TTS speak error:', e);
+          (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
+        };
+
+        // 3. Giải phóng hàng chờ SpeechSynthesis bị kẹt và phát giọng nói
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+        window.speechSynthesis.cancel();
+        setTimeout(() => {
+          window.speechSynthesis.speak(msg);
+        }, 150);
+      };
+
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          speakNow();
+          window.speechSynthesis.onvoiceschanged = null;
+        };
+      } else {
+        speakNow();
+      }
+    };
+
     const checkGlobalUnreadAndSpeak = async () => {
-      // Không đọc nếu đang ở chế độ gửi của phường
-      if (localStorage.getItem('is_phuong_mode') === 'true') return;
       if (!supabase) return;
       if (window.speechSynthesis.speaking) return;
 
+      const isPhuong = localStorage.getItem('is_phuong_mode') === 'true';
+      const myWardId = localStorage.getItem('user_ward_id') || localStorage.getItem('guest_ward_id');
+      if (!myWardId) return;
+
       try {
-        const myWardId = localStorage.getItem('user_ward_id') || localStorage.getItem('guest_ward_id');
-        if (!myWardId) return;
+        if (!isPhuong) {
+          // --- CHẾ ĐỘ TỔ DÂN PHỐ: Nhận công văn của Phường ---
+          const wardAdminUid = await getWardAdminId(myWardId);
+          if (!wardAdminUid) return;
 
-        const wardAdminUid = await getWardAdminId(myWardId);
-        if (!wardAdminUid) return;
+          // Tải danh sách công văn Phường
+          const { data: wardConfig } = await supabase
+            .from('app_config')
+            .select('value')
+            .eq('user_id', wardAdminUid)
+            .eq('key', 'ward_documents')
+            .maybeSingle();
 
-        // Tải danh sách công văn Phường
-        const { data: wardConfig } = await supabase
-          .from('app_config')
-          .select('value')
-          .eq('user_id', wardAdminUid)
-          .eq('key', 'ward_documents')
-          .maybeSingle();
+          if (!wardConfig || !wardConfig.value) return;
+          const docs: any[] = JSON.parse(wardConfig.value);
 
-        if (!wardConfig || !wardConfig.value) return;
-        const docs: any[] = JSON.parse(wardConfig.value);
+          // Tải danh sách đã xem của chính Tổ
+          const currentUserId = localStorage.getItem('supabase_user_id');
+          let myReads: { doc_id: string; read_at: string }[] = [];
 
-        // Tải danh sách đã xem của chính Tổ
-        const currentUserId = localStorage.getItem('supabase_user_id');
-        let myReads: { doc_id: string; read_at: string }[] = [];
+          if (currentUserId) {
+            const { data: myReadsConfig } = await supabase
+              .from('app_config')
+              .select('value')
+              .eq('user_id', currentUserId)
+              .eq('key', 'read_doc_ids')
+              .maybeSingle();
 
-        if (currentUserId) {
-          const { data: myReadsConfig } = await supabase
+            if (myReadsConfig && myReadsConfig.value) {
+              try {
+                myReads = JSON.parse(myReadsConfig.value);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          } else {
+            const localReads = localStorage.getItem('read_doc_ids');
+            if (localReads) {
+              try {
+                myReads = JSON.parse(localReads);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
+
+          // Đồng bộ về localStorage cho UI các trang
+          const syncedDocs = docs.map(doc => ({
+            ...doc,
+            is_read: myReads.some(r => r.doc_id === doc.id)
+          }));
+          localStorage.setItem('ward_documents', JSON.stringify(syncedDocs));
+          window.dispatchEvent(new CustomEvent('ward-docs-synced'));
+
+          // Kiểm tra xem có văn bản chưa đọc nào thuộc vai trò hiện tại không
+          const currentRole = localStorage.getItem('current_role') || '';
+          const userRole = localStorage.getItem('user_role') || '';
+          const activeRole = currentRole && currentRole !== 'demo' ? currentRole : (userRole === 'tdp_leader' ? 'to_truong' : 'demo');
+
+          const unread = syncedDocs.find(d => {
+            if (d.is_read) return false;
+            if (activeRole === 'bi_thu') return d.category === 'party';
+            if (activeRole === 'to_truong' || activeRole === 'admin') return d.category === 'leader';
+            if (activeRole === 'mat_tran') return d.category === 'front';
+            return true;
+          });
+
+          if (unread) {
+            // Throttling: giới hạn phát âm thanh tối đa 1 lần mỗi 55 giây
+            const now = Date.now();
+            if (now - lastSpokenTime < 55000) return;
+            lastSpokenTime = now;
+
+            let prefix = '';
+            if (unread.category === 'party') prefix = 'Thông báo. Khối Đảng Chi bộ có công văn nghị quyết mới.';
+            else if (unread.category === 'front') prefix = 'Thông báo. Khối Mặt trận Tổ quốc có công văn mới.';
+            else prefix = 'Thông báo. Khối Chính quyền có công văn mới.';
+
+            const textToSpeak = `${prefix} Trích yếu: ${unread.title}. Vui lòng kiểm tra và xử lý.`;
+            
+            setDocNotification({
+              title: 'Tin nhắn tự động',
+              message: textToSpeak,
+              id: unread.id
+            });
+
+            playChimeAndSpeak(textToSpeak);
+          }
+        } else {
+          // --- CHẾ ĐỘ PHƯỜNG ADMIN: Nhận báo cáo của các Tổ dân phố ---
+          const currentUserId = localStorage.getItem('supabase_user_id');
+          if (!currentUserId) return;
+
+          // Lấy danh sách Tổ dân phố để lấy user_ids
+          const tdpProfiles = await db.getTDPList(myWardId);
+          const tdpUserIds = tdpProfiles.map(t => t.id);
+          if (tdpUserIds.length === 0) return;
+
+          // Tải báo cáo của tất cả các TDP
+          const { data: allTdpConfig } = await supabase
+            .from('app_config')
+            .select('user_id, value')
+            .in('user_id', tdpUserIds)
+            .eq('key', 'tdp_reports');
+
+          if (!allTdpConfig || allTdpConfig.length === 0) return;
+
+          const combinedReports: any[] = [];
+          allTdpConfig.forEach(row => {
+            const tdp = tdpProfiles.find(t => t.id === row.user_id);
+            if (tdp && row.value) {
+              try {
+                const reports = JSON.parse(row.value);
+                reports.forEach((rep: any) => {
+                  combinedReports.push({
+                    ...rep,
+                    sender_name: tdp.tdp_name
+                  });
+                });
+              } catch (e) {}
+            }
+          });
+
+          // Tải danh sách báo cáo đã xem của Phường
+          let readReportIds: string[] = [];
+          const { data: readConfig } = await supabase
             .from('app_config')
             .select('value')
             .eq('user_id', currentUserId)
-            .eq('key', 'read_doc_ids')
+            .eq('key', 'read_report_ids')
             .maybeSingle();
 
-          if (myReadsConfig && myReadsConfig.value) {
+          if (readConfig && readConfig.value) {
             try {
-              myReads = JSON.parse(myReadsConfig.value);
-            } catch (e) {
-              console.error(e);
+              readReportIds = JSON.parse(readConfig.value);
+            } catch (e) {}
+          } else {
+            const localReadRep = localStorage.getItem('read_report_ids');
+            if (localReadRep) {
+              try {
+                readReportIds = JSON.parse(localReadRep);
+              } catch (e) {}
             }
           }
-        } else {
-          // Khách / Demo: đọc từ localStorage
-          const localReads = localStorage.getItem('read_doc_ids');
-          if (localReads) {
-            try {
-              myReads = JSON.parse(localReads);
-            } catch (e) {
-              console.error(e);
-            }
-          }
-        }
 
-        // Đồng bộ về localStorage cho UI các trang
-        const syncedDocs = docs.map(doc => ({
-          ...doc,
-          is_read: myReads.some(r => r.doc_id === doc.id)
-        }));
-        localStorage.setItem('ward_documents', JSON.stringify(syncedDocs));
-        window.dispatchEvent(new CustomEvent('ward-docs-synced'));
+          // Đồng bộ về localStorage cho UI
+          const syncedReports = combinedReports.map(rep => ({
+            ...rep,
+            is_read: readReportIds.includes(rep.id)
+          }));
+          localStorage.setItem('tdp_reports', JSON.stringify(syncedReports));
+          window.dispatchEvent(new CustomEvent('tdp-reports-synced'));
 
-        // Kiểm tra xem có văn bản chưa đọc nào thuộc vai trò hiện tại không
-        const currentRole = localStorage.getItem('current_role') || '';
-        const userRole = localStorage.getItem('user_role') || '';
-        const activeRole = currentRole && currentRole !== 'demo' ? currentRole : (userRole === 'tdp_leader' ? 'to_truong' : 'demo');
+          // Tìm báo cáo chưa xem của TDP gửi lên Phường
+          const unreadReport = syncedReports.find(r => !r.is_read);
+          if (unreadReport) {
+            const now = Date.now();
+            if (now - lastSpokenTime < 55000) return;
+            lastSpokenTime = now;
 
-        const unread = syncedDocs.find(d => {
-          if (d.is_read) return false;
-          if (activeRole === 'bi_thu') return d.category === 'party';
-          if (activeRole === 'to_truong' || activeRole === 'admin') return d.category === 'leader';
-          if (activeRole === 'mat_tran') return d.category === 'front';
-          return true;
-        });
-
-        if (unread) {
-          // Throttling: giới hạn phát âm thanh tối đa 1 lần mỗi 55 giây
-          const now = Date.now();
-          if (now - lastSpokenTime < 55000) return;
-          lastSpokenTime = now;
-
-          let prefix = '';
-          if (unread.category === 'party') prefix = 'Thông báo. Khối Đảng Chi bộ có công văn nghị quyết mới.';
-          else if (unread.category === 'front') prefix = 'Thông báo. Khối Mặt trận Tổ quốc có công văn mới.';
-          else prefix = 'Thông báo. Khối Chính quyền có công văn mới.';
-
-          const textToSpeak = `${prefix} Trích yếu: ${unread.title}. Vui lòng kiểm tra và xử lý.`;
-          
-          setDocNotification({
-            title: 'Tin nhắn tự động',
-            message: textToSpeak,
-            id: unread.id
-          });
-
-          // 1. Phát nhạc chuông chime chất lượng cao trước để thu hút chú ý và kích hoạt audio context
-          try {
-            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioContext) {
-              const ctx = new AudioContext();
-              
-              // Nốt thứ nhất (D5)
-              const osc1 = ctx.createOscillator();
-              const gain1 = ctx.createGain();
-              osc1.connect(gain1);
-              gain1.connect(ctx.destination);
-              osc1.type = 'sine';
-              osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
-              gain1.gain.setValueAtTime(0.15, ctx.currentTime);
-              gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-              osc1.start(ctx.currentTime);
-              osc1.stop(ctx.currentTime + 0.4);
-              
-              // Nốt thứ hai (A5)
-              const osc2 = ctx.createOscillator();
-              const gain2 = ctx.createGain();
-              osc2.connect(gain2);
-              gain2.connect(ctx.destination);
-              osc2.type = 'sine';
-              osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-              gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.1);
-              gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-              osc2.start(ctx.currentTime + 0.1);
-              osc2.stop(ctx.currentTime + 0.5);
-            }
-          } catch (audioErr) {
-            console.warn('Không thể phát âm thanh chime:', audioErr);
-          }
-
-          // 2. Chuẩn bị và phát giọng nói tiếng Việt chuẩn (chị Google)
-          const speakNow = () => {
-            const msg = new SpeechSynthesisUtterance(textToSpeak);
-            msg.lang = 'vi-VN';
-            msg.volume = 1;
-            msg.rate = 0.95;
-
-            const voices = window.speechSynthesis.getVoices();
-            const viVoices = voices.filter(v => {
-              const l = v.lang.toLowerCase().replace('_', '-');
-              return l.includes('vi') || l.includes('vnm');
+            const textToSpeak = `Thông báo. Có báo cáo mới gửi lên Phường từ ${unreadReport.sender_name || 'Tổ dân phố'}. Trích yếu: ${unreadReport.title}. Vui lòng kiểm tra và xử lý.`;
+            
+            setDocNotification({
+              title: 'Tin nhắn tự động',
+              message: textToSpeak,
+              id: unreadReport.id
             });
 
-            // Ưu tiên tìm giọng Google vi-VN (chị Google)
-            const googleVoice = viVoices.find(v => v.name.toLowerCase().includes('google'));
-            const femaleViVoice = googleVoice || viVoices.find(v => {
-              const name = v.name.toLowerCase();
-              return (
-                (name.includes('an') || name.includes('hoaimy') || name.includes('female') || name.includes('nữ')) &&
-                !name.includes('nam') && 
-                !name.includes('male')
-              );
-            }) || viVoices.find(v => !v.name.toLowerCase().includes('nam')) || viVoices[0];
-
-            if (femaleViVoice) {
-              msg.voice = femaleViVoice;
-              console.log('[TTS] Selected voice:', femaleViVoice.name);
-            }
-
-            if (!(window as any)._globalUtterances) {
-              (window as any)._globalUtterances = [];
-            }
-            (window as any)._globalUtterances.push(msg);
-            msg.onend = () => {
-              (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
-            };
-            msg.onerror = (e) => {
-              console.warn('TTS speak error:', e);
-              (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg);
-            };
-
-            // 3. Giải phóng hàng chờ SpeechSynthesis bị kẹt và phát giọng nói
-            if (window.speechSynthesis.paused) {
-              window.speechSynthesis.resume();
-            }
-            window.speechSynthesis.cancel();
-            setTimeout(() => {
-              window.speechSynthesis.speak(msg);
-            }, 150);
-          };
-
-          if (window.speechSynthesis.getVoices().length === 0) {
-            window.speechSynthesis.onvoiceschanged = () => {
-              speakNow();
-              window.speechSynthesis.onvoiceschanged = null;
-            };
-          } else {
-            speakNow();
+            playChimeAndSpeak(textToSpeak);
           }
-
-          setTimeout(() => setDocNotification(null), 15000);
         }
       } catch (e) {
         console.error('Lỗi kiểm tra thông báo ngầm:', e);
