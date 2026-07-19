@@ -643,6 +643,11 @@ const App = () => {
 
   const isExistingTdp = existingTdps.includes(newKeyTdpName.trim());
 
+  const filteredGeneratedKeys = generatedKeysList.filter(k => {
+    if (!currentKeyWardId) return true;
+    return k.ward_id === currentKeyWardId;
+  });
+
   const loadGeneratedKeys = async () => {
     if (!supabase) return;
     try {
@@ -3900,7 +3905,7 @@ const App = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {generatedKeysList.map((k) => (
+                          {filteredGeneratedKeys.map((k) => (
                             <tr key={k.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                               <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 'bold' }}>{k.key}</td>
                               <td style={{ padding: '6px 10px' }}>{k.wards?.name || '—'}</td>
@@ -3998,7 +4003,7 @@ const App = () => {
                               )}
                             </tr>
                           ))}
-                          {generatedKeysList.length === 0 && (
+                          {filteredGeneratedKeys.length === 0 && (
                             <tr>
                               <td colSpan={isHighestAdmin ? 7 : 6} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
                             </tr>
