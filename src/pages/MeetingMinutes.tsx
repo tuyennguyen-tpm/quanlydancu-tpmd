@@ -1478,7 +1478,33 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           </div>
 
           <div className="form-group">
-            <label style={{ fontWeight: '600', fontSize: '0.85rem' }}>Nội dung diễn biến chi tiết</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontWeight: '600', fontSize: '0.85rem', margin: 0 }}>Nội dung diễn biến chi tiết</label>
+              {!isGuest && (
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreenEdit(true)}
+                  style={{
+                    background: 'rgba(79, 70, 229, 0.08)',
+                    border: 'none',
+                    color: '#4f46e5',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.78rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.15)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.08)'}
+                >
+                  <Maximize2 size={12} /> Phóng to soạn thảo (Word)
+                </button>
+              )}
+            </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -1525,7 +1551,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                   border: 'none'
                 }}
               >
-                <Maximize2 size={14} /> Soạn thảo Word A4
+                <Maximize2 size={14} /> Phóng to soạn thảo (Word)
               </button>
             )}
             {!isGuest && (
