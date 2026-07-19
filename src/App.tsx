@@ -624,6 +624,7 @@ const App = () => {
   const [selectedKeyWardId, setSelectedKeyWardId] = useState('');
   const [newWardNameInput, setNewWardNameInput] = useState('');
   const [showNewWardInput, setShowNewWardInput] = useState(false);
+  const [editingKey, setEditingKey] = useState<any | null>(null);
 
   const loadGeneratedKeys = async () => {
     if (!supabase) return;
@@ -735,6 +736,96 @@ const App = () => {
         detail: { message: 'Lỗi khi tạo mã kích hoạt.', type: 'danger' } 
       });
       window.dispatchEvent(ev);
+    }
+  };
+
+  const handleDeleteKey = async (keyText: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa mã kích hoạt "${keyText}"? Hành động này không thể hoàn tác.`)) {
+      return;
+    }
+    const success = await db.deleteRegistrationKey(keyText);
+    if (success) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã xóa mã kích hoạt thành công!', type: 'success' } }));
+      loadGeneratedKeys();
+      if (editingKey?.key === keyText) {
+        handleCancelEditKey();
+      }
+    } else {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lỗi khi xóa mã kích hoạt.', type: 'danger' } }));
+    }
+  };
+
+  const handleResetKey = async (keyText: string) => {
+    if (!window.confirm(`Bạn có muốn gia hạn/khôi phục mã "${keyText}" về trạng thái Chưa sử dụng? Mã này sẽ có thể được dùng lại để đăng ký.`)) {
+      return;
+    }
+    const success = await db.resetRegistrationKey(keyText);
+    if (success) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã gia hạn/khôi phục mã kích hoạt thành công!', type: 'success' } }));
+      loadGeneratedKeys();
+    } else {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lỗi khi gia hạn/khôi phục mã.', type: 'danger' } }));
+    }
+  };
+
+  const handleStartEditKey = (k: any) => {
+    setEditingKey(k);
+    setNewKeyRole(k.role);
+    setSelectedKeyWardId(k.ward_id);
+    setNewKeyTdpName(k.tdp_name === 'Ban quản trị Phường' ? '' : k.tdp_name || '');
+    setShowNewWardInput(false);
+  };
+
+  const handleCancelEditKey = () => {
+    setEditingKey(null);
+    setNewKeyRole('tdp_leader');
+    setNewKeyTdpName('');
+    setGeneratedKeyResult('');
+  };
+
+  const handleSaveKeyEdit = async () => {
+    if (!supabase || !editingKey) return;
+    try {
+      let targetWardId = '';
+      if (showNewWardInput && newWardNameInput.trim()) {
+        const { data: newWard, error } = await supabase
+          .from('wards')
+          .insert({ name: newWardNameInput.trim() })
+          .select()
+          .single();
+        if (error) throw error;
+        if (newWard) {
+          targetWardId = newWard.id;
+          await loadWardsList();
+          setSelectedKeyWardId(newWard.id);
+          setShowNewWardInput(false);
+          setNewWardNameInput('');
+        }
+      } else {
+        targetWardId = selectedKeyWardId;
+      }
+
+      if (!targetWardId) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vui lòng chọn hoặc nhập tên Phường!', type: 'warning' } }));
+        return;
+      }
+
+      const updates = {
+        role: newKeyRole,
+        tdp_name: newKeyRole === 'ward_admin' ? 'Ban quản trị Phường' : newKeyTdpName,
+        ward_id: targetWardId
+      };
+
+      const success = await db.updateRegistrationKey(editingKey.key, updates);
+      if (success) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Đã cập nhật mã kích hoạt thành công!', type: 'success' } }));
+        handleCancelEditKey();
+        loadGeneratedKeys();
+      } else {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Lỗi khi cập nhật mã.', type: 'danger' } }));
+      }
+    } catch (err: any) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `Lỗi: ${err.message}`, type: 'danger' } }));
     }
   };
 
@@ -3477,7 +3568,7 @@ const App = () => {
                   marginTop: '12px'
                 }}>
                   <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#db2777', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                    🔑 Sinh Mã kích hoạt (License Key) Hệ thống
+                    🔑 {editingKey ? `✏️ Chỉnh sửa Mã kích hoạt: ${editingKey.key}` : 'Sinh Mã kích hoạt (License Key) Hệ thống'}
                   </div>
                   <div style={{ fontSize: '0.78rem', color: '#64748b', borderLeft: '3px solid #db2777', paddingLeft: '8px', margin: '4px 0 8px 0', lineHeight: '1.4' }}>
                     📌 <strong>Hướng dẫn nhanh:</strong><br />
@@ -3573,20 +3664,51 @@ const App = () => {
                       </div>
                     )}
 
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={handleGenerateKey}
-                      style={{
-                        background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-                        borderColor: '#be185d',
-                        padding: '10px 16px',
-                        height: '38px',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      Sinh mã Key
-                    </button>
+                    {editingKey ? (
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={handleSaveKeyEdit}
+                          style={{
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            borderColor: '#059669',
+                            padding: '10px 16px',
+                            height: '38px',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Lưu thay đổi
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={handleCancelEditKey}
+                          style={{
+                            padding: '10px 16px',
+                            height: '38px',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={handleGenerateKey}
+                        style={{
+                          background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+                          borderColor: '#be185d',
+                          padding: '10px 16px',
+                          height: '38px',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Sinh mã Key
+                      </button>
+                    )}
                   </div>
 
                   {generatedKeyResult && (
@@ -3636,6 +3758,7 @@ const App = () => {
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Đối tượng</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Tên địa bàn</th>
                             <th style={{ padding: '6px 10px', color: '#475569' }}>Trạng thái</th>
+                            <th style={{ padding: '6px 10px', color: '#475569', textAlign: 'right' }}>Thao tác</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3652,11 +3775,77 @@ const App = () => {
                                   <span style={{ color: '#22c55e', fontWeight: '600' }}>🟢 Chưa dùng</span>
                                 )}
                               </td>
+                              <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                                  {k.is_used && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResetKey(k.key)}
+                                      style={{
+                                        padding: '2px 6px',
+                                        fontSize: '0.7rem',
+                                        background: '#f0fdf4',
+                                        color: '#16a34a',
+                                        border: '1px solid #bbf7d0',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontWeight: '600',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '2px'
+                                      }}
+                                      title="Khôi phục mã về trạng thái Chưa dùng để đăng ký lại"
+                                    >
+                                      🔄 Gia hạn
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditKey(k)}
+                                    style={{
+                                      padding: '2px 6px',
+                                      fontSize: '0.7rem',
+                                      background: '#eff6ff',
+                                      color: '#2563eb',
+                                      border: '1px solid #bfdbfe',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontWeight: '600',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '2px'
+                                    }}
+                                    title="Sửa thông tin mã"
+                                  >
+                                    ✏️ Sửa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteKey(k.key)}
+                                    style={{
+                                      padding: '2px 6px',
+                                      fontSize: '0.7rem',
+                                      background: '#fef2f2',
+                                      color: '#dc2626',
+                                      border: '1px solid #fecaca',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                      fontWeight: '600',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '2px'
+                                    }}
+                                    title="Xóa mã kích hoạt"
+                                  >
+                                    🗑️ Xóa
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))}
                           {generatedKeysList.length === 0 && (
                             <tr>
-                              <td colSpan={5} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
+                              <td colSpan={6} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic' }}>Chưa sinh mã kích hoạt nào.</td>
                             </tr>
                           )}
                         </tbody>

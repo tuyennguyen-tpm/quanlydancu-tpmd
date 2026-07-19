@@ -650,6 +650,48 @@ export const db = {
     }
   },
 
+  deleteRegistrationKey: async (keyText: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('registration_keys')
+        .delete()
+        .eq('key', keyText);
+      return !error;
+    } catch (e) {
+      console.error('Failed to delete key:', e);
+      return false;
+    }
+  },
+
+  resetRegistrationKey: async (keyText: string): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('registration_keys')
+        .update({ is_used: false, used_by: null })
+        .eq('key', keyText);
+      return !error;
+    } catch (e) {
+      console.error('Failed to reset key:', e);
+      return false;
+    }
+  },
+
+  updateRegistrationKey: async (keyText: string, updates: { role: string; tdp_name: string | null; ward_id: string }): Promise<boolean> => {
+    if (!supabase) return false;
+    try {
+      const { error } = await supabase
+        .from('registration_keys')
+        .update(updates)
+        .eq('key', keyText);
+      return !error;
+    } catch (e) {
+      console.error('Failed to update key:', e);
+      return false;
+    }
+  },
+
   // --- Households ---
   getHouseholds: async (): Promise<Household[]> => {
     if (supabase) {
