@@ -1834,7 +1834,8 @@ const App = () => {
     }
 
     const isSuper = localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
-    if (isSuper) {
+    const isWardOrSuper = localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin';
+    if (isWardOrSuper) {
       db.getAllTDPProfiles().then((profiles) => {
         setAllTdpProfiles(profiles);
         const initialTargets: Record<string, string> = {};
@@ -3042,7 +3043,7 @@ const App = () => {
                 >
                   ⚙️ Cấu hình chung
                 </button>
-                {(localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) && (
+                {(localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
                   <button
                     type="button"
                     onClick={() => setSettingsTab('keys')}
@@ -3057,7 +3058,7 @@ const App = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    🔑 Khóa & Điều chuyển Phường
+                    {isHighestAdmin ? '🔑 Khóa & Điều chuyển Phường' : '🔑 Mã kích hoạt Tổ dân phố'}
                   </button>
                 )}
               </div>
