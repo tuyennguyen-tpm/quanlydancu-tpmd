@@ -130,6 +130,7 @@ const App = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isOfflineMode, setOfflineMode] = useState<boolean>(localStorage.getItem('offline_mode') === 'true');
   const [isGuestMode, setGuestMode] = useState<boolean>(localStorage.getItem('guest_mode') === 'true');
+  const [isLicenseExpired, setIsLicenseExpired] = useState<boolean>(false);
 
   const isHighestAdmin = localStorage.getItem('user_role') === 'super_admin' || 
                          (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
@@ -1268,6 +1269,32 @@ const App = () => {
         } else if (profile.role === 'tdp_leader') {
           localStorage.setItem('tdp_name', profile.tdp_name || 'Tổ dân phố');
         }
+
+        // Check key expiration for non-highest admins
+        if (supabase) {
+          const isHighest = profile.role === 'super_admin' || (profile.role === 'ward_admin' && profile.full_name === 'Nguyễn Kim Tuyến');
+          if (isHighest) {
+            setIsLicenseExpired(false);
+          } else {
+            try {
+              const { data: keyData, error: keyErr } = await supabase
+                .from('registration_keys')
+                .select('expires_at')
+                .eq('used_by', userId)
+                .maybeSingle();
+              if (!keyErr && keyData && keyData.expires_at) {
+                const isExpired = new Date(keyData.expires_at).getTime() < Date.now();
+                setIsLicenseExpired(isExpired);
+              } else {
+                setIsLicenseExpired(false);
+              }
+            } catch (err) {
+              console.error('Failed to check key expiration:', err);
+              setIsLicenseExpired(false);
+            }
+          }
+        }
+
         setShowKeyActivation(false);
       } else {
         setShowKeyActivation(true);
@@ -1362,6 +1389,7 @@ const App = () => {
       await supabase.auth.signOut();
     }
     setShowKeyActivation(false);
+    setIsLicenseExpired(false);
     setSession(null);
     localStorage.clear();
     resetToDefaultConfig();
@@ -2191,6 +2219,7 @@ const App = () => {
       window.dispatchEvent(ev);
       
       resetToDefaultConfig();
+      setIsLicenseExpired(false);
       
       localStorage.removeItem('offline_mode');
       localStorage.removeItem('guest_mode');
@@ -2525,6 +2554,91 @@ const App = () => {
     );
   }
   const isWardSettings = (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && selectedTdpUserId === 'all';
+
+  if (isLicenseExpired) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+        padding: '20px',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}>
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '24px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+          padding: '40px',
+          width: '100%',
+          maxWidth: '500px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '70px',
+            height: '70px',
+            borderRadius: '50%',
+            backgroundColor: '#fee2e2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 24px auto',
+            color: '#ef4444',
+            boxShadow: '0 8px 20px rgba(239, 68, 68, 0.2)'
+          }}>
+            <svg width="36" height="36" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h2 style={{ color: '#1e293b', fontSize: '1.5rem', fontWeight: '800', marginBottom: '12px' }}>
+            Tài khoản đã hết hạn sử dụng
+          </h2>
+          <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '28px' }}>
+            Thời hạn sử dụng của mã kích hoạt liên kết với tài khoản này đã kết thúc. Vui lòng liên hệ với <strong>Quản trị viên tối cao (Ông Nguyễn Kim Tuyến)</strong> để gia hạn bản quyền và tiếp tục truy cập dữ liệu.
+          </p>
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '28px',
+            textAlign: 'left'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '1.2rem' }}>📞</span>
+              <span style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: '600' }}>Số điện thoại liên hệ:</span>
+            </div>
+            <div style={{ fontSize: '0.95rem', color: '#475569', paddingLeft: '28px', fontWeight: '700' }}>
+              0912 083 018 – 0899 661 982
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: '12px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+              transition: 'all 0.2s'
+            }}
+          >
+            Đăng xuất tài khoản
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="layout-container">
