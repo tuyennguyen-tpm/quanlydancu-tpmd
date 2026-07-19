@@ -124,14 +124,15 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       showToast('Mật khẩu phải chứa ít nhất 6 ký tự!', 'warning');
       return;
     }
-    if (!regKey.trim()) {
+    const cleanRegKey = regKey.replace(/\s+/g, '').toUpperCase();
+    if (!cleanRegKey) {
       showToast('Vui lòng nhập Mã kích hoạt bản quyền!', 'warning');
       return;
     }
     setLoading(true);
     try {
       // 1. Kiểm tra mã kích hoạt
-      const keyVal = await db.validateRegistrationKey(regKey);
+      const keyVal = await db.validateRegistrationKey(cleanRegKey);
       if (!keyVal.valid) {
         showToast(keyVal.message, 'danger');
         setLoading(false);
@@ -158,7 +159,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         });
 
         // 4. Kích hoạt mã key
-        await db.useRegistrationKey(regKey, data.user.id);
+        await db.useRegistrationKey(cleanRegKey, data.user.id);
 
         if (!data.session) {
           // Email confirmation is enabled in Supabase

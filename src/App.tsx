@@ -1278,7 +1278,8 @@ const App = () => {
   };
 
   const handleVerifyActivationKey = async () => {
-    if (!activationKey.trim()) {
+    const cleanKey = activationKey.replace(/\s+/g, '').toUpperCase();
+    if (!cleanKey) {
       window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vui lòng nhập mã kích hoạt.', type: 'warning' } }));
       return;
     }
@@ -1293,7 +1294,7 @@ const App = () => {
       return;
     }
     try {
-      const res = await db.validateRegistrationKey(activationKey.trim());
+      const res = await db.validateRegistrationKey(cleanKey);
       if (!res.valid) {
         window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: res.message, type: 'danger' } }));
         setActivationLoading(false);
@@ -1343,7 +1344,7 @@ const App = () => {
       const { error: keyError } = await supabase
         .from('registration_keys')
         .update({ is_used: true, used_by: userId })
-        .eq('key', activationKey.trim());
+        .eq('key', cleanKey);
       if (keyError) throw keyError;
         
       window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Kích hoạt tài khoản thành công!', type: 'success' } }));
