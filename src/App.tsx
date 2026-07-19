@@ -634,12 +634,15 @@ const App = () => {
   const currentKeyWardId = selectedKeyWardId || localStorage.getItem('user_ward_id') || '';
 
   const existingTdps = Array.from(
-    new Set(
-      allTdpProfiles
+    new Set([
+      ...allTdpProfiles
         .filter(p => p.ward_id === currentKeyWardId && p.tdp_name)
-        .map(p => p.tdp_name.trim())
-    )
-  );
+        .map(p => p.tdp_name.trim()),
+      ...generatedKeysList
+        .filter(k => k.ward_id === currentKeyWardId && k.tdp_name && k.tdp_name !== 'Ban quản trị Phường')
+        .map(k => k.tdp_name.trim())
+    ])
+  ).sort();
 
   const isExistingTdp = existingTdps.includes(newKeyTdpName.trim());
 
