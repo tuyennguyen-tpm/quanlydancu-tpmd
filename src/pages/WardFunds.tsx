@@ -1519,14 +1519,14 @@ const WardFunds = () => {
           </tbody>
         </table>
 
-        <div style="font-size: 10pt; font-style: italic; margin-bottom: 10px; margin-top: 2px; text-align: left;">
+        <div style="font-size: 9.5pt; font-style: italic; margin-bottom: 4px; margin-top: 2px; text-align: left;">
           Số tiền bằng chữ: <strong>${textAmountWords}</strong>
         </div>
 
         <table class="receipt-signatures-table">
           <tr>
             <td colspan="4"></td>
-            <td style="font-style: italic; font-size: 9pt; padding-bottom: 2px; text-align: center;">
+            <td style="font-style: italic; font-size: 8.5pt; padding-bottom: 2px; text-align: center;">
               ${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ${dateText}
             </td>
           </tr>
@@ -1545,21 +1545,21 @@ const WardFunds = () => {
             <td>(Ký, họ tên)</td>
           </tr>
           <tr style="text-align: center;">
-            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
-              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
-                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+              <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
               </div>
               <strong>${leaderName}</strong>
             </td>
-            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
-              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
-                ${keToanSigUrl ? `<img src="${keToanSigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+              <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${keToanSigUrl ? `<img src="${keToanSigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
               </div>
               <strong>${keToanName}</strong>
             </td>
-            <td style="vertical-align: bottom; height: 55px; padding-top: 4px;">
-              <div style="height: 38px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
-                ${thuQuySigUrl ? `<img src="${thuQuySigUrl}" alt="Chữ ký" style="height: 38px; max-height: 38px; max-width: 100px; object-fit: contain;" />` : ''}
+            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+              <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${thuQuySigUrl ? `<img src="${thuQuySigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
               </div>
               <strong>${thuQuyName}</strong>
             </td>
@@ -1658,22 +1658,22 @@ const WardFunds = () => {
           }
           .receipt-info-table {
             width: 100%;
-            margin-bottom: 8px !important;
+            margin-bottom: 4px !important;
             border-collapse: collapse;
           }
           .receipt-info-table td {
-            padding: 4px 0 !important;
-            font-size: 10.5pt !important;
+            padding: 2px 0 !important;
+            font-size: 10pt !important;
           }
           .receipt-details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 5px !important;
-            margin-bottom: 8px !important;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
           }
           .receipt-details-table th, .receipt-details-table td {
             border: 1px solid #000;
-            padding: 4px 6px !important;
+            padding: 3.5px 6px !important;
             font-size: 9.5pt !important;
             vertical-align: middle;
           }
@@ -1685,7 +1685,7 @@ const WardFunds = () => {
           .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px !important;
+            margin-top: 8px !important;
             page-break-inside: avoid !important;
           }
           .receipt-signatures-table td {
@@ -1998,39 +1998,39 @@ const WardFunds = () => {
           }
           .receipt-title-container {
             text-align: center;
-            margin-top: 12px !important;
-            margin-bottom: 12px !important;
+            margin-top: 6px !important;
+            margin-bottom: 6px !important;
           }
           .receipt-title {
             font-size: 15.5pt !important;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 3px !important;
+            margin-bottom: 2px !important;
           }
           .receipt-subtitle {
             font-style: italic;
-            font-size: 10pt !important;
+            font-size: 9.5pt !important;
           }
           .receipt-info-table {
             width: 100%;
-            margin-bottom: 10px !important;
+            margin-bottom: 4px !important;
             border-collapse: collapse;
           }
           .receipt-info-table td {
-            padding: 4px 0 !important;
-            font-size: 10.5pt !important;
+            padding: 2px 0 !important;
+            font-size: 10pt !important;
           }
           .receipt-details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px !important;
-            margin-bottom: 10px !important;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
           }
           .receipt-details-table th, .receipt-details-table td {
             border: 1px solid #000;
-            padding: 5px 8px !important;
-            font-size: 10pt !important;
+            padding: 3.5px 6px !important;
+            font-size: 9.5pt !important;
             vertical-align: middle;
           }
           .receipt-details-table th {
@@ -2041,15 +2041,15 @@ const WardFunds = () => {
           .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px !important;
+            margin-top: 8px !important;
             page-break-inside: avoid !important;
           }
           .receipt-signatures-table td {
             border: none;
             text-align: center;
-            font-size: 10pt !important;
+            font-size: 9.5pt !important;
             vertical-align: top;
-            padding: 4px !important;
+            padding: 2px !important;
           }
         </style>
       </head>
