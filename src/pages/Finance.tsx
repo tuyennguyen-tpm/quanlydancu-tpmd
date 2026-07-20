@@ -571,10 +571,20 @@ const Finance = () => {
         const hhFundsList = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
         const totalPaid = hhFundsList.reduce((sum, f) => sum + f.amount, 0);
         
+        const tdpNameStoredInLocal = localStorage.getItem('tdp_name') || '';
+        let displayAddress = hh.address || '';
+        if (tdpNameStoredInLocal && !displayAddress.toLowerCase().includes(tdpNameStoredInLocal.toLowerCase())) {
+          if (displayAddress) {
+            displayAddress = `${displayAddress}, ${tdpNameStoredInLocal}`;
+          } else {
+            displayAddress = tdpNameStoredInLocal;
+          }
+        }
+
         const rowData: (string | number)[] = [
           sttCounter,
           headName,
-          hh.address,
+          displayAddress,
           totalPaid
         ];
         

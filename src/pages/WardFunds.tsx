@@ -993,12 +993,22 @@ const WardFunds = () => {
         }
 
         sttCounter++;
+        const tdpNameStored = localStorage.getItem('tdp_name') || '';
+        let displayAddress = f.address || '';
+        if (tdpNameStored && !displayAddress.toLowerCase().includes(tdpNameStored.toLowerCase())) {
+          if (displayAddress) {
+            displayAddress = `${displayAddress}, ${tdpNameStored}`;
+          } else {
+            displayAddress = tdpNameStored;
+          }
+        }
+
         const rowData: any[] = [
           sttCounter,
           f.full_name,
           f.dob || '',
           groupName || '-',
-          f.address || ''
+          displayAddress
         ];
         
         activeFunds.forEach(fund => {
