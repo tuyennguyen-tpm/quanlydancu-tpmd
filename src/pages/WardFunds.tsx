@@ -1084,7 +1084,13 @@ const WardFunds = () => {
             contrib.actual > 0 && contrib.date ? new Date(contrib.date).toLocaleDateString('vi-VN') : ''
           );
         });
-        rowData.push(f.note || '');
+        
+        const isAllPaid = activeFunds.every(fund => {
+          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          return contrib.actual >= contrib.expected && contrib.expected > 0;
+        });
+        const displayNote = (!isAllPaid && f.note === 'Đã nộp đủ đợt tập trung') ? '' : (f.note || '');
+        rowData.push(displayNote);
         
         const dataRow = worksheet.addRow(rowData);
         dataRow.height = 22;
@@ -1237,6 +1243,12 @@ const WardFunds = () => {
         return `<td style="text-align: right;">${formatCurrency(contrib.actual)} / ${formatCurrency(contrib.expected)}</td>`;
       }).join('');
 
+      const isAllPaid = activeFunds.every(fund => {
+        const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+        return contrib.actual >= contrib.expected && contrib.expected > 0;
+      });
+      const displayNote = (!isAllPaid && item.note === 'Đã nộp đủ đợt tập trung') ? '' : (item.note || '');
+
       return `
         <tr>
           <td style="text-align: center;">${index + 1}</td>
@@ -1252,7 +1264,7 @@ const WardFunds = () => {
           <td style="text-align: center;">${item.dob || '-'}</td>
           <td>${item.address || '-'}</td>
           ${fundContributions}
-          <td>${item.note || ''}</td>
+          <td>${displayNote}</td>
         </tr>
       `;
     }).join('');
@@ -1532,6 +1544,12 @@ const WardFunds = () => {
     const grandTotalTarget = wardTotal + tdpTotal;
     const paidFundsRowsHtml = [...tdpRows, ...wardRows].join('');
 
+    const isAllPaid = activeFunds.every(fund => {
+      const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+      return contrib.actual >= contrib.expected && contrib.expected > 0;
+    });
+    const displayNote = (!isAllPaid && item.note === 'Đã nộp đủ đợt tập trung') ? '' : (item.note || '');
+
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
       const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
@@ -1653,10 +1671,10 @@ const WardFunds = () => {
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
             <td style="text-align: left;">Nộp các khoản đóng góp quỹ Phường năm ${selectedYear}</td>
           </tr>
-          ${item.note ? `
+          ${displayNote ? `
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Ghi chú:</td>
-            <td style="text-align: left; font-weight: bold; color: #b91c1c;">${item.note}</td>
+            <td style="text-align: left; font-weight: bold; color: #b91c1c;">${displayNote}</td>
           </tr>
           ` : ''}
         </table>
