@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db, supabase } from '../services/db';
 import type { WardDocument } from '../types';
 import { X, Plus, Upload } from 'lucide-react';
+import { speakVietnamese } from '../utils/tts';
 
 const WardDocuments = () => {
   const [documents, setDocuments] = useState<WardDocument[]>([]);
@@ -350,36 +351,7 @@ const WardDocuments = () => {
       else if (unread.category === 'front') prefix = 'Thông báo. Khối Mặt trận Tổ quốc có công văn mới.';
       else prefix = 'Thông báo. Khối Chính quyền có công văn mới.';
 
-      const doSpeak = (voice: SpeechSynthesisVoice | null) => {
-        const msg = new SpeechSynthesisUtterance(`${prefix} Trích yếu: ${unread.title}. Vui lòng mở phần mềm để xem chi tiết.`);
-        msg.lang = 'vi-VN';
-        msg.volume = 1;
-        msg.rate = 0.9;
-        msg.pitch = 1;
-        if (voice) {
-          msg.voice = voice;
-          console.log('[TTS WardDocs] Giọng đọc:', voice.name);
-        }
-        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-        window.speechSynthesis.cancel();
-        setTimeout(() => window.speechSynthesis.speak(msg), 200);
-      };
-
-      const findViVoice = (): SpeechSynthesisVoice | null => {
-        const voices = window.speechSynthesis.getVoices();
-        const vi = voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'));
-        return vi.find(v => v.name.toLowerCase().includes('google'))
-          || vi.find(v => !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('nam'))
-          || vi[0] || null;
-      };
-
-      let attempts = 0;
-      const trySpeak = () => {
-        const voice = findViVoice();
-        if (voice || attempts >= 20) { doSpeak(voice); }
-        else { attempts++; setTimeout(trySpeak, 300); }
-      };
-      trySpeak();
+      speakVietnamese(`${prefix} Trích yếu: ${unread.title}. Vui lòng mở phần mềm để xem chi tiết.`);
     }
   };
 

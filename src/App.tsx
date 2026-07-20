@@ -26,6 +26,7 @@ import FarmersAssociation from './pages/FarmersAssociation';
 import YouthUnion from './pages/YouthUnion';
 import WardDocuments from './pages/WardDocuments';
 import InvitationTemplates from './pages/InvitationTemplates';
+import { speakVietnamese } from './utils/tts';
 import { 
   Users, 
   Home, 
@@ -255,43 +256,9 @@ const App = () => {
         console.warn('Không thể phát âm thanh chime:', audioErr);
       }
 
-      // 2. Phát giọng nói tiếng Việt - dùng polling để chắc chắn giọng đã được tải
-      const doSpeak = (voice: SpeechSynthesisVoice | null) => {
-        const msg = new SpeechSynthesisUtterance(textToSpeak);
-        msg.lang = 'vi-VN';
-        msg.volume = 1;
-        msg.rate = 0.9;
-        msg.pitch = 1;
-        if (voice) {
-          msg.voice = voice;
-          console.log('[TTS] Giọng đọc:', voice.name, voice.lang);
-        }
-        if (!(window as any)._globalUtterances) (window as any)._globalUtterances = [];
-        (window as any)._globalUtterances.push(msg);
-        msg.onend = () => { (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg); };
-        msg.onerror = () => { (window as any)._globalUtterances = (window as any)._globalUtterances.filter((u: any) => u !== msg); };
-        if (window.speechSynthesis.paused) window.speechSynthesis.resume();
-        window.speechSynthesis.cancel();
-        setTimeout(() => window.speechSynthesis.speak(msg), 200);
+        // Phát giọng nói tiếng Việt chuẩn (Tự động fallback Google TTS nếu hệ điều hành không có voice tiếng Việt)
+        speakVietnamese(textToSpeak);
       };
-
-      const findViVoice = (): SpeechSynthesisVoice | null => {
-        const voices = window.speechSynthesis.getVoices();
-        const vi = voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'));
-        return vi.find(v => v.name.toLowerCase().includes('google'))
-          || vi.find(v => !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('nam'))
-          || vi[0] || null;
-      };
-
-      // Polling: thử tìm giọng tối đa 20 lần x 300ms = 6 giây
-      let attempts = 0;
-      const trySpeak = () => {
-        const voice = findViVoice();
-        if (voice || attempts >= 20) { doSpeak(voice); }
-        else { attempts++; setTimeout(trySpeak, 300); }
-      };
-      trySpeak();
-    };
 
     const checkGlobalUnreadAndSpeak = async () => {
       if (!supabase) return;
@@ -2102,11 +2069,9 @@ const App = () => {
             { user_id: uId, key: 'support_phone', value: newSupportPhone },
             { user_id: uId, key: 'logo_url', value: newLogo },
             { user_id: uId, key: 'fund_list', value: JSON.stringify(mappedFunds) },
+            { user_id: uId, key: 'ward_fund_list', value: JSON.stringify(mappedWardFunds) },
             { user_id: uId, key: 'latest_app_version', value: newVersion }
           ];
-          if (isWardOrSuperAdmin) {
-            configItems.push({ user_id: uId, key: 'ward_fund_list', value: JSON.stringify(mappedWardFunds) });
-          }
           await supabase.from('app_config').upsert(configItems);
 
           // Cập nhật trường tdp_name trong bảng profiles nếu là Tổ trưởng để tránh bị ghi đè khi reload
