@@ -1209,7 +1209,7 @@ const Finance = () => {
     printWindow.document.close();
   };
 
-  const generateStateReceiptHtml = (hh: Household, dateText: string, tdpNameVal: string, wardNameVal: string, leaderName: string, leaderSigUrl: string) =>. {
+  const generateStateReceiptHtml = (hh: Household, dateText: string, tdpNameVal: string, wardNameVal: string, leaderName: string, leaderSigUrl: string) => {
     const headName = getHouseholdHeadName(hh);
     const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
     const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
