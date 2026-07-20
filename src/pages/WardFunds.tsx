@@ -2264,8 +2264,8 @@ const WardFunds = () => {
     // Quỹ Phường từ CSDL hoặc mẫu mặc định
     const wardFundsList = (db as any).getWardFundList() || [];
     const defaultWardItems = [
-      { name: 'Quỹ phòng chống thiên tai', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động: Nam từ 18 đến 61 tuổi, Nữ từ 18 đến 58 tuổi – Có danh sách kèm theo)' },
-      { name: 'Đền ơn đáp nghĩa', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động: Nam từ 18 đến 61 tuổi, Nữ từ 18 đến 58 tuổi – Có danh sách kèm theo)' },
+      { name: 'Quỹ phòng chống thiên tai', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
+      { name: 'Đền ơn đáp nghĩa', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
       { name: 'Chăm sóc người cao tuổi', text: '20.000đ / hộ / năm' }
     ];
 
@@ -2278,7 +2278,7 @@ const WardFunds = () => {
     `).join('');
 
     let wardListHtml = defaultWardItems.map((item) => `
-      <li style="margin-bottom: 5px;"><b>${item.name}:</b> ${item.text}</li>
+      <li style="margin-bottom: 3px;"><b>${item.name}:</b> ${item.text}</li>
     `).join('');
 
     if (wardFundsList.length > 0) {
@@ -2287,7 +2287,7 @@ const WardFunds = () => {
         const targetStr = typeof wf.target === 'number' ? wf.target.toLocaleString('vi-VN') + 'đ' : (wf.target ? wf.target + 'đ' : '....đ');
         const unitStr = isHousehold ? 'hộ' : 'khẩu';
         const noteStr = isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)';
-        return `<li style="margin-bottom: 5px;"><b>${wf.name}:</b> ${targetStr} / ${unitStr} / năm${noteStr}</li>`;
+        return `<li style="margin-bottom: 3px;"><b>${wf.name}:</b> ${targetStr} / ${unitStr} / năm${noteStr}</li>`;
       }).join('');
     }
 
@@ -2301,21 +2301,34 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 15mm 20mm 15mm 20mm;
+              margin: 8mm 14mm;
             }
-            body { margin: 0; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              height: 100%;
+              overflow: hidden;
+            }
+            .notice-container {
+              max-height: 275mm !important;
+              page-break-inside: avoid !important;
+            }
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 13pt;
-            line-height: 1.4;
+            font-size: 11.5pt;
+            line-height: 1.3;
             color: #000;
-            padding: 10px;
+            padding: 5px;
+          }
+          .notice-container {
+            width: 100%;
+            box-sizing: border-box;
           }
           .header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
           }
           .header-table td {
             vertical-align: top;
@@ -2324,35 +2337,35 @@ const WardFunds = () => {
           }
           .title-section {
             text-align: center;
-            margin-top: 15px;
-            margin-bottom: 20px;
+            margin-top: 4px;
+            margin-bottom: 8px;
           }
           .doc-title {
-            font-size: 16pt;
+            font-size: 15pt;
             font-weight: bold;
             text-transform: uppercase;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
           }
           .doc-subtitle {
-            font-size: 13pt;
+            font-size: 11.5pt;
             font-style: italic;
           }
           .section-heading {
-            font-size: 13pt;
+            font-size: 11.5pt;
             font-weight: bold;
             text-transform: uppercase;
-            margin-top: 15px;
-            margin-bottom: 8px;
+            margin-top: 6px;
+            margin-bottom: 3px;
           }
           .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 12px;
+            margin-bottom: 5px;
           }
           .data-table th, .data-table td {
             border: 1px solid #000;
-            padding: 6px 8px;
-            font-size: 12pt;
+            padding: 3px 6px;
+            font-size: 10.5pt;
           }
           .data-table th {
             text-align: center;
@@ -2362,7 +2375,7 @@ const WardFunds = () => {
           .footer-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 25px;
+            margin-top: 8px;
             page-break-inside: avoid;
           }
           .footer-table td {
@@ -2373,65 +2386,67 @@ const WardFunds = () => {
         </style>
       </head>
       <body>
-        <table class="header-table">
-          <tr>
-            <td style="width: 45%; text-align: center;">
-              <div style="font-weight: bold; font-size: 12pt;">UBND PHƯỜNG ${wardNameVal.toUpperCase().replace('PHƯỜNG ', '')}</div>
-              <div style="font-weight: bold; font-size: 12pt;">TỔ DÂN PHỐ ${tdpNameVal.toUpperCase().replace('TỔ DÂN PHỐ ', '')}</div>
-              <div style="font-size: 12pt;">Số: ...../TB-TDP</div>
-            </td>
-            <td style="width: 55%; text-align: center;">
-              <div style="font-weight: bold; font-size: 12pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-              <div style="font-weight: bold; font-size: 12pt;">Độc lập - Tự do - Hạnh phúc</div>
-              <div style="font-size: 12pt; margin-top: 2px;">------------------------</div>
-            </td>
-          </tr>
-        </table>
-
-        <div class="title-section">
-          <div class="doc-title">THÔNG BÁO</div>
-          <div class="doc-subtitle">Về việc dự kiến thu các khoản đóng góp tự nguyện năm ${selectedYear}</div>
-        </div>
-
-        <p style="margin-bottom: 8px;"><b>Kính gửi:</b> Các hộ gia đình và Nhân dân Tổ dân phố ${tdpNameVal}.</p>
-        <p style="margin-bottom: 8px; text-indent: 24px;">Căn cứ kết quả cuộc họp Tổ dân phố ngày ..... tháng ..... năm ${selectedYear};</p>
-        <p style="margin-bottom: 12px; text-indent: 24px;">Nhằm phục vụ các hoạt động chung của cộng đồng dân cư, Ban cán sự Tổ dân phố ${tdpNameVal} thông báo dự kiến các khoản đóng góp tự nguyện năm ${selectedYear} như sau:</p>
-
-        <div class="section-heading">QUỸ TỔ DÂN PHỐ DỰ KIẾN THU</div>
-        <table class="data-table">
-          <thead>
+        <div class="notice-container">
+          <table class="header-table">
             <tr>
-              <th style="width: 50px;">STT</th>
-              <th>Nội dung khoản thu</th>
-              <th style="width: 240px;">Mức dự kiến</th>
+              <td style="width: 45%; text-align: center;">
+                <div style="font-weight: bold; font-size: 11pt;">UBND PHƯỜNG ${wardNameVal.toUpperCase().replace('PHƯỜNG ', '')}</div>
+                <div style="font-weight: bold; font-size: 11pt;">TỔ DÂN PHỐ ${tdpNameVal.toUpperCase().replace('TỔ DÂN PHỐ ', '')}</div>
+                <div style="font-size: 11pt;">Số: ...../TB-TDP</div>
+              </td>
+              <td style="width: 55%; text-align: center;">
+                <div style="font-weight: bold; font-size: 11pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div style="font-weight: bold; font-size: 11pt;">Độc lập - Tự do - Hạnh phúc</div>
+                <div style="font-size: 11pt; margin-top: 1px;">------------------------</div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            ${tdpRowsHtml}
-          </tbody>
-        </table>
+          </table>
 
-        <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
-        <ol style="margin-top: 4px; margin-bottom: 12px; padding-left: 20px;">
-          ${wardListHtml}
-        </ol>
+          <div class="title-section">
+            <div class="doc-title">THÔNG BÁO</div>
+            <div class="doc-subtitle">Về việc dự kiến thu các khoản đóng góp tự nguyện năm ${selectedYear}</div>
+          </div>
 
-        <p style="margin-bottom: 8px;"><b>Tổng mức dự kiến:</b> .................................... đồng/hộ/năm.</p>
-        <p style="margin-bottom: 8px; text-indent: 24px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện trên tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
-        <p style="margin-bottom: 12px; text-indent: 24px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${selectedYear}.</p>
-        <p style="margin-bottom: 15px;">Trân trọng thông báo!</p>
+          <p style="margin-bottom: 4px;"><b>Kính gửi:</b> Các hộ gia đình và Nhân dân Tổ dân phố ${tdpNameVal}.</p>
+          <p style="margin-bottom: 4px; text-indent: 20px;">Căn cứ kết quả cuộc họp Tổ dân phố ngày ..... tháng ..... năm ${selectedYear};</p>
+          <p style="margin-bottom: 6px; text-indent: 20px;">Nhằm phục vụ các hoạt động chung của cộng đồng dân cư, Ban cán sự Tổ dân phố ${tdpNameVal} thông báo dự kiến các khoản đóng góp tự nguyện năm ${selectedYear} như sau:</p>
 
-        <table class="footer-table">
-          <tr>
-            <td style="width: 45%;"></td>
-            <td style="width: 55%;">
-              <div style="font-style: italic; margin-bottom: 5px;">Nam Sầm Sơn, ngày ..... tháng ..... năm ${selectedYear}</div>
-              <div style="font-weight: bold; font-size: 13pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
-              <div style="font-style: italic; font-size: 11pt; margin-bottom: 50px;">(Ký, ghi rõ họ tên)</div>
-              <div style="font-weight: bold; font-size: 13pt;">${leaderName}</div>
-            </td>
-          </tr>
-        </table>
+          <div class="section-heading">QUỸ TỔ DÂN PHỐ DỰ KIẾN THU</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">STT</th>
+                <th>Nội dung khoản thu</th>
+                <th style="width: 220px;">Mức dự kiến</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tdpRowsHtml}
+            </tbody>
+          </table>
+
+          <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
+          <ol style="margin-top: 2px; margin-bottom: 6px; padding-left: 18px; font-size: 10.5pt;">
+            ${wardListHtml}
+          </ol>
+
+          <p style="margin-bottom: 4px;"><b>Tổng mức dự kiến:</b> .................................... đồng/hộ/năm.</p>
+          <p style="margin-bottom: 4px; text-indent: 20px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện trên tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
+          <p style="margin-bottom: 6px; text-indent: 20px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${selectedYear}.</p>
+          <p style="margin-bottom: 6px;">Trân trọng thông báo!</p>
+
+          <table class="footer-table">
+            <tr>
+              <td style="width: 45%;"></td>
+              <td style="width: 55%;">
+                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ngày ..... tháng ..... năm ${selectedYear}</div>
+                <div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
+                <div style="font-style: italic; font-size: 10pt; margin-bottom: 30px;">(Ký, ghi rõ họ tên)</div>
+                <div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>
+              </td>
+            </tr>
+          </table>
+        </div>
 
         <script>
           window.onload = function() {
