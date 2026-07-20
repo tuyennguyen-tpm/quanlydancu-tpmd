@@ -310,30 +310,43 @@ const WardFunds = () => {
     setContribInputs(inputs);
   };
 
-  // Quick Pay (Mark fully paid for all funds)
+  // Quick Pay (Mark fully paid for all funds / or toggle back to unpaid)
   const handleQuickPay = async (record: WardFund) => {
     if (isGuest) {
       showToast('Khách không có quyền sửa đổi dữ liệu đóng quỹ!', 'warning');
       return;
     }
     try {
+      // Kiểm tra xem hiện tại đã đóng đủ chưa
+      const isCurrentlyPaid = activeFunds.every(fund => {
+        const contrib = record.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+        return contrib.actual >= contrib.expected && contrib.expected > 0;
+      });
+
       const newContributions: Record<string, any> = { ...record.contributions };
       activeFunds.forEach(fund => {
         const existing = record.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
         newContributions[fund.name] = {
           expected: existing.expected,
-          actual: existing.expected,
-          date: existing.date || new Date().toISOString().slice(0, 10)
+          actual: isCurrentlyPaid ? 0 : existing.expected, // Nếu đã đóng đủ thì hủy đóng, ngược lại đóng đủ
+          date: isCurrentlyPaid ? '' : (existing.date || new Date().toISOString().slice(0, 10))
         };
       });
 
       const payload: WardFund = {
         ...record,
         contributions: newContributions,
-        note: record.note || 'Đã nộp đủ đợt tập trung'
+        note: isCurrentlyPaid 
+          ? (record.note === 'Đã nộp đủ đợt tập trung' ? '' : record.note) // Xóa ghi chú tự động nếu hủy đóng
+          : (record.note || 'Đã nộp đủ đợt tập trung')
       };
       await db.saveWardFund(payload);
-      showToast(`Đã ghi nhận đóng đủ các quỹ cho ${record.full_name}`, 'success');
+      showToast(
+        isCurrentlyPaid 
+          ? `Đã hủy ghi nhận đóng quỹ cho ${record.full_name}` 
+          : `Đã ghi nhận đóng đủ các quỹ cho ${record.full_name}`, 
+        'success'
+      );
       loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
     } catch (e) {
@@ -368,6 +381,17 @@ const WardFunds = () => {
       };
     }
 
+    // Kiểm tra xem có còn đóng đủ tất cả các quỹ không
+    const isAllPaid = activeFunds.every(fund => {
+      const contrib = newContributions[fund.name] || { expected: fund.target, actual: 0 };
+      return contrib.actual >= contrib.expected && contrib.expected > 0;
+    });
+
+    let finalNote = note.trim();
+    if (!isAllPaid && finalNote === 'Đã nộp đủ đợt tập trung') {
+      finalNote = '';
+    }
+
     try {
       const payload: WardFund = {
         ...editingRecord,
@@ -375,7 +399,7 @@ const WardFunds = () => {
         dob: dobInput.trim() || undefined,
         address: addressInput.trim() || undefined,
         contributions: newContributions,
-        note: note.trim()
+        note: finalNote || undefined
       };
       await db.saveWardFund(payload);
       showToast('Cập nhật thông tin thành công!', 'success');
@@ -3535,7 +3559,18 @@ const WardFunds = () => {
                             );
                           })}
                           
-                          <td style={{ padding: '12px 10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{item.note || '—'}</td>
+                          <td style={{ padding: '12px 10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            {(() => {
+                              const isAllPaid = activeFunds.every(fund => {
+                                const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+                                return contrib.actual >= contrib.expected && contrib.expected > 0;
+                              });
+                              if (!isAllPaid && item.note === 'Đã nộp đủ đợt tập trung') {
+                                return '—';
+                              }
+                              return item.note || '—';
+                            })()}
+                          </td>
                           {!isGuest && (
                             <td style={{ padding: '12px 10px' }}>
                               <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
