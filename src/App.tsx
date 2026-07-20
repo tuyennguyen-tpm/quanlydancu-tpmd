@@ -1246,10 +1246,11 @@ const App = () => {
         }
       }
 
-      // Đồng bộ chỉ tiêu đóng quỹ từ cấp Phường (ward_admin) xuống các Tổ dân phố
+      // Đồng bộ chỉ tiêu đóng quỹ từ cấp Phường (ward_admin) xuống các Tổ dân phố (nếu TDP chưa tùy chỉnh riêng)
       const myWardId = localStorage.getItem('user_ward_id');
       const currentUserRole = localStorage.getItem('user_role');
-      if (myWardId && currentUserRole !== 'ward_admin') {
+      const hasCustomWardFunds = !!localStorage.getItem('ward_fund_list');
+      if (myWardId && currentUserRole !== 'ward_admin' && !hasCustomWardFunds) {
         try {
           const { data: wardAdmins } = await supabase
             .from('profiles')
@@ -1273,6 +1274,8 @@ const App = () => {
         } catch (err) {
           console.error('Lỗi tự động đồng bộ danh sách quỹ Phường:', err);
         }
+      } else {
+        window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
       }
     } catch (e) {
       console.error('Failed to load system config from Supabase:', e);
