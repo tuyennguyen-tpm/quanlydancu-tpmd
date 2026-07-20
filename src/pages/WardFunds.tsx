@@ -14,7 +14,8 @@ import {
   RefreshCw,
   Coins,
   Printer,
-  Users
+  Users,
+  Home
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -643,6 +644,69 @@ const WardFunds = () => {
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  // Tự động quét và bổ sung các Hộ gia đình còn thiếu từ CSDL vào danh sách Quỹ Phường
+  const handleSupplementMissingHouseholds = async () => {
+    if (isGuest) {
+      showToast('Khách không có quyền sửa đổi dữ liệu!', 'warning');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const resList = await db.getResidents();
+      const hhList = await db.getHouseholds();
+      const activeFundsList = (db as any).getWardFundList();
+
+      const existingFundNames = new Set(funds.map(f => f.full_name.trim().toLowerCase()));
+      const missingBatch: WardFund[] = [];
+      let addedCount = 0;
+
+      hhList.forEach(hh => {
+        const members = resList.filter(r => r.household_id === hh.id && r.status !== 'deceased');
+        const hasMemberInFund = members.some(m => existingFundNames.has(m.full_name.trim().toLowerCase()));
+
+        if (!hasMemberInFund && members.length > 0) {
+          const head = members.find(m => m.is_head) || members[0];
+          const contributions: Record<string, any> = {};
+
+          activeFundsList.forEach((fund: any) => {
+            const isHouseholdScope = fund.scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
+            contributions[fund.name] = {
+              expected: isHouseholdScope ? fund.target : 0,
+              actual: 0
+            };
+          });
+
+          missingBatch.push({
+            id: generateUUID(),
+            year: selectedYear,
+            full_name: head.full_name.trim(),
+            dob: head.dob ? head.dob.slice(0, 4) : undefined,
+            address: hh.address,
+            user_id: head.user_id,
+            note: 'Tự động bổ sung từ CSDL Hộ khẩu',
+            contributions
+          });
+          addedCount++;
+        }
+      });
+
+      if (missingBatch.length === 0) {
+        showToast('Tất cả các Hộ dân trong CSDL đều đã có tên trong danh sách Quỹ Phường!', 'info');
+      } else {
+        await db.saveWardFundsBatch(missingBatch);
+        showToast(`Đã tự động tìm và bổ sung ${addedCount} Hộ dân còn thiếu vào danh sách Quỹ Phường!`, 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      }
+    } catch (e) {
+      showToast('Lỗi khi tự động bổ sung hộ dân!', 'danger');
+      console.error(e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -2429,6 +2493,29 @@ const WardFunds = () => {
               }}
             >
               <Upload size={16} /> Nhập Excel Phường
+            </button>
+          )}
+
+          {/* Nút tự động bổ sung hộ thiếu từ CSDL */}
+          {!isGuest && (
+            <button
+              onClick={handleSupplementMissingHouseholds}
+              className="btn btn-primary"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#f0fdf4',
+                border: '1.5px solid #bbf7d0',
+                color: '#16a34a',
+                fontWeight: '700',
+                fontSize: '0.85rem'
+              }}
+              title="Quét toàn bộ CSDL Hộ khẩu và tự động bổ sung những Hộ còn thiếu chưa có trong danh sách Phường giao"
+            >
+              <Home size={16} /> Bổ sung Hộ thiếu từ CSDL
             </button>
           )}
           <input 
