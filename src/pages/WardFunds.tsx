@@ -1603,19 +1603,28 @@ const WardFunds = () => {
         <style>
           @media print {
             @page {
-              size: A5 landscape;
-              margin: 0;
+              size: A4 portrait;
+              margin: 6mm 10mm;
             }
-            body {
+            html, body {
               margin: 0;
-              padding: 8mm 10mm;
+              padding: 0;
+              height: 100%;
+              overflow: hidden;
+            }
+            .receipt-container {
+              max-height: 275mm !important;
+              page-break-inside: avoid !important;
+              page-break-after: avoid !important;
+              page-break-before: avoid !important;
             }
           }
           body {
             font-family: "Times New Roman", Times, serif;
             font-size: 10pt;
-            line-height: 1.35;
+            line-height: 1.3;
             color: #000;
+            padding: 5px;
           }
           .receipt-container {
             width: 100%;

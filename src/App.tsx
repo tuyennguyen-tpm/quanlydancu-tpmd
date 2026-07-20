@@ -1059,7 +1059,7 @@ const App = () => {
 
   // Targets states for TDP Funds (Dynamic)
   const [fundsConfig, setFundsConfig] = useState<{ name: string; target: string }[]>([]);
-  const [wardFundsConfig, setWardFundsConfig] = useState<{ name: string; target: string; scope?: 'person' | 'household' }[]>([]);
+  const [wardFundsConfig, setWardFundsConfig] = useState<{ name: string; target: string; scope?: 'person' | 'household'; age_range?: string }[]>([]);
   const [guestPinInput, setGuestPinInput] = useState(localStorage.getItem('guest_access_pin') || '1234');
   const [latestAppVersionInput, setLatestAppVersionInput] = useState(localStorage.getItem('latest_app_version') || APP_VERSION);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
