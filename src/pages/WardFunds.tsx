@@ -213,35 +213,56 @@ const WardFunds = () => {
   };
 
   // Filtered List
-  const filteredFunds = useMemo(() => funds.filter(f => {
-    const matchesSearch = 
-      f.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (f.address && f.address.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    if (!matchesSearch) return false;
+  const filteredFunds = useMemo(() => {
+    const list = funds.filter(f => {
+      const matchesSearch = 
+        f.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (f.address && f.address.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      if (!matchesSearch) return false;
 
-    let matchesStatus = true;
-    if (filterStatus === 'paid_all') {
-      matchesStatus = activeFunds.every(fund => {
-        const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
-        return contrib.actual >= contrib.expected;
-      });
-    } else if (filterStatus === 'unpaid_any') {
-      matchesStatus = activeFunds.some(fund => {
-        const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
-        return contrib.actual < contrib.expected;
-      });
-    }
-    if (!matchesStatus) return false;
+      let matchesStatus = true;
+      if (filterStatus === 'paid_all') {
+        matchesStatus = activeFunds.every(fund => {
+          const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+          return contrib.actual >= contrib.expected;
+        });
+      } else if (filterStatus === 'unpaid_any') {
+        matchesStatus = activeFunds.some(fund => {
+          const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+          return contrib.actual < contrib.expected;
+        });
+      }
+      if (!matchesStatus) return false;
 
-    // Filter group
-    if (groupFilter !== 'all') {
-      const fundGroup = getGroupOfFundRecord(f);
-      if (fundGroup !== groupFilter) return false;
-    }
+      // Filter group
+      if (groupFilter !== 'all') {
+        const fundGroup = getGroupOfFundRecord(f);
+        if (fundGroup !== groupFilter) return false;
+      }
 
-    return true;
-  }), [funds, searchTerm, filterStatus, activeFunds, groupFilter, residents, households, groups]);
+      return true;
+    });
+
+    // Sắp xếp thứ tự ưu tiên theo Cụm/Tổ đã cấu hình (Ví dụ: Tổ Việt Trung -> Tổ 4 -> Tổ 5...)
+    return list.sort((a, b) => {
+      const grpA = getGroupOfFundRecord(a);
+      const grpB = getGroupOfFundRecord(b);
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === grpA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === grpB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+
+      // Cùng Tổ thì xếp theo Tên tiếng Việt A-Z
+      return a.full_name.localeCompare(b.full_name, 'vi');
+    });
+  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, residents, households, groups]);
 
   // Calculate Statistics dynamically
   const fundStats = activeFunds.map(fund => {
@@ -872,7 +893,7 @@ const WardFunds = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet(`Bao_Cao_Thu_Quy_${selectedYear}`);
 
-      const totalCols = 4 + activeFunds.length * 3 + 1; // 4 cột cá nhân + 3 cột/quỹ + 1 ghi chú
+      const totalCols = 5 + activeFunds.length * 3 + 1; // 5 cột cá nhân + 3 cột/quỹ + 1 ghi chú
 
       // Title block
       worksheet.getCell('A1').value = `BÁO CÁO THU QUỸ ỦY THÁC TỪ PHƯỜNG NĂM ${selectedYear}`;
@@ -889,9 +910,9 @@ const WardFunds = () => {
 
       // Group Headers
       worksheet.getCell('A3').value = 'Thông tin cá nhân';
-      worksheet.mergeCells('A3:D3');
+      worksheet.mergeCells('A3:E3');
       
-      let currentColNum = 5;
+      let currentColNum = 6;
       activeFunds.forEach(fund => {
         const startCellStr = worksheet.getColumn(currentColNum).letter + '3';
         const endCellStr = worksheet.getColumn(currentColNum + 2).letter + '3';
@@ -916,7 +937,7 @@ const WardFunds = () => {
       });
 
       // Sub Headers
-      const subHeaders = ['STT', 'Họ và tên', 'Năm sinh', 'Địa chỉ'];
+      const subHeaders = ['STT', 'Họ và tên', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ'];
       activeFunds.forEach(() => {
         subHeaders.push('Phải nộp (đ)', 'Thực nộp (đ)', 'Ngày nộp');
       });
@@ -939,10 +960,12 @@ const WardFunds = () => {
 
       // Data Rows
       filteredFunds.forEach((f, idx) => {
+        const groupName = getGroupOfFundRecord(f);
         const rowData: any[] = [
           idx + 1,
           f.full_name,
           f.dob || '',
+          groupName || '-',
           f.address || ''
         ];
         
@@ -962,9 +985,10 @@ const WardFunds = () => {
         dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }; // STT
         dataRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' }; // Họ tên
         dataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }; // Năm sinh
-        dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' }; // Địa chỉ
+        dataRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }; // Cụm/Tổ
+        dataRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' }; // Địa chỉ
 
-        let cNum = 5;
+        let cNum = 6;
         activeFunds.forEach(fund => {
           const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
           
@@ -992,7 +1016,7 @@ const WardFunds = () => {
 
       // Total Row
       const totalRowIndex = worksheet.rowCount + 1;
-      const totalRowCells: any[] = ['Tổng cộng', '', '', ''];
+      const totalRowCells: any[] = ['Tổng cộng', '', '', '', ''];
       
       activeFunds.forEach(fund => {
         const totalExp = filteredFunds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0);
@@ -1003,12 +1027,12 @@ const WardFunds = () => {
       
       const totalRow = worksheet.addRow(totalRowCells);
       totalRow.height = 24;
-      worksheet.mergeCells(`A${totalRowIndex}:D${totalRowIndex}`);
+      worksheet.mergeCells(`A${totalRowIndex}:E${totalRowIndex}`);
       
       totalRow.getCell(1).font = { bold: true, name: 'Segoe UI' };
       totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      let curCellIndex = 5;
+      let curCellIndex = 6;
       activeFunds.forEach(() => {
         [curCellIndex, curCellIndex + 1].forEach(colIdx => {
           const cell = totalRow.getCell(colIdx);
@@ -1038,9 +1062,10 @@ const WardFunds = () => {
         if (idx === 0) col.width = 6;      // STT
         else if (idx === 1) col.width = 25;  // Họ tên
         else if (idx === 2) col.width = 12;  // Năm sinh
-        else if (idx === 3) col.width = 25;  // Địa chỉ
+        else if (idx === 3) col.width = 16;  // Cụm/Tổ
+        else if (idx === 4) col.width = 25;  // Địa chỉ
         else if (idx < currentColNum - 1) {
-          const mod = (idx - 4) % 3;
+          const mod = (idx - 5) % 3;
           if (mod === 2) col.width = 14;     // Ngày nộp
           else col.width = 15;               // Expected / Actual
         } else col.width = 20;               // Ghi chú
@@ -2300,10 +2325,28 @@ const WardFunds = () => {
     // Quỹ Phường từ CSDL hoặc mẫu mặc định
     const wardFundsList = (db as any).getWardFundList() || [];
     const defaultWardItems = [
-      { name: 'Quỹ phòng chống thiên tai', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
-      { name: 'Đền ơn đáp nghĩa', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
-      { name: 'Chăm sóc người cao tuổi', text: '20.000đ / hộ / năm' }
+      { name: 'Quỹ phòng chống thiên tai', target: 10000, scope: 'person', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
+      { name: 'Đền ơn đáp nghĩa', target: 20000, scope: 'person', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
+      { name: 'Chăm sóc người cao tuổi', target: 20000, scope: 'household', text: '20.000đ / hộ / năm' }
     ];
+
+    let wardHouseholdTotal = 0;
+    let wardPersonTotal = 0;
+
+    const listToCalc = wardFundsList.length > 0 ? wardFundsList : defaultWardItems;
+    listToCalc.forEach((wf: any) => {
+      const isHousehold = wf.scope === 'household' || (wf.name && (wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi')));
+      const targetVal = typeof wf.target === 'number' ? wf.target : parseInt(String(wf.target || '').replace(/\D/g, ''), 10) || 0;
+      if (isHousehold) {
+        wardHouseholdTotal += targetVal;
+      } else {
+        wardPersonTotal += targetVal;
+      }
+    });
+
+    const wardSummaryStr = (wardHouseholdTotal > 0 || wardPersonTotal > 0)
+      ? `${wardHouseholdTotal > 0 ? `${wardHouseholdTotal.toLocaleString('vi-VN')}đ/hộ/năm` : ''}${wardHouseholdTotal > 0 && wardPersonTotal > 0 ? ' + ' : ''}${wardPersonTotal > 0 ? `${wardPersonTotal.toLocaleString('vi-VN')}đ/khẩu/năm (khẩu lao động)` : ''}`
+      : '....................................';
 
     let wardListHtml = defaultWardItems.map((item) => `
       <li style="margin-bottom: 3px;"><b>${item.name}:</b> ${item.text}</li>
@@ -2454,11 +2497,19 @@ const WardFunds = () => {
           </table>
 
           <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
-          <ol style="margin-top: 2px; margin-bottom: 6px; padding-left: 18px; font-size: 10.5pt;">
+          <ol style="margin-top: 2px; margin-bottom: 4px; padding-left: 18px; font-size: 10.5pt;">
             ${wardListHtml}
           </ol>
+          <div style="font-size: 10.5pt; font-weight: bold; margin-bottom: 6px; padding-left: 18px; color: #1e40af;">
+            ➔ Tổng Quỹ Phường dự kiến: ${wardSummaryStr}
+          </div>
 
-          <p style="margin-bottom: 4px;"><b>Tổng mức dự kiến:</b> ${totalNoticeText} đồng/hộ/năm.</p>
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 10.5pt;">
+            <p style="margin: 0 0 3px 0;"><b>1. Quỹ Tổ dân phố dự kiến:</b> <strong>${totalTdpNum > 0 ? totalTdpNum.toLocaleString('vi-VN') + ' đồng/hộ/năm' : '.... đồng/hộ/năm'}</strong></p>
+            <p style="margin: 0 0 3px 0;"><b>2. Quỹ Phường thu theo quy định:</b> <strong>${wardSummaryStr}</strong></p>
+            <p style="margin: 3px 0 0 0; font-size: 11pt; color: #b91c1c;"><b>👉 TỔNG CỘNG DỰ KIẾN (QUỸ TĐP + QUỸ PHƯỜNG):</b> <strong>${(totalTdpNum + wardHouseholdTotal).toLocaleString('vi-VN')} đồng/hộ/năm</strong> ${wardPersonTotal > 0 ? ` + <strong>${wardPersonTotal.toLocaleString('vi-VN')}đ / 1 khẩu lao động</strong>` : ''}</p>
+          </div>
+
           <p style="margin-bottom: 4px; text-indent: 20px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện trên tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
           <p style="margin-bottom: 6px; text-indent: 20px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${selectedYear}.</p>
           <p style="margin-bottom: 6px;">Trân trọng thông báo!</p>
