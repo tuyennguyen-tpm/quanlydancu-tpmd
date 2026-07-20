@@ -992,9 +992,25 @@ const WardFunds = () => {
           groupHeaderRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
         }
 
-        sttCounter++;
         const tdpNameStored = localStorage.getItem('tdp_name') || '';
         let displayAddress = f.address || '';
+        
+        // Loại bỏ phần Tổ/Cụm trùng lặp khỏi địa chỉ
+        if (groupName) {
+          // Xóa "Tổ X" hoặc "Cụm X"
+          const cleanGroup = groupName.replace(/^(tổ|cụm)\s*/gi, '').trim();
+          const groupRegex = new RegExp(`\\b(tổ|cụm)?\\s*${cleanGroup}\\b`, 'gi');
+          displayAddress = displayAddress.replace(groupRegex, '');
+        }
+        
+        // Làm sạch các ký tự phân cách thừa (phẩy, gạch ngang, khoảng trắng) ở đầu/cuối và ở giữa
+        displayAddress = displayAddress
+          .replace(/^[-\s,·•]+/g, '')
+          .replace(/[-\s,·•]+$/g, '')
+          .replace(/\s*,\s*,+/g, ',')
+          .trim();
+
+        // Ghép thêm tên Tổ dân phố từ cài đặt nếu chưa có
         if (tdpNameStored && !displayAddress.toLowerCase().includes(tdpNameStored.toLowerCase())) {
           if (displayAddress) {
             displayAddress = `${displayAddress}, ${tdpNameStored}`;
@@ -1002,6 +1018,12 @@ const WardFunds = () => {
             displayAddress = tdpNameStored;
           }
         }
+        
+        // Dọn dẹp dấu phẩy hoặc gạch thừa một lần nữa
+        displayAddress = displayAddress
+          .replace(/^[-\s,·•]+/g, '')
+          .replace(/[-\s,·•]+$/g, '')
+          .trim();
 
         const rowData: any[] = [
           sttCounter,

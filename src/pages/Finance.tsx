@@ -573,6 +573,23 @@ const Finance = () => {
         
         const tdpNameStoredInLocal = localStorage.getItem('tdp_name') || '';
         let displayAddress = hh.address || '';
+        
+        // Loại bỏ phần Tổ/Cụm trùng lặp khỏi địa chỉ
+        const group = hh.self_management_group || '';
+        if (group) {
+          const cleanGroup = group.replace(/^(tổ|cụm)\s*/gi, '').trim();
+          const groupRegex = new RegExp(`\\b(tổ|cụm)?\\s*${cleanGroup}\\b`, 'gi');
+          displayAddress = displayAddress.replace(groupRegex, '');
+        }
+
+        // Làm sạch các ký tự phân cách thừa
+        displayAddress = displayAddress
+          .replace(/^[-\s,·•]+/g, '')
+          .replace(/[-\s,·•]+$/g, '')
+          .replace(/\s*,\s*,+/g, ',')
+          .trim();
+
+        // Ghép thêm tên Tổ dân phố từ cài đặt nếu chưa có
         if (tdpNameStoredInLocal && !displayAddress.toLowerCase().includes(tdpNameStoredInLocal.toLowerCase())) {
           if (displayAddress) {
             displayAddress = `${displayAddress}, ${tdpNameStoredInLocal}`;
@@ -580,6 +597,12 @@ const Finance = () => {
             displayAddress = tdpNameStoredInLocal;
           }
         }
+
+        // Dọn dẹp dấu phẩy hoặc gạch thừa một lần nữa
+        displayAddress = displayAddress
+          .replace(/^[-\s,·•]+/g, '')
+          .replace(/[-\s,·•]+$/g, '')
+          .trim();
 
         const rowData: (string | number)[] = [
           sttCounter,
