@@ -574,8 +574,7 @@ const Finance = () => {
         const tdpNameStoredInLocal = localStorage.getItem('tdp_name') || '';
         let displayAddress = hh.address || '';
         
-        // Loại bỏ phần Tổ/Cụm trùng lặp khỏi địa chỉ
-        const group = hh.self_management_group || '';
+        // Loại bỏ phần Tổ/Cụm trùng lặp khỏi địa chỉ (sử dụng biến group đã khai báo ở trên)
         if (group) {
           const cleanGroup = group.replace(/^(tổ|cụm)\s*/gi, '').trim();
           const groupRegex = new RegExp(`\\b(tổ|cụm)?\\s*${cleanGroup}\\b`, 'gi');
