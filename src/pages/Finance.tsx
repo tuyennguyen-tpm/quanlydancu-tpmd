@@ -86,11 +86,13 @@ const Finance = () => {
   const [fundDateInput, setFundDateInput] = useState<string>(new Date().toISOString().slice(0, 10));
 
   const [fundNames, setFundNames] = useState<string[]>([]);
+  const [fundList, setFundList] = useState<{ name: string; target: number }[]>([]);
 
   useEffect(() => {
     const loadFunds = () => {
       const list = db.getFundList();
       setFundNames(list.map(f => f.name));
+      setFundList(list);
     };
     loadFunds();
     window.addEventListener('fund-targets-changed', loadFunds);
@@ -923,7 +925,291 @@ const Finance = () => {
     printWindow.document.close();
   };
 
-  const generateStateReceiptHtml = (hh: Household, dateText: string, tdpNameVal: string, wardNameVal: string, leaderName: string, leaderSigUrl: string) => {
+  // In Thông báo dự kiến thu các khoản đóng góp tự nguyện (Mẫu chuẩn gộp TDP & Phường)
+  const handlePrintCombinedNotice = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = isWardUser 
+      ? (tdpFilter !== 'all' ? (tdpMap[tdpFilter] || 'Tổ dân phố') : 'Tất cả TDP')
+      : (localStorage.getItem('tdp_name') || 'Tổ dân phố');
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+    } catch { /* ignore */ }
+
+    // Quỹ TDP từ CSDL hoặc mẫu mặc định
+    const tdpFundsList = (db as any).getFundList() || [];
+    const defaultTdpItems = [
+      { name: 'Điện của 7 nhà văn hóa', target: '....' },
+      { name: 'Bảo vệ, vệ sinh Nhà văn hóa', target: '....' },
+      { name: 'Internet', target: '....' },
+      { name: 'Tiền chè nước cho các hội họp', target: '....' },
+      { name: 'Quỹ đám hiếu', target: '....' },
+      { name: 'Quỹ an sinh xã hội', target: '50.000' },
+      { name: 'Quỹ khuyến học', target: '50.000' },
+      { name: 'Quỹ văn hóa - thể thao của thanh thiếu niên', target: '50.000' }
+    ];
+
+    const tdpItemsToRender = tdpFundsList.length > 0 
+      ? tdpFundsList.map((f: any) => ({ name: f.name, target: typeof f.target === 'number' ? f.target.toLocaleString('vi-VN') : (f.target || '....') }))
+      : defaultTdpItems;
+
+    const totalTdpNum = tdpItemsToRender.reduce((sum: number, item: any) => {
+      const valStr = String(item.target || '').replace(/\D/g, '');
+      const val = parseInt(valStr, 10);
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
+
+    let tdpRowsHtml = tdpItemsToRender.map((item: any, idx: number) => `
+      <tr>
+        <td style="text-align:center;">${idx + 1}</td>
+        <td>${item.name}</td>
+        <td style="text-align:right; font-weight:bold;">${item.target} đồng/hộ/năm</td>
+      </tr>
+    `).join('');
+
+    if (totalTdpNum > 0) {
+      tdpRowsHtml += `
+        <tr style="font-weight: bold; background-color: #f9fafb;">
+          <td colspan="2" style="text-align: center;">TỔNG CỘNG MỨC DỰ KIẾN (QUỸ TĐP)</td>
+          <td style="text-align: right; color: #15803d;">${totalTdpNum.toLocaleString('vi-VN')} đồng/hộ/năm</td>
+        </tr>
+      `;
+    }
+
+    const totalNoticeText = totalTdpNum > 0
+      ? `<b>${totalTdpNum.toLocaleString('vi-VN')}</b>`
+      : '....................................';
+
+    // Quỹ Phường từ CSDL hoặc mẫu mặc định
+    const wardFundsList = (db as any).getWardFundList() || [];
+    const defaultWardItems = [
+      { name: 'Quỹ phòng chống thiên tai', target: 10000, scope: 'person', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
+      { name: 'Đền ơn đáp nghĩa', target: 20000, scope: 'person', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
+      { name: 'Chăm sóc người cao tuổi', target: 20000, scope: 'household', text: '20.000đ / hộ / năm' }
+    ];
+
+    let wardHouseholdTotal = 0;
+    let wardPersonTotal = 0;
+
+    const listToCalc = wardFundsList.length > 0 ? wardFundsList : defaultWardItems;
+    listToCalc.forEach((wf: any) => {
+      const isHousehold = wf.scope === 'household' || (wf.name && (wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi')));
+      const targetVal = typeof wf.target === 'number' ? wf.target : parseInt(String(wf.target || '').replace(/\D/g, ''), 10) || 0;
+      if (isHousehold) {
+        wardHouseholdTotal += targetVal;
+      } else {
+        wardPersonTotal += targetVal;
+      }
+    });
+
+    const wardSummaryStr = (wardHouseholdTotal > 0 || wardPersonTotal > 0)
+      ? `${wardHouseholdTotal > 0 ? `${wardHouseholdTotal.toLocaleString('vi-VN')}đ/hộ/năm` : ''}${wardHouseholdTotal > 0 && wardPersonTotal > 0 ? ' + ' : ''}${wardPersonTotal > 0 ? `${wardPersonTotal.toLocaleString('vi-VN')}đ/khẩu/năm (khẩu lao động)` : ''}`
+      : '....................................';
+
+    let wardListHtml = defaultWardItems.map((item) => `
+      <li style="margin-bottom: 3px;"><b>${item.name}:</b> ${item.text}</li>
+    `).join('');
+
+    if (wardFundsList.length > 0) {
+      wardListHtml = wardFundsList.map((wf: any) => {
+        const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi');
+        const targetStr = typeof wf.target === 'number' ? wf.target.toLocaleString('vi-VN') + 'đ' : (wf.target ? wf.target + 'đ' : '....đ');
+        const unitStr = isHousehold ? 'hộ' : 'khẩu';
+        const noteStr = wf.age_range ? ` (${wf.age_range})` : (isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)');
+        return `<li style="margin-bottom: 3px;"><b>${wf.name}:</b> ${targetStr} / ${unitStr} / năm${noteStr}</li>`;
+      }).join('');
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Thông Báo Dự Kiến Thu Các Khoản Đóng Góp Năm ${fundYear}</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 8mm 14mm;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              height: 100%;
+              overflow: hidden;
+            }
+            .notice-container {
+              max-height: 275mm !important;
+              page-break-inside: avoid !important;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 11.5pt;
+            line-height: 1.3;
+            color: #000;
+            padding: 5px;
+          }
+          .notice-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+          }
+          .header-table td {
+            vertical-align: top;
+            border: none;
+            padding: 0;
+          }
+          .title-section {
+            text-align: center;
+            margin-top: 4px;
+            margin-bottom: 8px;
+          }
+          .doc-title {
+            font-size: 15pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+          }
+          .doc-subtitle {
+            font-size: 11.5pt;
+            font-style: italic;
+          }
+          .section-heading {
+            font-size: 11.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 6px;
+            margin-bottom: 3px;
+          }
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5px;
+          }
+          .data-table th, .data-table td {
+            border: 1px solid #000;
+            padding: 3px 6px;
+            font-size: 10.5pt;
+          }
+          .data-table th {
+            text-align: center;
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+          .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            page-break-inside: avoid;
+          }
+          .footer-table td {
+            border: none;
+            vertical-align: top;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="notice-container">
+          <table class="header-table">
+            <tr>
+              <td style="width: 45%; text-align: center;">
+                <div style="font-weight: bold; font-size: 11pt;">UBND PHƯỜNG ${wardNameVal.toUpperCase().replace('PHƯỜNG ', '')}</div>
+                <div style="font-weight: bold; font-size: 11pt;">TỔ DÂN PHỐ ${tdpNameVal.toUpperCase().replace('TỔ DÂN PHỐ ', '')}</div>
+                <div style="font-size: 11pt;">Số: ...../TB-TDP</div>
+              </td>
+              <td style="width: 55%; text-align: center;">
+                <div style="font-weight: bold; font-size: 11pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div style="font-weight: bold; font-size: 11pt;">Độc lập - Tự do - Hạnh phúc</div>
+                <div style="font-size: 11pt; margin-top: 1px;">------------------------</div>
+              </td>
+            </tr>
+          </table>
+
+          <div class="title-section">
+            <div class="doc-title">THÔNG BÁO</div>
+            <div class="doc-subtitle">Về việc dự kiến thu các khoản đóng góp tự nguyện năm ${fundYear}</div>
+          </div>
+
+          <p style="margin-bottom: 4px;"><b>Kính gửi:</b> Các hộ gia đình và Nhân dân Tổ dân phố ${tdpNameVal}.</p>
+          <p style="margin-bottom: 4px; text-indent: 20px;">Căn cứ kết quả cuộc họp Tổ dân phố ngày ..... tháng ..... năm ${fundYear};</p>
+          <p style="margin-bottom: 6px; text-indent: 20px;">Nhằm phục vụ các hoạt động chung của cộng đồng dân cư, Ban cán sự Tổ dân phố ${tdpNameVal} thông báo dự kiến các khoản đóng góp tự nguyện năm ${fundYear} như sau:</p>
+
+          <div class="section-heading">QUỸ TỔ DÂN PHỐ DỰ KIẾN THU</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">STT</th>
+                <th>Nội dung khoản thu</th>
+                <th style="width: 220px;">Mức dự kiến</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tdpRowsHtml}
+            </tbody>
+          </table>
+
+          <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
+          <ol style="margin-top: 2px; margin-bottom: 4px; padding-left: 18px; font-size: 10.5pt;">
+            ${wardListHtml}
+          </ol>
+          <div style="font-size: 10.5pt; font-weight: bold; margin-bottom: 6px; padding-left: 18px; color: #1e40af;">
+            ➔ Tổng Quỹ Phường dự kiến: ${wardSummaryStr}
+          </div>
+
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 10.5pt;">
+            <p style="margin: 0 0 3px 0;"><b>1. Quỹ Tổ dân phố dự kiến:</b> <strong>${totalTdpNum > 0 ? totalTdpNum.toLocaleString('vi-VN') + ' đồng/hộ/năm' : '.... đồng/hộ/năm'}</strong></p>
+            <p style="margin: 0 0 3px 0;"><b>2. Quỹ Phường thu theo quy định:</b> <strong>${wardSummaryStr}</strong></p>
+            <p style="margin: 3px 0 0 0; font-size: 11pt; color: #b91c1c;"><b>👉 TỔNG CỘNG DỰ KIẾN (QUỸ TĐP + QUỸ PHƯỜNG):</b> <strong>${(totalTdpNum + wardHouseholdTotal).toLocaleString('vi-VN')} đồng/hộ/năm</strong> ${wardPersonTotal > 0 ? ` + <strong>${wardPersonTotal.toLocaleString('vi-VN')}đ / 1 khẩu lao động</strong>` : ''}</p>
+          </div>
+
+          <p style="margin-bottom: 4px; text-indent: 20px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện trên tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
+          <p style="margin-bottom: 6px; text-indent: 20px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${fundYear}.</p>
+          <p style="margin-bottom: 6px;">Trân trọng thông báo!</p>
+
+          <table class="footer-table">
+            <tr>
+              <td style="width: 45%;"></td>
+              <td style="width: 55%;">
+                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ngày ..... tháng ..... năm ${fundYear}</div>
+                <div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
+                <div style="font-style: italic; font-size: 10pt; margin-bottom: 30px;">(Ký, ghi rõ họ tên)</div>
+                <div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const generateStateReceiptHtml = (hh: Household, dateText: string, tdpNameVal: string, wardNameVal: string, leaderName: string, leaderSigUrl: string) =>. {
     const headName = getHouseholdHeadName(hh);
     const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
     const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
@@ -1092,7 +1378,7 @@ const Finance = () => {
             </td>
           </tr>
           <tr style="font-weight: bold; text-align: center;">
-            <td style="width: 20%;">Thủ trưởng đơn vị</td>
+            <td style="width: 20%;">Tổ Trưởng Tổ Dân phố</td>
             <td style="width: 20%;">Kế toán trưởng</td>
             <td style="width: 20%;">Thủ quỹ</td>
             <td style="width: 20%;">Người lập phiếu</td>
@@ -2445,6 +2731,39 @@ const Finance = () => {
               {canPrintExport && (
                 <>
                   <button 
+                    onClick={handlePrintCombinedNotice}
+                    title="In mẫu Thông báo dự kiến thu các khoản đóng góp tự nguyện gộp Quỹ TDP & Quỹ Phường"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#8b5cf6',
+                      border: '1.5px solid #7c3aed',
+                      color: '#fff',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#7c3aed';
+                      e.currentTarget.style.borderColor = '#6d28d9';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#8b5cf6';
+                      e.currentTarget.style.borderColor = '#7c3aed';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <Printer size={16} /> In Thông báo dự kiến thu (Mẫu chuẩn)
+                  </button>
+
+                  <button 
                     onClick={handlePrintFundsList}
                     style={{
                       padding: '8px 16px',
@@ -2613,9 +2932,20 @@ const Finance = () => {
                 <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f0fdf4', color: '#166534' }}>
                   <th style={{ width: '250px', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>Hộ gia đình / Chủ hộ</th>
                   <th style={{ width: '130px', textAlign: 'right', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>Tổng đã nộp</th>
-                  {fundNames.map((name, i) => (
-                    <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>{name}</th>
-                  ))}
+                  {fundNames.map((name, i) => {
+                    const fundConfig = fundList.find(f => f.name === name);
+                    const targetAmt = fundConfig ? fundConfig.target : 0;
+                    return (
+                      <th key={i} style={{ textAlign: 'center', fontSize: '0.8rem', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>
+                        <div>{name}</div>
+                        {targetAmt > 0 && (
+                          <div style={{ fontSize: '0.72rem', color: '#4b7c59', fontWeight: '600', marginTop: '2px', fontStyle: 'italic' }}>
+                            {formatCurrency(targetAmt)}đ/hộ
+                          </div>
+                        )}
+                      </th>
+                    );
+                  })}
                   <th style={{ width: '110px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f0fdf4', color: '#166534', zIndex: 10, borderBottom: '2px solid #bbf7d0' }}>Biên lai</th>
                 </tr>
               </thead>
@@ -2637,6 +2967,8 @@ const Finance = () => {
                       {fundNames.map((fundName, idx) => {
                         const paidFund = hhFunds.find(f => f.fund_name === fundName);
                         const amountPaid = paidFund ? paidFund.amount : 0;
+                        const fundConfig = fundList.find(f => f.name === fundName);
+                        const targetAmt = fundConfig ? fundConfig.target : 0;
                         
                         return (
                           <td key={idx} style={{ textAlign: 'center' }}>
@@ -2661,24 +2993,31 @@ const Finance = () => {
                                 {formatCurrency(amountPaid)}
                               </button>
                             ) : (
-                              <button 
-                                onClick={() => handleOpenFundPay(hh.id, fundName)}
-                                style={{
-                                  padding: '6px 12px',
-                                  borderRadius: '20px',
-                                  border: '1px dashed var(--border)',
-                                  backgroundColor: '#f8fafc',
-                                  color: 'var(--text-muted)',
-                                  fontWeight: '600',
-                                  fontSize: '0.8rem',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s'
-                                }}
-                                onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
-                                onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-                              >
-                                Chưa nộp
-                              </button>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                <button 
+                                  onClick={() => handleOpenFundPay(hh.id, fundName)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    border: '1px dashed var(--border)',
+                                    backgroundColor: '#f8fafc',
+                                    color: 'var(--text-muted)',
+                                    fontWeight: '600',
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                                  onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                                >
+                                  Chưa nộp
+                                </button>
+                                {targetAmt > 0 && (
+                                  <span style={{ fontSize: '0.7rem', color: '#dc2626', fontStyle: 'italic', fontWeight: '600' }}>
+                                    {formatCurrency(targetAmt)}đ
+                                  </span>
+                                )}
+                              </div>
                             )}
                           </td>
                         );
