@@ -575,17 +575,17 @@ const WardFunds = () => {
                 expected = 0;
               } else {
                 if (isPCTT) {
-                  // Quỹ Thiên tai: Nam 18-60, Nữ 18-55 trong độ tuổi lao động
-                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 60;
-                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 55;
+                  // Quỹ Thiên tai: Nam 18-61, Nữ 18-58 trong độ tuổi lao động
+                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 61;
+                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 58;
                   if (isMaleInAge || isFemaleInAge) {
                     expected = fund.target;
                     shouldAdd = true;
                   }
                 } else if (isDOdn) {
-                  // Quỹ Đền ơn đáp nghĩa: Người trong độ tuổi lao động Nam 18-60, Nữ 18-55
-                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 60;
-                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 55;
+                  // Quỹ Đền ơn đáp nghĩa: Người trong độ tuổi lao động Nam 18-61, Nữ 18-58
+                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 61;
+                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 58;
                   if (isMaleInAge || isFemaleInAge) {
                     expected = fund.target;
                     shouldAdd = true;
@@ -1330,29 +1330,52 @@ const WardFunds = () => {
     const resident = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
     const hhOfRes = resident ? households.find(h => h.id === resident.household_id) : null;
     
-    const totalTarget = activeFunds.reduce((sum, fund) => {
-      const expectedVal = item.contributions?.[fund.name]?.expected !== undefined 
-        ? item.contributions[fund.name].expected 
-        : fund.target;
-      return sum + expectedVal;
-    }, 0);
+    // Tải các khoản Quỹ Tổ Dân Phố để in chung trên 1 phiếu
+    const tdpFundsConfig = (db as any).getFundList() || [];
+    const householdFundsList = (db as any).getHouseholdFunds() || [];
 
-    const paidFundsRowsHtml = activeFunds.map((fund, idx) => {
+    // Tính tiền Quỹ Phường
+    let wardTotal = 0;
+    const wardRows = activeFunds.map((fund, idx) => {
       const amountToPrint = item.contributions?.[fund.name]?.expected !== undefined 
         ? item.contributions[fund.name].expected 
         : fund.target;
+      wardTotal += amountToPrint;
       const note = item.contributions?.[fund.name]?.date 
         ? new Date(item.contributions[fund.name].date!).toLocaleDateString('vi-VN') 
         : '—';
       return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
-          <td style="font-weight: bold; text-align: left;">Đóng góp ${fund.name} (${selectedYear})</td>
+          <td style="font-weight: bold; text-align: left;">[Quỹ Phường] ${fund.name} (${selectedYear})</td>
           <td style="text-align: right; font-weight: bold;">${formatCurrency(amountToPrint)} đ</td>
           <td style="text-align: left;">${note}</td>
         </tr>
       `;
-    }).join('');
+    });
+
+    // Tính tiền Quỹ TDP (nếu khớp Hộ gia đình)
+    let tdpTotal = 0;
+    const tdpRows: string[] = [];
+    if (hhOfRes && tdpFundsConfig.length > 0) {
+      const hhFundRec = householdFundsList.find((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear);
+      tdpFundsConfig.forEach((tf: any, idx: number) => {
+        const expectedVal = hhFundRec?.contributions?.[tf.name]?.expected !== undefined ? hhFundRec.contributions[tf.name].expected : tf.target;
+        tdpTotal += expectedVal;
+        const note = hhFundRec?.contributions?.[tf.name]?.date ? new Date(hhFundRec.contributions[tf.name].date!).toLocaleDateString('vi-VN') : '—';
+        tdpRows.push(`
+          <tr>
+            <td style="text-align: center;">${wardRows.length + idx + 1}</td>
+            <td style="font-weight: bold; text-align: left;">[Quỹ TDP] ${tf.name} (${selectedYear})</td>
+            <td style="text-align: right; font-weight: bold;">${formatCurrency(expectedVal)} đ</td>
+            <td style="text-align: left;">${note}</td>
+          </tr>
+        `);
+      });
+    }
+
+    const grandTotalTarget = wardTotal + tdpTotal;
+    const paidFundsRowsHtml = [...tdpRows, ...wardRows].join('');
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
@@ -1404,7 +1427,7 @@ const WardFunds = () => {
       return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
     };
 
-    const textAmountWords = docSoTien(totalTarget);
+    const textAmountWords = docSoTien(grandTotalTarget);
 
     // Tải chữ ký động cho Kế toán trưởng & Thủ quỹ
     let keToanName = '';
@@ -1489,8 +1512,8 @@ const WardFunds = () => {
           <tbody>
             ${paidFundsRowsHtml.length > 0 ? paidFundsRowsHtml : '<tr><td colspan="4" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản quỹ nào trong năm.</td></tr>'}
             <tr class="receipt-total-row">
-              <td colspan="2" style="text-align: center; font-weight: bold;">TỔNG CỘNG</td>
-              <td style="text-align: right; font-weight: bold; color: #15803d;">${formatCurrency(totalTarget)} đ</td>
+              <td colspan="2" style="text-align: center; font-weight: bold;">TỔNG CỘNG CÁC KHOẢN (TĐP + PHƯỜNG)</td>
+              <td style="text-align: right; font-weight: bold; color: #15803d;">${formatCurrency(grandTotalTarget)} đ</td>
               <td></td>
             </tr>
           </tbody>
@@ -2241,8 +2264,8 @@ const WardFunds = () => {
     // Quỹ Phường từ CSDL hoặc mẫu mặc định
     const wardFundsList = (db as any).getWardFundList() || [];
     const defaultWardItems = [
-      { name: 'Quỹ phòng chống thiên tai', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động: Tuổi từ 18 đến 60 – Có danh sách kèm theo)' },
-      { name: 'Đền ơn đáp nghĩa', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động: Tuổi từ 18 đến 60 – Có danh sách kèm theo)' },
+      { name: 'Quỹ phòng chống thiên tai', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động: Nam từ 18 đến 61 tuổi, Nữ từ 18 đến 58 tuổi – Có danh sách kèm theo)' },
+      { name: 'Đền ơn đáp nghĩa', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động: Nam từ 18 đến 61 tuổi, Nữ từ 18 đến 58 tuổi – Có danh sách kèm theo)' },
       { name: 'Chăm sóc người cao tuổi', text: '20.000đ / hộ / năm' }
     ];
 
