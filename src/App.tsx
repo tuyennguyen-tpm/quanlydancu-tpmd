@@ -2010,24 +2010,20 @@ const App = () => {
     await db.saveFundList(mappedFunds);
     window.dispatchEvent(new CustomEvent('fund-targets-changed'));
 
-    // Kiểm tra tính hợp lệ của các loại quỹ nộp Phường (Chỉ Phường mới được thay đổi)
-    const isWardOrSuperAdmin = localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin';
-    let mappedWardFunds: { name: string; target: number }[] = [];
-    if (isWardOrSuperAdmin) {
-      const hasEmptyWardFundName = wardFundsConfig.some(f => !f.name.trim());
-      if (hasEmptyWardFundName) {
-        window.dispatchEvent(new CustomEvent('show-toast', { 
-          detail: { message: `Tên các loại quỹ nộp Phường không được bỏ trống!`, type: 'warning' } 
-        }));
-        return;
-      }
-      mappedWardFunds = wardFundsConfig.map(f => ({
-        name: f.name.trim(),
-        target: parseInt(f.target.replace(/\./g, '')) || 0
+    // Kiểm tra tính hợp lệ của các loại quỹ nộp Phường
+    const hasEmptyWardFundName = wardFundsConfig.some(f => !f.name.trim());
+    if (hasEmptyWardFundName) {
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { message: `Tên các loại quỹ nộp Phường không được bỏ trống!`, type: 'warning' } 
       }));
-      await (db as any).saveWardFundList(mappedWardFunds);
-      window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
+      return;
     }
+    const mappedWardFunds = wardFundsConfig.map(f => ({
+      name: f.name.trim(),
+      target: parseInt(f.target.replace(/\./g, '')) || 0
+    }));
+    await (db as any).saveWardFundList(mappedWardFunds);
+    window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
 
     // Save groups configuration
     const cleanedGroups = groupsConfig.map(g => g.trim()).filter(Boolean);
@@ -3342,16 +3338,14 @@ const App = () => {
                   <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                     🎯 Danh mục Quỹ nộp Phường giao & Chỉ tiêu (VNĐ/Người)
                   </div>
-                  {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
-                    <button
-                      type="button"
-                      onClick={handleAddWardFundConfig}
-                      className="btn btn-primary"
-                      style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', height: 'fit-content', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
-                    >
-                      <Plus size={14} /> Thêm Quỹ nộp Phường
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleAddWardFundConfig}
+                    className="btn btn-primary"
+                    style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', height: 'fit-content', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                  >
+                    <Plus size={14} /> Thêm Quỹ nộp Phường
+                  </button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {wardFundsConfig.map((fund, idx) => (
@@ -3360,48 +3354,44 @@ const App = () => {
                         type="text"
                         placeholder="Tên quỹ nộp Phường (Ví dụ: Quỹ phòng chống thiên tai)"
                         value={fund.name}
-                        disabled={!(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin')}
                         onChange={(e) => handleWardFundConfigChange(idx, 'name', e.target.value)}
-                        style={{ flex: 3, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem', backgroundColor: !(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') ? '#f1f5f9' : undefined }}
+                        style={{ flex: 3, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
                         required
                       />
                       <input
                         type="text"
                         placeholder="Chỉ tiêu (VND/Người)"
                         value={fund.target}
-                        disabled={!(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin')}
                         onChange={(e) => handleWardFundConfigChange(idx, 'target', e.target.value)}
-                        style={{ flex: 1.5, minWidth: '110px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'right', fontSize: '0.9rem', backgroundColor: !(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') ? '#f1f5f9' : undefined }}
+                        style={{ flex: 1.5, minWidth: '110px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'right', fontSize: '0.9rem' }}
                         required
                       />
-                      {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveWardFundConfig(idx)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            padding: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: '6px',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          title="Xóa loại quỹ này"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveWardFundConfig(idx)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        title="Xóa loại quỹ này"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                   {wardFundsConfig.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                      Chưa cấu hình loại quỹ nộp Phường nào.
+                      Chưa cấu hình loại quỹ nộp Phường nào. Hãy bấm "Thêm Quỹ nộp Phường" để tạo mới.
                     </div>
                   )}
                 </div>
