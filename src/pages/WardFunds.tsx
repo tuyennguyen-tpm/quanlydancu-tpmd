@@ -1051,11 +1051,13 @@ const WardFunds = () => {
         ];
         
         activeFunds.forEach(fund => {
-          const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          const expectedVal = contrib.expected || fund.target;
+          const actualVal = contrib.actual > 0 ? contrib.actual : '';
           rowData.push(
-            contrib.expected,
-            contrib.actual,
-            contrib.date ? new Date(contrib.date).toLocaleDateString('vi-VN') : ''
+            expectedVal,
+            actualVal,
+            contrib.actual > 0 && contrib.date ? new Date(contrib.date).toLocaleDateString('vi-VN') : ''
           );
         });
         rowData.push(f.note || '');
@@ -1071,7 +1073,8 @@ const WardFunds = () => {
 
         let cNum = 6;
         activeFunds.forEach(fund => {
-          const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          const expectedVal = contrib.expected || fund.target;
           
           dataRow.getCell(cNum).alignment = { horizontal: 'right', vertical: 'middle' };
           dataRow.getCell(cNum).numFmt = '#,##0';
@@ -1081,11 +1084,11 @@ const WardFunds = () => {
           
           dataRow.getCell(cNum + 2).alignment = { horizontal: 'center', vertical: 'middle' };
 
-          if (contrib.actual >= contrib.expected && contrib.expected > 0) {
+          if (contrib.actual >= expectedVal && expectedVal > 0) {
             dataRow.getCell(cNum + 1).font = { color: { argb: 'FF16A34A' }, bold: true };
           } else if (contrib.actual > 0) {
             dataRow.getCell(cNum + 1).font = { color: { argb: 'FFD97706' }, bold: true };
-          } else if (contrib.expected > 0) {
+          } else if (expectedVal > 0) {
             dataRow.getCell(cNum + 1).font = { color: { argb: 'FFDC2626' } };
           }
           
@@ -1100,7 +1103,10 @@ const WardFunds = () => {
       const totalRowCells: any[] = ['Tổng cộng', '', '', '', ''];
       
       activeFunds.forEach(fund => {
-        const totalExp = filteredFunds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0);
+        const totalExp = filteredFunds.reduce((sum, f) => {
+          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          return sum + (contrib.expected || fund.target);
+        }, 0);
         const totalAcu = filteredFunds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
         totalRowCells.push(totalExp, totalAcu, '');
       });
