@@ -1666,7 +1666,18 @@ const Finance = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const receiptsHtml = filteredHouseholdsForFunds.map(hh => {
+    // Sắp xếp hộ dân theo Tổ/Cụm rồi đến tên chủ hộ trước khi in
+    const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
+      const gA = (a.self_management_group || '').toLowerCase();
+      const gB = (b.self_management_group || '').toLowerCase();
+      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      
+      const nameA = getHouseholdHeadName(a).toLowerCase();
+      const nameB = getHouseholdHeadName(b).toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
+    const receiptsHtml = sortedHouseholds.map(hh => {
       const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
       return generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
@@ -1828,7 +1839,18 @@ const Finance = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const receiptsHtml = filteredHouseholdsForFunds.map(hh => {
+    // Sắp xếp hộ dân theo Tổ/Cụm rồi đến tên chủ hộ trước khi in
+    const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
+      const gA = (a.self_management_group || '').toLowerCase();
+      const gB = (b.self_management_group || '').toLowerCase();
+      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      
+      const nameA = getHouseholdHeadName(a).toLowerCase();
+      const nameB = getHouseholdHeadName(b).toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
+    const receiptsHtml = sortedHouseholds.map(hh => {
       const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
       return generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
@@ -1987,13 +2009,24 @@ const Finance = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
+    // Sắp xếp hộ dân theo Tổ/Cụm rồi đến tên chủ hộ trước khi in
+    const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
+      const gA = (a.self_management_group || '').toLowerCase();
+      const gB = (b.self_management_group || '').toLowerCase();
+      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      
+      const nameA = getHouseholdHeadName(a).toLowerCase();
+      const nameB = getHouseholdHeadName(b).toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
     const pagesHtmlList: string[] = [];
-    for (let i = 0; i < filteredHouseholdsForFunds.length; i += 2) {
-      const hh1 = filteredHouseholdsForFunds[i];
+    for (let i = 0; i < sortedHouseholds.length; i += 2) {
+      const hh1 = sortedHouseholds[i];
       const tdpName1 = tdpMap[hh1.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
       const receipt1 = generateStateReceiptHtml(hh1, dateText, tdpName1, wardNameVal, leaderName, leaderSigUrl);
 
-      const hh2 = filteredHouseholdsForFunds[i + 1];
+      const hh2 = sortedHouseholds[i + 1];
       let receipt2 = '';
       if (hh2) {
         const tdpName2 = tdpMap[hh2.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
