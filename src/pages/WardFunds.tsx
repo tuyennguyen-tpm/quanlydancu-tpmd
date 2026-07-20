@@ -589,10 +589,18 @@ const WardFunds = () => {
                     shouldAdd = true;
                   }
                 } else {
-                  // Các quỹ khác: Thu theo đầu người hoặc đầu hộ bình thường (chỉ áp dụng cho người lớn >= 18 tuổi)
-                  if (age >= 18) {
-                    expected = fund.target;
-                    shouldAdd = true;
+                  // Các quỹ khác: Tự động phân biệt thu theo Hộ (chỉ Chủ hộ nộp) hoặc thu theo Đầu người
+                  const isHouseholdScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
+                  if (isHouseholdScope) {
+                    if (r.is_head && age >= 18) {
+                      expected = fund.target;
+                      shouldAdd = true;
+                    }
+                  } else {
+                    if (age >= 18) {
+                      expected = fund.target;
+                      shouldAdd = true;
+                    }
                   }
                 }
               }
@@ -2645,6 +2653,7 @@ const WardFunds = () => {
                   
                   {activeFunds.map(fund => {
                     const isPCTT = fund.name.includes('thiên tai');
+                    const isHousehold = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
                     return (
                       <th key={fund.name} style={{ 
                         width: '180px', 
@@ -2653,10 +2662,13 @@ const WardFunds = () => {
                         position: 'sticky', 
                         top: 0, 
                         zIndex: 10,
-                        backgroundColor: isPCTT ? '#ecfdf5' : '#fef3c7', 
-                        color: isPCTT ? '#065f46' : '#78350f' 
+                        backgroundColor: isHousehold ? '#eff6ff' : (isPCTT ? '#ecfdf5' : '#fef3c7'), 
+                        color: isHousehold ? '#1e40af' : (isPCTT ? '#065f46' : '#78350f') 
                       }}>
-                        {fund.name}
+                        <div>{fund.name}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.85, fontWeight: '500', marginTop: '2px' }}>
+                          {isHousehold ? '🏡 (Thu theo Hộ)' : '👤 (Thu theo Người)'}
+                        </div>
                       </th>
                     );
                   })}

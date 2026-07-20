@@ -1741,21 +1741,26 @@ export const db = {
       }
     }
   },
-  getWardFundList: (): { name: string; target: number }[] => {
+  getWardFundList: (): { name: string; target: number; scope?: 'person' | 'household' }[] => {
     const stored = localStorage.getItem('ward_fund_list');
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        return parsed.map((item: any) => ({
+          ...item,
+          scope: item.scope || (item.name.toLowerCase().includes('hộ') || item.name.toLowerCase().includes('người cao tuổi') || item.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person')
+        }));
       } catch (e) {
         console.error('Failed to parse ward_fund_list, fallback to default', e);
       }
     }
     return [
-      { name: 'Quỹ phòng chống thiên tai', target: 15000 },
-      { name: 'Quỹ Đền ơn đáp nghĩa', target: 70000 }
+      { name: 'Quỹ phòng chống thiên tai', target: 15000, scope: 'person' },
+      { name: 'Quỹ Đền ơn đáp nghĩa', target: 70000, scope: 'person' },
+      { name: 'Quỹ Chăm sóc người cao tuổi', target: 50000, scope: 'household' }
     ];
   },
-  saveWardFundList: async (funds: { name: string; target: number }[]): Promise<void> => {
+  saveWardFundList: async (funds: { name: string; target: number; scope?: 'person' | 'household' }[]): Promise<void> => {
     const valueStr = JSON.stringify(funds);
     localStorage.setItem('ward_fund_list', valueStr);
     if (supabase) {
