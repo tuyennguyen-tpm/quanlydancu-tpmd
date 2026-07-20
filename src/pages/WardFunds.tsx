@@ -1168,7 +1168,17 @@ const WardFunds = () => {
     const leaderName = localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến';
     const leaderSigUrl = localStorage.getItem('leader_sig_url') || '';
 
-    const rowsHtml = filteredFunds.map((item, index) => {
+    const sortedFunds = [...filteredFunds].sort((a, b) => {
+      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
+      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
+      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      
+      const nameA = (a.full_name || '').toLowerCase();
+      const nameB = (b.full_name || '').toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
+    const rowsHtml = sortedFunds.map((item, index) => {
       const fundContributions = activeFunds.map(fund => {
         const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
         return `<td style="text-align: right;">${formatCurrency(contrib.actual)} / ${formatCurrency(contrib.expected)}</td>`;
@@ -1840,12 +1850,23 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
+    // Sắp xếp danh sách theo Cụm / Tổ trước khi in
+    const sortedFunds = [...filteredFunds].sort((a, b) => {
+      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
+      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
+      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      
+      const nameA = (a.full_name || '').toLowerCase();
+      const nameB = (b.full_name || '').toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
     const pagesHtmlList: string[] = [];
-    for (let i = 0; i < filteredFunds.length; i += 2) {
-      const item1 = filteredFunds[i];
+    for (let i = 0; i < sortedFunds.length; i += 2) {
+      const item1 = sortedFunds[i];
       const receipt1 = generateWardStateReceiptHtml(item1, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
 
-      const item2 = filteredFunds[i + 1];
+      const item2 = sortedFunds[i + 1];
       let receipt2 = '';
       if (item2) {
         receipt2 = generateWardStateReceiptHtml(item2, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
@@ -2037,7 +2058,18 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const receiptsHtml = filteredFunds.map(item => {
+    // Sắp xếp danh sách theo Cụm / Tổ trước khi in
+    const sortedFunds = [...filteredFunds].sort((a, b) => {
+      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
+      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
+      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      
+      const nameA = (a.full_name || '').toLowerCase();
+      const nameB = (b.full_name || '').toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
+    const receiptsHtml = sortedFunds.map(item => {
       return generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
 
@@ -2196,7 +2228,18 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const receiptsHtml = filteredFunds.map(item => {
+    // Sắp xếp danh sách theo Cụm / Tổ trước khi in
+    const sortedFunds = [...filteredFunds].sort((a, b) => {
+      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
+      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
+      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      
+      const nameA = (a.full_name || '').toLowerCase();
+      const nameB = (b.full_name || '').toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
+    const receiptsHtml = sortedFunds.map(item => {
       return generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
 
