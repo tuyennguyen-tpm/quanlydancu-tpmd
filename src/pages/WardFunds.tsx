@@ -958,11 +958,43 @@ const WardFunds = () => {
         };
       });
 
-      // Data Rows
-      filteredFunds.forEach((f, idx) => {
-        const groupName = getGroupOfFundRecord(f);
+      // Sắp xếp danh sách theo Cụm / Tổ trước khi ghi vào Excel
+      const sortedFunds = [...filteredFunds].sort((a, b) => {
+        const groupA = (getGroupOfFundRecord(a) || '').toLowerCase();
+        const groupB = (getGroupOfFundRecord(b) || '').toLowerCase();
+        if (groupA < groupB) return -1;
+        if (groupA > groupB) return 1;
+        // Nếu cùng tổ thì xếp theo tên
+        const nameA = (a.full_name || '').toLowerCase();
+        const nameB = (b.full_name || '').toLowerCase();
+        return nameA.localeCompare(nameB, 'vi');
+      });
+
+      let currentGroup = '';
+      let sttCounter = 0;
+
+      sortedFunds.forEach((f) => {
+        const groupName = getGroupOfFundRecord(f) || '';
+
+        // Tạo dòng tiêu đề cụm/tổ khi chuyển nhóm
+        if (groupName !== currentGroup) {
+          currentGroup = groupName;
+          const groupLabel = groupName ? `TỔ/CỤM: ${groupName.toUpperCase()}` : 'CHƯA PHÂN NHÓM';
+          const groupHeaderRow = worksheet.addRow([groupLabel]);
+          groupHeaderRow.height = 22;
+          worksheet.mergeCells(`A${groupHeaderRow.number}:${String.fromCharCode(64 + totalCols)}${groupHeaderRow.number}`);
+          groupHeaderRow.getCell(1).font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FFFFFFFF' } };
+          groupHeaderRow.getCell(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1E40AF' } // Màu xanh Navy
+          };
+          groupHeaderRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+        }
+
+        sttCounter++;
         const rowData: any[] = [
-          idx + 1,
+          sttCounter,
           f.full_name,
           f.dob || '',
           groupName || '-',

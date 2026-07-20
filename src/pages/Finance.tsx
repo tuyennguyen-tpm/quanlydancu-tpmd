@@ -535,14 +535,44 @@ const Finance = () => {
         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
       });
       
-      // 4. Data Rows
-      filteredHouseholdsForFunds.forEach((hh, index) => {
+      // 4. Sắp xếp hộ dân theo Tổ/Cụm rồi mới xuất
+      const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
+        const gA = (a.self_management_group || '').toLowerCase();
+        const gB = (b.self_management_group || '').toLowerCase();
+        if (gA < gB) return -1;
+        if (gA > gB) return 1;
+        return 0;
+      });
+
+      let currentGroup = '';
+      let sttCounter = 0;
+
+      sortedHouseholds.forEach((hh) => {
+        const group = hh.self_management_group || '';
+
+        // Khi sang tổ/cụm mới → thêm dòng tiêu đề nhóm
+        if (group !== currentGroup) {
+          currentGroup = group;
+          const groupLabel = group ? `TỔ/CỤM: ${group.toUpperCase()}` : 'CHƯA PHÂN NHÓM';
+          const groupHeaderRow = worksheet.addRow([groupLabel]);
+          groupHeaderRow.height = 22;
+          worksheet.mergeCells(`A${groupHeaderRow.number}:${String.fromCharCode(64 + headers.length)}${groupHeaderRow.number}`);
+          groupHeaderRow.getCell(1).font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FFFFFFFF' } };
+          groupHeaderRow.getCell(1).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1E40AF' }
+          };
+          groupHeaderRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+        }
+
+        sttCounter++;
         const headName = getHouseholdHeadName(hh);
         const hhFundsList = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
         const totalPaid = hhFundsList.reduce((sum, f) => sum + f.amount, 0);
         
-        const rowData = [
-          index + 1,
+        const rowData: (string | number)[] = [
+          sttCounter,
           headName,
           hh.address,
           totalPaid
@@ -578,6 +608,7 @@ const Finance = () => {
           }
         }
       });
+
       
       // 5. Dòng tổng cộng ở cuối
       const totalRowData = ['Tổng cộng', '', '', 0];
