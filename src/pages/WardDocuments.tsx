@@ -328,7 +328,6 @@ const WardDocuments = () => {
   const checkUnreadAndSpeak = () => {
     // Chỉ đọc nếu không phải màn hình của phường
     if (localStorage.getItem('is_phuong_mode') === 'true') return;
-    if (window.speechSynthesis.speaking) return;
 
     const stored = localStorage.getItem('ward_documents');
     if (!stored) return;

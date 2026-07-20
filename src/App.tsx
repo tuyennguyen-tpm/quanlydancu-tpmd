@@ -262,7 +262,6 @@ const App = () => {
 
     const checkGlobalUnreadAndSpeak = async () => {
       if (!supabase) return;
-      if (window.speechSynthesis.speaking) return;
 
       const isPhuong = localStorage.getItem('is_phuong_mode') === 'true';
       const myWardId = localStorage.getItem('user_ward_id') || localStorage.getItem('guest_ward_id');
