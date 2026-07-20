@@ -3300,7 +3300,11 @@ const WardFunds = () => {
                       return (
                         <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                          <td style={{ padding: '12px 10px' }}>
+                          <td 
+                            style={{ padding: '12px 10px', cursor: 'pointer' }}
+                            onClick={() => handleOpenPay(item)}
+                            title="Bấm để cập nhật nộp tiền cho cá nhân này"
+                          >
                             <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{item.full_name}</div>
                             {(() => {
                               const info = findResidentGroupAndHead(item.full_name, item.dob || '');
@@ -3323,7 +3327,12 @@ const WardFunds = () => {
                             const hasPartial = contrib.actual > 0 && contrib.actual < contrib.expected;
                             
                             return (
-                              <td key={fund.name} style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <td 
+                                key={fund.name} 
+                                style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', cursor: 'pointer' }}
+                                onClick={() => handleOpenPay(item)}
+                                title={`Bấm để cập nhật nộp quỹ: ${fund.name}`}
+                              >
                                 <div style={{ 
                                   display: 'inline-block',
                                   padding: '6px 12px',
@@ -3331,8 +3340,12 @@ const WardFunds = () => {
                                   backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (contrib.expected === 0 ? '#f1f5f9' : '#fee2e2')),
                                   color: paid ? '#166534' : (hasPartial ? '#92400e' : (contrib.expected === 0 ? '#64748b' : '#991b1b')),
                                   fontWeight: '600',
-                                  fontSize: '0.85rem'
-                                }}>
+                                  fontSize: '0.85rem',
+                                  transition: 'transform 0.1s',
+                                }}
+                                onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                                >
                                   {contrib.expected === 0 ? (
                                     <span style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>Miễn / 0đ</span>
                                   ) : (
