@@ -2727,6 +2727,7 @@ const WardFunds = () => {
                 <Printer size={16} /> In loạt phiếu A5
               </button>
             </>
+          )}
           {/* Xóa sạch năm */}
           {!isGuest && funds.length > 0 && (
             <button
