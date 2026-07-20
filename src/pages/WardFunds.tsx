@@ -2270,6 +2270,33 @@ const WardFunds = () => {
       ? tdpFundsList.map((f: any) => ({ name: f.name, target: typeof f.target === 'number' ? f.target.toLocaleString('vi-VN') : (f.target || '....') }))
       : defaultTdpItems;
 
+    const totalTdpNum = tdpItemsToRender.reduce((sum: number, item: any) => {
+      const valStr = String(item.target || '').replace(/\D/g, '');
+      const val = parseInt(valStr, 10);
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
+
+    let tdpRowsHtml = tdpItemsToRender.map((item: any, idx: number) => `
+      <tr>
+        <td style="text-align:center;">${idx + 1}</td>
+        <td>${item.name}</td>
+        <td style="text-align:right; font-weight:bold;">${item.target} đồng/hộ/năm</td>
+      </tr>
+    `).join('');
+
+    if (totalTdpNum > 0) {
+      tdpRowsHtml += `
+        <tr style="font-weight: bold; background-color: #f9fafb;">
+          <td colspan="2" style="text-align: center;">TỔNG CỘNG MỨC DỰ KIẾN (QUỸ TĐP)</td>
+          <td style="text-align: right; color: #15803d;">${totalTdpNum.toLocaleString('vi-VN')} đồng/hộ/năm</td>
+        </tr>
+      `;
+    }
+
+    const totalNoticeText = totalTdpNum > 0
+      ? `<b>${totalTdpNum.toLocaleString('vi-VN')}</b>`
+      : '....................................';
+
     // Quỹ Phường từ CSDL hoặc mẫu mặc định
     const wardFundsList = (db as any).getWardFundList() || [];
     const defaultWardItems = [
@@ -2277,14 +2304,6 @@ const WardFunds = () => {
       { name: 'Đền ơn đáp nghĩa', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
       { name: 'Chăm sóc người cao tuổi', text: '20.000đ / hộ / năm' }
     ];
-
-    const tdpRowsHtml = tdpItemsToRender.map((item: any, idx: number) => `
-      <tr>
-        <td style="text-align:center;">${idx + 1}</td>
-        <td>${item.name}</td>
-        <td style="text-align:right; font-weight:bold;">${item.target} đồng/hộ/năm</td>
-      </tr>
-    `).join('');
 
     let wardListHtml = defaultWardItems.map((item) => `
       <li style="margin-bottom: 3px;"><b>${item.name}:</b> ${item.text}</li>
@@ -2439,7 +2458,7 @@ const WardFunds = () => {
             ${wardListHtml}
           </ol>
 
-          <p style="margin-bottom: 4px;"><b>Tổng mức dự kiến:</b> .................................... đồng/hộ/năm.</p>
+          <p style="margin-bottom: 4px;"><b>Tổng mức dự kiến:</b> ${totalNoticeText} đồng/hộ/năm.</p>
           <p style="margin-bottom: 4px; text-indent: 20px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện trên tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
           <p style="margin-bottom: 6px; text-indent: 20px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${selectedYear}.</p>
           <p style="margin-bottom: 6px;">Trân trọng thông báo!</p>
