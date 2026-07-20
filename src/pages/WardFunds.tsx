@@ -58,6 +58,7 @@ const WardFunds = () => {
   
   // Cấu hình quỹ của Phường động
   const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);
+  const [subTabMode, setSubTabMode] = useState<'ward_list' | 'household_list' | 'all_summary'>('ward_list');
   
   // Modal State
   const [editingRecord, setEditingRecord] = useState<WardFund | null>(null);
@@ -2355,6 +2356,80 @@ const WardFunds = () => {
         })}
       </div>
 
+      {/* ─── 3 Sub-Tabs Chuyển đổi linh hoạt theo nhu cầu ─── */}
+      <div style={{
+        display: 'flex',
+        gap: '10px',
+        borderBottom: '2px solid var(--border)',
+        paddingBottom: '10px',
+        marginBottom: '12px',
+        flexWrap: 'wrap'
+      }}>
+        <button
+          type="button"
+          onClick={() => setSubTabMode('ward_list')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '10px',
+            border: 'none',
+            backgroundColor: subTabMode === 'ward_list' ? '#2563eb' : 'var(--bg-main)',
+            color: subTabMode === 'ward_list' ? '#fff' : 'var(--text-main)',
+            fontWeight: '700',
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: subTabMode === 'ward_list' ? '0 2px 4px rgba(37,99,235,0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📜 1. Danh sách gốc Phường giao ({funds.length} cá nhân)
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTabMode('household_list')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '10px',
+            border: 'none',
+            backgroundColor: subTabMode === 'household_list' ? '#10b981' : 'var(--bg-main)',
+            color: subTabMode === 'household_list' ? '#fff' : 'var(--text-main)',
+            fontWeight: '700',
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: subTabMode === 'household_list' ? '0 2px 4px rgba(16,185,129,0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          🏡 2. Danh sách Quỹ thu theo Hộ ({households.length} hộ)
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTabMode('all_summary')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '10px',
+            border: 'none',
+            backgroundColor: subTabMode === 'all_summary' ? '#8b5cf6' : 'var(--bg-main)',
+            color: subTabMode === 'all_summary' ? '#fff' : 'var(--text-main)',
+            fontWeight: '700',
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: subTabMode === 'all_summary' ? '0 2px 4px rgba(139,92,246,0.25)' : 'none',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📋 3. Bảng tổng hợp thu nộp (In phiếu & Đi thu tiền)
+        </button>
+      </div>
+
       {/* Toolbar Controls */}
       <div style={{ 
         display: 'flex', 
@@ -2652,8 +2727,6 @@ const WardFunds = () => {
                 <Printer size={16} /> In loạt phiếu A5
               </button>
             </>
-          )}
-
           {/* Xóa sạch năm */}
           {!isGuest && funds.length > 0 && (
             <button
@@ -2722,183 +2795,219 @@ const WardFunds = () => {
             <span>Đơn vị tính: Đồng (đ)</span>
           </div>
 
+          {/* Tab Switcher */}
+          <div style={{ marginBottom: '12px', display: 'flex', gap: '8px' }}>
+            {['all', 'ward_list', 'household_list'].map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setSubTabMode(mode as any)}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  border: subTabMode === mode ? '1px solid #3b82f6' : '1px solid var(--border)',
+                  backgroundColor: subTabMode === mode ? '#eff6ff' : '#fff',
+                  color: subTabMode === mode ? '#2563eb' : 'var(--text-muted)',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                {mode === 'all' ? 'Tất cả' : mode === 'ward_list' ? 'Thu theo người' : 'Thu theo hộ'}
+              </button>
+            ))}
+          </div>
+
           {/* Table container with horizontal & vertical scroll scrollbar support */}
-          <div style={{ 
-            overflow: 'auto', 
-            maxHeight: 'calc(100vh - 330px)',
-            border: '1.5px solid var(--border)', 
-            borderRadius: '12px', 
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
-          }}>
-            <table className="data-table" style={{ width: '100%', minWidth: `${600 + activeFunds.length * 200}px`, borderCollapse: 'collapse', margin: 0 }}>
-              <thead>
-                <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
-                  <th style={{ width: '60px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>STT</th>
-                  <th style={{ width: '220px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Người phải nộp</th>
-                  <th style={{ width: '90px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Năm sinh</th>
-                  <th style={{ width: '240px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Địa chỉ</th>
-                  
-                  {activeFunds.map(fund => {
-                    const isPCTT = fund.name.includes('thiên tai');
-                    const isHousehold = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
-                    return (
-                      <th key={fund.name} style={{ 
-                        width: '180px', 
-                        padding: '12px 10px',
-                        textAlign: 'center', 
-                        position: 'sticky', 
-                        top: 0, 
-                        zIndex: 10,
-                        backgroundColor: isHousehold ? '#eff6ff' : (isPCTT ? '#ecfdf5' : '#fef3c7'), 
-                        color: isHousehold ? '#1e40af' : (isPCTT ? '#065f46' : '#78350f') 
-                      }}>
-                        <div>{fund.name}</div>
-                        <div style={{ fontSize: '0.7rem', opacity: 0.85, fontWeight: '500', marginTop: '2px' }}>
-                          {isHousehold ? '🏡 (Thu theo Hộ)' : '👤 (Thu theo Người)'}
-                        </div>
-                      </th>
-                    );
-                  })}
-                  
-                  <th style={{ width: '200px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Ghi chú</th>
-                  {!isGuest && <th style={{ width: '110px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Thao tác</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredFunds.map((item, idx) => {
-                  return (
-                    <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                      <td style={{ padding: '12px 10px' }}>
-                        <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{item.full_name}</div>
-                        {(() => {
-                          const info = findResidentGroupAndHead(item.full_name, item.dob || '');
-                          if (info.headName) {
-                            return (
-                              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                🏡 <span style={{ fontStyle: 'italic' }}>Chủ hộ:</span> <span style={{ fontWeight: '600' }}>{info.headName}</span>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>{item.dob || '—'}</td>
-                      <td style={{ padding: '12px 10px' }}>{item.address || '—'}</td>
+          {(() => {
+            const displayedActiveFunds = activeFunds.filter((f: any) => {
+              const isHouseholdScope = f.scope === 'household' || f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi');
+              if (subTabMode === 'ward_list') return !isHouseholdScope;
+              if (subTabMode === 'household_list') return isHouseholdScope;
+              return true;
+            });
+
+            return (
+              <div style={{ 
+                overflow: 'auto', 
+                maxHeight: 'calc(100vh - 330px)',
+                border: '1.5px solid var(--border)', 
+                borderRadius: '12px', 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
+              }}>
+                <table className="data-table" style={{ width: '100%', minWidth: `${600 + displayedActiveFunds.length * 200}px`, borderCollapse: 'collapse', margin: 0 }}>
+                  <thead>
+                    <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
+                      <th style={{ width: '60px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>STT</th>
+                      <th style={{ width: '220px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Người phải nộp</th>
+                      <th style={{ width: '90px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Năm sinh</th>
+                      <th style={{ width: '240px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Địa chỉ</th>
                       
-                      {activeFunds.map(fund => {
-                        const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-                        const paid = contrib.actual >= contrib.expected && contrib.expected > 0;
-                        const hasPartial = contrib.actual > 0 && contrib.actual < contrib.expected;
-                        
+                      {displayedActiveFunds.map(fund => {
+                        const isPCTT = fund.name.includes('thiên tai');
+                        const isHousehold = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
                         return (
-                          <td key={fund.name} style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle' }}>
-                            <div style={{ 
-                              display: 'inline-block',
-                              padding: '6px 12px',
-                              borderRadius: '8px',
-                              width: '90%',
-                              backgroundColor: paid ? '#ecfdf5' : hasPartial ? '#fffbeb' : '#fff1f2',
-                              border: `1px solid ${paid ? '#10b981' : hasPartial ? '#f59e0b' : '#f87171'}`,
-                            }}>
-                              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: paid ? '#047857' : hasPartial ? '#b45309' : '#be123c' }}>
-                                {formatCurrency(contrib.actual)} / {formatCurrency(contrib.expected)}
-                              </div>
-                              {contrib.date && (
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  📅 {new Date(contrib.date).toLocaleDateString('vi-VN')}
-                                </div>
-                              )}
+                          <th key={fund.name} style={{ 
+                            width: '180px', 
+                            padding: '12px 10px',
+                            textAlign: 'center', 
+                            position: 'sticky', 
+                            top: 0, 
+                            zIndex: 10,
+                            backgroundColor: isHousehold ? '#eff6ff' : (isPCTT ? '#ecfdf5' : '#fef3c7'), 
+                            color: isHousehold ? '#1e40af' : (isPCTT ? '#065f46' : '#78350f') 
+                          }}>
+                            <div>{fund.name}</div>
+                            <div style={{ fontSize: '0.7rem', opacity: 0.85, fontWeight: '500', marginTop: '2px' }}>
+                              {isHousehold ? '🏡 (Thu theo Hộ)' : '👤 (Thu theo Người)'}
                             </div>
-                          </td>
+                          </th>
                         );
                       })}
                       
-                      <td style={{ padding: '12px 10px' }}>{item.note || '—'}</td>
-                      {!isGuest && (
-                        <td style={{ padding: '12px 10px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
-                            <button
-                              onClick={() => handleQuickPay(item)}
-                              title="Ghi nhận nộp đủ nhanh"
-                              style={{
-                                background: '#10b981',
-                                border: 'none',
-                                color: '#fff',
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <Check size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleOpenPay(item)}
-                              title="Cập nhật chi tiết"
-                              style={{
-                                background: '#3b82f6',
-                                border: 'none',
-                                color: '#fff',
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handlePrintIndividualReceipt_Ward(item)}
-                              title="In phiếu thu"
-                              style={{
-                                background: '#8b5cf6',
-                                border: 'none',
-                                color: '#fff',
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <Printer size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRecord(item.id, item.full_name)}
-                              title="Xóa cá nhân này"
-                              style={{
-                                background: '#ef4444',
-                                border: 'none',
-                                color: '#fff',
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      )}
+                      <th style={{ width: '200px', padding: '12px 10px', textAlign: 'left', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Ghi chú</th>
+                      {!isGuest && <th style={{ width: '130px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Thao tác</th>}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {filteredFunds.map((item, idx) => {
+                      return (
+                        <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                          <td style={{ padding: '12px 10px' }}>
+                            <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{item.full_name}</div>
+                            {(() => {
+                              const info = findResidentGroupAndHead(item.full_name, item.dob || '');
+                              if (info.headName) {
+                                return (
+                                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    🏡 <span style={{ fontStyle: 'italic' }}>Chủ hộ:</span> <span style={{ fontWeight: '600' }}>{info.headName}</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>{item.dob || '—'}</td>
+                          <td style={{ padding: '12px 10px' }}>{item.address || '—'}</td>
+                          
+                          {displayedActiveFunds.map(fund => {
+                            const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+                            const paid = contrib.actual >= contrib.expected && contrib.expected > 0;
+                            const hasPartial = contrib.actual > 0 && contrib.actual < contrib.expected;
+                            
+                            return (
+                              <td key={fund.name} style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <div style={{ 
+                                  display: 'inline-block',
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (contrib.expected === 0 ? '#f1f5f9' : '#fee2e2')),
+                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (contrib.expected === 0 ? '#64748b' : '#991b1b')),
+                                  fontWeight: '600',
+                                  fontSize: '0.85rem'
+                                }}>
+                                  {contrib.expected === 0 ? (
+                                    <span style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>Miễn / 0đ</span>
+                                  ) : (
+                                    <>
+                                      {formatCurrency(contrib.actual)}
+                                      <div style={{ fontSize: '0.72rem', opacity: 0.8, marginTop: '2px' }}>
+                                        / {formatCurrency(contrib.expected)}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                          
+                          <td style={{ padding: '12px 10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{item.note || '—'}</td>
+                          {!isGuest && (
+                            <td style={{ padding: '12px 10px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                                <button
+                                  onClick={() => handleQuickPay(item)}
+                                  title="Ghi nhận nộp đủ nhanh"
+                                  style={{
+                                    background: '#10b981',
+                                    border: 'none',
+                                    color: '#fff',
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Check size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenPay(item)}
+                                  title="Cập nhật chi tiết"
+                                  style={{
+                                    background: '#3b82f6',
+                                    border: 'none',
+                                    color: '#fff',
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handlePrintIndividualReceipt_Ward(item)}
+                                  title="In phiếu thu"
+                                  style={{
+                                    background: '#8b5cf6',
+                                    border: 'none',
+                                    color: '#fff',
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Printer size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRecord(item.id, item.full_name)}
+                                  title="Xóa cá nhân này"
+                                  style={{
+                                    background: '#ef4444',
+                                    border: 'none',
+                                    color: '#fff',
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       )}
 
