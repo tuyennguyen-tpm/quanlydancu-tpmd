@@ -1802,14 +1802,14 @@ const App = () => {
   };
 
   const handleAddWardFundConfig = () => {
-    setWardFundsConfig([...wardFundsConfig, { name: '', target: '0', scope: 'person' }]);
+    setWardFundsConfig([...wardFundsConfig, { name: '', target: '0', scope: 'person', age_range: '' }]);
   };
 
   const handleRemoveWardFundConfig = (index: number) => {
     setWardFundsConfig(wardFundsConfig.filter((_, i) => i !== index));
   };
 
-  const handleWardFundConfigChange = (index: number, field: 'name' | 'target' | 'scope', value: string) => {
+  const handleWardFundConfigChange = (index: number, field: 'name' | 'target' | 'scope' | 'age_range', value: string) => {
     const updated = [...wardFundsConfig];
     if (field === 'target') {
       updated[index][field] = formatInputNumber(value);
@@ -1851,7 +1851,8 @@ const App = () => {
     setWardFundsConfig(currentWardFunds.map((f: any) => ({
       name: f.name,
       target: formatInputNumber(f.target.toString()),
-      scope: f.scope || (f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person')
+      scope: f.scope || (f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
+      age_range: f.age_range || ''
     })));
     setSbUrl(localStorage.getItem('supabase_url') || '');
     setSbKey(localStorage.getItem('supabase_anon_key') || '');
@@ -1991,7 +1992,8 @@ const App = () => {
     const mappedWardFunds = wardFundsConfig.map(f => ({
       name: f.name.trim(),
       target: parseInt(f.target.replace(/\./g, '')) || 0,
-      scope: f.scope || (f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person')
+      scope: f.scope || (f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
+      age_range: f.age_range ? f.age_range.trim() : ''
     }));
     await (db as any).saveWardFundList(mappedWardFunds);
     window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
@@ -3318,13 +3320,13 @@ const App = () => {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {wardFundsConfig.map((fund, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                       <input
                         type="text"
                         placeholder="Tên quỹ nộp Phường (Ví dụ: Quỹ phòng chống thiên tai)"
                         value={fund.name}
                         onChange={(e) => handleWardFundConfigChange(idx, 'name', e.target.value)}
-                        style={{ flex: 2.5, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
+                        style={{ flex: 2, minWidth: '180px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.9rem' }}
                         required
                       />
                       <input
@@ -3332,17 +3334,25 @@ const App = () => {
                         placeholder="Chỉ tiêu (VND)"
                         value={fund.target}
                         onChange={(e) => handleWardFundConfigChange(idx, 'target', e.target.value)}
-                        style={{ flex: 1.2, minWidth: '100px', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'right', fontSize: '0.9rem' }}
+                        style={{ flex: 1, minWidth: '90px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'right', fontSize: '0.9rem' }}
                         required
                       />
                       <select
                         value={fund.scope || (fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person')}
                         onChange={(e) => handleWardFundConfigChange(idx, 'scope', e.target.value)}
-                        style={{ flex: 1.3, padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.85rem', backgroundColor: '#fff', cursor: 'pointer' }}
+                        style={{ flex: 1, minWidth: '120px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.85rem', backgroundColor: '#fff', cursor: 'pointer' }}
                       >
                         <option value="person">👤 Thu theo Người</option>
                         <option value="household">🏡 Thu theo Hộ (Chủ hộ)</option>
                       </select>
+                      <input
+                        type="text"
+                        placeholder="Độ tuổi (VD: Nam 18-61, Nữ 18-58)"
+                        value={fund.age_range || ''}
+                        onChange={(e) => handleWardFundConfigChange(idx, 'age_range', e.target.value)}
+                        style={{ flex: 1.5, minWidth: '140px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.85rem' }}
+                        title="Độ tuổi quy định thu quỹ"
+                      />
                       <button
                         type="button"
                         onClick={() => handleRemoveWardFundConfig(idx)}

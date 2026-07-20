@@ -1741,26 +1741,27 @@ export const db = {
       }
     }
   },
-  getWardFundList: (): { name: string; target: number; scope?: 'person' | 'household' }[] => {
+  getWardFundList: (): { name: string; target: number; scope?: 'person' | 'household'; age_range?: string }[] => {
     const stored = localStorage.getItem('ward_fund_list');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         return parsed.map((item: any) => ({
           ...item,
-          scope: item.scope || (item.name.toLowerCase().includes('hộ') || item.name.toLowerCase().includes('người cao tuổi') || item.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person')
+          scope: item.scope || (item.name.toLowerCase().includes('hộ') || item.name.toLowerCase().includes('người cao tuổi') || item.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
+          age_range: item.age_range || ''
         }));
       } catch (e) {
         console.error('Failed to parse ward_fund_list, fallback to default', e);
       }
     }
     return [
-      { name: 'Quỹ phòng chống thiên tai', target: 15000, scope: 'person' },
-      { name: 'Quỹ Đền ơn đáp nghĩa', target: 70000, scope: 'person' },
-      { name: 'Quỹ Chăm sóc người cao tuổi', target: 50000, scope: 'household' }
+      { name: 'Quỹ phòng chống thiên tai', target: 15000, scope: 'person', age_range: 'Nam 18-61, Nữ 18-58 tuổi' },
+      { name: 'Quỹ Đền ơn đáp nghĩa', target: 70000, scope: 'person', age_range: 'Nam 18-61, Nữ 18-58 tuổi' },
+      { name: 'Quỹ Chăm sóc người cao tuổi', target: 50000, scope: 'household', age_range: 'Hộ gia đình' }
     ];
   },
-  saveWardFundList: async (funds: { name: string; target: number; scope?: 'person' | 'household' }[]): Promise<void> => {
+  saveWardFundList: async (funds: { name: string; target: number; scope?: 'person' | 'household'; age_range?: string }[]): Promise<void> => {
     const valueStr = JSON.stringify(funds);
     localStorage.setItem('ward_fund_list', valueStr);
     if (supabase) {

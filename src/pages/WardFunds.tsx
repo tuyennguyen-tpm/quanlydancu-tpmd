@@ -2286,7 +2286,7 @@ const WardFunds = () => {
         const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi');
         const targetStr = typeof wf.target === 'number' ? wf.target.toLocaleString('vi-VN') + 'đ' : (wf.target ? wf.target + 'đ' : '....đ');
         const unitStr = isHousehold ? 'hộ' : 'khẩu';
-        const noteStr = isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)';
+        const noteStr = wf.age_range ? ` (${wf.age_range})` : (isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)');
         return `<li style="margin-bottom: 3px;"><b>${wf.name}:</b> ${targetStr} / ${unitStr} / năm${noteStr}</li>`;
       }).join('');
     }
