@@ -997,16 +997,19 @@ const WardFunds = () => {
         
         // Loại bỏ phần Tổ/Cụm trùng lặp khỏi địa chỉ
         if (groupName) {
-          // Xóa "Tổ X" hoặc "Cụm X"
+          // Xóa "Tổ X" hoặc "Cụm X" cụ thể của nhóm hiện tại
           const cleanGroup = groupName.replace(/^(tổ|cụm)\s*/gi, '').trim();
           const groupRegex = new RegExp(`\\b(tổ|cụm)?\\s*${cleanGroup}\\b`, 'gi');
           displayAddress = displayAddress.replace(groupRegex, '');
         }
         
+        // Loại bỏ bất kỳ cụm từ "Tổ/Cụm [số]" nào khác để tránh lộn xộn, mâu thuẫn thông tin trên cùng một dòng
+        displayAddress = displayAddress.replace(/\b(tổ|cụm|tổ tự quản|cụm tự quản)\s*\d+\b/gi, '');
+        
         // Làm sạch các ký tự phân cách thừa (phẩy, gạch ngang, khoảng trắng) ở đầu/cuối và ở giữa
         displayAddress = displayAddress
-          .replace(/^[-\s,·•]+/g, '')
-          .replace(/[-\s,·•]+$/g, '')
+          .replace(/^[-\s,·•/]+/g, '')
+          .replace(/[-\s,·•/]+$/g, '')
           .replace(/\s*,\s*,+/g, ',')
           .trim();
 

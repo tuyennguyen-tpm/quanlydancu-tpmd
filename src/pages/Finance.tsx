@@ -581,10 +581,13 @@ const Finance = () => {
           displayAddress = displayAddress.replace(groupRegex, '');
         }
 
+        // Loại bỏ bất kỳ cụm từ "Tổ/Cụm [số]" nào khác để tránh lộn xộn, mâu thuẫn thông tin trên cùng một dòng
+        displayAddress = displayAddress.replace(/\b(tổ|cụm|tổ tự quản|cụm tự quản)\s*\d+\b/gi, '');
+
         // Làm sạch các ký tự phân cách thừa
         displayAddress = displayAddress
-          .replace(/^[-\s,·•]+/g, '')
-          .replace(/[-\s,·•]+$/g, '')
+          .replace(/^[-\s,·•/]+/g, '')
+          .replace(/[-\s,·•/]+$/g, '')
           .replace(/\s*,\s*,+/g, ',')
           .trim();
 
