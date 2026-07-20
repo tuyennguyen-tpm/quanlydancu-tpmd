@@ -2203,6 +2203,228 @@ const WardFunds = () => {
     printWindow.document.close();
   };
 
+  // In Thông báo dự kiến thu các khoản đóng góp tự nguyện (Mẫu chuẩn gộp TDP & Phường)
+  const handlePrintCombinedNotice = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = localStorage.getItem('tdp_name') || 'Quảng Giao';
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    
+    let leaderName = localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+    } catch { /* ignore */ }
+
+    // Quỹ TDP từ CSDL hoặc mẫu mặc định
+    const tdpFundsList = (db as any).getFundList() || [];
+    const defaultTdpItems = [
+      { name: 'Điện của 7 nhà văn hóa', target: '....' },
+      { name: 'Bảo vệ, vệ sinh Nhà văn hóa', target: '....' },
+      { name: 'Internet', target: '....' },
+      { name: 'Tiền chè nước cho các hội họp', target: '....' },
+      { name: 'Quỹ đám hiếu', target: '....' },
+      { name: 'Quỹ an sinh xã hội', target: '50.000' },
+      { name: 'Quỹ khuyến học', target: '50.000' },
+      { name: 'Quỹ văn hóa - thể thao của thanh thiếu niên', target: '50.000' }
+    ];
+
+    const tdpItemsToRender = tdpFundsList.length > 0 
+      ? tdpFundsList.map((f: any) => ({ name: f.name, target: typeof f.target === 'number' ? f.target.toLocaleString('vi-VN') : (f.target || '....') }))
+      : defaultTdpItems;
+
+    // Quỹ Phường từ CSDL hoặc mẫu mặc định
+    const wardFundsList = (db as any).getWardFundList() || [];
+    const defaultWardItems = [
+      { name: 'Quỹ phòng chống thiên tai', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động: Tuổi từ 18 đến 60 – Có danh sách kèm theo)' },
+      { name: 'Đền ơn đáp nghĩa', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động: Tuổi từ 18 đến 60 – Có danh sách kèm theo)' },
+      { name: 'Chăm sóc người cao tuổi', text: '20.000đ / hộ / năm' }
+    ];
+
+    const tdpRowsHtml = tdpItemsToRender.map((item: any, idx: number) => `
+      <tr>
+        <td style="text-align:center;">${idx + 1}</td>
+        <td>${item.name}</td>
+        <td style="text-align:right; font-weight:bold;">${item.target} đồng/hộ/năm</td>
+      </tr>
+    `).join('');
+
+    let wardListHtml = defaultWardItems.map((item) => `
+      <li style="margin-bottom: 5px;"><b>${item.name}:</b> ${item.text}</li>
+    `).join('');
+
+    if (wardFundsList.length > 0) {
+      wardListHtml = wardFundsList.map((wf: any) => {
+        const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi');
+        const targetStr = typeof wf.target === 'number' ? wf.target.toLocaleString('vi-VN') + 'đ' : (wf.target ? wf.target + 'đ' : '....đ');
+        const unitStr = isHousehold ? 'hộ' : 'khẩu';
+        const noteStr = isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)';
+        return `<li style="margin-bottom: 5px;"><b>${wf.name}:</b> ${targetStr} / ${unitStr} / năm${noteStr}</li>`;
+      }).join('');
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Thông Báo Dự Kiến Thu Các Khoản Đóng Góp Năm ${selectedYear}</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 15mm 20mm 15mm 20mm;
+            }
+            body { margin: 0; }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13pt;
+            line-height: 1.4;
+            color: #000;
+            padding: 10px;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+          }
+          .header-table td {
+            vertical-align: top;
+            border: none;
+            padding: 0;
+          }
+          .title-section {
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 20px;
+          }
+          .doc-title {
+            font-size: 16pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+          }
+          .doc-subtitle {
+            font-size: 13pt;
+            font-style: italic;
+          }
+          .section-heading {
+            font-size: 13pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 15px;
+            margin-bottom: 8px;
+          }
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+          }
+          .data-table th, .data-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            font-size: 12pt;
+          }
+          .data-table th {
+            text-align: center;
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+          .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            page-break-inside: avoid;
+          }
+          .footer-table td {
+            border: none;
+            vertical-align: top;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="width: 45%; text-align: center;">
+              <div style="font-weight: bold; font-size: 12pt;">UBND PHƯỜNG ${wardNameVal.toUpperCase().replace('PHƯỜNG ', '')}</div>
+              <div style="font-weight: bold; font-size: 12pt;">TỔ DÂN PHỐ ${tdpNameVal.toUpperCase().replace('TỔ DÂN PHỐ ', '')}</div>
+              <div style="font-size: 12pt;">Số: ...../TB-TDP</div>
+            </td>
+            <td style="width: 55%; text-align: center;">
+              <div style="font-weight: bold; font-size: 12pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+              <div style="font-weight: bold; font-size: 12pt;">Độc lập - Tự do - Hạnh phúc</div>
+              <div style="font-size: 12pt; margin-top: 2px;">------------------------</div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="title-section">
+          <div class="doc-title">THÔNG BÁO</div>
+          <div class="doc-subtitle">Về việc dự kiến thu các khoản đóng góp tự nguyện năm ${selectedYear}</div>
+        </div>
+
+        <p style="margin-bottom: 8px;"><b>Kính gửi:</b> Các hộ gia đình và Nhân dân Tổ dân phố ${tdpNameVal}.</p>
+        <p style="margin-bottom: 8px; text-indent: 24px;">Căn cứ kết quả cuộc họp Tổ dân phố ngày ..... tháng ..... năm ${selectedYear};</p>
+        <p style="margin-bottom: 12px; text-indent: 24px;">Nhằm phục vụ các hoạt động chung của cộng đồng dân cư, Ban cán sự Tổ dân phố ${tdpNameVal} thông báo dự kiến các khoản đóng góp tự nguyện năm ${selectedYear} như sau:</p>
+
+        <div class="section-heading">QUỸ TỔ DÂN PHỐ DỰ KIẾN THU</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 50px;">STT</th>
+              <th>Nội dung khoản thu</th>
+              <th style="width: 240px;">Mức dự kiến</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tdpRowsHtml}
+          </tbody>
+        </table>
+
+        <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
+        <ol style="margin-top: 4px; margin-bottom: 12px; padding-left: 20px;">
+          ${wardListHtml}
+        </ol>
+
+        <p style="margin-bottom: 8px;"><b>Tổng mức dự kiến:</b> .................................... đồng/hộ/năm.</p>
+        <p style="margin-bottom: 8px; text-indent: 24px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện trên tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
+        <p style="margin-bottom: 12px; text-indent: 24px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${selectedYear}.</p>
+        <p style="margin-bottom: 15px;">Trân trọng thông báo!</p>
+
+        <table class="footer-table">
+          <tr>
+            <td style="width: 45%;"></td>
+            <td style="width: 55%;">
+              <div style="font-style: italic; margin-bottom: 5px;">Nam Sầm Sơn, ngày ..... tháng ..... năm ${selectedYear}</div>
+              <div style="font-weight: bold; font-size: 13pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
+              <div style="font-style: italic; font-size: 11pt; margin-bottom: 50px;">(Ký, ghi rõ họ tên)</div>
+              <div style="font-weight: bold; font-size: 13pt;">${leaderName}</div>
+            </td>
+          </tr>
+        </table>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <div style={{ 
       animation: 'fadeIn 0.25s ease-out',
@@ -2571,8 +2793,8 @@ const WardFunds = () => {
             </button>
           )}
 
-          {/* Nút tự động bổ sung hộ thiếu từ CSDL */}
-          {!isGuest && (
+          {/* Nút tự động bổ sung hộ thiếu từ CSDL (Chỉ xuất hiện khi ở Tab Quỹ theo Hộ hoặc Bảng tổng hợp) */}
+          {!isGuest && subTabMode !== 'ward_list' && (
             <button
               onClick={handleSupplementMissingHouseholds}
               className="btn btn-primary"
@@ -2624,6 +2846,26 @@ const WardFunds = () => {
 
           {canPrintExport && (
             <>
+              <button
+                onClick={handlePrintCombinedNotice}
+                className="btn btn-primary"
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#8b5cf6',
+                  border: '1.5px solid #7c3aed',
+                  color: '#fff',
+                  fontWeight: '700',
+                  fontSize: '0.85rem'
+                }}
+                title="In mẫu Thông báo dự kiến thu các khoản đóng góp tự nguyện gộp Quỹ TDP & Quỹ Phường"
+              >
+                <Printer size={16} /> In Thông báo dự kiến thu (Mẫu chuẩn)
+              </button>
+
               <button
                 onClick={handlePrintList}
                 className="btn btn-secondary"
