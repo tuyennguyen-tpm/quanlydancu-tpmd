@@ -537,11 +537,22 @@ const Finance = () => {
       
       // 4. Sắp xếp hộ dân theo Tổ/Cụm rồi mới xuất
       const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
-        const gA = (a.self_management_group || '').toLowerCase();
-        const gB = (b.self_management_group || '').toLowerCase();
-        if (gA < gB) return -1;
-        if (gA > gB) return 1;
-        return 0;
+        const gA = a.self_management_group || '';
+        const gB = b.self_management_group || '';
+        
+        const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+        const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+        
+        const rankA = idxA !== -1 ? idxA : 999;
+        const rankB = idxB !== -1 ? idxB : 999;
+        
+        if (rankA !== rankB) {
+          return rankA - rankB;
+        }
+        
+        const nameA = getHouseholdHeadName(a).toLowerCase();
+        const nameB = getHouseholdHeadName(b).toLowerCase();
+        return nameA.localeCompare(nameB, 'vi');
       });
 
       let currentGroup = '';
@@ -1668,9 +1679,18 @@ const Finance = () => {
 
     // Sắp xếp hộ dân theo Tổ/Cụm rồi đến tên chủ hộ trước khi in
     const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
-      const gA = (a.self_management_group || '').toLowerCase();
-      const gB = (b.self_management_group || '').toLowerCase();
-      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      const gA = a.self_management_group || '';
+      const gB = b.self_management_group || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
       
       const nameA = getHouseholdHeadName(a).toLowerCase();
       const nameB = getHouseholdHeadName(b).toLowerCase();
@@ -1841,9 +1861,18 @@ const Finance = () => {
 
     // Sắp xếp hộ dân theo Tổ/Cụm rồi đến tên chủ hộ trước khi in
     const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
-      const gA = (a.self_management_group || '').toLowerCase();
-      const gB = (b.self_management_group || '').toLowerCase();
-      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      const gA = a.self_management_group || '';
+      const gB = b.self_management_group || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
       
       const nameA = getHouseholdHeadName(a).toLowerCase();
       const nameB = getHouseholdHeadName(b).toLowerCase();
@@ -2011,9 +2040,18 @@ const Finance = () => {
 
     // Sắp xếp hộ dân theo Tổ/Cụm rồi đến tên chủ hộ trước khi in
     const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
-      const gA = (a.self_management_group || '').toLowerCase();
-      const gB = (b.self_management_group || '').toLowerCase();
-      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      const gA = a.self_management_group || '';
+      const gB = b.self_management_group || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
       
       const nameA = getHouseholdHeadName(a).toLowerCase();
       const nameB = getHouseholdHeadName(b).toLowerCase();
@@ -2280,29 +2318,51 @@ const Finance = () => {
     return map;
   }, [householdFunds, fundYear]);
 
-  const filteredHouseholdsForFunds = useMemo(() => households.filter(hh => {
-    const headName = getHouseholdHeadName(hh).toLowerCase();
-    const address = (hh.address || '').toLowerCase();
-    const householdNumber = (hh.household_number || '').toLowerCase();
-    const search = fundSearchTerm.toLowerCase();
-    const matchesSearch = headName.includes(search) || address.includes(search) || householdNumber.includes(search);
-    
-    if (!matchesSearch) return false;
-    
-    const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
-    
-    if (fundFilterStatus === 'paid') {
-      if (totalPaid === 0) return false;
-    } else if (fundFilterStatus === 'unpaid') {
-      if (totalPaid > 0) return false;
-    }
+  const filteredHouseholdsForFunds = useMemo(() => {
+    const list = households.filter(hh => {
+      const headName = getHouseholdHeadName(hh).toLowerCase();
+      const address = (hh.address || '').toLowerCase();
+      const householdNumber = (hh.household_number || '').toLowerCase();
+      const search = fundSearchTerm.toLowerCase();
+      const matchesSearch = headName.includes(search) || address.includes(search) || householdNumber.includes(search);
+      
+      if (!matchesSearch) return false;
+      
+      const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
+      
+      if (fundFilterStatus === 'paid') {
+        if (totalPaid === 0) return false;
+      } else if (fundFilterStatus === 'unpaid') {
+        if (totalPaid > 0) return false;
+      }
 
-    // Lọc theo phân quyền Tổ (cấp TDP) hoặc TDP (cấp phường)
-    const matchesTdp = !isWardUser || tdpFilter === 'all' || hh.user_id === tdpFilter;
-    const matchesGroup = isWardUser || fundGroupFilter === 'all' || hh.self_management_group === fundGroupFilter;
-    
-    return matchesTdp && matchesGroup;
-  }), [households, totalPaidLookup, fundSearchTerm, fundYear, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser]);
+      // Lọc theo phân quyền Tổ (cấp TDP) hoặc TDP (cấp phường)
+      const matchesTdp = !isWardUser || tdpFilter === 'all' || hh.user_id === tdpFilter;
+      const matchesGroup = isWardUser || fundGroupFilter === 'all' || hh.self_management_group === fundGroupFilter;
+      
+      return matchesTdp && matchesGroup;
+    });
+
+    return list.sort((a, b) => {
+      const gA = a.self_management_group || '';
+      const gB = b.self_management_group || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+      
+      // Nếu cùng tổ thì xếp theo tên chủ hộ
+      const nameA = getHouseholdHeadName(a).toLowerCase();
+      const nameB = getHouseholdHeadName(b).toLowerCase();
+      return nameA.localeCompare(nameB, 'vi');
+    });
+  }, [households, totalPaidLookup, fundSearchTerm, fundYear, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups]);
 
   // 4. Tối ưu hóa hiệu năng: Tính toán nhanh thông số thống kê cho các thẻ 3D
   const fundStatistics = useMemo(() => {

@@ -174,27 +174,26 @@ const WardFunds = () => {
     const list = residentsInfoLookup.get(nameKey);
     if (!list || list.length === 0) return { group: '', headName: '' };
     
-    // If only one resident matches the name, return it
-    if (list.length === 1) return list[0];
-    
-    // If multiple, try to match by DOB
     const cleanDob = dob.trim();
     if (cleanDob) {
       const matched = list.find(r => r.dob.includes(cleanDob) || cleanDob.includes(r.dob));
       if (matched) return matched;
+      // Nếu có năm sinh nhưng không trùng khớp với bất kỳ ai có năm sinh đó trong DB,
+      // thì không được tự ý khớp bừa với người khác trùng tên nhưng khác năm sinh.
+      // Chỉ cho phép khớp nếu người trong DB không có năm sinh.
+      const noDobMatch = list.find(r => !r.dob);
+      if (noDobMatch) return noDobMatch;
+      return { group: '', headName: '' };
     }
-    return list[0]; // fallback to first match
+    
+    // Nếu bản ghi quỹ không có DOB, chỉ tự động khớp nếu trong DB chỉ có duy nhất 1 người trùng tên
+    if (list.length === 1) return list[0];
+    return { group: '', headName: '' };
   };
 
   // Helper to resolve group/tổ of a fund record
   const getGroupOfFundRecord = (f: WardFund) => {
-    // 1. Cross-reference with database residents using fast map
-    const info = findResidentGroupAndHead(f.full_name, f.dob || '');
-    if (info.group) {
-      return info.group;
-    }
-    
-    // 2. Scan address text for group keywords
+    // 1. Quét địa chỉ trước để lấy tổ/cụm thực tế ghi trên địa chỉ (độ ưu tiên cao nhất, tránh khớp sai DB)
     const addr = (f.address || '').toLowerCase();
     for (const g of groups) {
       const gLower = g.toLowerCase();
@@ -209,6 +208,13 @@ const WardFunds = () => {
         }
       }
     }
+
+    // 2. Nếu địa chỉ không ghi rõ tổ/cụm cụ thể, đối chiếu với danh sách nhân khẩu trong cơ sở dữ liệu
+    const info = findResidentGroupAndHead(f.full_name, f.dob || '');
+    if (info.group) {
+      return info.group;
+    }
+    
     return '';
   };
 
@@ -960,11 +966,19 @@ const WardFunds = () => {
 
       // Sắp xếp danh sách theo Cụm / Tổ trước khi ghi vào Excel
       const sortedFunds = [...filteredFunds].sort((a, b) => {
-        const groupA = (getGroupOfFundRecord(a) || '').toLowerCase();
-        const groupB = (getGroupOfFundRecord(b) || '').toLowerCase();
-        if (groupA < groupB) return -1;
-        if (groupA > groupB) return 1;
-        // Nếu cùng tổ thì xếp theo tên
+        const gA = getGroupOfFundRecord(a) || '';
+        const gB = getGroupOfFundRecord(b) || '';
+        
+        const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+        const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+        
+        const rankA = idxA !== -1 ? idxA : 999;
+        const rankB = idxB !== -1 ? idxB : 999;
+        
+        if (rankA !== rankB) {
+          return rankA - rankB;
+        }
+        
         const nameA = (a.full_name || '').toLowerCase();
         const nameB = (b.full_name || '').toLowerCase();
         return nameA.localeCompare(nameB, 'vi');
@@ -1169,9 +1183,18 @@ const WardFunds = () => {
     const leaderSigUrl = localStorage.getItem('leader_sig_url') || '';
 
     const sortedFunds = [...filteredFunds].sort((a, b) => {
-      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
-      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
-      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      const gA = getGroupOfFundRecord(a) || '';
+      const gB = getGroupOfFundRecord(b) || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
       
       const nameA = (a.full_name || '').toLowerCase();
       const nameB = (b.full_name || '').toLowerCase();
@@ -1852,9 +1875,18 @@ const WardFunds = () => {
 
     // Sắp xếp danh sách theo Cụm / Tổ trước khi in
     const sortedFunds = [...filteredFunds].sort((a, b) => {
-      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
-      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
-      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      const gA = getGroupOfFundRecord(a) || '';
+      const gB = getGroupOfFundRecord(b) || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
       
       const nameA = (a.full_name || '').toLowerCase();
       const nameB = (b.full_name || '').toLowerCase();
@@ -2060,9 +2092,18 @@ const WardFunds = () => {
 
     // Sắp xếp danh sách theo Cụm / Tổ trước khi in
     const sortedFunds = [...filteredFunds].sort((a, b) => {
-      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
-      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
-      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      const gA = getGroupOfFundRecord(a) || '';
+      const gB = getGroupOfFundRecord(b) || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
       
       const nameA = (a.full_name || '').toLowerCase();
       const nameB = (b.full_name || '').toLowerCase();
@@ -2230,9 +2271,18 @@ const WardFunds = () => {
 
     // Sắp xếp danh sách theo Cụm / Tổ trước khi in
     const sortedFunds = [...filteredFunds].sort((a, b) => {
-      const gA = (getGroupOfFundRecord(a) || '').toLowerCase();
-      const gB = (getGroupOfFundRecord(b) || '').toLowerCase();
-      if (gA !== gB) return gA.localeCompare(gB, 'vi');
+      const gA = getGroupOfFundRecord(a) || '';
+      const gB = getGroupOfFundRecord(b) || '';
+      
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+      
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
       
       const nameA = (a.full_name || '').toLowerCase();
       const nameB = (b.full_name || '').toLowerCase();
