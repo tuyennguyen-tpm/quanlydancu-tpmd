@@ -1459,40 +1459,40 @@ const WardFunds = () => {
     const tdpFundsConfig = (db as any).getFundList() || [];
     const householdFundsList = (db as any).getHouseholdFunds() || [];
 
-    // Tính tiền Quỹ Phường
+    // Tính tiền Quỹ Phường thực tế đã nộp (actual)
     let wardTotal = 0;
     const wardRows = activeFunds.map((fund, idx) => {
-      const amountToPrint = item.contributions?.[fund.name]?.expected !== undefined 
-        ? item.contributions[fund.name].expected 
-        : fund.target;
-      wardTotal += amountToPrint;
-      const note = item.contributions?.[fund.name]?.date 
-        ? new Date(item.contributions[fund.name].date!).toLocaleDateString('vi-VN') 
+      const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+      const amountPaid = contrib.actual || 0;
+      wardTotal += amountPaid;
+      const note = contrib.date 
+        ? new Date(contrib.date).toLocaleDateString('vi-VN') 
         : '—';
       return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
           <td style="font-weight: bold; text-align: left;">[Quỹ Phường] ${fund.name} (${selectedYear})</td>
-          <td style="text-align: right; font-weight: bold;">${formatCurrency(amountToPrint)} đ</td>
+          <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
           <td style="text-align: left;">${note}</td>
         </tr>
       `;
     });
 
-    // Tính tiền Quỹ TDP (nếu khớp Hộ gia đình)
+    // Tính tiền Quỹ TDP thực tế đã nộp (nếu khớp Hộ gia đình)
     let tdpTotal = 0;
     const tdpRows: string[] = [];
     if (hhOfRes && tdpFundsConfig.length > 0) {
-      const hhFundRec = householdFundsList.find((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear);
+      const hhFunds = householdFundsList.filter((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear);
       tdpFundsConfig.forEach((tf: any, idx: number) => {
-        const expectedVal = hhFundRec?.contributions?.[tf.name]?.expected !== undefined ? hhFundRec.contributions[tf.name].expected : tf.target;
-        tdpTotal += expectedVal;
-        const note = hhFundRec?.contributions?.[tf.name]?.date ? new Date(hhFundRec.contributions[tf.name].date!).toLocaleDateString('vi-VN') : '—';
+        const fundRec = hhFunds.find((hf: any) => hf.fund_name === tf.name);
+        const amountPaid = fundRec ? fundRec.amount : 0;
+        tdpTotal += amountPaid;
+        const note = fundRec?.paid_at ? new Date(fundRec.paid_at).toLocaleDateString('vi-VN') : '—';
         tdpRows.push(`
           <tr>
             <td style="text-align: center;">${wardRows.length + idx + 1}</td>
             <td style="font-weight: bold; text-align: left;">[Quỹ TDP] ${tf.name} (${selectedYear})</td>
-            <td style="text-align: right; font-weight: bold;">${formatCurrency(expectedVal)} đ</td>
+            <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
             <td style="text-align: left;">${note}</td>
           </tr>
         `);
@@ -1623,6 +1623,12 @@ const WardFunds = () => {
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
             <td style="text-align: left;">Nộp các khoản đóng góp quỹ Phường năm ${selectedYear}</td>
           </tr>
+          ${item.note ? `
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Ghi chú:</td>
+            <td style="text-align: left; font-weight: bold; color: #b91c1c;">${item.note}</td>
+          </tr>
+          ` : ''}
         </table>
 
         <table class="receipt-details-table">
@@ -1893,12 +1899,35 @@ const WardFunds = () => {
       return nameA.localeCompare(nameB, 'vi');
     });
 
+    const householdFundsList = (db as any).getHouseholdFunds() || [];
+    const fundsToPrint = sortedFunds.filter(item => {
+      let total = 0;
+      activeFunds.forEach(fund => {
+        total += item.contributions?.[fund.name]?.actual || 0;
+      });
+      const resident = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
+      const hhOfRes = resident ? households.find(h => h.id === resident.household_id) : null;
+      if (hhOfRes) {
+        const tdpPaid = householdFundsList
+          .filter((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear)
+          .reduce((sum: number, hf: any) => sum + hf.amount, 0);
+        total += tdpPaid;
+      }
+      return total > 0;
+    });
+
+    if (fundsToPrint.length === 0) {
+      showToast('Không có cá nhân nào đã nộp tiền trong danh sách để in phiếu thu!', 'warning');
+      printWindow.close();
+      return;
+    }
+
     const pagesHtmlList: string[] = [];
-    for (let i = 0; i < sortedFunds.length; i += 2) {
-      const item1 = sortedFunds[i];
+    for (let i = 0; i < fundsToPrint.length; i += 2) {
+      const item1 = fundsToPrint[i];
       const receipt1 = generateWardStateReceiptHtml(item1, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
 
-      const item2 = sortedFunds[i + 1];
+      const item2 = fundsToPrint[i + 1];
       let receipt2 = '';
       if (item2) {
         receipt2 = generateWardStateReceiptHtml(item2, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
@@ -2110,7 +2139,30 @@ const WardFunds = () => {
       return nameA.localeCompare(nameB, 'vi');
     });
 
-    const receiptsHtml = sortedFunds.map(item => {
+    const householdFundsList = (db as any).getHouseholdFunds() || [];
+    const fundsToPrint = sortedFunds.filter(item => {
+      let total = 0;
+      activeFunds.forEach(fund => {
+        total += item.contributions?.[fund.name]?.actual || 0;
+      });
+      const resident = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
+      const hhOfRes = resident ? households.find(h => h.id === resident.household_id) : null;
+      if (hhOfRes) {
+        const tdpPaid = householdFundsList
+          .filter((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear)
+          .reduce((sum: number, hf: any) => sum + hf.amount, 0);
+        total += tdpPaid;
+      }
+      return total > 0;
+    });
+
+    if (fundsToPrint.length === 0) {
+      showToast('Không có cá nhân nào đã nộp tiền trong danh sách để in phiếu thu!', 'warning');
+      printWindow.close();
+      return;
+    }
+
+    const receiptsHtml = fundsToPrint.map(item => {
       return generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
 
@@ -2118,7 +2170,7 @@ const WardFunds = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>In loạt phiếu thu quỹ phường A4 (1 phiếu/trang) - ${filteredFunds.length} người</title>
+        <title>In loạt phiếu thu quỹ phường A4 (1 phiếu/trang) - ${fundsToPrint.length} người</title>
         <meta charset="utf-8" />
         <style>
           @media print {
@@ -2289,7 +2341,30 @@ const WardFunds = () => {
       return nameA.localeCompare(nameB, 'vi');
     });
 
-    const receiptsHtml = sortedFunds.map(item => {
+    const householdFundsList = (db as any).getHouseholdFunds() || [];
+    const fundsToPrint = sortedFunds.filter(item => {
+      let total = 0;
+      activeFunds.forEach(fund => {
+        total += item.contributions?.[fund.name]?.actual || 0;
+      });
+      const resident = residents.find(r => r.full_name === item.full_name && (!item.dob || r.dob === item.dob));
+      const hhOfRes = resident ? households.find(h => h.id === resident.household_id) : null;
+      if (hhOfRes) {
+        const tdpPaid = householdFundsList
+          .filter((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear)
+          .reduce((sum: number, hf: any) => sum + hf.amount, 0);
+        total += tdpPaid;
+      }
+      return total > 0;
+    });
+
+    if (fundsToPrint.length === 0) {
+      showToast('Không có cá nhân nào đã nộp tiền trong danh sách để in phiếu thu!', 'warning');
+      printWindow.close();
+      return;
+    }
+
+    const receiptsHtml = fundsToPrint.map(item => {
       return generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
 
@@ -2297,7 +2372,7 @@ const WardFunds = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>In loạt phiếu thu quỹ phường A5 - ${filteredFunds.length} người</title>
+        <title>In loạt phiếu thu quỹ phường A5 - ${fundsToPrint.length} người</title>
         <meta charset="utf-8" />
         <style>
           @media print {

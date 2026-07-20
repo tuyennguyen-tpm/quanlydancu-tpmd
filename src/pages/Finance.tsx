@@ -1697,7 +1697,19 @@ const Finance = () => {
       return nameA.localeCompare(nameB, 'vi');
     });
 
-    const receiptsHtml = sortedHouseholds.map(hh => {
+    const householdsToPrint = sortedHouseholds.filter(hh => {
+      const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+      const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+      return totalPaid > 0;
+    });
+
+    if (householdsToPrint.length === 0) {
+      showToast('Không có hộ gia đình nào đã nộp tiền trong danh sách để in phiếu thu!', 'warning');
+      printWindow.close();
+      return;
+    }
+
+    const receiptsHtml = householdsToPrint.map(hh => {
       const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
       return generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
@@ -1706,7 +1718,7 @@ const Finance = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>In loạt phiếu thu A5 - ${filteredHouseholdsForFunds.length} hộ</title>
+        <title>In loạt phiếu thu A5 - ${householdsToPrint.length} hộ</title>
         <meta charset="utf-8" />
         <style>
           @media print {
@@ -1879,7 +1891,19 @@ const Finance = () => {
       return nameA.localeCompare(nameB, 'vi');
     });
 
-    const receiptsHtml = sortedHouseholds.map(hh => {
+    const householdsToPrint = sortedHouseholds.filter(hh => {
+      const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+      const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+      return totalPaid > 0;
+    });
+
+    if (householdsToPrint.length === 0) {
+      showToast('Không có hộ gia đình nào đã nộp tiền trong danh sách để in phiếu thu!', 'warning');
+      printWindow.close();
+      return;
+    }
+
+    const receiptsHtml = householdsToPrint.map(hh => {
       const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
       return generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     }).join('\n');
@@ -1888,7 +1912,7 @@ const Finance = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>In loạt phiếu thu A4 (1 phiếu/trang) - ${filteredHouseholdsForFunds.length} hộ</title>
+        <title>In loạt phiếu thu A4 (1 phiếu/trang) - ${householdsToPrint.length} hộ</title>
         <meta charset="utf-8" />
         <style>
           @media print {
@@ -2058,13 +2082,25 @@ const Finance = () => {
       return nameA.localeCompare(nameB, 'vi');
     });
 
+    const householdsToPrint = sortedHouseholds.filter(hh => {
+      const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+      const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+      return totalPaid > 0;
+    });
+
+    if (householdsToPrint.length === 0) {
+      showToast('Không có hộ gia đình nào đã nộp tiền trong danh sách để in phiếu thu!', 'warning');
+      printWindow.close();
+      return;
+    }
+
     const pagesHtmlList: string[] = [];
-    for (let i = 0; i < sortedHouseholds.length; i += 2) {
-      const hh1 = sortedHouseholds[i];
+    for (let i = 0; i < householdsToPrint.length; i += 2) {
+      const hh1 = householdsToPrint[i];
       const tdpName1 = tdpMap[hh1.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
       const receipt1 = generateStateReceiptHtml(hh1, dateText, tdpName1, wardNameVal, leaderName, leaderSigUrl);
 
-      const hh2 = sortedHouseholds[i + 1];
+      const hh2 = householdsToPrint[i + 1];
       let receipt2 = '';
       if (hh2) {
         const tdpName2 = tdpMap[hh2.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
