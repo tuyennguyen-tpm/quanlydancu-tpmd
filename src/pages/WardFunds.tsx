@@ -364,39 +364,28 @@ const WardFunds = () => {
     return { group: '', headName: '', isHead: false };
   };
 
+  // Pre-calculate metadata (group, household info) for all fund records to ensure 60fps search/filter performance
+  const fundMetaMap = useMemo(() => {
+    const map = new Map<string, { householdId: string; address: string; headName: string; groupName: string }>();
+    funds.forEach(f => {
+      const info = findMatchingHouseholdForWardFund(f);
+      map.set(f.id, info);
+    });
+    return map;
+  }, [funds, residents, households, groups]);
+
   // Helper to resolve group/tổ of a fund record
   const getGroupOfFundRecord = (f: WardFund) => {
-    // 1. Quét địa chỉ trước để lấy tổ/cụm thực tế ghi trên địa chỉ (độ ưu tiên cao nhất, tránh khớp sai DB)
-    const addr = (f.address || '').toLowerCase();
-    for (const g of groups) {
-      const gLower = g.toLowerCase();
-      if (addr.includes(gLower)) {
-        return g;
-      }
-      const numMatch = g.match(/\d+/);
-      if (numMatch) {
-        const num = numMatch[0];
-        if (addr.includes(`tổ ${num}`) || addr.includes(`tổ: ${num}`) || addr.includes(`tổ tự quản ${num}`) || addr.includes(`tổ tự quản số ${num}`)) {
-          return g;
-        }
-      }
-    }
-
-    // 2. Nếu địa chỉ không ghi rõ tổ/cụm cụ thể, đối chiếu với danh sách nhân khẩu trong cơ sở dữ liệu
-    const info = findResidentGroupAndHead(f.full_name, f.dob || '');
-    if (info.group) {
-      return info.group;
-    }
-    
-    return '';
+    return fundMetaMap.get(f.id)?.groupName || '';
   };
 
   // Filtered List
   const filteredFunds = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
     const list = funds.filter(f => {
-      const matchesSearch = 
-        f.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        (f.address && f.address.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = !term || 
+        f.full_name.toLowerCase().includes(term) || 
+        (f.address && f.address.toLowerCase().includes(term));
       
       if (!matchesSearch) return false;
 
@@ -416,7 +405,7 @@ const WardFunds = () => {
 
       // Filter group
       if (groupFilter !== 'all') {
-        const fundGroup = getGroupOfFundRecord(f);
+        const fundGroup = fundMetaMap.get(f.id)?.groupName || '';
         if (fundGroup !== groupFilter) return false;
       }
 
@@ -424,15 +413,12 @@ const WardFunds = () => {
     });
 
     // Lọc chỉ giữ lại chủ hộ nếu ở Tab thu theo Hộ:
-    // Dùng headNamesSet để đối chiếu trực tiếp thay vì dùng name+dob matching dễ thất bại
     let filteredByMode: WardFund[];
     if (subTabMode === 'household_list') {
       const seenNames = new Set<string>();
       filteredByMode = list.filter(f => {
         const nameKey = f.full_name.trim().toLowerCase();
-        // Kiểm tra xem người này có phải chủ hộ theo CSDL không
         if (!headNamesSet.has(nameKey)) return false;
-        // Chỉ giữ lại 1 bản ghi per chủ hộ (loại bỏ trùng lặp nếu 1 chủ hộ có nhiều entries)
         if (seenNames.has(nameKey)) return false;
         seenNames.add(nameKey);
         return true;
@@ -441,10 +427,10 @@ const WardFunds = () => {
       filteredByMode = list;
     }
 
-    // Sắp xếp thứ tự ưu tiên theo Cụm/Tổ đã cấu hình (Ví dụ: Tổ Việt Trung -> Tổ 4 -> Tổ 5...)
+    // Sắp xếp thứ tự ưu tiên theo Cụm/Tổ đã cấu hình
     return filteredByMode.sort((a, b) => {
-      const grpA = getGroupOfFundRecord(a);
-      const grpB = getGroupOfFundRecord(b);
+      const grpA = fundMetaMap.get(a.id)?.groupName || '';
+      const grpB = fundMetaMap.get(b.id)?.groupName || '';
       
       const idxA = groups.findIndex(g => g.trim().toLowerCase() === grpA.trim().toLowerCase());
       const idxB = groups.findIndex(g => g.trim().toLowerCase() === grpB.trim().toLowerCase());
@@ -456,21 +442,20 @@ const WardFunds = () => {
         return rankA - rankB;
       }
 
-      // Cùng Tổ thì xếp theo Tên tiếng Việt A-Z
       return a.full_name.localeCompare(b.full_name, 'vi');
     });
-  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, residents, households, groups, headNamesSet]);
+  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, fundMetaMap, groups, headNamesSet]);
 
   // Danh sách gom theo hộ gia đình cho chế độ xem “Thu gom theo Hộ”
   const householdGroupedFunds = useMemo(() => {
     type HHGroup = { householdId: string; headName: string; address: string; groupName: string; members: WardFund[] };
     const groupMap = new Map<string, HHGroup>();
     filteredFunds.forEach(f => {
-      const hhInfo = findMatchingHouseholdForWardFund(f);
+      const hhInfo = fundMetaMap.get(f.id) || findMatchingHouseholdForWardFund(f);
       const householdId = hhInfo.householdId;
       const address = hhInfo.address || f.address || '';
       const headName = hhInfo.headName || '';
-      const groupName = hhInfo.groupName || getGroupOfFundRecord(f);
+      const groupName = hhInfo.groupName || '';
       if (!groupMap.has(householdId)) {
         groupMap.set(householdId, { householdId, headName, address, groupName, members: [] });
       }
@@ -492,7 +477,7 @@ const WardFunds = () => {
       if (rA !== rB) return rA - rB;
       return a.address.localeCompare(b.address, 'vi');
     });
-  }, [filteredFunds, residents, households, groups, headNamesSet]);
+  }, [filteredFunds, fundMetaMap, groups, headNamesSet]);
 
   // Calculate Statistics dynamically - luôn dùng chỉ tiêu mới nhất từ cấu hình
   const fundStats = activeFunds.map(fund => {
