@@ -48,6 +48,26 @@ const formatDateVN = (dateStr?: string | null): string => {
   return str;
 };
 
+const normalizeDateToCompare = (dStr?: string | null): string => {
+  if (!dStr || !dStr.trim()) return '';
+  const s = dStr.trim().replace(/[-\/]/g, '.');
+  const parts = s.split('.');
+  if (parts.length === 3) {
+    let day = '', month = '', year = '';
+    if (parts[0].length === 4) {
+      // YYYY.MM.DD
+      [year, month, day] = parts;
+    } else if (parts[2].length === 4) {
+      // DD.MM.YYYY
+      [day, month, year] = parts;
+    }
+    if (day && month && year) {
+      return `${parseInt(day, 10)}-${parseInt(month, 10)}-${year}`;
+    }
+  }
+  return s;
+};
+
 const DebouncedInput = ({
   value: initialValue,
   onChange,
@@ -134,6 +154,13 @@ const WardFunds = () => {
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [note, setNote] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list'); // Chế độ xem danh sách hay gom theo hộ
+
+  // Lazy rendering state to prevent DOM bloating and typing lag
+  const [visibleCount, setVisibleCount] = useState(150);
+
+  useEffect(() => {
+    setVisibleCount(150);
+  }, [searchTerm, filterStatus, groupFilter, subTabMode, viewMode]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -306,7 +333,11 @@ const WardFunds = () => {
     
     const cleanDob = dob.trim();
     if (cleanDob) {
-      const matched = list.find(r => r.dob.includes(cleanDob) || cleanDob.includes(r.dob));
+      const normClean = normalizeDateToCompare(cleanDob);
+      const matched = list.find(r => {
+        const normR = normalizeDateToCompare(r.dob);
+        return normR === normClean || r.dob.includes(cleanDob) || cleanDob.includes(r.dob);
+      });
       if (matched) return matched;
       const noDobMatch = list.find(r => !r.dob);
       if (noDobMatch) return noDobMatch;
@@ -369,7 +400,11 @@ const WardFunds = () => {
 
       // b. Tiếp theo khớp Ngày sinh hoặc Năm sinh
       if (filtered.length > 1 && dobClean) {
-        const exactDobMatch = filtered.filter(r => r.dob && (r.dob.trim() === dobClean || r.dob.includes(dobClean) || dobClean.includes(r.dob)));
+        const normClean = normalizeDateToCompare(dobClean);
+        const exactDobMatch = filtered.filter(r => {
+          const normR = normalizeDateToCompare(r.dob);
+          return r.dob && (normR === normClean || r.dob.trim() === dobClean || r.dob.includes(dobClean) || dobClean.includes(r.dob));
+        });
         if (exactDobMatch.length > 0) {
           filtered = exactDobMatch;
         } else if (yearClean) {
@@ -1347,7 +1382,11 @@ const WardFunds = () => {
             if (uMatch.length > 0) filtered = uMatch;
           }
           if (filtered.length > 1 && dobClean) {
-            const dobMatch = filtered.filter(r => r.dob && (r.dob.trim() === dobClean || r.dob.includes(dobClean)));
+            const normClean = normalizeDateToCompare(dobClean);
+            const dobMatch = filtered.filter(r => {
+              const normR = normalizeDateToCompare(r.dob);
+              return r.dob && (normR === normClean || r.dob.trim() === dobClean || r.dob.includes(dobClean));
+            });
             if (dobMatch.length > 0) filtered = dobMatch;
             else if (yearClean) {
               const yMatch = filtered.filter(r => (r.dob || '').includes(yearClean));
@@ -1544,7 +1583,11 @@ const WardFunds = () => {
           } else if (candidates.length > 1) {
             let filtered = candidates;
             if (dobClean) {
-              const exactDobMatch = filtered.filter(r => r.dob && (r.dob.trim() === dobClean || r.dob.includes(dobClean)));
+              const normClean = normalizeDateToCompare(dobClean);
+              const exactDobMatch = filtered.filter(r => {
+                const normR = normalizeDateToCompare(r.dob);
+                return r.dob && (normR === normClean || r.dob.trim() === dobClean || r.dob.includes(dobClean));
+              });
               if (exactDobMatch.length > 0) filtered = exactDobMatch;
               else if (yearClean) {
                 const yearMatch = filtered.filter(r => (r.dob || '').includes(yearClean));
@@ -5028,12 +5071,13 @@ const WardFunds = () => {
             minWidth: '200px'
           }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              placeholder="Tìm theo tên người nộp, tên chủ hộ, địa chỉ..."
+            <DebouncedInput
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={setSearchInput}
+              debounce={300}
+              placeholder="Tìm theo tên người nộp, tên chủ hộ, địa chỉ..."
               className="premium-input-3d"
+              style={{ paddingLeft: '36px' }}
             />
           </div>
 
@@ -5535,31 +5579,33 @@ const WardFunds = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {householdGroupedFunds.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Không có dữ liệu.</div>
-              ) : householdGroupedFunds.map(group => {
-                const totalExpected = group.members.reduce((sum, m) =>
-                  sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
-                    s + (m.contributions?.[fund.name]?.expected || 0), 0), 0);
-                const totalActual = group.members.reduce((sum, m) =>
-                  sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
-                    s + (m.contributions?.[fund.name]?.actual || 0), 0), 0);
-                
-                const tdpActiveFunds = (db as any).getFundList() || [];
-                const hhIdClean = group.householdId;
-                const hhTdpFunds = householdFunds.filter(hf => hf.household_id === hhIdClean && hf.year === selectedYear);
-                const allTdpPaid = tdpActiveFunds.length > 0 && tdpActiveFunds.every((fund: any) => {
-                  const paid = hhTdpFunds.find(hf => hf.fund_name === fund.name);
-                  return paid && paid.amount >= fund.target;
-                });
-                
-                const allWardPaid = totalActual >= totalExpected && totalExpected > 0;
-                const allPaid = allWardPaid && (tdpActiveFunds.length === 0 || allTdpPaid);
-                const hasPartial = (totalActual > 0 || hhTdpFunds.some(f => f.amount > 0)) && !allPaid;
-                const borderColor = allPaid ? '#86efac' : hasPartial ? '#fde68a' : '#e2e8f0';
-                const headerBg = allPaid
-                  ? 'linear-gradient(135deg,#dcfce7,#bbf7d0)'
-                  : hasPartial
-                  ? 'linear-gradient(135deg,#fef9c3,#fde68a)'
-                  : 'linear-gradient(135deg,#eff6ff,#dbeafe)';
+              ) : (
+                <>
+                  {householdGroupedFunds.slice(0, visibleCount).map(group => {
+                    const totalExpected = group.members.reduce((sum, m) =>
+                      sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
+                        s + (m.contributions?.[fund.name]?.expected || 0), 0), 0);
+                    const totalActual = group.members.reduce((sum, m) =>
+                      sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
+                        s + (m.contributions?.[fund.name]?.actual || 0), 0), 0);
+                    
+                    const tdpActiveFunds = (db as any).getFundList() || [];
+                    const hhIdClean = group.householdId;
+                    const hhTdpFunds = householdFunds.filter(hf => hf.household_id === hhIdClean && hf.year === selectedYear);
+                    const allTdpPaid = tdpActiveFunds.length > 0 && tdpActiveFunds.every((fund: any) => {
+                      const paid = hhTdpFunds.find(hf => hf.fund_name === fund.name);
+                      return paid && paid.amount >= fund.target;
+                    });
+                    
+                    const allWardPaid = totalActual >= totalExpected && totalExpected > 0;
+                    const allPaid = allWardPaid && (tdpActiveFunds.length === 0 || allTdpPaid);
+                    const hasPartial = (totalActual > 0 || hhTdpFunds.some(f => f.amount > 0)) && !allPaid;
+                    const borderColor = allPaid ? '#86efac' : hasPartial ? '#fde68a' : '#e2e8f0';
+                    const headerBg = allPaid
+                      ? 'linear-gradient(135deg,#dcfce7,#bbf7d0)'
+                      : hasPartial
+                      ? 'linear-gradient(135deg,#fef9c3,#fde68a)'
+                      : 'linear-gradient(135deg,#eff6ff,#dbeafe)';
 
                 return (
                   <div key={group.householdId} style={{ border: `1.5px solid ${borderColor}`, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
@@ -5645,7 +5691,31 @@ const WardFunds = () => {
                     })}
                   </div>
                 );
-              })}
+                  })}
+                  {householdGroupedFunds.length > visibleCount && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount(c => c + 150)}
+                      className="premium-button-3d"
+                      style={{
+                        margin: '12px auto',
+                        display: 'block',
+                        padding: '10px 24px',
+                        background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        borderRadius: '10px',
+                        border: 'none',
+                        boxShadow: '0 4px 6px rgba(37,99,235,0.2)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⏬ Hiển thị thêm 150 hộ tiếp theo... (Còn {householdGroupedFunds.length - visibleCount} hộ)
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           ) : (
           /* ===== STANDARD TABLE VIEW ===== */
@@ -5658,13 +5728,14 @@ const WardFunds = () => {
             });
 
             return (
-              <div style={{ 
-                overflow: 'auto', 
-                maxHeight: 'calc(100vh - 330px)',
-                border: '1.5px solid var(--border)', 
-                borderRadius: '12px', 
-                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
-              }}>
+              <>
+                <div style={{ 
+                  overflow: 'auto', 
+                  maxHeight: 'calc(100vh - 330px)',
+                  border: '1.5px solid var(--border)', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)'
+                }}>
                 <table className="data-table" style={{ width: '100%', minWidth: `${600 + displayedActiveFunds.length * 200}px`, borderCollapse: 'collapse', margin: 0 }}>
                   <thead>
                     <tr style={{ position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
@@ -5700,7 +5771,7 @@ const WardFunds = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredFunds.map((item, idx) => {
+                    {filteredFunds.slice(0, visibleCount).map((item, idx) => {
                       return (
                         <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>{idx + 1}</td>
@@ -5868,6 +5939,29 @@ const WardFunds = () => {
                   </tbody>
                 </table>
               </div>
+              {filteredFunds.length > visibleCount && (
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount(c => c + 150)}
+                  className="premium-button-3d"
+                  style={{
+                    margin: '12px auto',
+                    display: 'block',
+                    padding: '10px 24px',
+                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    boxShadow: '0 4px 6px rgba(37,99,235,0.2)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⏬ Hiển thị thêm 150 người tiếp theo... (Còn {filteredFunds.length - visibleCount} người)
+                </button>
+              )}
+              </>
             );
           })()
           )}

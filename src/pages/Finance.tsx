@@ -113,6 +113,13 @@ const Finance = () => {
   const [fundNames, setFundNames] = useState<string[]>([]);
   const [fundList, setFundList] = useState<{ name: string; target: number }[]>([]);
 
+  // Lazy rendering state to prevent DOM bloating and typing lag
+  const [visibleCount, setVisibleCount] = useState(150);
+
+  useEffect(() => {
+    setVisibleCount(150);
+  }, [fundSearchTerm, fundFilterStatus, fundGroupFilter, tdpFilter, subTab]);
+
   useEffect(() => {
     const loadFunds = () => {
       const list = db.getFundList();
@@ -3879,13 +3886,13 @@ const Finance = () => {
             {/* Hàng 2: Tìm kiếm bên trái (ngắn lại) và các nút in ấn / Excel sát ngay bên phải nó */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <div className="search-box" style={{ width: '240px', position: 'relative' }}>
-                <Search size={18} />
-                <input
-                  type="text"
-                  placeholder="Tìm theo tên chủ hộ, địa chỉ..."
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '10px' }} />
+                <DebouncedInput
                   value={fundSearchInput}
-                  onChange={(e) => setFundSearchInput(e.target.value)}
-                  style={{ paddingRight: fundSearchInput ? '36px' : '12px' }}
+                  onChange={setFundSearchInput}
+                  debounce={300}
+                  placeholder="Tìm theo tên chủ hộ, địa chỉ..."
+                  style={{ paddingLeft: '38px', paddingRight: fundSearchInput ? '36px' : '12px' }}
                 />
                 {fundSearchInput && (
                   <button
@@ -4129,7 +4136,7 @@ const Finance = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredHouseholdsForFunds.map((hh) => {
+                {filteredHouseholdsForFunds.slice(0, visibleCount).map((hh) => {
                   const headName = getHouseholdHeadName(hh);
                   const hhFunds = hhFundsMap.get(hh.id) || [];
                   const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
@@ -4277,6 +4284,28 @@ const Finance = () => {
               </tbody>
             </table>
           </div>
+          {filteredHouseholdsForFunds.length > visibleCount && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount(c => c + 150)}
+              className="premium-button-3d"
+              style={{
+                margin: '12px auto',
+                display: 'block',
+                padding: '10px 24px',
+                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                color: 'white',
+                fontWeight: '700',
+                fontSize: '0.85rem',
+                borderRadius: '10px',
+                border: 'none',
+                boxShadow: '0 4px 6px rgba(37,99,235,0.2)',
+                cursor: 'pointer'
+              }}
+            >
+              ⏬ Hiển thị thêm 150 hộ tiếp theo... (Còn {filteredHouseholdsForFunds.length - visibleCount} hộ)
+            </button>
+          )}
 
           {/* Matrix pay modal */}
           {editingFund && (
