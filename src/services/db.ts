@@ -1032,16 +1032,33 @@ export const db = {
   getFinancialRecords: async (): Promise<FinancialRecord[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('financial_records').select('*');
-        const tenantFilter = getTenantFilter();
-        if (tenantFilter) {
-          query = query.eq(tenantFilter.field, tenantFilter.value);
+        let allData: any[] = [];
+        let from = 0;
+        const limit = 1000;
+        let hasMore = true;
+        let hasError = false;
+
+        while (hasMore) {
+          let query = supabase.from('financial_records').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
+          const tenantFilter = getTenantFilter();
+          if (tenantFilter) {
+            query = query.eq(tenantFilter.field, tenantFilter.value);
+          }
+          const { data, error } = await query;
+          if (error) {
+            handleDbError('tải danh sách thu chi', error);
+            hasError = true;
+            break;
+          }
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < limit) hasMore = false;
+            else from += limit;
+          } else {
+            hasMore = false;
+          }
         }
-        const { data, error } = await query
-          .order('created_at', { ascending: true })
-          .order('id', { ascending: true });
-        if (error) handleDbError('tải danh sách thu chi', error);
-        if (!error && data) return data;
+        if (!hasError) return allData;
       } catch (e) {
         console.error('Supabase getFinancialRecords error, falling back to local storage', e);
       }
@@ -1638,14 +1655,33 @@ export const db = {
   getHouseholdFunds: async (): Promise<HouseholdFund[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('household_funds').select('*');
-        const tenantFilter = getTenantFilter();
-        if (tenantFilter) {
-          query = query.eq(tenantFilter.field, tenantFilter.value);
+        let allData: any[] = [];
+        let from = 0;
+        const limit = 1000;
+        let hasMore = true;
+        let hasError = false;
+
+        while (hasMore) {
+          let query = supabase.from('household_funds').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
+          const tenantFilter = getTenantFilter();
+          if (tenantFilter) {
+            query = query.eq(tenantFilter.field, tenantFilter.value);
+          }
+          const { data, error } = await query;
+          if (error) {
+            handleDbError('tải danh sách đóng quỹ hộ dân', error);
+            hasError = true;
+            break;
+          }
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < limit) hasMore = false;
+            else from += limit;
+          } else {
+            hasMore = false;
+          }
         }
-        const { data, error } = await query;
-        if (error) handleDbError('tải danh sách đóng quỹ hộ dân', error);
-        if (!error && data) return data;
+        if (!hasError) return allData;
       } catch (e) {
         console.error('Supabase getHouseholdFunds error, falling back to local storage', e);
       }
@@ -1783,16 +1819,33 @@ export const db = {
   getWardFunds: async (year: number): Promise<WardFund[]> => {
     if (supabase) {
       try {
-        let query = supabase.from('ward_funds').select('*').eq('year', year);
-        const tenantFilter = getTenantFilter();
-        if (tenantFilter) {
-          query = query.eq(tenantFilter.field, tenantFilter.value);
+        let allData: any[] = [];
+        let from = 0;
+        const limit = 1000;
+        let hasMore = true;
+        let hasError = false;
+
+        while (hasMore) {
+          let query = supabase.from('ward_funds').select('*').eq('year', year).order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
+          const tenantFilter = getTenantFilter();
+          if (tenantFilter) {
+            query = query.eq(tenantFilter.field, tenantFilter.value);
+          }
+          const { data, error } = await query;
+          if (error) {
+            handleDbError('lấy danh sách quỹ phường', error);
+            hasError = true;
+            break;
+          }
+          if (data && data.length > 0) {
+            allData = [...allData, ...data];
+            if (data.length < limit) hasMore = false;
+            else from += limit;
+          } else {
+            hasMore = false;
+          }
         }
-        const { data, error } = await query
-          .order('created_at', { ascending: true })
-          .order('id', { ascending: true });
-        if (error) throw error;
-        return data || [];
+        if (!hasError) return allData;
       } catch (e) {
         handleDbError('lấy danh sách quỹ phường', e);
       }
