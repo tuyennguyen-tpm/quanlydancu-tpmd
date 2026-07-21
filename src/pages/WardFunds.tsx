@@ -85,6 +85,7 @@ const WardFunds = () => {
   });
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
+  const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
 
   
   // Cấu hình quỹ của Phường động
@@ -116,6 +117,10 @@ const WardFunds = () => {
     try {
       const data = await db.getWardFunds(selectedYear);
       setFunds(data);
+      try {
+        const hhFunds = await db.getHouseholdFunds();
+        setHouseholdFunds(hhFunds || []);
+      } catch { /* ignore */ }
     } catch (e) {
       showToast('Lỗi tải dữ liệu quỹ phường!', 'danger');
     } finally {
@@ -501,23 +506,37 @@ const WardFunds = () => {
   };
 
   // Thu nhanh toàn bộ thành viên của 1 hộ gia đình cùng 1 lần (gồm Quỹ Phường + Quỹ TDP theo thông báo)
-  const handleQuickPayHousehold = async (members: WardFund[], forceCancel?: boolean) => {
+  const handleQuickPayHousehold = async (members: WardFund[], forceCancel?: boolean, targetHouseholdId?: string) => {
     if (isGuest) { showToast('Khách không có quyền sửa!', 'warning'); return; }
     try {
-      const firstMember = members[0];
-      let householdId = '';
-      if (firstMember) {
-        const nameKey = firstMember.full_name.trim().toLowerCase();
-        const hhInfo = residentToHouseholdMap.get(nameKey + '__' + selectedYear) || residentToHouseholdMap.get(nameKey + '__');
-        if (hhInfo?.householdId && !hhInfo.householdId.startsWith('addr__')) {
-          householdId = hhInfo.householdId;
-        } else {
+      let householdId = targetHouseholdId || '';
+      if (!householdId || householdId.startsWith('addr__')) {
+        for (const m of members) {
+          const nameKey = m.full_name.trim().toLowerCase();
+          const hhInfo = residentToHouseholdMap.get(nameKey + '__' + selectedYear) || residentToHouseholdMap.get(nameKey + '__');
+          if (hhInfo?.householdId && !hhInfo.householdId.startsWith('addr__')) {
+            householdId = hhInfo.householdId;
+            break;
+          }
           const res = residents.find(r => r.full_name.trim().toLowerCase() === nameKey);
-          if (res) householdId = res.household_id;
+          if (res?.household_id) {
+            householdId = res.household_id;
+            break;
+          }
         }
       }
 
-      const household = households.find(h => h.id === householdId);
+      let household = households.find(h => h.id === householdId);
+      if (!household && householdId.startsWith('addr__')) {
+        const firstM = members[0];
+        const addrClean = (firstM?.address || '').trim().toLowerCase();
+        const matchedHh = households.find(h => (h.address || '').trim().toLowerCase() === addrClean);
+        if (matchedHh) {
+          household = matchedHh;
+          householdId = matchedHh.id;
+        }
+      }
+
       const tdpActiveFunds = (db as any).getFundList() || [];
       
       let householdPaidFunds: HouseholdFund[] = [];
@@ -538,7 +557,7 @@ const WardFunds = () => {
         })
       );
 
-      const allTdpPaid = tdpActiveFunds.every((fund: any) => {
+      const allTdpPaid = tdpActiveFunds.length > 0 && tdpActiveFunds.every((fund: any) => {
         const paidFund = filteredHhFunds.find(hf => hf.fund_name === fund.name);
         return paidFund && paidFund.amount >= fund.target;
       });
@@ -558,6 +577,7 @@ const WardFunds = () => {
 
       // 2. Lưu đóng quỹ TDP và đồng bộ Sổ quỹ chung
       if (householdId && !householdId.startsWith('addr__')) {
+        const firstMember = members[0];
         const headResident = residents.find(r => (household && r.id === household.head_of_household_id) || r.is_head);
         const headName = headResident ? headResident.full_name : (household?.martyr_name || (firstMember ? firstMember.full_name : 'Đại diện hộ'));
 
@@ -4976,8 +4996,18 @@ const WardFunds = () => {
                 const totalActual = group.members.reduce((sum, m) =>
                   sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
                     s + (m.contributions?.[fund.name]?.actual || 0), 0), 0);
-                const allPaid = totalActual >= totalExpected && totalExpected > 0;
-                const hasPartial = totalActual > 0 && totalActual < totalExpected;
+                
+                const tdpActiveFunds = (db as any).getFundList() || [];
+                const hhIdClean = group.householdId;
+                const hhTdpFunds = householdFunds.filter(hf => hf.household_id === hhIdClean && hf.year === selectedYear);
+                const allTdpPaid = tdpActiveFunds.length > 0 && tdpActiveFunds.every((fund: any) => {
+                  const paid = hhTdpFunds.find(hf => hf.fund_name === fund.name);
+                  return paid && paid.amount >= fund.target;
+                });
+                
+                const allWardPaid = totalActual >= totalExpected && totalExpected > 0;
+                const allPaid = allWardPaid && (tdpActiveFunds.length === 0 || allTdpPaid);
+                const hasPartial = (totalActual > 0 || hhTdpFunds.some(f => f.amount > 0)) && !allPaid;
                 const borderColor = allPaid ? '#86efac' : hasPartial ? '#fde68a' : '#e2e8f0';
                 const headerBg = allPaid
                   ? 'linear-gradient(135deg,#dcfce7,#bbf7d0)'
@@ -5024,7 +5054,7 @@ const WardFunds = () => {
                           </button>
                         )}
                         {!isGuest && (
-                          <button type="button" onClick={() => handleQuickPayHousehold(group.members, allPaid)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
+                          <button type="button" onClick={() => handleQuickPayHousehold(group.members, allPaid, group.householdId)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
                             {allPaid ? '↩ Hủy' : '✓ Thu đủ cả nhà'}
                           </button>
                         )}
