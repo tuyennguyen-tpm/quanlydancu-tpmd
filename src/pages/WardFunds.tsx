@@ -70,6 +70,7 @@ const WardFunds = () => {
   const [showDataMenu, setShowDataMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [note, setNote] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list'); // Chế độ xem danh sách hay gom theo hộ
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -194,6 +195,32 @@ const WardFunds = () => {
     return headNames;
   }, [households, residents]);
 
+  // Bảng tra cứu: name+year → thông tin hộ khẩu, dùng để gom nhóm theo hộ gia đình
+  const residentToHouseholdMap = useMemo(() => {
+    const hhMap = new Map<string, Household>();
+    households.forEach(h => hhMap.set(h.id, h));
+    const headNameForHH = new Map<string, string>();
+    households.forEach(h => {
+      const head = residents.find(r => r.id === h.head_of_household_id);
+      if (head) headNameForHH.set(h.id, head.full_name);
+    });
+    const map = new Map<string, { householdId: string; address: string; headName: string; groupName: string }>();
+    residents.forEach(r => {
+      const year = (r.dob || '').match(/\d{4}/)?.[0] || '';
+      const nameKey = r.full_name.trim().toLowerCase();
+      const hh = hhMap.get(r.household_id);
+      const info = {
+        householdId: r.household_id,
+        address: hh?.address || '',
+        headName: headNameForHH.get(r.household_id) || '',
+        groupName: (hh as any)?.self_management_group || ''
+      };
+      map.set(nameKey + '__' + year, info);
+      if (!map.has(nameKey + '__')) map.set(nameKey + '__', info);
+    });
+    return map;
+  }, [residents, households]);
+
   // A fast O(1) helper function to find resident info by name and dob
   const findResidentGroupAndHead = (name: string, dob: string) => {
     const nameKey = name.trim().toLowerCase();
@@ -314,6 +341,43 @@ const WardFunds = () => {
     });
   }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, residents, households, groups, headNamesSet]);
 
+  // Danh sách gom theo hộ gia đình cho chế độ xem “Thu gom theo Hộ”
+  const householdGroupedFunds = useMemo(() => {
+    type HHGroup = { householdId: string; headName: string; address: string; groupName: string; members: WardFund[] };
+    const groupMap = new Map<string, HHGroup>();
+    filteredFunds.forEach(f => {
+      const year = (f.dob || '').match(/\d{4}/)?.[0] || '';
+      const nameKey = f.full_name.trim().toLowerCase();
+      const hhInfo = residentToHouseholdMap.get(nameKey + '__' + year)
+                  || residentToHouseholdMap.get(nameKey + '__')
+                  || null;
+      const householdId = hhInfo?.householdId || ('addr__' + (f.address || '').trim().toLowerCase());
+      const address = hhInfo?.address || f.address || '';
+      const headName = hhInfo?.headName || '';
+      const groupName = hhInfo?.groupName || getGroupOfFundRecord(f);
+      if (!groupMap.has(householdId)) {
+        groupMap.set(householdId, { householdId, headName, address, groupName, members: [] });
+      }
+      groupMap.get(householdId)!.members.push(f);
+    });
+    groupMap.forEach(g => {
+      g.members.sort((a, b) => {
+        const aH = headNamesSet.has(a.full_name.trim().toLowerCase());
+        const bH = headNamesSet.has(b.full_name.trim().toLowerCase());
+        if (aH !== bH) return aH ? -1 : 1;
+        return a.full_name.localeCompare(b.full_name, 'vi');
+      });
+    });
+    return Array.from(groupMap.values()).sort((a, b) => {
+      const iA = groups.findIndex(g => g.toLowerCase() === a.groupName.toLowerCase());
+      const iB = groups.findIndex(g => g.toLowerCase() === b.groupName.toLowerCase());
+      const rA = iA >= 0 ? iA : 999;
+      const rB = iB >= 0 ? iB : 999;
+      if (rA !== rB) return rA - rB;
+      return a.address.localeCompare(b.address, 'vi');
+    });
+  }, [filteredFunds, residentToHouseholdMap, headNamesSet, groups]);
+
   // Calculate Statistics dynamically
   const fundStats = activeFunds.map(fund => {
     const expected = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0);
@@ -396,6 +460,30 @@ const WardFunds = () => {
     } catch (e) {
       showToast('Thao tác thất bại!', 'danger');
     }
+  };
+
+  // Thu nhanh toàn bộ thành viên của 1 hộ gia đình cùng 1 lần
+  const handleQuickPayHousehold = async (members: WardFund[]) => {
+    if (isGuest) { showToast('Khách không có quyền sửa!', 'warning'); return; }
+    try {
+      const allPaid = members.every(m =>
+        activeFunds.every(fund => {
+          const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          return c.actual >= c.expected && c.expected > 0;
+        })
+      );
+      const today = new Date().toISOString().slice(0, 10);
+      await Promise.all(members.map(async m => {
+        const newC: Record<string, any> = { ...m.contributions };
+        activeFunds.forEach(fund => {
+          const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          newC[fund.name] = { expected: c.expected, actual: allPaid ? 0 : (c.expected || c.actual), date: allPaid ? '' : today };
+        });
+        await db.saveWardFund({ ...m, contributions: newC, note: allPaid ? '' : 'Đã nộp đủ đợt tập trung' });
+      }));
+      showToast(allPaid ? `Đã hủy ghi nhận thu của ${members.length} người` : `✅ Đã thu đủ ${members.length} người trong hộ!`, 'success');
+      loadData();
+    } catch { showToast('Có lỗi khi cập nhật!', 'danger'); }
   };
 
   // Save Edit Modal
@@ -3348,6 +3436,35 @@ const WardFunds = () => {
 
           {/* Right Actions */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', position: 'relative' }}>
+            {/* Nút chuyển chế độ xem: Danh sách ↔ Gom theo Hộ */}
+            {subTabMode === 'ward_list' && (
+              <button
+                type="button"
+                onClick={() => setViewMode(m => m === 'list' ? 'grouped' : 'list')}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  border: `1.5px solid ${viewMode === 'grouped' ? '#a78bfa' : '#cbd5e1'}`,
+                  background: viewMode === 'grouped'
+                    ? 'linear-gradient(135deg, #f5f3ff, #ede9fe)'
+                    : 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+                  color: viewMode === 'grouped' ? '#7c3aed' : '#64748b',
+                  fontWeight: '700',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: viewMode === 'grouped'
+                    ? '0 3px 6px rgba(124,58,237,0.15), inset 0 -2.5px 0 rgba(124,58,237,0.15)'
+                    : '0 2px 4px rgba(0,0,0,0.05), inset 0 -2px 0 rgba(0,0,0,0.05)',
+                  transition: 'all 0.15s ease'
+                }}
+                title={viewMode === 'grouped' ? 'Xem danh sách thông thường' : 'Gom nhóm từng hộ gia đình'}
+              >
+                {viewMode === 'grouped' ? '📋 Xem danh sách' : '🏡 Gom theo Hộ'}
+              </button>
+            )}
             {/* Data Actions Dropdown */}
             <div style={{ position: 'relative' }}>
               <button
@@ -3686,7 +3803,94 @@ const WardFunds = () => {
           </div>
 
           {/* Table container with horizontal & vertical scroll scrollbar support */}
-          {(() => {
+          {viewMode === 'grouped' && subTabMode === 'ward_list' ? (
+            /* ===== CHẾ ĐỘ XEM GOM THEO HỘ GIA ĐÌNH ===== */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {householdGroupedFunds.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Không có dữ liệu.</div>
+              ) : householdGroupedFunds.map(group => {
+                const totalExpected = group.members.reduce((sum, m) =>
+                  sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
+                    s + (m.contributions?.[fund.name]?.expected || 0), 0), 0);
+                const totalActual = group.members.reduce((sum, m) =>
+                  sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
+                    s + (m.contributions?.[fund.name]?.actual || 0), 0), 0);
+                const allPaid = totalActual >= totalExpected && totalExpected > 0;
+                const hasPartial = totalActual > 0 && totalActual < totalExpected;
+                const borderColor = allPaid ? '#86efac' : hasPartial ? '#fde68a' : '#e2e8f0';
+                const headerBg = allPaid
+                  ? 'linear-gradient(135deg,#dcfce7,#bbf7d0)'
+                  : hasPartial
+                  ? 'linear-gradient(135deg,#fef9c3,#fde68a)'
+                  : 'linear-gradient(135deg,#eff6ff,#dbeafe)';
+
+                return (
+                  <div key={group.householdId} style={{ border: `1.5px solid ${borderColor}`, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+                    {/* Header hộ */}
+                    <div style={{ background: headerBg, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: '800', fontSize: '0.95rem' }}>🏡 {group.headName || group.address || 'Hộ gia đình'}</span>
+                        {group.address && group.headName && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{group.address}</span>}
+                        {group.groupName && <span style={{ fontSize: '0.75rem', background: '#e2e8f0', borderRadius: '6px', padding: '1px 8px', fontWeight: '600', color: '#475569' }}>{group.groupName}</span>}
+                        <span style={{ fontSize: '0.75rem', background: allPaid ? '#16a34a' : hasPartial ? '#d97706' : '#dc2626', borderRadius: '10px', padding: '2px 9px', fontWeight: '700', color: 'white' }}>
+                          {group.members.length} người
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontWeight: '700', fontSize: '0.9rem', color: allPaid ? '#16a34a' : hasPartial ? '#92400e' : '#dc2626' }}>
+                          {formatCurrency(totalActual)} / {formatCurrency(totalExpected)}
+                        </span>
+                        {!isGuest && (
+                          <button type="button" onClick={() => handleQuickPayHousehold(group.members)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
+                            {allPaid ? '↩ Hủy' : '✓ Thu đủ cả nhà'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {/* Danh sách thành viên */}
+                    {group.members.map((member, idx) => {
+                      const mExp = activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) => s + (member.contributions?.[fund.name]?.expected || 0), 0);
+                      const mAct = activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) => s + (member.contributions?.[fund.name]?.actual || 0), 0);
+                      const mPaid = mAct >= mExp && mExp > 0;
+                      const isHead = headNamesSet.has(member.full_name.trim().toLowerCase());
+                      return (
+                        <div key={member.id} style={{ padding: '9px 16px', borderBottom: idx < group.members.length - 1 ? '1px solid #f1f5f9' : 'none', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', backgroundColor: mPaid ? '#f0fdf4' : 'white' }}>
+                          <span style={{ color: '#94a3b8', fontWeight: '600', width: '22px', textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                          <div style={{ minWidth: '180px', flex: '1' }}>
+                            <span style={{ fontWeight: isHead ? '800' : '600', fontSize: '0.88rem' }}>{isHead ? '👑 ' : ''}{member.full_name}</span>
+                            {member.dob && <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginLeft: '5px' }}>({member.dob})</span>}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: '2' }}>
+                            {activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').map(fund => {
+                              const c = member.contributions?.[fund.name] || { expected: 0, actual: 0 };
+                              const paid = c.actual >= c.expected && c.expected > 0;
+                              return (
+                                <span key={fund.name} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', background: c.expected === 0 ? '#f1f5f9' : paid ? '#dcfce7' : '#fee2e2', color: c.expected === 0 ? '#94a3b8' : paid ? '#166534' : '#991b1b', whiteSpace: 'nowrap' }}>
+                                  {fund.name.split(' ').slice(-2).join(' ')}: {c.expected === 0 ? 'Miễn' : `${c.actual.toLocaleString('vi-VN')}/${c.expected.toLocaleString('vi-VN')}đ`}
+                                </span>
+                              );
+                            })}
+                          </div>
+                          {!isGuest && (
+                            <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
+                              <button onClick={() => handleQuickPay(member)} title={mPaid ? 'Hủy ghi nhận' : 'Thu đủ cá nhân'} style={{ background: mPaid ? '#e2e8f0' : '#10b981', border: 'none', color: mPaid ? '#64748b' : 'white', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <Check size={14} />
+                              </button>
+                              <button onClick={() => handleOpenPay(member)} title="Cập nhật chi tiết" style={{ background: '#3b82f6', border: 'none', color: 'white', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <Edit2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+          /* ===== STANDARD TABLE VIEW ===== */
+          (() => {
             const displayedActiveFunds = activeFunds.filter((f: any) => {
               const isHouseholdScope = f.scope === 'household' || f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi');
               if (subTabMode === 'ward_list') return !isHouseholdScope;
@@ -3899,7 +4103,8 @@ const WardFunds = () => {
                 </table>
               </div>
             );
-          })()}
+          })()
+          )}
         </div>
       )}
 
