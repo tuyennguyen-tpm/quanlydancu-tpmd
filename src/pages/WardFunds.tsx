@@ -3086,10 +3086,7 @@ const WardFunds = () => {
       return sum + rSum;
     }, 0);
 
-    if (totalTdp + totalWard === 0) {
-      showToast('Hộ gia đình này chưa nộp khoản đóng góp nào trong năm nay!', 'warning');
-      return;
-    }
+    const savedReceiptHtml = localStorage.getItem(`receipt_html_${householdId}_${selectedYear}`);
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -3114,7 +3111,7 @@ const WardFunds = () => {
     const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
-    const receiptHtml = generateHouseholdReceiptHtml(
+    const receiptHtml = savedReceiptHtml || generateHouseholdReceiptHtml(
       household,
       members,
       memberWardRecords,
@@ -3149,6 +3146,7 @@ const WardFunds = () => {
             line-height: 1.35;
             color: #000;
             padding: 5px;
+            padding-top: 55px;
           }
           .receipt-container {
             width: 100%;
@@ -3228,16 +3226,81 @@ const WardFunds = () => {
             vertical-align: top;
             padding: 2px !important;
           }
+          
+          /* Custom edit toolbar style */
+          .print-toolbar {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 6px 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 10px;
+            z-index: 99999;
+          }
+          .toolbar-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 9pt;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+          }
+          .btn-print { background: #10b981; color: white; }
+          .btn-print:hover { background: #059669; }
+          .btn-save { background: #3b82f6; color: white; }
+          .btn-save:hover { background: #2563eb; }
+          .btn-reset { background: #f59e0b; color: white; }
+          .btn-reset:hover { background: #d97706; }
+          .btn-close { background: #ef4444; color: white; }
+          .btn-close:hover { background: #dc2626; }
+          
+          @media print {
+            .print-toolbar {
+              display: none !important;
+            }
+            body {
+              padding-top: 5px !important;
+            }
+          }
         </style>
       </head>
       <body>
-        ${receiptHtml}
+        <div class="print-toolbar">
+          <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
+          <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu phiếu</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải lại mặc định</button>
+          <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
+        </div>
+        
+        <div class="editor-area" contenteditable="true" style="outline: none;">
+          ${receiptHtml}
+        </div>
+        
         <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          };
+          const btnSave = document.getElementById('btn-save');
+          const btnReset = document.getElementById('btn-reset');
+          const editor = document.querySelector('.editor-area');
+
+          btnSave.addEventListener('click', function() {
+            localStorage.setItem('receipt_html_${householdId}_${selectedYear}', editor.innerHTML);
+            alert('Đã lưu nội dung chỉnh sửa của phiếu thu hộ gia đình này!');
+          });
+
+          btnReset.addEventListener('click', function() {
+            if (confirm('Bạn có chắc chắn muốn xóa bản lưu chỉnh sửa và tải lại dữ liệu mặc định từ hệ thống?')) {
+              localStorage.removeItem('receipt_html_${householdId}_${selectedYear}');
+              window.location.reload();
+            }
+          });
         </script>
       </body>
       </html>
