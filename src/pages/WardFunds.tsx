@@ -328,10 +328,10 @@ const WardFunds = () => {
 
   // Hàm tra cứu khớp chính xác Hộ gia đình cho từng bản ghi quỹ Phường dựa trên Tên, Ngày sinh, Tổ (user_id) & Địa chỉ
   const findMatchingHouseholdForWardFund = (f: WardFund) => {
-    const nameKey = f.full_name.trim().toLowerCase();
+    const nameKey = f.full_name.trim().toLowerCase().replace(/\s+/g, ' ');
     const dobClean = (f.dob || '').trim();
     const yearClean = dobClean.match(/\d{4}/)?.[0] || '';
-    const addrClean = (f.address || '').trim().toLowerCase();
+    const addrClean = (f.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
     // 1. Lọc tất cả nhân khẩu trùng tên trong CSDL (O(1) lookup)
     const candidates = residentsByNameMap.get(nameKey) || [];
@@ -360,7 +360,16 @@ const WardFunds = () => {
         }
       }
 
-      // c. Tiếp theo khớp Địa chỉ hoặc Tổ tự quản của Hộ
+      // c. Tiếp theo khớp Tên chủ hộ nếu địa chỉ chứa tên chủ hộ (vd: "Hộ bà Trương Thị Phương")
+      if (filtered.length > 1 && addrClean) {
+        const headMatch = filtered.filter(r => {
+          const headName = headNameForHHMap.get(r.household_id)?.toLowerCase() || '';
+          return headName && (addrClean.includes(headName) || headName.includes(addrClean));
+        });
+        if (headMatch.length > 0) filtered = headMatch;
+      }
+
+      // d. Tiếp theo khớp Địa chỉ hoặc Tổ tự quản của Hộ
       if (filtered.length > 1 && addrClean) {
         const addrMatch = filtered.filter(r => {
           const hh = householdMap.get(r.household_id);
@@ -384,8 +393,23 @@ const WardFunds = () => {
       };
     }
 
-    // Nếu không khớp nhân khẩu trong CSDL, thử đối chiếu với Hộ gia đình bằng địa chỉ + user_id
+    // 2. Nếu không khớp nhân khẩu trong CSDL, thử đối chiếu với Hộ gia đình bằng Tên Chủ hộ có trong địa chỉ
     if (addrClean) {
+      const matchedHhByHead = households.find(h => {
+        const headName = headNameForHHMap.get(h.id)?.toLowerCase();
+        if (!headName) return false;
+        return addrClean.includes(headName);
+      });
+      if (matchedHhByHead) {
+        return {
+          householdId: matchedHhByHead.id,
+          address: matchedHhByHead.address || f.address || '',
+          headName: headNameForHHMap.get(matchedHhByHead.id) || f.full_name,
+          groupName: (matchedHhByHead as any)?.self_management_group || getGroupOfFundRecord(f)
+        };
+      }
+
+      // Thử đối chiếu với Hộ gia đình bằng địa chỉ + user_id
       const matchedHh = households.find(h => {
         const hhAddr = (h.address || '').trim().toLowerCase();
         const addrOk = hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean);
@@ -402,12 +426,20 @@ const WardFunds = () => {
       }
     }
 
-    // Hộ ảo phân biệt theo địa chỉ + user_id + tên
-    const fallbackId = 'addr__' + (f.address || f.full_name).trim().toLowerCase() + '__' + (f.user_id || '');
+    // 3. Hộ ảo: Nếu dùng chung địa chỉ (vd: "Hộ bà Trương Thị Phương"), gom chung các thành viên vào 1 Hộ
+    const addrKey = addrClean ? addrClean : ('name__' + nameKey);
+    const fallbackId = 'addr__' + addrKey + '__' + (f.user_id || '');
+
+    let derivedHeadName = f.full_name;
+    const hoMatch = f.address?.match(/hộ\s+(?:ông|bà)?\s*([^\s,,-]+(?:\s+[^\s,,-]+)+)/i);
+    if (hoMatch && hoMatch[1]) {
+      derivedHeadName = hoMatch[1].trim();
+    }
+
     return {
       householdId: fallbackId,
       address: f.address || '',
-      headName: f.full_name,
+      headName: derivedHeadName,
       groupName: getGroupOfFundRecord(f)
     };
   };
