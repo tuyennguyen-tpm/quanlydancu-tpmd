@@ -2836,7 +2836,7 @@ const WardFunds = () => {
       const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
       const paidAmount = paidFund?.amount || 0;
       receiptRows.push({
-        name: '[Quỹ TDP] ' + fund.name,
+        name: '[TDP] ' + fund.name,
         type: 'Hộ gia đình',
         rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
         amount: paidAmount,
@@ -2851,7 +2851,7 @@ const WardFunds = () => {
       if (isHousehold) {
         const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
         receiptRows.push({
-          name: '[Quỹ Phường] ' + wf.name,
+          name: '[UBND Phường] ' + wf.name,
           type: 'Hộ gia đình',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
           amount: actualPaid,
@@ -2861,7 +2861,7 @@ const WardFunds = () => {
         const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
         const paidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
         receiptRows.push({
-          name: '[Quỹ Phường] ' + wf.name,
+          name: '[UBND Phường] ' + wf.name,
           type: 'Nhân khẩu LĐ',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
           amount: actualPaid,
@@ -2870,8 +2870,8 @@ const WardFunds = () => {
       }
     });
 
-    const tdpTotal = receiptRows.filter(r => r.name.startsWith('[Quỹ TDP]')).reduce((sum, r) => sum + r.amount, 0);
-    const wardTotal = receiptRows.filter(r => r.name.startsWith('[Quỹ Phường]')).reduce((sum, r) => sum + r.amount, 0);
+    const tdpTotal = receiptRows.filter(r => r.name.startsWith('[TDP]')).reduce((sum, r) => sum + r.amount, 0);
+    const wardTotal = receiptRows.filter(r => r.name.startsWith('[UBND Phường]')).reduce((sum, r) => sum + r.amount, 0);
     const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {
@@ -3203,73 +3203,29 @@ const WardFunds = () => {
             padding: 0;
             vertical-align: top;
           }
-          .receipt-org-title {
-            font-weight: bold;
-            font-size: 10pt !important;
-            line-height: 1.3;
+          .btn-print { background: #10b981; color: white; }
+          .btn-print:hover { background: #059669; }
+          .btn-save { background: #3b82f6; color: white; }
+          .btn-save:hover { background: #2563eb; }
+          .btn-load { background: #8b5cf6; color: white; }
+          .btn-load:hover { background: #7c3aed; }
+          .font-size-select {
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 8.5pt;
+            font-weight: 600;
+            cursor: pointer;
+            background: #f8fafc;
+            color: #334155;
           }
-          .receipt-form-title {
-            text-align: right;
-            font-size: 9.5pt !important;
-            line-height: 1.25;
+          .toolbar-label {
+            font-size: 8pt;
+            color: #64748b;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
           }
-          .receipt-title-container {
-            text-align: center;
-            margin-top: 6px !important;
-            margin-bottom: 6px !important;
-          }
-          .receipt-title {
-            font-size: 15.5pt !important;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 2px !important;
-          }
-          .receipt-subtitle {
-            font-style: italic;
-            font-size: 9.5pt !important;
-          }
-          .receipt-info-table {
-            width: 100%;
-            margin-bottom: 4px !important;
-            border-collapse: collapse;
-          }
-          .receipt-info-table td {
-            padding: 2px 0 !important;
-            font-size: 10pt !important;
-          }
-          .receipt-details-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 4px !important;
-            margin-bottom: 4px !important;
-          }
-          .receipt-details-table th, .receipt-details-table td {
-            border: 1px solid #000;
-            padding: 4px 6px !important;
-            font-size: 9.5pt !important;
-            vertical-align: middle;
-          }
-          .receipt-details-table th {
-            font-weight: bold;
-            text-align: center;
-            background-color: #f2f2f2;
-          }
-          .receipt-signatures-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px !important;
-            page-break-inside: avoid !important;
-          }
-          .receipt-signatures-table td {
-            border: none;
-            text-align: center;
-            font-size: 9.5pt !important;
-            vertical-align: top;
-            padding: 2px !important;
-          }
-          
-          /* Custom edit toolbar style */
           .print-toolbar {
             position: fixed;
             top: 8px;
@@ -3300,10 +3256,29 @@ const WardFunds = () => {
           .btn-print:hover { background: #059669; }
           .btn-save { background: #3b82f6; color: white; }
           .btn-save:hover { background: #2563eb; }
+          .btn-load { background: #8b5cf6; color: white; }
+          .btn-load:hover { background: #7c3aed; }
           .btn-reset { background: #f59e0b; color: white; }
           .btn-reset:hover { background: #d97706; }
           .btn-close { background: #ef4444; color: white; }
           .btn-close:hover { background: #dc2626; }
+          .font-size-select {
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 8.5pt;
+            font-weight: 600;
+            cursor: pointer;
+            background: #f8fafc;
+            color: #334155;
+          }
+          .toolbar-label {
+            font-size: 8pt;
+            color: #64748b;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+          }
           
           @media print {
             .print-toolbar {
@@ -3319,8 +3294,21 @@ const WardFunds = () => {
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
-          ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load" style="background:#8b5cf6;">📂 Mở bản đã lưu</button>' : ''}
+          ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>' : ''}
           <button class="toolbar-btn btn-reset" id="btn-reset">🗑 Xóa bản lưu</button>
+          <span class="toolbar-label">📝 Cỡ chữ:</span>
+          <select class="font-size-select" id="font-size-select">
+            <option value="7pt">7pt</option>
+            <option value="7.5pt">7.5pt</option>
+            <option value="8pt">8pt</option>
+            <option value="8.5pt">8.5pt</option>
+            <option value="9pt" selected>9pt (mặc định)</option>
+            <option value="9.5pt">9.5pt</option>
+            <option value="10pt">10pt</option>
+            <option value="10.5pt">10.5pt</option>
+            <option value="11pt">11pt</option>
+            <option value="12pt">12pt</option>
+          </select>
           <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
         </div>
 
@@ -3340,6 +3328,13 @@ const WardFunds = () => {
           const btnReset = document.getElementById('btn-reset');
           const btnLoad = document.getElementById('btn-load');
           const editor = document.querySelector('.editor-area');
+          const fontSizeSelect = document.getElementById('font-size-select');
+
+          fontSizeSelect.addEventListener('change', function() {
+            document.querySelectorAll('.receipt-container').forEach(function(el) {
+              el.style.fontSize = fontSizeSelect.value;
+            });
+          });
 
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
