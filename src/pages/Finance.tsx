@@ -22,6 +22,36 @@ import { showToast } from '../utils/toast';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
+interface DebouncedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  value: string;
+  onChange: (value: string) => void;
+  debounce?: number;
+}
+
+const DebouncedInput = ({
+  value: initialValue,
+  onChange,
+  debounce = 250,
+  ...props
+}: DebouncedInputProps) => {
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      onChange(value);
+    }, debounce);
+    return () => clearTimeout(timeout);
+  }, [value, onChange, debounce]);
+
+  return (
+    <input {...props} value={value} onChange={e => setValue(e.target.value)} />
+  );
+};
+
 const Finance = () => {
   const currentYear = new Date().getFullYear();
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
@@ -43,8 +73,7 @@ const Finance = () => {
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
-  const [searchInput, setSearchInput] = useState('');
-  const searchTerm = useDeferredValue(searchInput);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
 
@@ -73,12 +102,6 @@ const Finance = () => {
     const saved = localStorage.getItem('tdp_groups_config');
     return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
   });
-
-  // Debounce fundSearchInput -> fundSearchTerm
-  useEffect(() => {
-    const t = setTimeout(() => setFundSearchTerm(fundSearchInput), 300);
-    return () => clearTimeout(t);
-  }, [fundSearchInput]);
 
   // Form đóng quỹ hộ dân
   const [editingFund, setEditingFund] = useState<{ householdId: string, fundName: string } | null>(null);
@@ -3462,11 +3485,11 @@ const Finance = () => {
             <div className="search-and-date">
                 <div className="search-mini">
                   <Search size={16} />
-                  <input 
+                  <DebouncedInput 
                     type="text" 
                     placeholder="Tìm nội dung, danh mục..." 
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
+                    value={searchTerm}
+                    onChange={setSearchTerm}
                   />
                 </div>
                 <button className="date-filter"><Calendar size={16} /> Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</button>
@@ -3781,17 +3804,17 @@ const Finance = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <div className="search-box" style={{ width: '240px', position: 'relative' }}>
                 <Search size={18} />
-                <input
+                <DebouncedInput
                   type="text"
                   placeholder="Tìm theo tên chủ hộ, địa chỉ..."
-                  value={fundSearchInput}
-                  onChange={(e) => setFundSearchInput(e.target.value)}
-                  style={{ paddingRight: fundSearchInput ? '36px' : '12px' }}
+                  value={fundSearchTerm}
+                  onChange={setFundSearchTerm}
+                  style={{ paddingRight: fundSearchTerm ? '36px' : '12px' }}
                 />
-                {fundSearchInput && (
+                {fundSearchTerm && (
                   <button
                     type="button"
-                    onClick={() => { setFundSearchInput(''); setFundSearchTerm(''); }}
+                    onClick={() => { setFundSearchTerm(''); }}
                     style={{
                       position: 'absolute',
                       right: '12px',

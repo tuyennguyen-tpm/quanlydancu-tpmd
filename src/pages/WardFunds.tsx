@@ -23,6 +23,36 @@ import { showToast } from '../utils/toast';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
+interface DebouncedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  value: string;
+  onChange: (value: string) => void;
+  debounce?: number;
+}
+
+const DebouncedInput = ({
+  value: initialValue,
+  onChange,
+  debounce = 250,
+  ...props
+}: DebouncedInputProps) => {
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      onChange(value);
+    }, debounce);
+    return () => clearTimeout(timeout);
+  }, [value, onChange, debounce]);
+
+  return (
+    <input {...props} value={value} onChange={e => setValue(e.target.value)} />
+  );
+};
+
 const WardFunds = () => {
   const currentYear = new Date().getFullYear();
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
@@ -44,8 +74,7 @@ const WardFunds = () => {
   // State
   const [funds, setFunds] = useState<WardFund[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
-  const [searchInput, setSearchInput] = useState('');
-  const searchTerm = useDeferredValue(searchInput);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid_all' | 'unpaid_any'>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
@@ -4485,11 +4514,11 @@ const WardFunds = () => {
             minWidth: '200px'
           }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
-            <input
+            <DebouncedInput
               type="text"
               placeholder="Tìm theo tên người dân, địa chỉ..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              value={searchTerm}
+              onChange={setSearchTerm}
               className="premium-input-3d"
             />
           </div>
