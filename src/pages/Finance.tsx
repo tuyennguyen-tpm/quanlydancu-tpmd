@@ -1067,7 +1067,8 @@ const Finance = () => {
     tdpNameVal: string,
     wardNameVal: string,
     leaderName: string,
-    leaderSigUrl: string
+    leaderSigUrl: string,
+    printMode: 'tdp_only' | 'combined' = 'combined'
   ) => {
     const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
@@ -1112,34 +1113,36 @@ const Finance = () => {
     });
 
     // Luôn hiển thị tất cả quỹ Phường đang hoạt động (kể cả chưa nộp)
-    const wardActiveFunds = (db as any).getWardFundList();
-    wardActiveFunds.forEach((wf: any) => {
-      const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
-      if (isHousehold) {
-        const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        receiptRows.push({
-          name: '[UBND] ' + wf.name,
-          type: 'Hộ gia đình',
-          rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
-          amount: actualPaid,
-          note: actualPaid === 0 ? 'Chưa nộp' : (actualPaid >= wf.target ? 'Thu đủ' : `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ`)
-        });
-      } else {
-        const rawActualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        const rawPaidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
-        
-        const paidCount = (laborCount > 0 && rawPaidCount > laborCount) ? laborCount : rawPaidCount;
-        const actualPaid = (laborCount > 0 && rawPaidCount > laborCount) ? (paidCount * wf.target) : rawActualPaid;
+    if (printMode === 'combined') {
+      const wardActiveFunds = (db as any).getWardFundList();
+      wardActiveFunds.forEach((wf: any) => {
+        const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
+        if (isHousehold) {
+          const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+          receiptRows.push({
+            name: '[UBND] ' + wf.name,
+            type: 'Hộ gia đình',
+            rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
+            amount: actualPaid,
+            note: actualPaid === 0 ? 'Chưa nộp' : (actualPaid >= wf.target ? 'Thu đủ' : `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ`)
+          });
+        } else {
+          const rawActualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+          const rawPaidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
+          
+          const paidCount = (laborCount > 0 && rawPaidCount > laborCount) ? laborCount : rawPaidCount;
+          const actualPaid = (laborCount > 0 && rawPaidCount > laborCount) ? (paidCount * wf.target) : rawActualPaid;
 
-        receiptRows.push({
-          name: '[UBND] ' + wf.name,
-          type: 'Nhân khẩu LĐ',
-          rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
-          amount: actualPaid,
-          note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount > 0 ? laborCount : 1} khẩu LĐ - Chưa nộp`
-        });
-      }
-    });
+          receiptRows.push({
+            name: '[UBND] ' + wf.name,
+            type: 'Nhân khẩu LĐ',
+            rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
+            amount: actualPaid,
+            note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount > 0 ? laborCount : 1} khẩu LĐ - Chưa nộp`
+          });
+        }
+      });
+    }
 
     const tdpTotal = receiptRows.filter(r => r.name.startsWith('[TDP]')).reduce((sum, r) => sum + r.amount, 0);
     const wardTotal = receiptRows.filter(r => r.name.startsWith('[UBND]') || r.name.startsWith('[UBND Phường]')).reduce((sum, r) => sum + r.amount, 0);
@@ -1255,7 +1258,7 @@ const Finance = () => {
         </table>
 
         <div class="receipt-title-container">
-          <h1 class="receipt-title">PHIẾU THU TỔNG HỢP</h1>
+          <h1 class="receipt-title">${printMode === 'tdp_only' ? 'PHIẾU THU QUỸ TỔ DÂN PHỐ' : 'PHIẾU THU TỔNG HỢP'}</h1>
           <p class="receipt-subtitle" style="margin-top: 2px; font-weight: bold; color: #1e3a8a;">${lienName}</p>
           <p class="receipt-subtitle">${dateText}</p>
         </div>
@@ -1360,7 +1363,10 @@ const Finance = () => {
     `;
   };
 
-  const handlePrintHouseholdReceipt = async (householdIdOrHh: string | Household) => {
+  const handlePrintHouseholdReceipt = async (
+    householdIdOrHh: string | Household,
+    printMode: 'tdp_only' | 'combined' = 'combined'
+  ) => {
     const household = typeof householdIdOrHh === 'string'
       ? households.find(h => h.id === householdIdOrHh)
       : householdIdOrHh;
@@ -1439,7 +1445,8 @@ const Finance = () => {
       tdpNameVal,
       wardNameVal,
       leaderName,
-      leaderSigUrl
+      leaderSigUrl,
+      printMode
     );
     const receiptHtml = freshReceiptHtml;
 
@@ -4217,29 +4224,54 @@ const Finance = () => {
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
                           <button 
-                            onClick={() => handlePrintHouseholdReceipt(hh)}
+                            onClick={() => handlePrintHouseholdReceipt(hh, 'tdp_only')}
                             style={{
                               padding: '4px 10px',
                               borderRadius: '6px',
                               border: '1.5px solid #cbd5e1',
                               backgroundColor: '#fff',
-                              color: '#475569',
+                              color: '#374151',
                               fontWeight: '700',
-                              fontSize: '0.75rem',
+                              fontSize: '0.72rem',
                               cursor: 'pointer',
                               transition: 'all 0.15s ease',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px',
-                              width: '95px',
+                              width: '100px',
                               justifyContent: 'center'
                             }}
-                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f3f4f6'; e.currentTarget.style.borderColor = '#9ca3af'; }}
                             onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                            title="In biên lai thu quỹ hộ này"
+                            title="In biên lai thu riêng các quỹ của TDP"
                           >
-                            <Printer size={13} />
-                            <span>In biên lai</span>
+                            <Printer size={12} />
+                            <span>In biên lai TDP</span>
+                          </button>
+                          <button 
+                            onClick={() => handlePrintHouseholdReceipt(hh, 'combined')}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              border: '1.5px solid #c084fc',
+                              backgroundColor: '#faf5ff',
+                              color: '#6b21a8',
+                              fontWeight: '700',
+                              fontSize: '0.72rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              width: '100px',
+                              justifyContent: 'center'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f3e8ff'; e.currentTarget.style.borderColor = '#a855f7'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#faf5ff'; e.currentTarget.style.borderColor = '#c084fc'; }}
+                            title="In biên lai gộp các quỹ TDP và quỹ UBND Phường"
+                          >
+                            <Printer size={12} />
+                            <span>In biên lai gộp</span>
                           </button>
                           {!isGuest && (
                             <button 
