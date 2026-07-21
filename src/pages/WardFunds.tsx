@@ -1091,12 +1091,21 @@ const WardFunds = () => {
           const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
 
           // C. Tính tuổi của nhân khẩu trong năm selectedYear
-          if (!r.dob) return;
-          const dobYear = new Date(r.dob).getFullYear();
-          if (isNaN(dobYear)) return;
-          const age = selectedYear - dobYear;
+          let age = 30; // Mặc định trong độ tuổi lao động nếu r.dob thiếu
+          let parsedYear = 0;
+          if (r.dob) {
+            parsedYear = parseInt(r.dob.match(/\d{4}/)?.[0] || '0', 10);
+            if (parsedYear > 0) {
+              age = selectedYear - parsedYear;
+            }
+          }
 
-          // D. Tính toán mức đóng góp của từng quỹ dựa trên quy định pháp luật
+          // D. Kiểm tra giới tính linh hoạt (nam / male / nữ / female)
+          const gStr = (r.gender || '').toString().toLowerCase();
+          const isMale = gStr === 'male' || gStr === 'nam';
+          const isFemale = gStr === 'female' || gStr === 'nữ';
+
+          // E. Tính toán mức đóng góp của từng quỹ dựa trên quy định pháp luật
           const contributions: Record<string, any> = {};
           let shouldAdd = false;
 
@@ -1121,19 +1130,13 @@ const WardFunds = () => {
                 // Người hưởng lương hưu được miễn Quỹ Thiên tai và Đền ơn đáp nghĩa
                 expected = 0;
               } else {
-                if (isPCTT) {
-                  // Quỹ Thiên tai: Nam 18-61, Nữ 18-58 trong độ tuổi lao động
-                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 61;
-                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 58;
-                  if (isMaleInAge || isFemaleInAge) {
-                    expected = fund.target;
-                    shouldAdd = true;
-                  }
-                } else if (isDOdn) {
-                  // Quỹ Đền ơn đáp nghĩa: Người trong độ tuổi lao động Nam 18-61, Nữ 18-58
-                  const isMaleInAge = r.gender === 'male' && age >= 18 && age <= 61;
-                  const isFemaleInAge = r.gender === 'female' && age >= 18 && age <= 58;
-                  if (isMaleInAge || isFemaleInAge) {
+                if (isPCTT || isDOdn) {
+                  // Quỹ Thiên tai & Đền ơn đáp nghĩa: Nam 18-61, Nữ 18-58 trong độ tuổi lao động
+                  const isMaleInAge = isMale ? (age >= 18 && age <= 61) : false;
+                  const isFemaleInAge = isFemale ? (age >= 18 && age <= 58) : false;
+                  const isGeneralInAge = (!isMale && !isFemale) ? (age >= 18 && age <= 60) : false;
+
+                  if (isMaleInAge || isFemaleInAge || isGeneralInAge) {
                     expected = fund.target;
                     shouldAdd = true;
                   }
@@ -1168,7 +1171,7 @@ const WardFunds = () => {
               id: generateUUID(),
               year: selectedYear,
               full_name: r.full_name.trim(),
-              dob: r.dob ? r.dob.slice(0, 4) : undefined, // chỉ lấy năm sinh
+              dob: parsedYear > 0 ? parsedYear.toString() : (r.dob ? r.dob.trim() : undefined),
               address: hh ? hh.address : undefined,
               user_id: r.user_id, // Gán trực tiếp cho TDP quản lý nhân khẩu này
               contributions
@@ -3210,9 +3213,12 @@ const WardFunds = () => {
       const statusClean = r.status || 'resident';
       if (statusClean === 'deceased') return false;
       const age = getResidentAge(r.dob);
-      if (r.gender === 'male') {
+      const gStr = (r.gender || '').toString().toLowerCase();
+      const isMale = gStr === 'male' || gStr === 'nam';
+      const isFemale = gStr === 'female' || gStr === 'nữ';
+      if (isMale) {
         return age >= 18 && age <= 61;
-      } else if (r.gender === 'female') {
+      } else if (isFemale) {
         return age >= 18 && age <= 58;
       }
       return age >= 18 && age <= 60;

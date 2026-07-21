@@ -1052,9 +1052,12 @@ const Finance = () => {
       const statusClean = r.status || 'resident';
       if (statusClean === 'deceased') return false;
       const age = getResidentAge(r.dob);
-      if (r.gender === 'male') {
+      const gStr = (r.gender || '').toString().toLowerCase();
+      const isMale = gStr === 'male' || gStr === 'nam';
+      const isFemale = gStr === 'female' || gStr === 'nữ';
+      if (isMale) {
         return age >= 18 && age <= 61;
-      } else if (r.gender === 'female') {
+      } else if (isFemale) {
         return age >= 18 && age <= 58;
       }
       return age >= 18 && age <= 60;
