@@ -30,6 +30,24 @@ interface DebouncedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEl
   debounce?: number;
 }
 
+const formatDateVN = (dateStr?: string | null): string => {
+  if (!dateStr || !dateStr.trim()) return '';
+  const str = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const [y, m, d] = str.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  if (str.includes('T') && /^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const [y, m, d] = str.split('T')[0].split('-');
+    return `${d}/${m}/${y}`;
+  }
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(str)) {
+    const [y, m, d] = str.split('/');
+    return `${d}/${m}/${y}`;
+  }
+  return str;
+};
+
 const DebouncedInput = ({
   value: initialValue,
   onChange,
@@ -1360,14 +1378,14 @@ const WardFunds = () => {
           const rowVals: any[] = [
             sttCounter,
             item.full_name || '',
-            item.dob || '',
+            formatDateVN(item.dob),
             itemGroup,
             item.address || ''
           ];
 
           activeFunds.forEach(fund => {
             const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-            rowVals.push(contrib.expected || fund.target, contrib.actual || 0, contrib.date ? new Date(contrib.date).toLocaleDateString('vi-VN') : '');
+            rowVals.push(contrib.expected || fund.target, contrib.actual || 0, formatDateVN(contrib.date));
           });
           rowVals.push(item.note || '');
 
@@ -5164,7 +5182,7 @@ const WardFunds = () => {
                           <span style={{ color: '#94a3b8', fontWeight: '600', width: '22px', textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
                           <div style={{ minWidth: '180px', flex: '1' }}>
                             <span style={{ fontWeight: isHead ? '800' : '600', fontSize: '0.88rem' }}>{isHead ? '👑 ' : ''}{member.full_name}</span>
-                            {member.dob && <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginLeft: '5px' }}>({member.dob})</span>}
+                            {member.dob && <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginLeft: '5px' }}>({formatDateVN(member.dob)})</span>}
                           </div>
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: '2' }}>
                             {activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').map(fund => {
@@ -5269,7 +5287,7 @@ const WardFunds = () => {
                               return null;
                             })()}
                           </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>{item.dob || '—'}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center' }}>{formatDateVN(item.dob) || '—'}</td>
                           <td style={{ padding: '12px 10px' }}>{item.address || '—'}</td>
                           
                           {displayedActiveFunds.map(fund => {
@@ -5460,7 +5478,7 @@ const WardFunds = () => {
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800' }}>Cập nhật đóng quỹ Phường</h3>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
-                  Hộ/Cá nhân: {editingRecord.full_name} {editingRecord.dob ? `(${editingRecord.dob})` : ''}
+                  Hộ/Cá nhân: {editingRecord.full_name} {editingRecord.dob ? `(${formatDateVN(editingRecord.dob)})` : ''}
                 </p>
               </div>
               <button 
