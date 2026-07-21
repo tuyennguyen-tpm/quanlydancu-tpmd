@@ -1079,7 +1079,9 @@ const Finance = () => {
       }
     });
 
-    const grandTotal = receiptRows.reduce((sum, r) => sum + r.amount, 0);
+    const tdpTotal = receiptRows.filter(r => r.name.startsWith('[Quỹ TDP]')).reduce((sum, r) => sum + r.amount, 0);
+    const wardTotal = receiptRows.filter(r => r.name.startsWith('[Quỹ Phường]')).reduce((sum, r) => sum + r.amount, 0);
+    const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
@@ -1231,7 +1233,7 @@ const Finance = () => {
           <tbody>
             ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản đóng góp nào.</td></tr>'}
             <tr class="receipt-total-row" style="font-weight: bold;">
-              <td colspan="4" style="text-align: center;">TỔNG CỘNG THỰC THU (TĐP + PHƯỜNG)</td>
+              <td colspan="4" style="text-align: center;">TỔNG CỘNG THỰC THU (TDP: ${tdpTotal.toLocaleString('vi-VN')} + PHƯỜNG: ${wardTotal.toLocaleString('vi-VN')})</td>
               <td style="text-align: right; color: #15803d;">${grandTotal.toLocaleString('vi-VN')} đ</td>
               <td></td>
             </tr>
