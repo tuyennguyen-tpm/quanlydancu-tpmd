@@ -652,7 +652,23 @@ const WardFunds = () => {
     }
     setEditingRecord(record);
     setFullNameInput(record.full_name);
-    setDobInput(record.dob || '');
+
+    // Tìm nhân khẩu tương ứng để lấy ngày sinh đầy đủ nếu record.dob chỉ chứa năm sinh
+    let displayDob = record.dob || '';
+    if (displayDob.length === 4) {
+      const nameKey = record.full_name.trim().toLowerCase();
+      const candidates = residents.filter(r => r.full_name.trim().toLowerCase() === nameKey);
+      if (candidates.length === 1) {
+        displayDob = formatDateVN(candidates[0].dob);
+      } else if (candidates.length > 1) {
+        const matched = candidates.find(r => r.user_id === record.user_id);
+        if (matched) displayDob = formatDateVN(matched.dob);
+      }
+    } else {
+      displayDob = formatDateVN(displayDob);
+    }
+
+    setDobInput(displayDob);
     setAddressInput(record.address || '');
     setNote(record.note || '');
 
@@ -1206,7 +1222,7 @@ const WardFunds = () => {
               id: generateUUID(),
               year: selectedYear,
               full_name: r.full_name.trim(),
-              dob: parsedYear > 0 ? parsedYear.toString() : (r.dob ? r.dob.trim() : undefined),
+              dob: r.dob ? formatDateVN(r.dob.trim()) : undefined,
               address: hh ? hh.address : undefined,
               user_id: r.user_id, // Gán trực tiếp cho TDP quản lý nhân khẩu này
               contributions
@@ -1502,6 +1518,7 @@ const WardFunds = () => {
 
         const batchFunds: WardFund[] = [];
         let successCount = 0;
+        const matchedResidentIdsInBatch = new Set<string>();
 
         worksheet.eachRow((row, rowNum) => {
           // Bỏ qua dòng tiêu đề và header
@@ -1553,7 +1570,14 @@ const WardFunds = () => {
               });
               if (addrMatch.length > 0) filtered = addrMatch;
             }
-            matchedResident = filtered[0];
+            
+            // Tránh gán trùng lặp: Ưu tiên chọn nhân khẩu chưa được khớp trong batch này
+            const unmatched = filtered.filter(r => !matchedResidentIdsInBatch.has(r.id));
+            if (unmatched.length > 0) {
+              matchedResident = unmatched[0];
+            } else {
+              matchedResident = filtered[0];
+            }
           }
 
           let matchedTdpId: string | undefined = matchedResident?.user_id;
@@ -1561,6 +1585,7 @@ const WardFunds = () => {
           let finalAddr = addr ? addr.trim() : undefined;
 
           if (matchedResident) {
+            matchedResidentIdsInBatch.add(matchedResident.id);
             const hh = households.find(h => h.id === matchedResident!.household_id);
             if (hh?.address) finalAddr = hh.address;
           }
