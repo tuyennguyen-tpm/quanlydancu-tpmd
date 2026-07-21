@@ -2939,6 +2939,27 @@ const WardFunds = () => {
           .btn-save { background: #3b82f6; color: white; }
           .btn-close { background: #ef4444; color: white; }
           
+          .toolbar-btn-format {
+            padding: 6px 12px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+          }
+          .toolbar-btn-format:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: white;
+            transform: translateY(-1px);
+          }
+          .toolbar-btn-format:active {
+            transform: translateY(1px);
+          }
+          
           .toolbar-select {
             padding: 6px 10px;
             border: 1px solid rgba(255,255,255,0.3);
@@ -3060,6 +3081,26 @@ const WardFunds = () => {
           <button class="toolbar-btn btn-save" id="btnSave">💾 Lưu mẫu</button>
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-close" onclick="window.close()">✖️ Đóng</button>
+          
+          <div style="display: flex; gap: 6px; align-items: center; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 10px; margin-left: 5px;">
+            <button class="toolbar-btn-format" onclick="document.execCommand('justifyLeft')" title="Căn lề trái">◀️ Căn trái</button>
+            <button class="toolbar-btn-format" onclick="document.execCommand('justifyCenter')" title="Căn giữa">🔼 Căn giữa</button>
+            <button class="toolbar-btn-format" onclick="document.execCommand('justifyRight')" title="Căn lề phải">▶️ Căn phải</button>
+            <button class="toolbar-btn-format" onclick="document.execCommand('justifyFull')" title="Căn đều hai bên">↔️ Căn đều</button>
+
+            <select id="lineHeightSelect" class="toolbar-select" style="margin-left: 5px;">
+              <option value="">Giãn dòng (Line Spacing)</option>
+              <option value="1.0">Giãn dòng: 1.0</option>
+              <option value="1.15">Giãn dòng: 1.15</option>
+              <option value="1.2">Giãn dòng: 1.2</option>
+              <option value="1.3">Giãn dòng: 1.3</option>
+              <option value="1.4">Giãn dòng: 1.4</option>
+              <option value="1.5">Giãn dòng: 1.5</option>
+              <option value="1.6">Giãn dòng: 1.6</option>
+              <option value="1.8">Giãn dòng: 1.8</option>
+              <option value="2.0">Giãn dòng: 2.0</option>
+            </select>
+          </div>
         </div>
         <div class="editor-area" contenteditable="true" spellcheck="false">
           ${editorContentHtml}
@@ -3097,6 +3138,43 @@ const WardFunds = () => {
           });
 
 
+
+          // Giãn dòng của phần được chọn
+          const lineHeightSelect = document.getElementById('lineHeightSelect');
+          lineHeightSelect.addEventListener('change', function() {
+            const val = this.value;
+            if (!val) return;
+            
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            
+            const range = selection.getRangeAt(0);
+            const editorArea = document.querySelector('.editor-area');
+            const blocks = editorArea.querySelectorAll('p, div, td, tr, th, span');
+            let applied = false;
+            
+            blocks.forEach(block => {
+              if (selection.containsNode(block, true)) {
+                block.style.lineHeight = val;
+                applied = true;
+              }
+            });
+            
+            if (!applied || selection.isCollapsed) {
+              let node = range.commonAncestorContainer;
+              while (node && node.nodeType === 3) {
+                node = node.parentNode;
+              }
+              while (node && node !== editorArea && node.tagName !== 'BODY') {
+                if (node.tagName === 'P' || node.tagName === 'DIV' || node.tagName === 'TD' || node.tagName === 'TR' || node.tagName === 'TH' || node.tagName === 'SPAN') {
+                  node.style.lineHeight = val;
+                  break;
+                }
+                node = node.parentNode;
+              }
+            }
+            this.value = ""; // reset select
+          });
 
           // Keyboard shortcut: Ctrl+P to print
           document.addEventListener('keydown', function(e) {
