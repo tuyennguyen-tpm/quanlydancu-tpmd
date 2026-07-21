@@ -161,13 +161,14 @@ const WardFunds = () => {
     });
 
     // We store residents by name for quick lookup. If multiple exists, we group them.
-    const nameMap = new Map<string, Array<{ dob: string; group: string; headName: string }>>();
+    const nameMap = new Map<string, Array<{ dob: string; group: string; headName: string; isHead: boolean }>>();
     residents.forEach(r => {
       const nameKey = r.full_name.trim().toLowerCase();
       const info = {
         dob: (r.dob || '').trim(),
         group: hhGroupMap.get(r.household_id) || '',
-        headName: hhHeadMap.get(r.household_id) || ''
+        headName: hhHeadMap.get(r.household_id) || '',
+        isHead: r.is_head || false
       };
       if (!nameMap.has(nameKey)) {
         nameMap.set(nameKey, []);
@@ -182,7 +183,7 @@ const WardFunds = () => {
   const findResidentGroupAndHead = (name: string, dob: string) => {
     const nameKey = name.trim().toLowerCase();
     const list = residentsInfoLookup.get(nameKey);
-    if (!list || list.length === 0) return { group: '', headName: '' };
+    if (!list || list.length === 0) return { group: '', headName: '', isHead: false };
     
     const cleanDob = dob.trim();
     if (cleanDob) {
@@ -193,12 +194,12 @@ const WardFunds = () => {
       // Chỉ cho phép khớp nếu người trong DB không có năm sinh.
       const noDobMatch = list.find(r => !r.dob);
       if (noDobMatch) return noDobMatch;
-      return { group: '', headName: '' };
+      return { group: '', headName: '', isHead: false };
     }
     
     // Nếu bản ghi quỹ không có DOB, chỉ tự động khớp nếu trong DB chỉ có duy nhất 1 người trùng tên
     if (list.length === 1) return list[0];
-    return { group: '', headName: '' };
+    return { group: '', headName: '', isHead: false };
   };
 
   // Helper to resolve group/tổ of a fund record
@@ -260,8 +261,16 @@ const WardFunds = () => {
       return true;
     });
 
+    // Lọc chỉ giữ lại chủ hộ nếu ở Tab thu theo Hộ
+    const filteredByMode = subTabMode === 'household_list'
+      ? list.filter(f => {
+          const info = findResidentGroupAndHead(f.full_name, f.dob || '');
+          return info.isHead === true;
+        })
+      : list;
+
     // Sắp xếp thứ tự ưu tiên theo Cụm/Tổ đã cấu hình (Ví dụ: Tổ Việt Trung -> Tổ 4 -> Tổ 5...)
-    return list.sort((a, b) => {
+    return filteredByMode.sort((a, b) => {
       const grpA = getGroupOfFundRecord(a);
       const grpB = getGroupOfFundRecord(b);
       
@@ -278,7 +287,7 @@ const WardFunds = () => {
       // Cùng Tổ thì xếp theo Tên tiếng Việt A-Z
       return a.full_name.localeCompare(b.full_name, 'vi');
     });
-  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, residents, households, groups]);
+  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, residents, households, groups]);
 
   // Calculate Statistics dynamically
   const fundStats = activeFunds.map(fund => {
