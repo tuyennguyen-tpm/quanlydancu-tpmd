@@ -560,16 +560,26 @@ const WardFunds = () => {
 
   // Calculate Statistics dynamically - luôn dùng chỉ tiêu mới nhất từ cấu hình
   const fundStats = activeFunds.map(fund => {
-    // Nếu bản ghi có expected > 0 thì dùng, nếu = 0 thì tính theo fund.target
-    const expected = funds.reduce((sum, f) => {
-      const stored = f.contributions?.[fund.name]?.expected || 0;
-      return sum + (stored > 0 ? stored : fund.target);
-    }, 0);
+    const isHouseholdScope = (fund as any).scope === 'household'
+      || fund.name.toLowerCase().includes('hộ')
+      || fund.name.toLowerCase().includes('người cao tuổi')
+      || fund.name.toLowerCase().includes('cao tuổi');
+
+    // Tính tổng số tiền phải thu: chỉ tính từ bản ghi có expected > 0
+    const recordsWithExpected = funds.filter(f => (f.contributions?.[fund.name]?.expected || 0) > 0);
+    const expected = recordsWithExpected.length > 0
+      ? recordsWithExpected.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0)
+      : fund.target * (isHouseholdScope
+          ? new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
+          : funds.length);
+
     const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
     const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
-    const remaining = expected - actual;
+    const remaining = Math.max(0, expected - actual);
     return {
       name: fund.name,
+      target: fund.target,
+      scope: isHouseholdScope ? 'household' : 'person',
       expected,
       actual,
       percent,
@@ -4898,8 +4908,8 @@ const WardFunds = () => {
                   <span style={{ fontSize: '0.78rem', fontWeight: '800', color: textColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {stat.name}
                   </span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.6rem', fontWeight: '850', color: '#1e293b' }}>
-                    {formatCurrency(stat.actual)}
+                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: '850', color: '#1e293b' }}>
+                    {formatCurrency(stat.target)} đ/{(stat as any).scope === 'household' ? 'hộ' : 'khẩu'}
                   </h3>
                 </div>
                 <div style={{
@@ -4920,10 +4930,8 @@ const WardFunds = () => {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>
-                <span>Phải thu: {formatCurrency(stat.expected)}</span>
-                <span style={{ color: stat.remaining > 0 ? '#ef4444' : '#10b981' }}>
-                  Còn thiếu: {formatCurrency(stat.remaining)}
-                </span>
+                <span>Đã thu: <strong style={{ color: '#16a34a' }}>{formatCurrency(stat.actual)} đ</strong></span>
+                <span>Phải thu: {formatCurrency(stat.expected)} đ</span>
               </div>
             </div>
           );
