@@ -577,6 +577,14 @@ const Finance = () => {
       });
       
       // 4. Sắp xếp hộ dân theo Tổ/Cụm rồi mới xuất
+      // Tiền xử lý Map thanh toán O(1) cho Excel để tránh đứng trang
+      const excelPayMap = new Map<string, number>();
+      householdFunds.forEach(f => {
+        if (f.year === fundYear) {
+          excelPayMap.set(`${f.household_id}_${f.fund_name}`, f.amount);
+        }
+      });
+
       const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
         const gA = a.self_management_group || '';
         const gB = b.self_management_group || '';
@@ -620,7 +628,7 @@ const Finance = () => {
 
         sttCounter++;
         const headName = getHouseholdHeadName(hh);
-        const hhFundsList = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+        const hhFundsList = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear && fundNames.includes(f.fund_name));
         const totalPaid = hhFundsList.reduce((sum, f) => sum + f.amount, 0);
         
         const tdpNameStoredInLocal = localStorage.getItem('tdp_name') || '';
@@ -666,8 +674,8 @@ const Finance = () => {
         ];
         
         fundNames.forEach(fundName => {
-          const paid = hhFundsList.find(f => f.fund_name === fundName);
-          rowData.push(paid ? paid.amount : 0);
+          const amount = excelPayMap.get(`${hh.id}_${fundName}`) || 0;
+          rowData.push(amount);
         });
         
         const dataRow = worksheet.addRow(rowData);
@@ -711,7 +719,7 @@ const Finance = () => {
       // Tính toán tổng cộng cho từng cột
       let grandTotal = 0;
       filteredHouseholdsForFunds.forEach(hh => {
-        const hhFundsList = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
+        const hhFundsList = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear && fundNames.includes(f.fund_name));
         grandTotal += hhFundsList.reduce((sum, f) => sum + f.amount, 0);
       });
       totalRow.getCell(4).value = grandTotal;
@@ -722,8 +730,8 @@ const Finance = () => {
       fundNames.forEach((fundName, idx) => {
         let colSum = 0;
         filteredHouseholdsForFunds.forEach(hh => {
-          const paid = householdFunds.find(f => f.household_id === hh.id && f.fund_name === fundName && f.year === fundYear);
-          if (paid) colSum += paid.amount;
+          const paidAmount = excelPayMap.get(`${hh.id}_${fundName}`) || 0;
+          colSum += paidAmount;
         });
         const cellIndex = 5 + idx;
         totalRow.getCell(cellIndex).value = colSum;
@@ -3284,21 +3292,25 @@ const Finance = () => {
     return new Intl.NumberFormat('vi-VN').format(parseInt(clean));
   };
 
-  // 1. Tối ưu hóa hiệu năng: Tạo Map tra cứu tổng số tiền đã nộp theo householdId & year
+  // 1. Tối ưu hóa hiệu năng: Tạo Map tra cứu tổng số tiền đã nộp theo householdId & year (chỉ tính các quỹ đang hoạt động)
   const totalPaidLookup = useMemo(() => {
     const map = new Map<string, number>();
+    const activeSet = new Set(fundNames);
     householdFunds.forEach(f => {
-      const key = `${f.household_id}_${f.year}`;
-      map.set(key, (map.get(key) || 0) + f.amount);
+      if (activeSet.has(f.fund_name)) {
+        const key = `${f.household_id}_${f.year}`;
+        map.set(key, (map.get(key) || 0) + f.amount);
+      }
     });
     return map;
-  }, [householdFunds]);
+  }, [householdFunds, fundNames]);
 
-  // 2. Tối ưu hóa hiệu năng: Tạo Map tra cứu danh sách các khoản nộp của từng hộ trong năm hiện tại
+  // 2. Tối ưu hóa hiệu năng: Tạo Map tra cứu danh sách các khoản nộp của từng hộ trong năm hiện tại (chỉ lấy quỹ đang hoạt động)
   const hhFundsMap = useMemo(() => {
     const map = new Map<string, typeof householdFunds>();
+    const activeSet = new Set(fundNames);
     householdFunds.forEach(f => {
-      if (f.year === fundYear) {
+      if (f.year === fundYear && activeSet.has(f.fund_name)) {
         if (!map.has(f.household_id)) {
           map.set(f.household_id, []);
         }
@@ -3306,13 +3318,14 @@ const Finance = () => {
       }
     });
     return map;
-  }, [householdFunds, fundYear]);
+  }, [householdFunds, fundYear, fundNames]);
 
-  // 3. Tối ưu hóa hiệu năng: Tạo Map tra cứu nhanh các khoản nộp của hộ để tính toán thống kê
+  // 3. Tối ưu hóa hiệu năng: Tạo Map tra cứu nhanh các khoản nộp của hộ để tính toán thống kê (chỉ lấy quỹ đang hoạt động)
   const fundPaymentsLookup = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
+    const activeSet = new Set(fundNames);
     householdFunds.forEach(f => {
-      if (f.year === fundYear && f.amount > 0) {
+      if (f.year === fundYear && f.amount > 0 && activeSet.has(f.fund_name)) {
         if (!map.has(f.household_id)) {
           map.set(f.household_id, new Map());
         }
@@ -3320,7 +3333,7 @@ const Finance = () => {
       }
     });
     return map;
-  }, [householdFunds, fundYear]);
+  }, [householdFunds, fundYear, fundNames]);
 
   const filteredHouseholdsForFunds = useMemo(() => {
     const list = households.filter(hh => {
