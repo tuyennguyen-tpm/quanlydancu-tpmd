@@ -2687,11 +2687,16 @@ const WardFunds = () => {
     const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     
     let leaderName = localStorage.getItem('leader_name') || 'Nguyễn Kim Tuyến';
+    let leaderSigUrl = '';
     try {
       const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
-      const toTruong = sigs.find((s: {id:string;name:string}) => s.id === 'to_truong');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
       if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
+
+    const today = new Date();
+    const dateTextVal = `ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
 
     // Quỹ TDP từ CSDL hoặc mẫu mặc định
     const tdpFundsList = (db as any).getFundList() || [];
@@ -2842,9 +2847,12 @@ const WardFunds = () => {
             <tr>
               <td style="width: 45%;"></td>
               <td style="width: 55%;">
-                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ngày ..... tháng ..... năm ${selectedYear}</div>
+                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ${dateTextVal}</div>
                 <div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
-                <div style="font-style: italic; font-size: 10pt; margin-bottom: 30px;">(Ký, ghi rõ họ tên)</div>
+                <div style="font-style: italic; font-size: 10pt; margin-bottom: 5px;">(Ký, ghi rõ họ tên)</div>
+                <div style="height: 55px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; margin-top: 5px;">
+                  ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 55px; max-height: 55px; max-width: 150px; object-fit: contain;" />` : '<div style="height: 55px;"></div>'}
+                </div>
                 <div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>
               </td>
             </tr>

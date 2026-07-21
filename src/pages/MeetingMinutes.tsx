@@ -129,6 +129,8 @@ const MeetingMinutes = () => {
                   (meetingType === 'general' && currentRole !== 'admin' && currentRole !== 'to_truong');
   const [content, setContent] = useState('');
   const [isFullscreenEdit, setIsFullscreenEdit] = useState(false);
+  const [textAlign, setTextAlign] = useState<'left' | 'center' | 'right' | 'justify'>('justify');
+  const [lineHeight, setLineHeight] = useState<'1.15' | '1.2' | '1.3' | '1.4' | '1.5' | '1.6' | '1.8' | '2.0'>('1.6');
 
   const [orgLevel1, setOrgLevel1] = useState(`UBND ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
   const [orgLevel2, setOrgLevel2] = useState(`TỔ DÂN PHỐ ${(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn').toUpperCase()}`);
@@ -151,7 +153,9 @@ const MeetingMinutes = () => {
       chairmanTitle,
       docNumber,
       endTime,
-      secretary2
+      secretary2,
+      textAlign,
+      lineHeight
     };
     return `${rawContent}\n\n<!--METADATA:${JSON.stringify(metadata)}-->`;
   };
@@ -172,6 +176,8 @@ const MeetingMinutes = () => {
         setDocNumber(meta.docNumber || '.....');
         setEndTime(meta.endTime || '...... giờ');
         setSecretary2(meta.secretary2 || '');
+        setTextAlign(meta.textAlign || 'justify');
+        setLineHeight(meta.lineHeight || '1.6');
         return fullContent.replace(regex, '');
       } catch (e) {
         console.error('Lỗi parse metadata:', e);
@@ -600,10 +606,6 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
   }, []);
 
   const handleReset = () => {
-    if (isGuest) {
-      showToast('Khách không có quyền đặt lại nội dung biên bản!', 'warning');
-      return;
-    }
     if (window.confirm('Bạn có muốn khôi phục nội dung biên bản về mặc định?')) {
       setSelectedMeetingId('');
       setTitle('Họp Tổ dân phố thường kỳ');
@@ -615,6 +617,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       setSecretary2(getOfficialNameFromConfig('thu_ky2', ''));
       setAttendance('85');
       setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
+      setTextAlign('justify');
+      setLineHeight('1.6');
       showToast('Đã khôi phục mặc định!', 'info');
     }
   };
@@ -893,11 +897,11 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             }
             .bullet-content {
               white-space: pre-wrap;
-              text-align: justify;
+              text-align: ${textAlign};
               margin-top: 10px;
               font-family: "Times New Roman", Times, serif;
               font-size: 14pt;
-              line-height: 1.6;
+              line-height: ${lineHeight};
             }
             .footer-table {
               width: 100%;
@@ -1055,13 +1059,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
       .map(line => {
         const trimmed = line.trim();
         if (!trimmed) {
-          return '<p style="margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;">&nbsp;</p>';
+          return `<p style="margin: 0 0 6pt 0; line-height: ${lineHeight}; font-size: 13pt;">&nbsp;</p>`;
         }
         const isHeaderOrList = /^[I|V|X|\d+\-|*•\+]+[.\s]/.test(trimmed) || trimmed.length < 60;
         if (isHeaderOrList) {
-          return `<p style="text-align: left; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;">${trimmed}</p>`;
+          return `<p style="text-align: left; margin: 0 0 6pt 0; line-height: ${lineHeight}; font-size: 13pt;">${trimmed}</p>`;
         }
-        return `<p style="text-align: justify; text-indent: 36pt; margin: 0 0 6pt 0; line-height: 1.5; font-size: 13pt;">${trimmed}</p>`;
+        return `<p style="text-align: ${textAlign}; text-indent: 36pt; margin: 0 0 6pt 0; line-height: ${lineHeight}; font-size: 13pt;">${trimmed}</p>`;
       })
       .join('');
 
@@ -1618,15 +1622,13 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-            {!isGuest && (
-              <button
-                onClick={handleReset}
-                className="btn btn-secondary"
-                style={{ flex: '1 1 120px', padding: '9px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-              >
-                <RotateCcw size={14} /> Reset form
-              </button>
-            )}
+            <button
+              onClick={handleReset}
+              className="btn btn-secondary"
+              style={{ flex: '1 1 120px', padding: '9px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+            >
+              <RotateCcw size={14} /> Reset form
+            </button>
             <button
               onClick={() => setIsFullscreenEdit(true)}
               className="btn btn-secondary"
@@ -1800,8 +1802,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               whiteSpace: 'pre-wrap',
               paddingLeft: '8px',
               fontFamily: '"Times New Roman", Times, serif',
-              lineHeight: '1.5',
-              textAlign: 'justify'
+              lineHeight: lineHeight,
+              textAlign: textAlign
             }}>
               {content}
             </div>
@@ -1882,40 +1884,93 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
             zIndex: 10
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FileText size={20} color="#60a5fa" />
-              <div>
-                <span style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>Soạn thảo Biên bản cuộc họp (Word)</span>
-                <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                  Khổ giấy A4 - Căn lề chuẩn
-                </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileText size={20} color="#60a5fa" />
+                <div>
+                  <span style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>Soạn thảo Biên bản cuộc họp (Word)</span>
+                  <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Khổ giấy A4 - Căn lề chuẩn
+                  </span>
+                </div>
+              </div>
+
+              {/* Spacing & Alignment controls */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '10px' }}>
+                <select 
+                  value={textAlign} 
+                  onChange={(e: any) => setTextAlign(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '0.82rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  className="toolbar-select"
+                >
+                  <option value="left" style={{ background: '#1e293b' }}>Align Left (Căn lề trái)</option>
+                  <option value="center" style={{ background: '#1e293b' }}>Align Center (Căn giữa)</option>
+                  <option value="right" style={{ background: '#1e293b' }}>Align Right (Căn lề phải)</option>
+                  <option value="justify" style={{ background: '#1e293b' }}>Align Justify (Căn đều)</option>
+                </select>
+
+                <select 
+                  value={lineHeight} 
+                  onChange={(e: any) => setLineHeight(e.target.value)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '0.82rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  className="toolbar-select"
+                >
+                  <option value="1.15" style={{ background: '#1e293b' }}>Line Spacing: 1.15</option>
+                  <option value="1.2" style={{ background: '#1e293b' }}>Line Spacing: 1.2</option>
+                  <option value="1.3" style={{ background: '#1e293b' }}>Line Spacing: 1.3</option>
+                  <option value="1.4" style={{ background: '#1e293b' }}>Line Spacing: 1.4</option>
+                  <option value="1.5" style={{ background: '#1e293b' }}>Line Spacing: 1.5</option>
+                  <option value="1.6" style={{ background: '#1e293b' }}>Line Spacing: 1.6</option>
+                  <option value="1.8" style={{ background: '#1e293b' }}>Line Spacing: 1.8</option>
+                  <option value="2.0" style={{ background: '#1e293b' }}>Line Spacing: 2.0</option>
+                </select>
               </div>
             </div>
             
             <div style={{ display: 'flex', gap: '12px' }}>
-              {!isGuest && (
-                <button
-                  onClick={handleReset}
-                  style={{
-                    background: 'rgba(255,255,255,0.15)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: 'white',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.88rem',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-                >
-                  <RotateCcw size={14} /> Khôi phục mặc định
-                </button>
-              )}
+              <button
+                onClick={handleReset}
+                style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <RotateCcw size={14} /> Khôi phục mặc định
+              </button>
               
               {!isGuest && (
                 <button
@@ -2374,8 +2429,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     resize: 'none',
                     fontFamily: '"Times New Roman", Times, serif',
                     fontSize: '12pt',
-                    lineHeight: '1.6',
-                    textAlign: 'justify',
+                    lineHeight: lineHeight,
+                    textAlign: textAlign,
                     background: 'transparent',
                     color: '#000',
                     borderLeft: '2px solid transparent',
