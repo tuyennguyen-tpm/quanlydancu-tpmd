@@ -74,7 +74,8 @@ const WardFunds = () => {
   // State
   const [funds, setFunds] = useState<WardFund[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDeferredValue(searchInput);
   const [isLoading, setIsLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'paid_all' | 'unpaid_any'>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
@@ -506,8 +507,14 @@ const WardFunds = () => {
       const firstMember = members[0];
       let householdId = '';
       if (firstMember) {
-        const res = residents.find(r => r.full_name.trim().toLowerCase() === firstMember.full_name.trim().toLowerCase());
-        if (res) householdId = res.household_id;
+        const nameKey = firstMember.full_name.trim().toLowerCase();
+        const hhInfo = residentToHouseholdMap.get(nameKey + '__' + selectedYear) || residentToHouseholdMap.get(nameKey + '__');
+        if (hhInfo?.householdId && !hhInfo.householdId.startsWith('addr__')) {
+          householdId = hhInfo.householdId;
+        } else {
+          const res = residents.find(r => r.full_name.trim().toLowerCase() === nameKey);
+          if (res) householdId = res.household_id;
+        }
       }
 
       const household = households.find(h => h.id === householdId);
@@ -550,9 +557,9 @@ const WardFunds = () => {
       }));
 
       // 2. Lưu đóng quỹ TDP và đồng bộ Sổ quỹ chung
-      if (household) {
-        const headResident = residents.find(r => r.id === household.head_of_household_id || r.is_head);
-        const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
+      if (householdId && !householdId.startsWith('addr__')) {
+        const headResident = residents.find(r => (household && r.id === household.head_of_household_id) || r.is_head);
+        const headName = headResident ? headResident.full_name : (household?.martyr_name || (firstMember ? firstMember.full_name : 'Đại diện hộ'));
 
         for (const fund of tdpActiveFunds) {
           const existing = filteredHhFunds.find(hf => hf.fund_name === fund.name);
@@ -1172,272 +1179,211 @@ const WardFunds = () => {
 
     try {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet(`Bao_Cao_Thu_Quy_${selectedYear}`);
 
-      const totalCols = 5 + activeFunds.length * 3 + 1; // 5 cột cá nhân + 3 cột/quỹ + 1 ghi chú
+      // ─── Helper: Xây dựng nội dung cho 1 worksheet ───────────────────────
+      const buildSheet = (
+        ws: ExcelJS.Worksheet,
+        sheetFunds: typeof filteredFunds,
+        sheetTitle: string,
+        isSummary: boolean
+      ) => {
+        const totalCols = 5 + activeFunds.length * 3 + 1;
+        const lastColLetter = ws.getColumn(totalCols).letter;
 
-      // Title block
-      worksheet.getCell('A1').value = `BÁO CÁO THU QUỸ ỦY THÁC TỪ PHƯỜNG NĂM ${selectedYear}`;
-      worksheet.getCell('A1').font = { name: 'Segoe UI', size: 16, bold: true, color: { argb: 'FF15803D' } };
-      
-      const lastColLetter = worksheet.getColumn(totalCols).letter;
-      worksheet.mergeCells(`A1:${lastColLetter}1`);
-      worksheet.getRow(1).height = 30;
+        // ── Tiêu đề ──
+        ws.getCell('A1').value = sheetTitle;
+        ws.getCell('A1').font = { name: 'Segoe UI', size: 15, bold: true, color: { argb: 'FF15803D' } };
+        ws.mergeCells(`A1:${lastColLetter}1`);
+        ws.getRow(1).height = 30;
 
-      worksheet.getCell('A2').value = `Tổ dân phố: ${localStorage.getItem('tdp_name') || 'Quảng Giao'} - Ngày báo cáo: ${new Date().toLocaleDateString('vi-VN')}`;
-      worksheet.getCell('A2').font = { name: 'Segoe UI', size: 11, italic: true, color: { argb: 'FF475569' } };
-      worksheet.mergeCells(`A2:${lastColLetter}2`);
-      worksheet.getRow(2).height = 20;
+        const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+        ws.getCell('A2').value = `Tổ dân phố: ${tdpName} - Ngày báo cáo: ${new Date().toLocaleDateString('vi-VN')}`;
+        ws.getCell('A2').font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
+        ws.mergeCells(`A2:${lastColLetter}2`);
+        ws.getRow(2).height = 20;
 
-      // Group Headers
-      worksheet.getCell('A3').value = 'Thông tin cá nhân';
-      worksheet.mergeCells('A3:E3');
-      
-      let currentColNum = 6;
-      activeFunds.forEach(fund => {
-        const startCellStr = worksheet.getColumn(currentColNum).letter + '3';
-        const endCellStr = worksheet.getColumn(currentColNum + 2).letter + '3';
-        worksheet.getCell(startCellStr).value = fund.name;
-        worksheet.mergeCells(`${startCellStr}:${endCellStr}`);
-        currentColNum += 3;
-      });
-      
-      const noteCellStr = worksheet.getColumn(currentColNum).letter + '3';
-      worksheet.getCell(noteCellStr).value = 'Ghi chú';
+        // ── Header nhóm cột ──
+        ws.getCell('A3').value = 'Thông tin cá nhân';
+        ws.mergeCells('A3:E3');
 
-      const groupRow = worksheet.getRow(3);
-      groupRow.height = 25;
-      groupRow.eachCell((cell) => {
-        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FF1E40AF' }
-        };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      });
-
-      // Sub Headers
-      const subHeaders = ['STT', 'Họ và tên', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ'];
-      activeFunds.forEach(() => {
-        subHeaders.push('Phải nộp (đ)', 'Thực nộp (đ)', 'Ngày nộp');
-      });
-      subHeaders.push('Chú thích');
-      
-      const subHeaderRow = worksheet.addRow(subHeaders);
-      subHeaderRow.height = 24;
-      subHeaderRow.eachCell((cell) => {
-        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E293B' } };
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFDBEAFE' }
-        };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
-        cell.border = {
-          bottom: { style: 'medium', color: { argb: 'FF3B82F6' } }
-        };
-      });
-
-      // Sắp xếp danh sách theo Cụm / Tổ trước khi ghi vào Excel
-      const sortedFunds = [...filteredFunds].sort((a, b) => {
-        const gA = getGroupOfFundRecord(a) || '';
-        const gB = getGroupOfFundRecord(b) || '';
-        
-        const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
-        const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
-        
-        const rankA = idxA !== -1 ? idxA : 999;
-        const rankB = idxB !== -1 ? idxB : 999;
-        
-        if (rankA !== rankB) {
-          return rankA - rankB;
-        }
-        
-        const nameA = (a.full_name || '').toLowerCase();
-        const nameB = (b.full_name || '').toLowerCase();
-        return nameA.localeCompare(nameB, 'vi');
-      });
-
-      let currentGroup = '';
-      let sttCounter = 0;
-
-      sortedFunds.forEach((f) => {
-        const groupName = getGroupOfFundRecord(f) || '';
-
-        // Tạo dòng tiêu đề cụm/tổ khi chuyển nhóm
-        if (groupName !== currentGroup) {
-          currentGroup = groupName;
-          const groupLabel = groupName ? `TỔ/CỤM: ${groupName.toUpperCase()}` : 'CHƯA PHÂN NHÓM';
-          const groupHeaderRow = worksheet.addRow([groupLabel]);
-          groupHeaderRow.height = 22;
-          worksheet.mergeCells(`A${groupHeaderRow.number}:${String.fromCharCode(64 + totalCols)}${groupHeaderRow.number}`);
-          groupHeaderRow.getCell(1).font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FFFFFFFF' } };
-          groupHeaderRow.getCell(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FF1E40AF' } // Màu xanh Navy
-          };
-          groupHeaderRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-        }
-
-        const tdpNameStored = localStorage.getItem('tdp_name') || '';
-        let displayAddress = f.address || '';
-        
-        // Loại bỏ phần Tổ/Cụm trùng lặp khỏi địa chỉ
-        if (groupName) {
-          // Xóa "Tổ X" hoặc "Cụm X" cụ thể của nhóm hiện tại
-          const cleanGroup = groupName.replace(/^(tổ|cụm)\s*/gi, '').trim();
-          const groupRegex = new RegExp(`\\b(tổ|cụm)?\\s*${cleanGroup}\\b`, 'gi');
-          displayAddress = displayAddress.replace(groupRegex, '');
-        }
-        
-        // Loại bỏ bất kỳ cụm từ "Tổ/Cụm [số]" nào khác để tránh lộn xộn, mâu thuẫn thông tin trên cùng một dòng
-        displayAddress = displayAddress.replace(/\b(tổ|cụm|tổ tự quản|cụm tự quản)\s*\d+\b/gi, '');
-        
-        // Làm sạch các ký tự phân cách thừa (phẩy, gạch ngang, khoảng trắng) ở đầu/cuối và ở giữa
-        displayAddress = displayAddress
-          .replace(/^[-\s,·•/]+/g, '')
-          .replace(/[-\s,·•/]+$/g, '')
-          .replace(/\s*,\s*,+/g, ',')
-          .trim();
-
-        // Ghép thêm tên Tổ dân phố từ cài đặt nếu chưa có
-        if (tdpNameStored && !displayAddress.toLowerCase().includes(tdpNameStored.toLowerCase())) {
-          if (displayAddress) {
-            displayAddress = `${displayAddress}, ${tdpNameStored}`;
-          } else {
-            displayAddress = tdpNameStored;
-          }
-        }
-        
-        // Dọn dẹp dấu phẩy hoặc gạch thừa một lần nữa
-        displayAddress = displayAddress
-          .replace(/^[-\s,·•]+/g, '')
-          .replace(/[-\s,·•]+$/g, '')
-          .trim();
-
-        const rowData: any[] = [
-          sttCounter,
-          f.full_name,
-          f.dob || '',
-          groupName || '-',
-          displayAddress
-        ];
-        
+        let currentColNum = 6;
         activeFunds.forEach(fund => {
-          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          const expectedVal = contrib.expected || fund.target;
-          const actualVal = contrib.actual > 0 ? contrib.actual : '';
-          rowData.push(
-            expectedVal,
-            actualVal,
-            contrib.actual > 0 && contrib.date ? new Date(contrib.date).toLocaleDateString('vi-VN') : ''
-          );
+          const startCell = ws.getColumn(currentColNum).letter + '3';
+          const endCell   = ws.getColumn(currentColNum + 2).letter + '3';
+          ws.getCell(startCell).value = fund.name;
+          ws.mergeCells(`${startCell}:${endCell}`);
+          currentColNum += 3;
         });
-        
-        const isAllPaid = activeFunds.every(fund => {
-          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          return contrib.actual >= contrib.expected && contrib.expected > 0;
+        ws.getCell(ws.getColumn(currentColNum).letter + '3').value = 'Ghi chú';
+
+        const groupRow = ws.getRow(3);
+        groupRow.height = 25;
+        groupRow.eachCell(cell => {
+          cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
-        const displayNote = (!isAllPaid && f.note === 'Đã nộp đủ đợt tập trung') ? '' : (f.note || '');
-        rowData.push(displayNote);
-        
-        const dataRow = worksheet.addRow(rowData);
-        dataRow.height = 22;
 
-        dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }; // STT
-        dataRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' }; // Họ tên
-        dataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' }; // Năm sinh
-        dataRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' }; // Cụm/Tổ
-        dataRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' }; // Địa chỉ
+        // ── Sub-headers ──
+        const subHeaders = ['STT', 'Họ và tên', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ'];
+        activeFunds.forEach(() => { subHeaders.push('Phải nộp (đ)', 'Thực nộp (đ)', 'Ngày nộp'); });
+        subHeaders.push('Chú thích');
 
-        let cNum = 6;
-        activeFunds.forEach(fund => {
-          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          const expectedVal = contrib.expected || fund.target;
-          
-          dataRow.getCell(cNum).alignment = { horizontal: 'right', vertical: 'middle' };
-          dataRow.getCell(cNum).numFmt = '#,##0';
-          
-          dataRow.getCell(cNum + 1).alignment = { horizontal: 'right', vertical: 'middle' };
-          dataRow.getCell(cNum + 1).numFmt = '#,##0';
-          
-          dataRow.getCell(cNum + 2).alignment = { horizontal: 'center', vertical: 'middle' };
+        const subHeaderRow = ws.addRow(subHeaders);
+        subHeaderRow.height = 24;
+        subHeaderRow.eachCell(cell => {
+          cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E293B' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = { bottom: { style: 'medium', color: { argb: 'FF3B82F6' } } };
+        });
 
-          if (contrib.actual >= expectedVal && expectedVal > 0) {
-            dataRow.getCell(cNum + 1).font = { color: { argb: 'FF16A34A' }, bold: true };
-          } else if (contrib.actual > 0) {
-            dataRow.getCell(cNum + 1).font = { color: { argb: 'FFD97706' }, bold: true };
-          } else if (expectedVal > 0) {
-            dataRow.getCell(cNum + 1).font = { color: { argb: 'FFDC2626' } };
+        // ── Sắp xếp dữ liệu theo thứ tự tổ trong cài đặt ──
+        const sortedFunds = [...sheetFunds].sort((a, b) => {
+          const gA = getGroupOfFundRecord(a) || '';
+          const gB = getGroupOfFundRecord(b) || '';
+          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+          const rankA = idxA !== -1 ? idxA : 999;
+          const rankB = idxB !== -1 ? idxB : 999;
+          if (rankA !== rankB) return rankA - rankB;
+          return (a.full_name || '').toLowerCase().localeCompare((b.full_name || '').toLowerCase(), 'vi');
+        });
+
+        // ── Dữ liệu ──
+        let currentGroup = '';
+        let sttCounter   = 0;
+
+        sortedFunds.forEach(item => {
+          const itemGroup = getGroupOfFundRecord(item) || 'Chưa phân nhóm';
+          
+          if (isSummary && itemGroup !== currentGroup) {
+            currentGroup = itemGroup;
+            const gRow = ws.addRow([`── ${currentGroup.toUpperCase()} ──`]);
+            ws.mergeCells(`A${gRow.number}:${lastColLetter}${gRow.number}`);
+            gRow.height = 22;
+            gRow.eachCell(cell => {
+              cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E40AF' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            });
           }
-          
-          cNum += 3;
-        });
 
-        dataRow.getCell(cNum).alignment = { horizontal: 'left', vertical: 'middle' }; // Ghi chú
-      });
+          sttCounter++;
+          const rowVals: any[] = [
+            sttCounter,
+            item.full_name || '',
+            item.dob || '',
+            itemGroup,
+            item.address || ''
+          ];
 
-      // Total Row
-      const totalRowIndex = worksheet.rowCount + 1;
-      const totalRowCells: any[] = ['Tổng cộng', '', '', '', ''];
-      
-      activeFunds.forEach(fund => {
-        const totalExp = filteredFunds.reduce((sum, f) => {
-          const contrib = f.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          return sum + (contrib.expected || fund.target);
-        }, 0);
-        const totalAcu = filteredFunds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
-        totalRowCells.push(totalExp, totalAcu, '');
-      });
-      totalRowCells.push('');
-      
-      const totalRow = worksheet.addRow(totalRowCells);
-      totalRow.height = 24;
-      worksheet.mergeCells(`A${totalRowIndex}:E${totalRowIndex}`);
-      
-      totalRow.getCell(1).font = { bold: true, name: 'Segoe UI' };
-      totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-
-      let curCellIndex = 6;
-      activeFunds.forEach(() => {
-        [curCellIndex, curCellIndex + 1].forEach(colIdx => {
-          const cell = totalRow.getCell(colIdx);
-          cell.font = { bold: true, name: 'Segoe UI', color: { argb: 'FF15803D' } };
-          cell.numFmt = '#,##0';
-          cell.alignment = { horizontal: 'right', vertical: 'middle' };
-        });
-        curCellIndex += 3;
-      });
-
-      // Borders and gridlines
-      worksheet.eachRow((row, rowNum) => {
-        if (rowNum >= 3) {
-          row.eachCell(cell => {
-            cell.border = {
-              top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-              left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-              bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-              right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
-            };
+          activeFunds.forEach(fund => {
+            const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+            rowVals.push(contrib.expected || fund.target, contrib.actual || 0, contrib.date ? new Date(contrib.date).toLocaleDateString('vi-VN') : '');
           });
+          rowVals.push(item.note || '');
+
+          const r = ws.addRow(rowVals);
+          r.height = 20;
+          r.eachCell((cell, colIndex) => {
+            if (colIndex === 1 || colIndex === 3) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            else if (colIndex >= 6 && (colIndex - 6) % 3 !== 2 && colIndex < totalCols) {
+              cell.numFmt = '#,##0';
+              cell.alignment = { horizontal: 'right', vertical: 'middle' };
+            } else if (colIndex >= 6 && (colIndex - 6) % 3 === 2) {
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            } else {
+              cell.alignment = { horizontal: 'left', vertical: 'middle' };
+            }
+          });
+        });
+
+        // ── Dòng tổng cộng ──
+        const totalRowVals: any[] = ['TỔNG CỘNG', '', '', '', ''];
+        activeFunds.forEach(fund => {
+          const sumExpected = sheetFunds.reduce((sum, f) => {
+            const exp = f.contributions?.[fund.name]?.expected;
+            return sum + (exp !== undefined && exp > 0 ? exp : fund.target);
+          }, 0);
+          const sumActual = sheetFunds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
+          totalRowVals.push(sumExpected, sumActual, '');
+        });
+        totalRowVals.push('');
+
+        const totalRow = ws.addRow(totalRowVals);
+        ws.mergeCells(`A${totalRow.number}:E${totalRow.number}`);
+        totalRow.height = 24;
+        totalRow.getCell(1).font = { bold: true, name: 'Segoe UI', color: { argb: 'FF15803D' } };
+        totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+        let curCellIndex = 6;
+        activeFunds.forEach(() => {
+          [curCellIndex, curCellIndex + 1].forEach(colIdx => {
+            const cell = totalRow.getCell(colIdx);
+            cell.font = { bold: true, name: 'Segoe UI', color: { argb: 'FF15803D' } };
+            cell.numFmt = '#,##0';
+            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          });
+          curCellIndex += 3;
+        });
+
+        // Borders and gridlines
+        ws.eachRow((row, rowNum) => {
+          if (rowNum >= 3) {
+            row.eachCell(cell => {
+              cell.border = {
+                top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+              };
+            });
+          }
+        });
+
+        // Column widths
+        ws.columns.forEach((col, idx) => {
+          if (idx === 0) col.width = 6;      // STT
+          else if (idx === 1) col.width = 25;  // Họ tên
+          else if (idx === 2) col.width = 12;  // Năm sinh
+          else if (idx === 3) col.width = 16;  // Cụm/Tổ
+          else if (idx === 4) col.width = 25;  // Địa chỉ
+          else if (idx < totalCols - 1) {
+            const mod = (idx - 5) % 3;
+            if (mod === 2) col.width = 14;     // Ngày nộp
+            else col.width = 15;               // Expected / Actual
+          } else col.width = 20;               // Ghi chú
+        });
+      };
+
+      // 1. Sheet 1: Tổng hợp tất cả
+      const summarySheet = workbook.addWorksheet('📋 Tổng hợp');
+      buildSheet(summarySheet, filteredFunds, `BÁO CÁO THU CÁC KHOẢN UBND PHƯỜNG NĂM ${selectedYear} - TỔNG HỢP`, true);
+
+      // 2. Tạo sheet cho từng Tổ/Cụm
+      groups.forEach(groupName => {
+        const groupFunds = filteredFunds.filter(f => {
+          const grp = getGroupOfFundRecord(f);
+          return grp.trim().toLowerCase() === groupName.trim().toLowerCase();
+        });
+
+        if (groupFunds.length > 0) {
+          const safeSheetName = groupName.replace(/[\\/*?:[\]]/g, '').slice(0, 31);
+          const groupSheet = workbook.addWorksheet(safeSheetName);
+          buildSheet(groupSheet, groupFunds, `BÁO CÁO THU CÁC KHOẢN UBND PHƯỜNG NĂM ${selectedYear} - ${groupName.toUpperCase()}`, false);
         }
       });
 
-      // Column widths
-      worksheet.columns.forEach((col, idx) => {
-        if (idx === 0) col.width = 6;      // STT
-        else if (idx === 1) col.width = 25;  // Họ tên
-        else if (idx === 2) col.width = 12;  // Năm sinh
-        else if (idx === 3) col.width = 16;  // Cụm/Tổ
-        else if (idx === 4) col.width = 25;  // Địa chỉ
-        else if (idx < currentColNum - 1) {
-          const mod = (idx - 5) % 3;
-          if (mod === 2) col.width = 14;     // Ngày nộp
-          else col.width = 15;               // Expected / Actual
-        } else col.width = 20;               // Ghi chú
+      // 3. Sheet cho những hộ chưa thuộc nhóm nào (nếu có)
+      const unassignedFunds = filteredFunds.filter(f => {
+        const grp = getGroupOfFundRecord(f);
+        return !groups.some(g => g.trim().toLowerCase() === grp.trim().toLowerCase());
       });
+      if (unassignedFunds.length > 0) {
+        const unassignedSheet = workbook.addWorksheet('Chưa phân nhóm');
+        buildSheet(unassignedSheet, unassignedFunds, `BÁO CÁO THU CÁC KHOẢN UBND PHƯỜNG NĂM ${selectedYear} - CHƯA PHÂN NHÓM`, false);
+      }
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -1764,7 +1710,7 @@ const WardFunds = () => {
       return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
-          <td style="font-weight: bold; text-align: left;">[Quỹ Phường] ${fund.name} (${selectedYear})</td>
+          <td style="font-weight: bold; text-align: left;">[UBND] ${fund.name} (${selectedYear})</td>
           <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
           <td style="text-align: left;">${note}</td>
         </tr>
@@ -1784,7 +1730,7 @@ const WardFunds = () => {
         tdpRows.push(`
           <tr>
             <td style="text-align: center;">${wardRows.length + idx + 1}</td>
-            <td style="font-weight: bold; text-align: left;">[Quỹ TDP] ${tf.name} (${selectedYear})</td>
+            <td style="font-weight: bold; text-align: left;">[TDP] ${tf.name} (${selectedYear})</td>
             <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
             <td style="text-align: left;">${note}</td>
           </tr>
@@ -2943,12 +2889,12 @@ const WardFunds = () => {
 
     const rowsHtml = receiptRows.map((r, idx) => `
       <tr>
-        <td style="text-align: center;">${idx + 1}</td>
-        <td style="font-weight: bold; text-align: left;">${r.name}</td>
-        <td style="text-align: center;">${r.type}</td>
-        <td style="text-align: right;">${r.rate}</td>
-        <td style="text-align: right; font-weight: bold;">${r.amount.toLocaleString('vi-VN')} đ</td>
-        <td style="text-align: left;">${r.note}</td>
+        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${idx + 1}</td>
+        <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.name}</td>
+        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${r.type}</td>
+        <td style="text-align: right; border: 1px solid #000; padding: 4px 6px;">${r.rate}</td>
+        <td style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 4px 6px;">${r.amount.toLocaleString('vi-VN')} đ</td>
+        <td style="text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.note}</td>
       </tr>
     `).join('');
 
@@ -3006,27 +2952,27 @@ const WardFunds = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
-            <td style="text-align: left;">Thu tổng hợp các khoản đóng góp tự nguyện (Quỹ TDP + Quỹ Phường) năm ${selectedYear}</td>
+            <td style="text-align: left;">Thu tổng hợp các khoản đóng góp tự nguyện (TDP + UBND) năm ${selectedYear}</td>
           </tr>
         </table>
 
         <table class="receipt-details-table" style="width:100%; border-collapse:collapse; margin-top:5px;">
           <thead>
             <tr>
-              <th style="width: 40px; text-align: center;">STT</th>
-              <th style="text-align: left;">Nội dung đóng góp</th>
-              <th style="width: 90px; text-align: center;">Đối tượng</th>
-              <th style="width: 110px; text-align: right;">Định mức</th>
-              <th style="width: 120px; text-align: right;">Số tiền nộp</th>
-              <th style="text-align: left;">Ghi chú</th>
+              <th style="width: 40px; text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">STT</th>
+              <th style="text-align: left; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Nội dung đóng góp</th>
+              <th style="width: 90px; text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Đối tượng</th>
+              <th style="width: 110px; text-align: right; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Định mức</th>
+              <th style="width: 120px; text-align: right; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Số tiền nộp</th>
+              <th style="text-align: left; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Ghi chú</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản đóng góp nào.</td></tr>'}
+            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666; border: 1px solid #000; padding: 4px 6px;">Chưa nộp khoản đóng góp nào.</td></tr>'}
             <tr class="receipt-total-row" style="font-weight: bold;">
-              <td colspan="4" style="text-align: center;">TỔNG CỘNG THỰC THU (TDP: ${tdpTotal.toLocaleString('vi-VN')} + PHƯỜNG: ${wardTotal.toLocaleString('vi-VN')})</td>
-              <td style="text-align: right; color: #15803d;">${grandTotal.toLocaleString('vi-VN')} đ</td>
-              <td></td>
+              <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px;">TỔNG CỘNG THỰC THU (TDP: ${tdpTotal.toLocaleString('vi-VN')} + UBND: ${wardTotal.toLocaleString('vi-VN')})</td>
+              <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
+              <td style="border: 1px solid #000; padding: 4px 6px;"></td>
             </tr>
           </tbody>
         </table>
@@ -3198,10 +3144,70 @@ const WardFunds = () => {
             width: 100%;
             border-collapse: collapse;
           }
-          .receipt-header-table td {
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 10pt !important;
+            line-height: 1.3;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 6px !important;
+            margin-bottom: 6px !important;
+          }
+          .receipt-title {
+            font-size: 15.5pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 9.5pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 4px !important;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 2px 0 !important;
+            font-size: 10pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000 !important;
+            padding: 4px 6px !important;
+            font-size: 9.5pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px !important;
+            page-break-inside: avoid !important;
+          }
+          .receipt-signatures-table td {
             border: none;
-            padding: 0;
+            text-align: center;
+            font-size: 9.5pt !important;
             vertical-align: top;
+            padding: 2px !important;
           }
           .btn-print { background: #10b981; color: white; }
           .btn-print:hover { background: #059669; }
@@ -3741,18 +3747,18 @@ const WardFunds = () => {
             </tbody>
           </table>
 
-          <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
+          <div class="section-heading">CÁC KHOẢN UBND THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
           <ol style="margin-top: 2px; margin-bottom: 4px; padding-left: 18px; font-size: 10.5pt;">
             ${wardListHtml}
           </ol>
           <div style="font-size: 10.5pt; font-weight: bold; margin-bottom: 6px; padding-left: 18px; color: #1e40af;">
-            ➔ Tổng Quỹ Phường dự kiến: ${wardSummaryStr}
+            ➔ Tổng khoản UBND dự kiến: ${wardSummaryStr}
           </div>
 
           <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 10.5pt;">
-            <p style="margin: 0 0 3px 0;"><b>1. Quỹ Tổ dân phố dự kiến:</b> <strong>${totalTdpNum > 0 ? totalTdpNum.toLocaleString('vi-VN') + ' đồng/hộ/năm' : '.... đồng/hộ/năm'}</strong></p>
-            <p style="margin: 0 0 3px 0;"><b>2. Quỹ Phường thu theo quy định:</b> <strong>${wardSummaryStr}</strong></p>
-            <p style="margin: 3px 0 0 0; font-size: 11pt; color: #b91c1c;"><b>👉 TỔNG CỘNG DỰ KIẾN (QUỸ TĐP + QUỸ PHƯỜNG):</b> <strong>${(totalTdpNum + wardHouseholdTotal).toLocaleString('vi-VN')} đồng/hộ/năm</strong> ${wardPersonTotal > 0 ? ` + <strong>${wardPersonTotal.toLocaleString('vi-VN')}đ / 1 khẩu lao động</strong>` : ''}</p>
+            <p style="margin: 0 0 3px 0;"><b>1. Tổ dân phố dự kiến:</b> <strong>${totalTdpNum > 0 ? totalTdpNum.toLocaleString('vi-VN') + ' đồng/hộ/năm' : '.... đồng/hộ/năm'}</strong></p>
+            <p style="margin: 0 0 3px 0;"><b>2. UBND thu theo quy định:</b> <strong>${wardSummaryStr}</strong></p>
+            <p style="margin: 3px 0 0 0; font-size: 11pt; color: #b91c1c;"><b>👉 TỔNG CỘNG DỰ KIẾN (TĐP + UBND):</b> <strong>${(totalTdpNum + wardHouseholdTotal).toLocaleString('vi-VN')} đồng/hộ/năm</strong> ${wardPersonTotal > 0 ? ` + <strong>${wardPersonTotal.toLocaleString('vi-VN')}đ / 1 khẩu lao động</strong>` : ''}</p>
           </div>
 
           <p style="margin-bottom: 4px; text-indent: 20px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện on tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
@@ -4509,11 +4515,11 @@ const WardFunds = () => {
             minWidth: '200px'
           }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
-            <DebouncedInput
+            <input
               type="text"
               placeholder="Tìm theo tên người dân, địa chỉ..."
-              value={searchTerm}
-              onChange={setSearchTerm}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="premium-input-3d"
             />
           </div>

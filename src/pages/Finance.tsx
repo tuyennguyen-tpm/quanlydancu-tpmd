@@ -73,7 +73,8 @@ const Finance = () => {
   const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const searchTerm = useDeferredValue(searchInput);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
 
@@ -82,7 +83,7 @@ const Finance = () => {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [recordedBy, setRecordedBy] = useState('Ban Quản lý');
+  const [recordedBy, setRecordedBy] = useState(localStorage.getItem('user_full_name') || 'Nguyễn Kim Tuyến');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   // Phân hệ Quản lý đóng quỹ mới bổ sung
@@ -91,8 +92,8 @@ const Finance = () => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
   const [fundYear, setFundYear] = useState<number>(new Date().getFullYear());
-  const [fundSearchTerm, setFundSearchTerm] = useState('');
   const [fundSearchInput, setFundSearchInput] = useState('');
+  const fundSearchTerm = useDeferredValue(fundSearchInput);
   const [fundFilterStatus, setFundFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [fundGroupFilter, setFundGroupFilter] = useState<string>('all');
   const [tdpList, setTdpList] = useState<any[]>([]);
@@ -1083,7 +1084,7 @@ const Finance = () => {
       if (isHousehold) {
         const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
         receiptRows.push({
-          name: '[UBND Phường] ' + wf.name,
+          name: '[UBND] ' + wf.name,
           type: 'Hộ gia đình',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
           amount: actualPaid,
@@ -1093,7 +1094,7 @@ const Finance = () => {
         const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
         const paidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
         receiptRows.push({
-          name: '[UBND Phường] ' + wf.name,
+          name: '[UBND] ' + wf.name,
           type: 'Nhân khẩu LĐ',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
           amount: actualPaid,
@@ -1103,7 +1104,7 @@ const Finance = () => {
     });
 
     const tdpTotal = receiptRows.filter(r => r.name.startsWith('[TDP]')).reduce((sum, r) => sum + r.amount, 0);
-    const wardTotal = receiptRows.filter(r => r.name.startsWith('[UBND Phường]')).reduce((sum, r) => sum + r.amount, 0);
+    const wardTotal = receiptRows.filter(r => r.name.startsWith('[UBND]') || r.name.startsWith('[UBND Phường]')).reduce((sum, r) => sum + r.amount, 0);
     const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {
@@ -1175,12 +1176,12 @@ const Finance = () => {
 
     const rowsHtml = receiptRows.map((r, idx) => `
       <tr>
-        <td style="text-align: center;">${idx + 1}</td>
-        <td style="font-weight: bold; text-align: left;">${r.name}</td>
-        <td style="text-align: center;">${r.type}</td>
-        <td style="text-align: right;">${r.rate}</td>
-        <td style="text-align: right; font-weight: bold;">${r.amount.toLocaleString('vi-VN')} đ</td>
-        <td style="text-align: left;">${r.note}</td>
+        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${idx + 1}</td>
+        <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.name}</td>
+        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${r.type}</td>
+        <td style="text-align: right; border: 1px solid #000; padding: 4px 6px;">${r.rate}</td>
+        <td style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 4px 6px;">${r.amount.toLocaleString('vi-VN')} đ</td>
+        <td style="text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.note}</td>
       </tr>
     `).join('');
 
@@ -1238,27 +1239,27 @@ const Finance = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
-            <td style="text-align: left;">Thu tổng hợp các khoản đóng góp tự nguyện (Quỹ TDP + Quỹ Phường) năm ${fundYear}</td>
+            <td style="text-align: left;">Thu tổng hợp các khoản đóng góp tự nguyện (TDP + UBND) năm ${fundYear}</td>
           </tr>
         </table>
 
         <table class="receipt-details-table" style="width:100%; border-collapse:collapse; margin-top:5px;">
           <thead>
             <tr>
-              <th style="width: 40px; text-align: center;">STT</th>
-              <th style="text-align: left;">Nội dung đóng góp</th>
-              <th style="width: 90px; text-align: center;">Đối tượng</th>
-              <th style="width: 110px; text-align: right;">Định mức</th>
-              <th style="width: 120px; text-align: right;">Số tiền nộp</th>
-              <th style="text-align: left;">Ghi chú</th>
+              <th style="width: 40px; text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">STT</th>
+              <th style="text-align: left; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Nội dung đóng góp</th>
+              <th style="width: 90px; text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Đối tượng</th>
+              <th style="width: 110px; text-align: right; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Định mức</th>
+              <th style="width: 120px; text-align: right; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Số tiền nộp</th>
+              <th style="text-align: left; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Ghi chú</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản đóng góp nào.</td></tr>'}
+            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666; border: 1px solid #000; padding: 4px 6px;">Chưa nộp khoản đóng góp nào.</td></tr>'}
             <tr class="receipt-total-row" style="font-weight: bold;">
-              <td colspan="4" style="text-align: center;">TỔNG CỘNG THỰC THU (TDP: ${tdpTotal.toLocaleString('vi-VN')} + PHƯỜNG: ${wardTotal.toLocaleString('vi-VN')})</td>
-              <td style="text-align: right; color: #15803d;">${grandTotal.toLocaleString('vi-VN')} đ</td>
-              <td></td>
+              <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px;">TỔNG CỘNG THỰC THU (TDP: ${tdpTotal.toLocaleString('vi-VN')} + UBND: ${wardTotal.toLocaleString('vi-VN')})</td>
+              <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
+              <td style="border: 1px solid #000; padding: 4px 6px;"></td>
             </tr>
           </tbody>
         </table>
@@ -1484,7 +1485,7 @@ const Finance = () => {
             margin-bottom: 4px !important;
           }
           .receipt-details-table th, .receipt-details-table td {
-            border: 1px solid #000;
+            border: 1px solid #000 !important;
             padding: 4px 6px !important;
             font-size: 9.5pt !important;
             vertical-align: middle;
@@ -1663,11 +1664,6 @@ const Finance = () => {
     const householdId = hh.id;
     try {
       const members = residents.filter(r => r.household_id === householdId);
-      if (members.length === 0) {
-        showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
-        return;
-      }
-
       const today = new Date().toISOString().slice(0, 10);
 
       // --- 1. Ghi nhận đóng Quỹ Phường ---
@@ -1702,32 +1698,34 @@ const Finance = () => {
 
       const shouldPay = forceCancel !== undefined ? !forceCancel : (!allWardPaid || !allTdpPaid);
 
-      // Lưu quỹ Phường
-      await Promise.all(members.map(async m => {
-        const nameKey = m.full_name.trim().toLowerCase();
-        const wardRec = memberWardRecords.find(f => f.full_name.trim().toLowerCase() === nameKey);
-        if (!wardRec) return;
+      // Lưu quỹ Phường (nếu có thành viên)
+      if (members.length > 0) {
+        await Promise.all(members.map(async m => {
+          const nameKey = m.full_name.trim().toLowerCase();
+          const wardRec = memberWardRecords.find(f => f.full_name.trim().toLowerCase() === nameKey);
+          if (!wardRec) return;
 
-        const newContributions: Record<string, any> = { ...wardRec.contributions };
-        wardActiveFunds.forEach((fund: any) => {
-          const c = wardRec.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          newContributions[fund.name] = {
-            expected: c.expected,
-            actual: shouldPay ? (c.expected || c.actual) : 0,
-            date: shouldPay ? today : ''
-          };
-        });
+          const newContributions: Record<string, any> = { ...wardRec.contributions };
+          wardActiveFunds.forEach((fund: any) => {
+            const c = wardRec.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+            newContributions[fund.name] = {
+              expected: c.expected,
+              actual: shouldPay ? (c.expected || c.actual) : 0,
+              date: shouldPay ? today : ''
+            };
+          });
 
-        await db.saveWardFund({
-          ...wardRec,
-          contributions: newContributions,
-          note: shouldPay ? 'Đã nộp đủ đợt tập trung' : ''
-        });
-      }));
+          await db.saveWardFund({
+            ...wardRec,
+            contributions: newContributions,
+            note: shouldPay ? 'Đã nộp đủ đợt tập trung' : ''
+          });
+        }));
+      }
 
       // Lưu quỹ TDP & Sổ quỹ chung
       const headResident = members.find(r => r.id === hh.head_of_household_id || r.is_head);
-      const headName = headResident ? headResident.full_name : (hh.martyr_name || 'Đại diện hộ');
+      const headName = headResident ? headResident.full_name : getHouseholdHeadName(hh);
 
       for (const fund of tdpActiveFunds) {
         const existing = filteredHhFunds.find(hf => hf.fund_name === fund.name);
@@ -3524,11 +3522,11 @@ const Finance = () => {
             <div className="search-and-date">
                 <div className="search-mini">
                   <Search size={16} />
-                  <DebouncedInput 
+                  <input 
                     type="text" 
                     placeholder="Tìm nội dung, danh mục..." 
-                    value={searchTerm}
-                    onChange={setSearchTerm}
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
                   />
                 </div>
                 <button className="date-filter"><Calendar size={16} /> Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</button>
@@ -3843,17 +3841,17 @@ const Finance = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <div className="search-box" style={{ width: '240px', position: 'relative' }}>
                 <Search size={18} />
-                <DebouncedInput
+                <input
                   type="text"
                   placeholder="Tìm theo tên chủ hộ, địa chỉ..."
-                  value={fundSearchTerm}
-                  onChange={setFundSearchTerm}
-                  style={{ paddingRight: fundSearchTerm ? '36px' : '12px' }}
+                  value={fundSearchInput}
+                  onChange={(e) => setFundSearchInput(e.target.value)}
+                  style={{ paddingRight: fundSearchInput ? '36px' : '12px' }}
                 />
-                {fundSearchTerm && (
+                {fundSearchInput && (
                   <button
                     type="button"
-                    onClick={() => { setFundSearchTerm(''); }}
+                    onClick={() => { setFundSearchInput(''); }}
                     style={{
                       position: 'absolute',
                       right: '12px',
