@@ -3085,7 +3085,9 @@ const WardFunds = () => {
       return sum + rSum;
     }, 0);
 
+    // Luôn tạo phiếu mới từ dữ liệu thực - bản lưu chỉ dùng khi người dùng tự chọn
     const savedReceiptHtml = localStorage.getItem(`receipt_html_${householdId}_${selectedYear}`);
+    const hasSavedVersion = !!savedReceiptHtml;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -3110,7 +3112,8 @@ const WardFunds = () => {
     const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
-    const receiptHtml = savedReceiptHtml || generateHouseholdReceiptHtml(
+    // Luôn dùng dữ liệu mới nhất từ hệ thống
+    const freshReceiptHtml = generateHouseholdReceiptHtml(
       household,
       members,
       memberWardRecords,
@@ -3121,6 +3124,7 @@ const WardFunds = () => {
       leaderName,
       leaderSigUrl
     );
+    const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -3275,29 +3279,54 @@ const WardFunds = () => {
       <body>
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
-          <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu phiếu</button>
-          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải lại mặc định</button>
+          <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
+          ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load" style="background:#8b5cf6;">📂 Mở bản đã lưu</button>' : ''}
+          <button class="toolbar-btn btn-reset" id="btn-reset">🗑 Xóa bản lưu</button>
           <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
         </div>
+
+        ${hasSavedVersion ? `
+        <div id="saved-notice" style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;display:flex;align-items:center;gap:10px;">
+          ⚠️ <strong>Có bản chỉnh sửa đã lưu.</strong> Đang hiển thị dữ liệu mới nhất từ hệ thống. Nhấn <strong>📂 Mở bản đã lưu</strong> nếu muốn xem bản chỉnh sửa cũ.
+        </div>` : ''}
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
           ${receiptHtml}
         </div>
         
         <script>
+          const SAVE_KEY = 'receipt_html_${householdId}_${selectedYear}';
+          const freshHtml = document.querySelector('.editor-area').innerHTML;
           const btnSave = document.getElementById('btn-save');
           const btnReset = document.getElementById('btn-reset');
+          const btnLoad = document.getElementById('btn-load');
           const editor = document.querySelector('.editor-area');
 
           btnSave.addEventListener('click', function() {
-            localStorage.setItem('receipt_html_${householdId}_${selectedYear}', editor.innerHTML);
-            alert('Đã lưu nội dung chỉnh sửa của phiếu thu hộ gia đình này!');
+            localStorage.setItem(SAVE_KEY, editor.innerHTML);
+            const notice = document.getElementById('saved-notice');
+            if (notice) notice.remove();
+            btnLoad && (btnLoad.style.display = 'inline-flex');
+            alert('Đã lưu bản chỉnh sửa phiếu thu! Lần sau mở phiếu này bạn có thể chọn xem bản đã lưu.');
           });
 
+          if (btnLoad) {
+            btnLoad.addEventListener('click', function() {
+              const saved = localStorage.getItem(SAVE_KEY);
+              if (saved) {
+                editor.innerHTML = saved;
+                document.getElementById('saved-notice').innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu</strong>. Nhấn 💾 Lưu chỉnh sửa để cập nhật bản lưu sau khi sửa thêm.';
+              }
+            });
+          }
+
           btnReset.addEventListener('click', function() {
-            if (confirm('Bạn có chắc chắn muốn xóa bản lưu chỉnh sửa và tải lại dữ liệu mặc định từ hệ thống?')) {
-              localStorage.removeItem('receipt_html_${householdId}_${selectedYear}');
-              window.location.reload();
+            if (confirm('Xóa bản lưu chỉnh sửa? Phiếu sẽ luôn hiển thị dữ liệu mới nhất từ hệ thống.')) {
+              localStorage.removeItem(SAVE_KEY);
+              editor.innerHTML = freshHtml;
+              const notice = document.getElementById('saved-notice');
+              if (notice) notice.remove();
+              if (btnLoad) btnLoad.style.display = 'none';
             }
           });
         </script>
