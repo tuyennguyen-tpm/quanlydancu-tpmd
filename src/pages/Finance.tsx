@@ -1297,11 +1297,15 @@ const Finance = () => {
           </thead>
           <tbody>
             ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666; border: 1px solid #000; padding: 4px 6px;">Chưa nộp khoản đóng góp nào.</td></tr>'}
-            <tr class="receipt-total-row" style="font-weight: bold;">
-              <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px;">TỔNG CỘNG THỰC THU (TDP: ${tdpTotal.toLocaleString('vi-VN')} + UBND: ${wardTotal.toLocaleString('vi-VN')})</td>
-              <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
-              <td style="border: 1px solid #000; padding: 4px 6px;"></td>
-            </tr>
+             <tr class="receipt-total-row" style="font-weight: bold;">
+               <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px;">
+                 TỔNG CỘNG THỰC THU ${printMode === 'tdp_only' 
+                   ? `(TDP: ${tdpTotal.toLocaleString('vi-VN')})` 
+                   : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} + UBND: ${wardTotal.toLocaleString('vi-VN')})`}
+               </td>
+               <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
+               <td style="border: 1px solid #000; padding: 4px 6px;"></td>
+             </tr>
           </tbody>
         </table>
 
