@@ -2937,7 +2937,6 @@ const WardFunds = () => {
           }
           .btn-print { background: #10b981; color: white; }
           .btn-save { background: #3b82f6; color: white; }
-          .btn-reset { background: #f59e0b; color: white; }
           .btn-close { background: #ef4444; color: white; }
           
           .toolbar-btn-format {
@@ -3080,7 +3079,6 @@ const WardFunds = () => {
           </select>
 
           <button class="toolbar-btn btn-save" id="btnSave">💾 Lưu mẫu</button>
-          <button class="toolbar-btn btn-reset" id="btnReset">🔄 Khôi phục</button>
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-close" onclick="window.close()">✖️ Đóng</button>
           
@@ -3229,16 +3227,6 @@ const WardFunds = () => {
               }
             }
             this.value = ""; // reset select
-          });
-
-          // Khôi phục mặc định
-          const btnReset = document.getElementById('btnReset');
-          btnReset.addEventListener('click', function() {
-            if (confirm('Bạn có chắc chắn muốn khôi phục về mẫu thông báo mặc định không? Mọi chỉnh sửa đã lưu trước đó sẽ bị xóa.')) {
-              localStorage.removeItem('notice_template_html_${selectedYear}');
-              localStorage.removeItem('notice_template_fontsize_${selectedYear}');
-              window.location.reload();
-            }
           });
 
           // Keyboard shortcut: Ctrl+P to print
