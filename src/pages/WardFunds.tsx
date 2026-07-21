@@ -4621,6 +4621,32 @@ const WardFunds = () => {
                 {viewMode === 'grouped' ? '📋 Xem danh sách' : '🏡 Gom theo Hộ'}
               </button>
             )}
+            {!isGuest && (
+              <button
+                type="button"
+                onClick={handleAutoInitFromResidents}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #fde68a',
+                  background: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+                  color: '#b45309',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(217, 119, 6, 0.15)',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #fef3c7, #fde68a)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #fffbeb, #fef3c7)'}
+                title="Tự động lập/lấy danh sách thu các khoản UBND Phường từ dữ liệu nhân khẩu"
+              >
+                <Users size={16} /> Lấy / Khởi tạo danh sách
+              </button>
+            )}
             {/* Data Actions Dropdown */}
             <div style={{ position: 'relative' }}>
               <button
