@@ -1188,7 +1188,31 @@ const Finance = () => {
           </table>
     `;
 
-    const editorContentHtml = savedHtml || defaultEditorHtml;
+    const freshFooterHtml = `
+          <table class="footer-table">
+            <tr>
+              <td style="width: 45%;"></td>
+              <td style="width: 55%;">
+                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ${dateTextVal}</div>
+                <div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
+                <div style="font-style: italic; font-size: 10pt; margin-bottom: 5px;">(Ký, ghi rõ họ tên)</div>
+                <div style="height: 55px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; margin-top: 5px;">
+                  ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 55px; max-height: 55px; max-width: 150px; object-fit: contain;" />` : '<div style="height: 55px;"></div>'}
+                </div>
+                <div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>
+              </td>
+            </tr>
+          </table>
+    `.trim();
+
+    let editorContentHtml = savedHtml || defaultEditorHtml;
+    if (savedHtml) {
+      if (editorContentHtml.includes('<table class="footer-table">')) {
+        editorContentHtml = editorContentHtml.replace(/<table class="footer-table">[\s\S]*?<\/table>/i, freshFooterHtml);
+      } else {
+        editorContentHtml += '\n' + freshFooterHtml;
+      }
+    }
 
     const htmlContent = `
       <!DOCTYPE html>
