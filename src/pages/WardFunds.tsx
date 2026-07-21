@@ -1588,6 +1588,63 @@ const WardFunds = () => {
           }
         }
 
+        // Tính lại expected ngay cả khi không tìm được nhân khẩu khớp
+        // dựa trên dob + giới tính từ tên (chữ đệm Thị)
+        const activeFundsList2 = (db as any).getWardFundList() || [];
+        const parseAgeRange2 = (ageRangeStr: string | undefined) => {
+          const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+          if (!ageRangeStr) return result;
+          const cleanStr = ageRangeStr.toLowerCase();
+          const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+          if (maleMatch) { result.maleMin = parseInt(maleMatch[1], 10); result.maleMax = parseInt(maleMatch[2], 10); }
+          const femaleMatch = cleanStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || cleanStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+          if (femaleMatch) { result.femaleMin = parseInt(femaleMatch[1], 10); result.femaleMax = parseInt(femaleMatch[2], 10); }
+          return result;
+        };
+
+        const fDobStr = f.dob || '';
+        const fBirthYear = parseInt(fDobStr.match(/\d{4}/)?.[0] || '0', 10);
+        const fAge = fBirthYear > 0 ? selectedYear - fBirthYear : 30;
+        const fName = f.full_name || '';
+        const hasThi2 = fName.toLowerCase().includes(' thị ') || fName.toLowerCase().endsWith(' thị');
+        const fIsFemale = hasThi2;
+        const fIsMale = !fIsFemale;
+
+        activeFundsList2.forEach((fund2: any) => {
+          const isPCTT2 = fund2.name.toLowerCase().includes('thiên tai');
+          const isDOdn2 = fund2.name.toLowerCase().includes('đền ơn đáp nghĩa') || fund2.name.toLowerCase().includes('đền ơn');
+          const isHouseholdScope2 = fund2.scope === 'household' || fund2.name.toLowerCase().includes('hộ') || fund2.name.toLowerCase().includes('người cao tuổi') || fund2.name.toLowerCase().includes('cao tuổi');
+
+          if (fund2.scope === 'person' || isPCTT2 || isDOdn2) {
+            const ageLimits2 = parseAgeRange2(fund2.age_range);
+            let shouldPay2 = false;
+            if (fIsMale) shouldPay2 = fAge >= ageLimits2.maleMin && fAge <= ageLimits2.maleMax;
+            else if (fIsFemale) shouldPay2 = fAge >= ageLimits2.femaleMin && fAge <= ageLimits2.femaleMax;
+            else shouldPay2 = fAge >= ageLimits2.generalMin && fAge <= ageLimits2.generalMax;
+            
+            const newExpected2 = shouldPay2 ? fund2.target : 0;
+            const currentExpected2 = newContributions[fund2.name]?.expected;
+            if (currentExpected2 !== newExpected2) {
+              newContributions[fund2.name] = {
+                expected: newExpected2,
+                actual: newContributions[fund2.name]?.actual || 0
+              };
+              updated = true;
+            }
+          } else if (!isHouseholdScope2) {
+            // Quỹ thu theo đầu người (không phân biệt tuổi lao động)
+            const newExpected2 = fAge >= 18 ? fund2.target : 0;
+            const currentExpected2 = newContributions[fund2.name]?.expected;
+            if (currentExpected2 !== newExpected2) {
+              newContributions[fund2.name] = {
+                expected: newExpected2,
+                actual: newContributions[fund2.name]?.actual || 0
+              };
+              updated = true;
+            }
+          }
+        });
+
         if (updated) {
           matchedCount++;
           updatedFunds.push({
@@ -1602,14 +1659,15 @@ const WardFunds = () => {
         }
       });
 
+      // Luôn lưu lại toàn bộ (bao gồm cả những record không thay đổi metadata nhưng có thể đã sửa expected)
+      await db.saveWardFundsBatch(updatedFunds);
       if (matchedCount > 0) {
-        await db.saveWardFundsBatch(updatedFunds);
-        showToast(`Đồng bộ thành công! Đã tự động khớp và chuẩn hóa thông tin cho ${matchedCount} bản ghi theo CSDL Hộ khẩu.`, 'success');
-        loadData();
-        window.dispatchEvent(new CustomEvent('db-changed'));
+        showToast(`Đồng bộ & tính lại chỉ tiêu thành công! Đã cập nhật ${matchedCount} bản ghi.`, 'success');
       } else {
-        showToast('Tất cả bản ghi trong danh sách Quỹ Phường đều đã khớp chuẩn với CSDL Hộ khẩu!', 'info');
+        showToast('Đã tính lại toàn bộ chỉ tiêu theo tuổi/giới tính. Không có thay đổi nào!', 'info');
       }
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
     } catch (e) {
       showToast('Thao tác đồng bộ thất bại!', 'danger');
       console.error(e);
