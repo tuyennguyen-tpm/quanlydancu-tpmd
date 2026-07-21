@@ -1606,8 +1606,25 @@ const WardFunds = () => {
         const fBirthYear = parseInt(fDobStr.match(/\d{4}/)?.[0] || '0', 10);
         const fAge = fBirthYear > 0 ? selectedYear - fBirthYear : 30;
         const fName = f.full_name || '';
-        const hasThi2 = fName.toLowerCase().includes(' thị ') || fName.toLowerCase().endsWith(' thị');
-        const fIsFemale = hasThi2;
+
+        // Xác định giới tính: ưu tiên từ nhân khẩu đã khớp, rồi mới dùng tên "Thị" làm dự phòng
+        let fIsFemale = false;
+        let fGenderKnown = false;
+        if (matchedRes) {
+          const mGStr = (matchedRes.gender || '').toString().toLowerCase().trim();
+          if (mGStr === 'female' || mGStr === 'nữ' || mGStr === 'nu' || mGStr.startsWith('f')) {
+            fIsFemale = true;
+            fGenderKnown = true;
+          } else if (mGStr === 'male' || mGStr === 'nam' || mGStr.startsWith('m')) {
+            fIsFemale = false;
+            fGenderKnown = true;
+          }
+        }
+        // Chỉ dùng "Thị" làm dự phòng khi không xác định được giới tính từ CSDL
+        if (!fGenderKnown) {
+          const hasThi2 = fName.toLowerCase().includes(' thị ') || fName.toLowerCase().endsWith(' thị');
+          fIsFemale = hasThi2;
+        }
         const fIsMale = !fIsFemale;
 
         activeFundsList2.forEach((fund2: any) => {
