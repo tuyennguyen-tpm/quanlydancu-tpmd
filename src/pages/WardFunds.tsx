@@ -383,7 +383,12 @@ const WardFunds = () => {
     const addrClean = (f.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
     // 1. Lọc tất cả nhân khẩu trùng tên trong CSDL (O(1) lookup)
-    const candidates = residentsByNameMap.get(nameKey) || [];
+    let candidates = residentsByNameMap.get(nameKey) || [];
+
+    // Nếu bản ghi quỹ có user_id rõ ràng, chỉ đối chiếu với nhân khẩu cùng tổ (TDP) để tránh lẫn lộn chéo tổ
+    if (f.user_id) {
+      candidates = candidates.filter(r => r.user_id === f.user_id);
+    }
 
     let matchedResident: Resident | undefined = undefined;
 
