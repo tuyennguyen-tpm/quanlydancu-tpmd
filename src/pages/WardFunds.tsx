@@ -3354,30 +3354,51 @@ const WardFunds = () => {
     const wardActiveFunds = (db as any).getWardFundList();
     wardActiveFunds.forEach((wf: any) => {
       const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
-      if (isHousehold) {
-        const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        receiptRows.push({
-          name: '[UBND Phường] ' + wf.name,
-          type: 'Hộ gia đình',
-          rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
-          amount: actualPaid,
-          note: actualPaid === 0 ? 'Chưa nộp' : (actualPaid >= wf.target ? 'Thu đủ' : `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ`)
-        });
-      } else {
-        const rawActualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        const rawPaidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
-        
-        const paidCount = (laborCount > 0 && rawPaidCount > laborCount) ? laborCount : rawPaidCount;
-        const actualPaid = (laborCount > 0 && rawPaidCount > laborCount) ? (paidCount * wf.target) : rawActualPaid;
+      
+      // Tính toán định mức đóng góp kỳ vọng của hộ đối với quỹ này
+      const getExpectedForMember = (r: WardFund) => {
+        const contrib = r.contributions?.[wf.name];
+        if (contrib !== undefined) {
+          return contrib.expected || 0;
+        }
+        // Dự phòng nếu chưa khởi tạo bản ghi đóng góp
+        if (isHousehold) {
+          return wf.target;
+        } else {
+          const age = getResidentAge(r.dob || '');
+          const isLabor = age >= 18 && age <= 60;
+          return isLabor ? wf.target : 0;
+        }
+      };
 
-        receiptRows.push({
-          name: '[UBND Phường] ' + wf.name,
-          type: 'Nhân khẩu LĐ',
-          rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
-          amount: actualPaid,
-          note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount > 0 ? laborCount : 1} khẩu LĐ - Chưa nộp`
-        });
+      const expectedTotalForHH = memberWardRecords.reduce((sum, r) => sum + getExpectedForMember(r), 0);
+      const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+
+      let noteText = '';
+      if (expectedTotalForHH === 0) {
+        noteText = actualPaid > 0 ? `Được miễn (tự nguyện đóng ${actualPaid.toLocaleString('vi-VN')} đ)` : 'Được miễn';
+      } else {
+        if (actualPaid >= expectedTotalForHH) {
+          noteText = 'Thu đủ';
+        } else if (actualPaid > 0) {
+          noteText = `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ (Còn thiếu ${(expectedTotalForHH - actualPaid).toLocaleString('vi-VN')} đ)`;
+        } else {
+          if (isHousehold) {
+            noteText = 'Chưa nộp';
+          } else {
+            const expectedCount = Math.round(expectedTotalForHH / wf.target) || 1;
+            noteText = `${expectedCount} khẩu LĐ - Chưa nộp`;
+          }
+        }
       }
+
+      receiptRows.push({
+        name: '[UBND Phường] ' + wf.name,
+        type: isHousehold ? 'Hộ gia đình' : 'Nhân khẩu LĐ',
+        rate: wf.target.toLocaleString('vi-VN') + (isHousehold ? ' đ/hộ' : ' đ/khẩu'),
+        amount: actualPaid,
+        note: noteText
+      });
     });
 
     const tdpTotal = receiptRows.filter(r => r.name.startsWith('[TDP]')).reduce((sum, r) => sum + r.amount, 0);
