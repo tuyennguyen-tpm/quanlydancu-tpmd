@@ -249,31 +249,97 @@ const WardFunds = () => {
     return headNames;
   }, [households, residents]);
 
-  // Bảng tra cứu: name+year → thông tin hộ khẩu, dùng để gom nhóm theo hộ gia đình
-  const residentToHouseholdMap = useMemo(() => {
-    const hhMap = new Map<string, Household>();
-    households.forEach(h => hhMap.set(h.id, h));
+  // Hàm tra cứu khớp chính xác Hộ gia đình cho từng bản ghi quỹ Phường dựa trên Tên, Ngày sinh, Tổ (user_id) & Địa chỉ
+  const findMatchingHouseholdForWardFund = (f: WardFund) => {
+    const nameKey = f.full_name.trim().toLowerCase();
+    const dobClean = (f.dob || '').trim();
+    const yearClean = dobClean.match(/\d{4}/)?.[0] || '';
+    const addrClean = (f.address || '').trim().toLowerCase();
+
+    // 1. Lọc tất cả nhân khẩu trùng tên trong CSDL
+    const candidates = residents.filter(r => r.full_name.trim().toLowerCase() === nameKey);
+
+    let matchedResident: Resident | undefined = undefined;
+
+    if (candidates.length === 1) {
+      matchedResident = candidates[0];
+    } else if (candidates.length > 1) {
+      let filtered = candidates;
+
+      // a. Ưu tiên khớp Tổ (user_id) nếu bản ghi có user_id
+      if (f.user_id) {
+        const userMatch = filtered.filter(r => r.user_id === f.user_id);
+        if (userMatch.length > 0) filtered = userMatch;
+      }
+
+      // b. Tiếp theo khớp Ngày sinh hoặc Năm sinh
+      if (filtered.length > 1 && dobClean) {
+        const exactDobMatch = filtered.filter(r => r.dob && (r.dob.trim() === dobClean || r.dob.includes(dobClean) || dobClean.includes(r.dob)));
+        if (exactDobMatch.length > 0) {
+          filtered = exactDobMatch;
+        } else if (yearClean) {
+          const yearMatch = filtered.filter(r => (r.dob || '').includes(yearClean));
+          if (yearMatch.length > 0) filtered = yearMatch;
+        }
+      }
+
+      // c. Tiếp theo khớp Địa chỉ hoặc Tổ tự quản của Hộ
+      if (filtered.length > 1 && addrClean) {
+        const addrMatch = filtered.filter(r => {
+          const hh = households.find(h => h.id === r.household_id);
+          if (!hh) return false;
+          const hhAddr = (hh.address || '').trim().toLowerCase();
+          return hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean);
+        });
+        if (addrMatch.length > 0) filtered = addrMatch;
+      }
+
+      matchedResident = filtered[0];
+    }
+
     const headNameForHH = new Map<string, string>();
     households.forEach(h => {
       const head = residents.find(r => r.id === h.head_of_household_id);
       if (head) headNameForHH.set(h.id, head.full_name);
     });
-    const map = new Map<string, { householdId: string; address: string; headName: string; groupName: string }>();
-    residents.forEach(r => {
-      const year = (r.dob || '').match(/\d{4}/)?.[0] || '';
-      const nameKey = r.full_name.trim().toLowerCase();
-      const hh = hhMap.get(r.household_id);
-      const info = {
-        householdId: r.household_id,
-        address: hh?.address || '',
-        headName: headNameForHH.get(r.household_id) || '',
-        groupName: (hh as any)?.self_management_group || ''
+
+    if (matchedResident) {
+      const hh = households.find(h => h.id === matchedResident!.household_id);
+      return {
+        householdId: matchedResident.household_id,
+        address: hh?.address || f.address || '',
+        headName: headNameForHH.get(matchedResident.household_id) || f.full_name,
+        groupName: (hh as any)?.self_management_group || getGroupOfFundRecord(f)
       };
-      map.set(nameKey + '__' + year, info);
-      if (!map.has(nameKey + '__')) map.set(nameKey + '__', info);
-    });
-    return map;
-  }, [residents, households]);
+    }
+
+    // Nếu không khớp nhân khẩu trong CSDL, thử đối chiếu với Hộ gia đình bằng địa chỉ + user_id
+    if (addrClean) {
+      const matchedHh = households.find(h => {
+        const hhAddr = (h.address || '').trim().toLowerCase();
+        const addrOk = hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean);
+        const userOk = f.user_id ? h.user_id === f.user_id : true;
+        return addrOk && userOk;
+      });
+      if (matchedHh) {
+        return {
+          householdId: matchedHh.id,
+          address: matchedHh.address || f.address || '',
+          headName: headNameForHH.get(matchedHh.id) || f.full_name,
+          groupName: (matchedHh as any)?.self_management_group || getGroupOfFundRecord(f)
+        };
+      }
+    }
+
+    // Hộ ảo phân biệt theo địa chỉ + user_id + tên
+    const fallbackId = 'addr__' + (f.address || f.full_name).trim().toLowerCase() + '__' + (f.user_id || '');
+    return {
+      householdId: fallbackId,
+      address: f.address || '',
+      headName: f.full_name,
+      groupName: getGroupOfFundRecord(f)
+    };
+  };
 
   // A fast O(1) helper function to find resident info by name and dob
   const findResidentGroupAndHead = (name: string, dob: string) => {
@@ -400,15 +466,11 @@ const WardFunds = () => {
     type HHGroup = { householdId: string; headName: string; address: string; groupName: string; members: WardFund[] };
     const groupMap = new Map<string, HHGroup>();
     filteredFunds.forEach(f => {
-      const year = (f.dob || '').match(/\d{4}/)?.[0] || '';
-      const nameKey = f.full_name.trim().toLowerCase();
-      const hhInfo = residentToHouseholdMap.get(nameKey + '__' + year)
-                  || residentToHouseholdMap.get(nameKey + '__')
-                  || null;
-      const householdId = hhInfo?.householdId || ('addr__' + (f.address || '').trim().toLowerCase());
-      const address = hhInfo?.address || f.address || '';
-      const headName = hhInfo?.headName || '';
-      const groupName = hhInfo?.groupName || getGroupOfFundRecord(f);
+      const hhInfo = findMatchingHouseholdForWardFund(f);
+      const householdId = hhInfo.householdId;
+      const address = hhInfo.address || f.address || '';
+      const headName = hhInfo.headName || '';
+      const groupName = hhInfo.groupName || getGroupOfFundRecord(f);
       if (!groupMap.has(householdId)) {
         groupMap.set(householdId, { householdId, headName, address, groupName, members: [] });
       }
@@ -430,7 +492,7 @@ const WardFunds = () => {
       if (rA !== rB) return rA - rB;
       return a.address.localeCompare(b.address, 'vi');
     });
-  }, [filteredFunds, residentToHouseholdMap, headNamesSet, groups]);
+  }, [filteredFunds, residents, households, groups, headNamesSet]);
 
   // Calculate Statistics dynamically - luôn dùng chỉ tiêu mới nhất từ cấu hình
   const fundStats = activeFunds.map(fund => {
@@ -563,15 +625,9 @@ const WardFunds = () => {
       let householdId = targetHouseholdId || '';
       if (!householdId || householdId.startsWith('addr__')) {
         for (const m of members) {
-          const nameKey = m.full_name.trim().toLowerCase();
-          const hhInfo = residentToHouseholdMap.get(nameKey + '__' + selectedYear) || residentToHouseholdMap.get(nameKey + '__');
-          if (hhInfo?.householdId && !hhInfo.householdId.startsWith('addr__')) {
+          const hhInfo = findMatchingHouseholdForWardFund(m);
+          if (hhInfo.householdId && !hhInfo.householdId.startsWith('addr__')) {
             householdId = hhInfo.householdId;
-            break;
-          }
-          const res = residents.find(r => r.full_name.trim().toLowerCase() === nameKey);
-          if (res?.household_id) {
-            householdId = res.household_id;
             break;
           }
         }
