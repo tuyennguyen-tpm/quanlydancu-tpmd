@@ -15,7 +15,8 @@ import {
   Coins,
   Printer,
   Users,
-  Home
+  Home,
+  Database
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -66,7 +67,8 @@ const WardFunds = () => {
   const [dobInput, setDobInput] = useState<string>('');
   const [addressInput, setAddressInput] = useState<string>('');
   const [contribInputs, setContribInputs] = useState<Record<string, { expected: string; actual: string; date: string }>>({});
-  const [note, setNote] = useState<string>('');
+  const [showDataMenu, setShowDataMenu] = useState(false);
+  const [showPrintMenu, setShowPrintMenu] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -112,10 +114,17 @@ const WardFunds = () => {
     };
     window.addEventListener('tdp-groups-changed', handleGroupsChange);
 
+    const handleGlobalClick = () => {
+      setShowDataMenu(false);
+      setShowPrintMenu(false);
+    };
+    window.addEventListener('click', handleGlobalClick);
+
     return () => {
       window.removeEventListener('ward-fund-targets-changed', loadActiveFunds);
       window.removeEventListener('db-changed', loadResidentsAndHouseholds);
       window.removeEventListener('tdp-groups-changed', handleGroupsChange);
+      window.removeEventListener('click', handleGlobalClick);
     };
   }, []);
 
@@ -2978,31 +2987,35 @@ const WardFunds = () => {
         })}
       </div>
 
-      {/* ─── 3 Sub-Tabs Chuyển đổi linh hoạt theo nhu cầu ─── */}
+      {/* ─── 3 Sub-Tabs Segmented Control Style ─── */}
       <div style={{
         display: 'flex',
-        gap: '10px',
-        borderBottom: '2px solid var(--border)',
-        paddingBottom: '10px',
-        marginBottom: '12px',
-        flexWrap: 'wrap'
+        backgroundColor: 'var(--bg-secondary, #f1f5f9)',
+        padding: '4px',
+        borderRadius: '10px',
+        marginBottom: '16px',
+        gap: '4px',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
         <button
           type="button"
           onClick={() => setSubTabMode('ward_list')}
           style={{
-            padding: '10px 18px',
-            borderRadius: '10px',
+            flex: 1,
+            padding: '8px 12px',
+            borderRadius: '8px',
             border: 'none',
-            backgroundColor: subTabMode === 'ward_list' ? '#2563eb' : 'var(--bg-main)',
-            color: subTabMode === 'ward_list' ? '#fff' : 'var(--text-main)',
+            backgroundColor: subTabMode === 'ward_list' ? '#fff' : 'transparent',
+            color: subTabMode === 'ward_list' ? '#2563eb' : 'var(--text-muted, #64748b)',
             fontWeight: '700',
-            fontSize: '0.88rem',
+            fontSize: '0.85rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: subTabMode === 'ward_list' ? '0 2px 4px rgba(37,99,235,0.25)' : 'none',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: subTabMode === 'ward_list' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
             transition: 'all 0.2s ease'
           }}
         >
@@ -3012,18 +3025,20 @@ const WardFunds = () => {
           type="button"
           onClick={() => setSubTabMode('household_list')}
           style={{
-            padding: '10px 18px',
-            borderRadius: '10px',
+            flex: 1,
+            padding: '8px 12px',
+            borderRadius: '8px',
             border: 'none',
-            backgroundColor: subTabMode === 'household_list' ? '#10b981' : 'var(--bg-main)',
-            color: subTabMode === 'household_list' ? '#fff' : 'var(--text-main)',
+            backgroundColor: subTabMode === 'household_list' ? '#fff' : 'transparent',
+            color: subTabMode === 'household_list' ? '#10b981' : 'var(--text-muted, #64748b)',
             fontWeight: '700',
-            fontSize: '0.88rem',
+            fontSize: '0.85rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: subTabMode === 'household_list' ? '0 2px 4px rgba(16,185,129,0.25)' : 'none',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: subTabMode === 'household_list' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
             transition: 'all 0.2s ease'
           }}
         >
@@ -3033,18 +3048,20 @@ const WardFunds = () => {
           type="button"
           onClick={() => setSubTabMode('all_summary')}
           style={{
-            padding: '10px 18px',
-            borderRadius: '10px',
+            flex: 1,
+            padding: '8px 12px',
+            borderRadius: '8px',
             border: 'none',
-            backgroundColor: subTabMode === 'all_summary' ? '#8b5cf6' : 'var(--bg-main)',
-            color: subTabMode === 'all_summary' ? '#fff' : 'var(--text-main)',
+            backgroundColor: subTabMode === 'all_summary' ? '#fff' : 'transparent',
+            color: subTabMode === 'all_summary' ? '#8b5cf6' : 'var(--text-muted, #64748b)',
             fontWeight: '700',
-            fontSize: '0.88rem',
+            fontSize: '0.85rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: subTabMode === 'all_summary' ? '0 2px 4px rgba(139,92,246,0.25)' : 'none',
+            justifyContent: 'center',
+            gap: '6px',
+            boxShadow: subTabMode === 'all_summary' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
             transition: 'all 0.2s ease'
           }}
         >
@@ -3126,56 +3143,16 @@ const WardFunds = () => {
         </div>
 
         {/* Right Actions */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {canPrintExport && (
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Data Actions Dropdown */}
+          <div style={{ position: 'relative' }}>
             <button
-              onClick={handleExportTemplate}
-              className="btn btn-secondary"
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#fff',
-                border: '1.5px solid var(--border)',
-                color: 'var(--text-main)',
-                fontWeight: '700',
-                fontSize: '0.85rem'
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDataMenu(!showDataMenu);
+                setShowPrintMenu(false);
               }}
-            >
-              <Download size={16} /> Tải file mẫu
-            </button>
-          )}
-
-          {/* Khởi tạo tự động từ Nhân khẩu */}
-          {!isGuest && (
-            <button
-              onClick={handleAutoInitFromResidents}
-              className="btn btn-primary"
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#fef3c7',
-                border: '1.5px solid #fde68a',
-                color: '#d97706',
-                fontWeight: '700',
-                fontSize: '0.85rem'
-              }}
-              title="Khởi tạo tự động danh sách thu theo độ tuổi & diện miễn giảm quy định pháp luật"
-            >
-              <Users size={16} /> Khởi tạo từ Nhân khẩu
-            </button>
-          )}
-
-          {/* Nhập Excel */}
-          {!isGuest && (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="btn btn-primary"
               style={{
                 padding: '8px 16px',
                 borderRadius: '8px',
@@ -3186,193 +3163,293 @@ const WardFunds = () => {
                 border: '1.5px solid #bfdbfe',
                 color: '#2563eb',
                 fontWeight: '700',
-                fontSize: '0.85rem'
+                fontSize: '0.85rem',
+                cursor: 'pointer'
               }}
             >
-              <Upload size={16} /> Nhập Excel Phường
+              <Database size={16} /> Thao tác dữ liệu ▼
             </button>
-          )}
+            {showDataMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                marginTop: '6px',
+                backgroundColor: '#fff',
+                border: '1.5px solid var(--border)',
+                borderRadius: '10px',
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+                padding: '6px',
+                width: '240px',
+                zIndex: 1000,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                {!isGuest && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDataMenu(false);
+                      handleAutoInitFromResidents();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#d97706',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef3c7'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Users size={14} /> Khởi tạo từ Nhân khẩu
+                  </button>
+                )}
+                {!isGuest && subTabMode !== 'ward_list' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDataMenu(false);
+                      handleSupplementMissingHouseholds();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#16a34a',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Home size={14} /> Bổ sung Hộ thiếu từ CSDL
+                  </button>
+                )}
+                {!isGuest && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDataMenu(false);
+                      fileInputRef.current?.click();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#2563eb',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Upload size={14} /> Nhập Excel Phường
+                  </button>
+                )}
+                {canPrintExport && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDataMenu(false);
+                      handleExportTemplate();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-main)',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Download size={14} /> Tải file mẫu Excel
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
-          {/* Nút tự động bổ sung hộ thiếu từ CSDL (Chỉ xuất hiện khi ở Tab Quỹ theo Hộ hoặc Bảng tổng hợp) */}
-          {!isGuest && subTabMode !== 'ward_list' && (
-            <button
-              onClick={handleSupplementMissingHouseholds}
-              className="btn btn-primary"
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#f0fdf4',
-                border: '1.5px solid #bbf7d0',
-                color: '#16a34a',
-                fontWeight: '700',
-                fontSize: '0.85rem'
-              }}
-              title="Quét toàn bộ CSDL Hộ khẩu và tự động bổ sung những Hộ còn thiếu chưa có trong danh sách Phường giao"
-            >
-              <Home size={16} /> Bổ sung Hộ thiếu từ CSDL
-            </button>
-          )}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleImportExcel} 
-            accept=".xlsx, .xls" 
-            style={{ display: 'none' }} 
-          />
-
+          {/* Print/Export Actions Dropdown */}
           {canPrintExport && (
-            <button
-              onClick={handleExportReport}
-              className="btn btn-success"
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#f0fdf4',
-                border: '1.5px solid #bbf7d0',
-                color: '#16a34a',
-                fontWeight: '700',
-                fontSize: '0.85rem'
-              }}
-            >
-              <FileSpreadsheet size={16} /> Xuất báo cáo
-            </button>
-          )}
-
-          {canPrintExport && (
-            <>
+            <div style={{ position: 'relative' }}>
               <button
-                onClick={handlePrintCombinedNotice}
-                className="btn btn-primary"
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#8b5cf6',
-                  border: '1.5px solid #7c3aed',
-                  color: '#fff',
-                  fontWeight: '700',
-                  fontSize: '0.85rem'
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPrintMenu(!showPrintMenu);
+                  setShowDataMenu(false);
                 }}
-                title="In mẫu Thông báo dự kiến thu các khoản đóng góp tự nguyện gộp Quỹ TDP & Quỹ Phường"
-              >
-                <Printer size={16} /> In Thông báo dự kiến thu (Mẫu chuẩn)
-              </button>
-
-              <button
-                onClick={handlePrintList}
-                className="btn btn-secondary"
                 style={{
                   padding: '8px 16px',
                   borderRadius: '8px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
+                  backgroundColor: '#f5f3ff',
+                  border: '1.5px solid #ddd6fe',
+                  color: '#7c3aed',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <Printer size={16} /> In ấn & Xuất bản ▼
+              </button>
+              {showPrintMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: '6px',
                   backgroundColor: '#fff',
                   border: '1.5px solid var(--border)',
-                  color: 'var(--text-main)',
-                  fontWeight: '700',
-                  fontSize: '0.85rem'
-                }}
-              >
-                <Printer size={16} /> In danh sách A4
-              </button>
-
-              <button 
-                onClick={handlePrintBulkReceiptsA4_Ward}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#eff6ff',
-                  border: '1px solid #bfdbfe',
-                  color: '#1e40af',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontSize: '0.85rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#dbeafe';
-                  e.currentTarget.style.borderColor = '#93c5fd';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#eff6ff';
-                  e.currentTarget.style.borderColor = '#bfdbfe';
-                }}
-              >
-                <Printer size={16} /> In loạt phiếu A4 (2 phiếu/trang)
-              </button>
-
-              <button 
-                onClick={handlePrintBulkReceiptsA4_1PerPage_Ward}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#faf5ff',
-                  border: '1px solid #e9d5ff',
-                  color: '#6b21a8',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontSize: '0.85rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3e8ff';
-                  e.currentTarget.style.borderColor = '#d8b4fe';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#faf5ff';
-                  e.currentTarget.style.borderColor = '#e9d5ff';
-                }}
-              >
-                <Printer size={16} /> In loạt phiếu A4 (1 phiếu/trang)
-              </button>
-
-              <button 
-                onClick={handlePrintBulkReceiptsA5_Ward}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
-                  color: '#166534',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  fontSize: '0.85rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#dcfce7';
-                  e.currentTarget.style.borderColor = '#86efac';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f0fdf4';
-                  e.currentTarget.style.borderColor = '#bbf7d0';
-                }}
-              >
-                <Printer size={16} /> In loạt phiếu A5
-              </button>
-            </>
+                  borderRadius: '10px',
+                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+                  padding: '6px',
+                  width: '280px',
+                  zIndex: 1000,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPrintMenu(false);
+                      handleExportReport();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#16a34a',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <FileSpreadsheet size={14} /> Xuất báo cáo Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPrintMenu(false);
+                      handlePrintCombinedNotice();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#7c3aed',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f5f3ff'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Printer size={14} /> In Thông báo dự kiến thu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPrintMenu(false);
+                      handlePrintList();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-main)',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Printer size={14} /> In danh sách A4
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPrintMenu(false);
+                      handlePrintBulkReceiptsA5_Ward();
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#166534',
+                      fontWeight: '600',
+                      fontSize: '0.82rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dcfce7'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <Printer size={14} /> In loạt phiếu A5
+                  </button>
+                </div>
+              )}
+            </div>
           )}
-          {/* Xóa sạch năm */}
+
+          {/* Delete Year Button */}
           {!isGuest && funds.length > 0 && (
             <button
+              type="button"
               onClick={handleClearYearData}
               title="Xóa hết danh sách năm nay"
               style={{
