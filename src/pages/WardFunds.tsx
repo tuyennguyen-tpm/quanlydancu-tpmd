@@ -3643,11 +3643,10 @@ const WardFunds = () => {
       return;
     }
 
-    const memberNames = members.map(m => m.full_name.trim().toLowerCase());
     const memberWardRecords = funds.filter(f => {
       if (f.year !== selectedYear) return false;
-      const nameKey = f.full_name.trim().toLowerCase();
-      return memberNames.includes(nameKey);
+      const meta = fundMetaMap.get(f.id);
+      return meta && meta.householdId === householdId;
     });
 
     let householdPaidFunds: HouseholdFund[] = [];
