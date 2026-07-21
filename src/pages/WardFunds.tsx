@@ -3593,7 +3593,7 @@ const WardFunds = () => {
 
     return `
       ${generateSingleReceipt('Liên 1: TDP lưu trữ')}
-      <div style="page-break-before: always; margin-top: 20px;"></div>
+      <div style="margin-top: 15px;"></div>
       ${generateSingleReceipt('Liên 2: Giao cho người nộp tiền')}
     `;
   };
