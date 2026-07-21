@@ -1447,6 +1447,33 @@ const Finance = () => {
         </div>
 
         <script>
+          // Tự động cập nhật ngày tháng và chữ ký/tên Tổ trưởng mới nhất vào footer table
+          (function() {
+            let footerTable = document.querySelector('.editor-area .footer-table');
+            if (!footerTable) {
+              const tables = document.querySelectorAll('.editor-area table');
+              if (tables.length > 0) {
+                footerTable = tables[tables.length - 1];
+              }
+            }
+            if (footerTable) {
+              footerTable.outerHTML = '<table class="footer-table" style="width: 100%; border-collapse: collapse; margin-top: 8px; page-break-inside: avoid;">' +
+                '<tr>' +
+                  '<td style="width: 45%; border: none; vertical-align: top; text-align: center;"></td>' +
+                  '<td style="width: 55%; border: none; vertical-align: top; text-align: center;">' +
+                    '<div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ${dateTextVal}</div>' +
+                    '<div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>' +
+                    '<div style="font-style: italic; font-size: 10pt; margin-bottom: 5px;">(Ký, ghi rõ họ tên)</div>' +
+                    '<div style="height: 55px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; margin-top: 5px;">' +
+                      '${leaderSigUrl ? '<img src="' + leaderSigUrl + '" alt="Chữ ký" style="height: 55px; max-height: 55px; max-width: 150px; object-fit: contain;" />' : '<div style="height: 55px;"></div>'}' +
+                    '</div>' +
+                    '<div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>' +
+                  '</td>' +
+                '</tr>' +
+              '</table>';
+            }
+          })();
+
           // Click to focus khi vào trang
           document.querySelector('.editor-area').addEventListener('click', function() {
             this.focus();
