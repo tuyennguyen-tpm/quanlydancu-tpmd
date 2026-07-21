@@ -2777,6 +2777,82 @@ const WardFunds = () => {
       }).join('');
     }
 
+    // Tải nội dung đã lưu từ localStorage nếu có
+    const savedHtml = localStorage.getItem(`notice_template_html_${selectedYear}`);
+    const savedFontSize = localStorage.getItem(`notice_template_fontsize_${selectedYear}`) || '11.5pt';
+
+    const defaultEditorHtml = `
+          <table class="header-table">
+            <tr>
+              <td style="width: 45%; text-align: center;">
+                <div style="font-weight: bold; font-size: 11pt;">UBND PHƯỜNG ${wardNameVal.toUpperCase().replace('PHƯỜNG ', '')}</div>
+                <div style="font-weight: bold; font-size: 11pt;">TỔ DÂN PHỐ ${tdpNameVal.toUpperCase().replace('TỔ DÂN PHỐ ', '')}</div>
+                <div style="font-size: 11pt;">Số: ...../TB-TDP</div>
+              </td>
+              <td style="width: 55%; text-align: center;">
+                <div style="font-weight: bold; font-size: 11pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div style="font-weight: bold; font-size: 11pt;">Độc lập - Tự do - Hạnh phúc</div>
+                <div style="font-size: 11pt; margin-top: 1px;">------------------------</div>
+              </td>
+            </tr>
+          </table>
+
+          <div class="title-section">
+            <div class="doc-title">THÔNG BÁO</div>
+            <div class="doc-subtitle">Về việc dự kiến thu các khoản đóng góp tự nguyện năm ${selectedYear}</div>
+          </div>
+
+          <p style="margin-bottom: 4px;"><b>Kính gửi:</b> Các hộ gia đình và Nhân dân Tổ dân phố ${tdpNameVal}.</p>
+          <p style="margin-bottom: 4px; text-indent: 20px;">Căn cứ kết quả cuộc họp Tổ dân phố ngày ..... tháng ..... năm ${selectedYear};</p>
+          <p style="margin-bottom: 6px; text-indent: 20px;">Nhằm phục vụ các hoạt động chung của cộng đồng dân cư, Ban cán sự Tổ dân phố ${tdpNameVal} thông báo dự kiến các khoản đóng góp tự nguyện năm ${selectedYear} như sau:</p>
+
+          <div class="section-heading">QUỸ TỔ DÂN PHỐ DỰ KIẾN THU</div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">STT</th>
+                <th>Nội dung khoản thu</th>
+                <th style="width: 220px;">Mức dự kiến</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tdpRowsHtml}
+            </tbody>
+          </table>
+
+          <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
+          <ol style="margin-top: 2px; margin-bottom: 4px; padding-left: 18px; font-size: 10.5pt;">
+            ${wardListHtml}
+          </ol>
+          <div style="font-size: 10.5pt; font-weight: bold; margin-bottom: 6px; padding-left: 18px; color: #1e40af;">
+            ➔ Tổng Quỹ Phường dự kiến: ${wardSummaryStr}
+          </div>
+
+          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 10.5pt;">
+            <p style="margin: 0 0 3px 0;"><b>1. Quỹ Tổ dân phố dự kiến:</b> <strong>${totalTdpNum > 0 ? totalTdpNum.toLocaleString('vi-VN') + ' đồng/hộ/năm' : '.... đồng/hộ/năm'}</strong></p>
+            <p style="margin: 0 0 3px 0;"><b>2. Quỹ Phường thu theo quy định:</b> <strong>${wardSummaryStr}</strong></p>
+            <p style="margin: 3px 0 0 0; font-size: 11pt; color: #b91c1c;"><b>👉 TỔNG CỘNG DỰ KIẾN (QUỸ TĐP + QUỸ PHƯỜNG):</b> <strong>${(totalTdpNum + wardHouseholdTotal).toLocaleString('vi-VN')} đồng/hộ/năm</strong> ${wardPersonTotal > 0 ? ` + <strong>${wardPersonTotal.toLocaleString('vi-VN')}đ / 1 khẩu lao động</strong>` : ''}</p>
+          </div>
+
+          <p style="margin-bottom: 4px; text-indent: 20px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện on tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
+          <p style="margin-bottom: 6px; text-indent: 20px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${selectedYear}.</p>
+          <p style="margin-bottom: 6px;">Trân trọng thông báo!</p>
+
+          <table class="footer-table">
+            <tr>
+              <td style="width: 45%;"></td>
+              <td style="width: 55%;">
+                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ngày ..... tháng ..... năm ${selectedYear}</div>
+                <div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
+                <div style="font-style: italic; font-size: 10pt; margin-bottom: 30px;">(Ký, ghi rõ họ tên)</div>
+                <div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>
+              </td>
+            </tr>
+          </table>
+    `;
+
+    const editorContentHtml = savedHtml || defaultEditorHtml;
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -2784,11 +2860,15 @@ const WardFunds = () => {
         <title>Thông Báo Dự Kiến Thu Các Khoản Đóng Góp Năm ${selectedYear}</title>
         <meta charset="utf-8" />
         <style>
+          :root {
+            --editor-font-size: ${savedFontSize};
+          }
           @media print {
             .editor-toolbar { display: none !important; }
             .editor-area {
               margin-top: 0 !important;
               padding: 5px !important;
+              font-size: var(--editor-font-size) !important;
             }
             @page {
               size: A4 portrait;
@@ -2802,7 +2882,7 @@ const WardFunds = () => {
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 11.5pt;
+            font-size: var(--editor-font-size);
             line-height: 1.3;
             color: #000;
             margin: 0;
@@ -2848,13 +2928,36 @@ const WardFunds = () => {
             box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 3px rgba(0,0,0,0.2);
           }
           .btn-print { background: #10b981; color: white; }
+          .btn-save { background: #3b82f6; color: white; }
+          .btn-reset { background: #f59e0b; color: white; }
           .btn-close { background: #ef4444; color: white; }
-          .btn-guide { background: rgba(255,255,255,0.2); color: white; font-weight: 500; font-size: 12px; }
+          
+          .toolbar-select {
+            padding: 6px 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 7px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+          }
+          .toolbar-select option {
+            background: #1e40af;
+            color: white;
+          }
+          .toolbar-select:hover {
+            background: rgba(255,255,255,0.25);
+          }
+
           .editor-area {
             margin-top: 60px;
             padding: 10px 14px;
             outline: none;
             min-height: 90vh;
+            font-size: var(--editor-font-size);
           }
           .editor-area:focus {
             outline: none;
@@ -2936,78 +3039,24 @@ const WardFunds = () => {
       </head>
       <body>
         <div class="editor-toolbar">
-          <span class="toolbar-title">✏️ Chỉnh sửa trực tiếp: Click vào bất kỳ chỗ nào trong văn bản để sửa nội dung</span>
+          <span class="toolbar-title">✏️ Sửa trực tiếp văn bản bên dưới:</span>
+          
+          <select id="fontSizeSelect" class="toolbar-select">
+            <option value="10pt" ${savedFontSize === '10pt' ? 'selected' : ''}>Cỡ chữ: 10pt</option>
+            <option value="11pt" ${savedFontSize === '11pt' ? 'selected' : ''}>Cỡ chữ: 11pt</option>
+            <option value="11.5pt" ${savedFontSize === '11.5pt' ? 'selected' : ''}>Cỡ chữ: 11.5pt</option>
+            <option value="12pt" ${savedFontSize === '12pt' ? 'selected' : ''}>Cỡ chữ: 12pt</option>
+            <option value="13pt" ${savedFontSize === '13pt' ? 'selected' : ''}>Cỡ chữ: 13pt</option>
+            <option value="14pt" ${savedFontSize === '14pt' ? 'selected' : ''}>Cỡ chữ: 14pt</option>
+          </select>
+
+          <button class="toolbar-btn btn-save" id="btnSave">💾 Lưu mẫu</button>
+          <button class="toolbar-btn btn-reset" id="btnReset">🔄 Khôi phục</button>
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-close" onclick="window.close()">✖️ Đóng</button>
         </div>
         <div class="editor-area" contenteditable="true" spellcheck="false">
-          <table class="header-table">
-            <tr>
-              <td style="width: 45%; text-align: center;">
-                <div style="font-weight: bold; font-size: 11pt;">UBND PHƯỜNG ${wardNameVal.toUpperCase().replace('PHƯỜNG ', '')}</div>
-                <div style="font-weight: bold; font-size: 11pt;">TỔ DÂN PHỐ ${tdpNameVal.toUpperCase().replace('TỔ DÂN PHỐ ', '')}</div>
-                <div style="font-size: 11pt;">Số: ...../TB-TDP</div>
-              </td>
-              <td style="width: 55%; text-align: center;">
-                <div style="font-weight: bold; font-size: 11pt;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style="font-weight: bold; font-size: 11pt;">Độc lập - Tự do - Hạnh phúc</div>
-                <div style="font-size: 11pt; margin-top: 1px;">------------------------</div>
-              </td>
-            </tr>
-          </table>
-
-          <div class="title-section">
-            <div class="doc-title">THÔNG BÁO</div>
-            <div class="doc-subtitle">Về việc dự kiến thu các khoản đóng góp tự nguyện năm ${selectedYear}</div>
-          </div>
-
-          <p style="margin-bottom: 4px;"><b>Kính gửi:</b> Các hộ gia đình và Nhân dân Tổ dân phố ${tdpNameVal}.</p>
-          <p style="margin-bottom: 4px; text-indent: 20px;">Căn cứ kết quả cuộc họp Tổ dân phố ngày ..... tháng ..... năm ${selectedYear};</p>
-          <p style="margin-bottom: 6px; text-indent: 20px;">Nhằm phục vụ các hoạt động chung của cộng đồng dân cư, Ban cán sự Tổ dân phố ${tdpNameVal} thông báo dự kiến các khoản đóng góp tự nguyện năm ${selectedYear} như sau:</p>
-
-          <div class="section-heading">QUỸ TỔ DÂN PHỐ DỰ KIẾN THU</div>
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width: 45px;">STT</th>
-                <th>Nội dung khoản thu</th>
-                <th style="width: 220px;">Mức dự kiến</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tdpRowsHtml}
-            </tbody>
-          </table>
-
-          <div class="section-heading">QUỸ PHƯỜNG THU (Các công quỹ pháp lệnh của nhà nước gồm)</div>
-          <ol style="margin-top: 2px; margin-bottom: 4px; padding-left: 18px; font-size: 10.5pt;">
-            ${wardListHtml}
-          </ol>
-          <div style="font-size: 10.5pt; font-weight: bold; margin-bottom: 6px; padding-left: 18px; color: #1e40af;">
-            ➔ Tổng Quỹ Phường dự kiến: ${wardSummaryStr}
-          </div>
-
-          <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 10.5pt;">
-            <p style="margin: 0 0 3px 0;"><b>1. Quỹ Tổ dân phố dự kiến:</b> <strong>${totalTdpNum > 0 ? totalTdpNum.toLocaleString('vi-VN') + ' đồng/hộ/năm' : '.... đồng/hộ/năm'}</strong></p>
-            <p style="margin: 0 0 3px 0;"><b>2. Quỹ Phường thu theo quy định:</b> <strong>${wardSummaryStr}</strong></p>
-            <p style="margin: 3px 0 0 0; font-size: 11pt; color: #b91c1c;"><b>👉 TỔNG CỘNG DỰ KIẾN (QUỸ TĐP + QUỸ PHƯỜNG):</b> <strong>${(totalTdpNum + wardHouseholdTotal).toLocaleString('vi-VN')} đồng/hộ/năm</strong> ${wardPersonTotal > 0 ? ` + <strong>${wardPersonTotal.toLocaleString('vi-VN')}đ / 1 khẩu lao động</strong>` : ''}</p>
-          </div>
-
-          <p style="margin-bottom: 4px; text-indent: 20px;">Các khoản trên là mức dự kiến để Nhân dân nghiên cứu, tham gia ý kiến và thống nhất thực hiện trên tinh thần tự nguyện, dân chủ, công khai, minh bạch.</p>
-          <p style="margin-bottom: 6px; text-indent: 20px;">Mọi ý kiến góp ý đề nghị gửi về Ban cán sự Tổ dân phố trước ngày ..... tháng ..... năm ${selectedYear}.</p>
-          <p style="margin-bottom: 6px;">Trân trọng thông báo!</p>
-
-          <table class="footer-table">
-            <tr>
-              <td style="width: 45%;"></td>
-              <td style="width: 55%;">
-                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ngày ..... tháng ..... năm ${selectedYear}</div>
-                <div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
-                <div style="font-style: italic; font-size: 10pt; margin-bottom: 30px;">(Ký, ghi rõ họ tên)</div>
-                <div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>
-              </td>
-            </tr>
-          </table>
+          ${editorContentHtml}
         </div>
 
         <script>
@@ -3015,6 +3064,42 @@ const WardFunds = () => {
           document.querySelector('.editor-area').addEventListener('click', function() {
             this.focus();
           });
+
+          // Thay đổi cỡ chữ
+          const fontSizeSelect = document.getElementById('fontSizeSelect');
+          fontSizeSelect.addEventListener('change', function() {
+            document.documentElement.style.setProperty('--editor-font-size', this.value);
+          });
+
+          // Lưu mẫu chỉnh sửa
+          const btnSave = document.getElementById('btnSave');
+          btnSave.addEventListener('click', function() {
+            const editorContent = document.querySelector('.editor-area').innerHTML;
+            const selectedFontSize = fontSizeSelect.value;
+            
+            localStorage.setItem('notice_template_html_${selectedYear}', editorContent);
+            localStorage.setItem('notice_template_fontsize_${selectedYear}', selectedFontSize);
+            
+            // Phản hồi trực quan
+            const originalText = btnSave.innerHTML;
+            btnSave.innerHTML = '💾 Đã lưu!';
+            btnSave.style.backgroundColor = '#059669';
+            setTimeout(() => {
+              btnSave.innerHTML = originalText;
+              btnSave.style.backgroundColor = '';
+            }, 1200);
+          });
+
+          // Khôi phục mặc định
+          const btnReset = document.getElementById('btnReset');
+          btnReset.addEventListener('click', function() {
+            if (confirm('Bạn có chắc chắn muốn khôi phục về mẫu thông báo mặc định không? Mọi chỉnh sửa đã lưu trước đó sẽ bị xóa.')) {
+              localStorage.removeItem('notice_template_html_${selectedYear}');
+              localStorage.removeItem('notice_template_fontsize_${selectedYear}');
+              window.location.reload();
+            }
+          });
+
           // Keyboard shortcut: Ctrl+P to print
           document.addEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'p') {

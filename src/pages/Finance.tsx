@@ -1106,102 +1106,11 @@ const Finance = () => {
       }).join('');
     }
 
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Thông Báo Dự Kiến Thu Các Khoản Đóng Góp Năm ${fundYear}</title>
-        <meta charset="utf-8" />
-        <style>
-          @media print {
-            @page {
-              size: A4 portrait;
-              margin: 8mm 14mm;
-            }
-            html, body {
-              margin: 0;
-              padding: 0;
-              height: 100%;
-              overflow: hidden;
-            }
-            .notice-container {
-              max-height: 275mm !important;
-              page-break-inside: avoid !important;
-            }
-          }
-          body {
-            font-family: "Times New Roman", Times, serif;
-            font-size: 11.5pt;
-            line-height: 1.3;
-            color: #000;
-            padding: 5px;
-          }
-          .notice-container {
-            width: 100%;
-            box-sizing: border-box;
-          }
-          .header-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 8px;
-          }
-          .header-table td {
-            vertical-align: top;
-            border: none;
-            padding: 0;
-          }
-          .title-section {
-            text-align: center;
-            margin-top: 4px;
-            margin-bottom: 8px;
-          }
-          .doc-title {
-            font-size: 15pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-          }
-          .doc-subtitle {
-            font-size: 11.5pt;
-            font-style: italic;
-          }
-          .section-heading {
-            font-size: 11.5pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-top: 6px;
-            margin-bottom: 3px;
-          }
-          .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 5px;
-          }
-          .data-table th, .data-table td {
-            border: 1px solid #000;
-            padding: 3px 6px;
-            font-size: 10.5pt;
-          }
-          .data-table th {
-            text-align: center;
-            background-color: #f2f2f2;
-            font-weight: bold;
-          }
-          .footer-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-            page-break-inside: avoid;
-          }
-          .footer-table td {
-            border: none;
-            vertical-align: top;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="notice-container">
+    // Tải nội dung đã lưu từ localStorage nếu có
+    const savedHtml = localStorage.getItem(`notice_template_html_${fundYear}`);
+    const savedFontSize = localStorage.getItem(`notice_template_fontsize_${fundYear}`) || '11.5pt';
+
+    const defaultEditorHtml = `
           <table class="header-table">
             <tr>
               <td style="width: 45%; text-align: center;">
@@ -1269,14 +1178,264 @@ const Finance = () => {
               </td>
             </tr>
           </table>
+    `;
+
+    const editorContentHtml = savedHtml || defaultEditorHtml;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Thông Báo Dự Kiến Thu Các Khoản Đóng Góp Năm ${fundYear}</title>
+        <meta charset="utf-8" />
+        <style>
+          :root {
+            --editor-font-size: ${savedFontSize};
+          }
+          @media print {
+            .editor-toolbar { display: none !important; }
+            .editor-area {
+              margin-top: 0 !important;
+              padding: 5px !important;
+              font-size: var(--editor-font-size) !important;
+            }
+            @page {
+              size: A4 portrait;
+              margin: 8mm 14mm;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              overflow: visible;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: var(--editor-font-size);
+            line-height: 1.3;
+            color: #000;
+            margin: 0;
+            padding: 0;
+          }
+          .editor-toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #1e40af, #1d4ed8);
+            color: white;
+            padding: 10px 16px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 9999;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+            flex-wrap: wrap;
+          }
+          .editor-toolbar .toolbar-title {
+            font-weight: bold;
+            font-size: 13px;
+            flex: 1;
+            white-space: nowrap;
+          }
+          .toolbar-btn {
+            padding: 7px 18px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.25), inset 0 -2px 0 rgba(0,0,0,0.15);
+          }
+          .toolbar-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3), inset 0 -2px 0 rgba(0,0,0,0.15);
+          }
+          .toolbar-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 3px rgba(0,0,0,0.2);
+          }
+          .btn-print { background: #10b981; color: white; }
+          .btn-save { background: #3b82f6; color: white; }
+          .btn-reset { background: #f59e0b; color: white; }
+          .btn-close { background: #ef4444; color: white; }
+          
+          .toolbar-select {
+            padding: 6px 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 7px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+          }
+          .toolbar-select option {
+            background: #1e40af;
+            color: white;
+          }
+          .toolbar-select:hover {
+            background: rgba(255,255,255,0.25);
+          }
+
+          .editor-area {
+            margin-top: 60px;
+            padding: 10px 14px;
+            outline: none;
+            min-height: 90vh;
+            font-size: var(--editor-font-size);
+          }
+          .editor-area:focus {
+            outline: none;
+          }
+          .edit-hint {
+            display: inline-block;
+            background: #fef3c7;
+            border: 1px dashed #d97706;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 10px;
+            color: #92400e;
+            margin-left: 6px;
+            font-style: normal;
+          }
+          .notice-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+          }
+          .header-table td {
+            vertical-align: top;
+            border: none;
+            padding: 0;
+          }
+          .title-section {
+            text-align: center;
+            margin-top: 4px;
+            margin-bottom: 8px;
+          }
+          .doc-title {
+            font-size: 15pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+          }
+          .doc-subtitle {
+            font-size: 11.5pt;
+            font-style: italic;
+          }
+          .section-heading {
+            font-size: 11.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 6px;
+            margin-bottom: 3px;
+          }
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5px;
+          }
+          .data-table th, .data-table td {
+            border: 1px solid #000;
+            padding: 3px 6px;
+            font-size: 10.5pt;
+          }
+          .data-table th {
+            text-align: center;
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+          .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            page-break-inside: avoid;
+          }
+          .footer-table td {
+            border: none;
+            vertical-align: top;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="editor-toolbar">
+          <span class="toolbar-title">✏️ Sửa trực tiếp văn bản bên dưới:</span>
+          
+          <select id="fontSizeSelect" class="toolbar-select">
+            <option value="10pt" ${savedFontSize === '10pt' ? 'selected' : ''}>Cỡ chữ: 10pt</option>
+            <option value="11pt" ${savedFontSize === '11pt' ? 'selected' : ''}>Cỡ chữ: 11pt</option>
+            <option value="11.5pt" ${savedFontSize === '11.5pt' ? 'selected' : ''}>Cỡ chữ: 11.5pt</option>
+            <option value="12pt" ${savedFontSize === '12pt' ? 'selected' : ''}>Cỡ chữ: 12pt</option>
+            <option value="13pt" ${savedFontSize === '13pt' ? 'selected' : ''}>Cỡ chữ: 13pt</option>
+            <option value="14pt" ${savedFontSize === '14pt' ? 'selected' : ''}>Cỡ chữ: 14pt</option>
+          </select>
+
+          <button class="toolbar-btn btn-save" id="btnSave">💾 Lưu mẫu</button>
+          <button class="toolbar-btn btn-reset" id="btnReset">🔄 Khôi phục</button>
+          <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
+          <button class="toolbar-btn btn-close" onclick="window.close()">✖️ Đóng</button>
+        </div>
+        <div class="editor-area" contenteditable="true" spellcheck="false">
+          ${editorContentHtml}
         </div>
 
         <script>
-          window.onload = function() {
-            setTimeout(function() {
+          // Click to focus khi vào trang
+          document.querySelector('.editor-area').addEventListener('click', function() {
+            this.focus();
+          });
+
+          // Thay đổi cỡ chữ
+          const fontSizeSelect = document.getElementById('fontSizeSelect');
+          fontSizeSelect.addEventListener('change', function() {
+            document.documentElement.style.setProperty('--editor-font-size', this.value);
+          });
+
+          // Lưu mẫu chỉnh sửa
+          const btnSave = document.getElementById('btnSave');
+          btnSave.addEventListener('click', function() {
+            const editorContent = document.querySelector('.editor-area').innerHTML;
+            const selectedFontSize = fontSizeSelect.value;
+            
+            localStorage.setItem('notice_template_html_${fundYear}', editorContent);
+            localStorage.setItem('notice_template_fontsize_${fundYear}', selectedFontSize);
+            
+            // Phản hồi trực quan
+            const originalText = btnSave.innerHTML;
+            btnSave.innerHTML = '💾 Đã lưu!';
+            btnSave.style.backgroundColor = '#059669';
+            setTimeout(() => {
+              btnSave.innerHTML = originalText;
+              btnSave.style.backgroundColor = '';
+            }, 1200);
+          });
+
+          // Khôi phục mặc định
+          const btnReset = document.getElementById('btnReset');
+          btnReset.addEventListener('click', function() {
+            if (confirm('Bạn có chắc chắn muốn khôi phục về mẫu thông báo mặc định không? Mọi chỉnh sửa đã lưu trước đó sẽ bị xóa.')) {
+              localStorage.removeItem('notice_template_html_${fundYear}');
+              localStorage.removeItem('notice_template_fontsize_${fundYear}');
+              window.location.reload();
+            }
+          });
+
+          // Keyboard shortcut: Ctrl+P to print
+          document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+              e.preventDefault();
               window.print();
-            }, 300);
-          };
+            }
+          });
         </script>
       </body>
       </html>
