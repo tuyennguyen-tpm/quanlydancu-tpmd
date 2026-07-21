@@ -1436,6 +1436,7 @@ const Finance = () => {
               <option value="1.6">Giãn dòng: 1.6</option>
               <option value="1.8">Giãn dòng: 1.8</option>
               <option value="2.0">Giãn dòng: 2.0</option>
+              <option value="custom">Giãn dòng: Nhập số khác...</option>
             </select>
           </div>
         </div>
@@ -1479,8 +1480,25 @@ const Finance = () => {
           // Giãn dòng của phần được chọn
           const lineHeightSelect = document.getElementById('lineHeightSelect');
           lineHeightSelect.addEventListener('change', function() {
-            const val = this.value;
+            let val = this.value;
             if (!val) return;
+            
+            if (val === 'custom') {
+              const customVal = prompt('Nhập khoảng cách giãn dòng mong muốn (ví dụ: 1.25, 1.75):');
+              if (customVal) {
+                const parsed = parseFloat(customVal);
+                if (!isNaN(parsed) && parsed > 0) {
+                  val = parsed.toString();
+                } else {
+                  alert('Vui lòng nhập một số lớn hơn 0!');
+                  this.value = "";
+                  return;
+                }
+              } else {
+                this.value = "";
+                return;
+              }
+            }
             
             const selection = window.getSelection();
             if (!selection.rangeCount) return;
