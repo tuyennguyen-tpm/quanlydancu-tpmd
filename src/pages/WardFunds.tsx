@@ -3306,7 +3306,8 @@ const WardFunds = () => {
     tdpNameVal: string,
     wardNameVal: string,
     leaderName: string,
-    leaderSigUrl: string
+    leaderSigUrl: string,
+    printMode: 'ward_only' | 'combined' = 'combined'
   ) => {
     const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
@@ -3337,18 +3338,20 @@ const WardFunds = () => {
     const receiptRows: Array<{ name: string; type: string; rate: string; amount: number; note: string }> = [];
 
     // Luôn hiển thị tất cả quỹ TDP đang hoạt động (kể cả chưa nộp)
-    const tdpActiveFunds = (db as any).getFundList() as { name: string; target: number }[];
-    tdpActiveFunds.forEach((fund: { name: string; target: number }) => {
-      const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
-      const paidAmount = paidFund?.amount || 0;
-      receiptRows.push({
-        name: '[TDP] ' + fund.name,
-        type: 'Hộ gia đình',
-        rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
-        amount: paidAmount,
-        note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : (paidAmount >= fund.target ? 'Thu đủ' : `Đã nộp ${paidAmount.toLocaleString('vi-VN')} đ`))
+    if (printMode === 'combined') {
+      const tdpActiveFunds = (db as any).getFundList() as { name: string; target: number }[];
+      tdpActiveFunds.forEach((fund: { name: string; target: number }) => {
+        const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
+        const paidAmount = paidFund?.amount || 0;
+        receiptRows.push({
+          name: '[TDP] ' + fund.name,
+          type: 'Hộ gia đình',
+          rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
+          amount: paidAmount,
+          note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : (paidAmount >= fund.target ? 'Thu đủ' : `Đã nộp ${paidAmount.toLocaleString('vi-VN')} đ`))
+        });
       });
-    });
+    }
 
     // Luôn hiển thị tất cả quỹ Phường đang hoạt động (kể cả chưa nộp)
     const wardActiveFunds = (db as any).getWardFundList();
@@ -3515,7 +3518,7 @@ const WardFunds = () => {
         </table>
 
         <div class="receipt-title-container">
-          <h1 class="receipt-title">PHIẾU THU TỔNG HỢP</h1>
+          <h1 class="receipt-title">${printMode === 'ward_only' ? 'PHIẾU THU QUỸ UBND PHƯỜNG' : 'PHIẾU THU TỔNG HỢP'}</h1>
           <p class="receipt-subtitle" style="margin-top: 2px; font-weight: bold; color: #1e3a8a;">${lienName}</p>
           <p class="receipt-subtitle">${dateText}</p>
         </div>
@@ -3554,11 +3557,15 @@ const WardFunds = () => {
           </thead>
           <tbody>
             ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666; border: 1px solid #000; padding: 4px 6px;">Chưa nộp khoản đóng góp nào.</td></tr>'}
-            <tr class="receipt-total-row" style="font-weight: bold;">
-              <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px;">TỔNG CỘNG THỰC THU (TDP: ${tdpTotal.toLocaleString('vi-VN')} + UBND: ${wardTotal.toLocaleString('vi-VN')})</td>
-              <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
-              <td style="border: 1px solid #000; padding: 4px 6px;"></td>
-            </tr>
+             <tr class="receipt-total-row" style="font-weight: bold;">
+               <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px;">
+                 TỔNG CỘNG THỰC THU ${printMode === 'ward_only' 
+                   ? `(UBND: ${wardTotal.toLocaleString('vi-VN')})` 
+                   : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} + UBND: ${wardTotal.toLocaleString('vi-VN')})`}
+               </td>
+               <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
+               <td style="border: 1px solid #000; padding: 4px 6px;"></td>
+             </tr>
           </tbody>
         </table>
 
@@ -3620,7 +3627,10 @@ const WardFunds = () => {
     `;
   };
 
-  const handlePrintHouseholdReceipt = async (householdId: string) => {
+  const handlePrintHouseholdReceipt = async (
+    householdId: string,
+    printMode: 'ward_only' | 'combined' = 'combined'
+  ) => {
     const household = households.find(h => h.id === householdId);
     if (!household) {
       showToast('Không tìm thấy thông tin hộ gia đình!', 'danger');
@@ -3692,7 +3702,8 @@ const WardFunds = () => {
       tdpNameVal,
       wardNameVal,
       leaderName,
-      leaderSigUrl
+      leaderSigUrl,
+      printMode
     );
     const receiptHtml = freshReceiptHtml;
 
@@ -5651,26 +5662,55 @@ const WardFunds = () => {
                           {formatCurrency(totalActual)} / {formatCurrency(totalExpected)}
                         </span>
                         {group.householdId && !group.householdId.startsWith('addr__') && (
-                          <button
-                            type="button"
-                            onClick={() => handlePrintHouseholdReceipt(group.householdId)}
-                            style={{
-                              padding: '6px 12px',
-                              borderRadius: '8px',
-                              border: 'none',
-                              background: '#8b5cf6',
-                              color: 'white',
-                              fontWeight: '700',
-                              fontSize: '0.8rem',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              boxShadow: '0 2px 4px rgba(139,92,246,0.3)'
-                            }}
-                          >
-                            <Printer size={13} /> Phiếu thu Hộ
-                          </button>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handlePrintHouseholdReceipt(group.householdId, 'ward_only')}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                border: '1.5px solid #cbd5e1',
+                                background: '#ffffff',
+                                color: '#334155',
+                                fontWeight: '700',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                              title="In biên lai thu riêng các quỹ của UBND Phường"
+                            >
+                              <Printer size={13} /> In biên lai Phường
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handlePrintHouseholdReceipt(group.householdId, 'combined')}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: '#8b5cf6',
+                                color: 'white',
+                                fontWeight: '700',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                boxShadow: '0 2px 4px rgba(139,92,246,0.3)',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.background = '#7c3aed'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.background = '#8b5cf6'; }}
+                              title="In biên lai gộp các quỹ TDP và quỹ UBND Phường"
+                            >
+                              <Printer size={13} /> In biên lai gộp
+                            </button>
+                          </div>
                         )}
                         {!isGuest && (
                           <button type="button" onClick={() => handleQuickPayHousehold(group.members, allPaid, group.householdId)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
