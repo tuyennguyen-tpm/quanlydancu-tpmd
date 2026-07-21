@@ -1144,7 +1144,7 @@ const Finance = () => {
           if (actualPaid >= expectedTotalForHH) {
             noteText = 'Thu đủ';
           } else if (actualPaid > 0) {
-            noteText = `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ (Còn thiếu ${(expectedTotalForHH - actualPaid).toLocaleString('vi-VN')} đ)`;
+            noteText = `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ`;
           } else {
             if (isHousehold) {
               noteText = 'Chưa nộp';
