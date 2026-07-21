@@ -5453,6 +5453,13 @@ const WardFunds = () => {
         </div>
       )}
 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImportExcel}
+        style={{ display: 'none' }}
+        accept=".xlsx, .xls"
+      />
     </div>
   );
 };
