@@ -631,8 +631,9 @@ const WardFunds = () => {
         isFemale = n.includes(' thị ') || n.endsWith(' thị');
       }
 
-      // Tính tuổi = năm hiện tại - năm sinh
-      const dobStr = matchedRes?.dob || f.dob || '';
+      // Tính tuổi = năm hiện tại - năm sinh của chính bản ghi quỹ (f.dob)
+      // KHÔNG dùng matchedRes.dob để tránh nhầm người trùng tên
+      const dobStr = f.dob || '';
       const birthYear = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
       const age = birthYear > 0 ? currentYear - birthYear : 30;
 
