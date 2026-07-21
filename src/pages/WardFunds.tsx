@@ -2697,6 +2697,11 @@ const WardFunds = () => {
         <meta charset="utf-8" />
         <style>
           @media print {
+            .editor-toolbar { display: none !important; }
+            .editor-area {
+              margin-top: 0 !important;
+              padding: 5px !important;
+            }
             @page {
               size: A4 portrait;
               margin: 8mm 14mm;
@@ -2704,12 +2709,7 @@ const WardFunds = () => {
             html, body {
               margin: 0;
               padding: 0;
-              height: 100%;
-              overflow: hidden;
-            }
-            .notice-container {
-              max-height: 275mm !important;
-              page-break-inside: avoid !important;
+              overflow: visible;
             }
           }
           body {
@@ -2717,7 +2717,70 @@ const WardFunds = () => {
             font-size: 11.5pt;
             line-height: 1.3;
             color: #000;
-            padding: 5px;
+            margin: 0;
+            padding: 0;
+          }
+          .editor-toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #1e40af, #1d4ed8);
+            color: white;
+            padding: 10px 16px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            z-index: 9999;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+            flex-wrap: wrap;
+          }
+          .editor-toolbar .toolbar-title {
+            font-weight: bold;
+            font-size: 13px;
+            flex: 1;
+            white-space: nowrap;
+          }
+          .toolbar-btn {
+            padding: 7px 18px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.15s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.25), inset 0 -2px 0 rgba(0,0,0,0.15);
+          }
+          .toolbar-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3), inset 0 -2px 0 rgba(0,0,0,0.15);
+          }
+          .toolbar-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2), inset 0 1px 3px rgba(0,0,0,0.2);
+          }
+          .btn-print { background: #10b981; color: white; }
+          .btn-close { background: #ef4444; color: white; }
+          .btn-guide { background: rgba(255,255,255,0.2); color: white; font-weight: 500; font-size: 12px; }
+          .editor-area {
+            margin-top: 60px;
+            padding: 10px 14px;
+            outline: none;
+            min-height: 90vh;
+          }
+          .editor-area:focus {
+            outline: none;
+          }
+          .edit-hint {
+            display: inline-block;
+            background: #fef3c7;
+            border: 1px dashed #d97706;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 10px;
+            color: #92400e;
+            margin-left: 6px;
+            font-style: normal;
           }
           .notice-container {
             width: 100%;
@@ -2784,7 +2847,12 @@ const WardFunds = () => {
         </style>
       </head>
       <body>
-        <div class="notice-container">
+        <div class="editor-toolbar">
+          <span class="toolbar-title">✏️ Chỉnh sửa trực tiếp: Click vào bất kỳ chỗ nào trong văn bản để sửa nội dung</span>
+          <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
+          <button class="toolbar-btn btn-close" onclick="window.close()">✖️ Đóng</button>
+        </div>
+        <div class="editor-area" contenteditable="true" spellcheck="false">
           <table class="header-table">
             <tr>
               <td style="width: 45%; text-align: center;">
@@ -2855,11 +2923,17 @@ const WardFunds = () => {
         </div>
 
         <script>
-          window.onload = function() {
-            setTimeout(function() {
+          // Click to focus khi vào trang
+          document.querySelector('.editor-area').addEventListener('click', function() {
+            this.focus();
+          });
+          // Keyboard shortcut: Ctrl+P to print
+          document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+              e.preventDefault();
               window.print();
-            }, 300);
-          };
+            }
+          });
         </script>
       </body>
       </html>
