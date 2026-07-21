@@ -16,7 +16,8 @@ import {
   Printer,
   Users,
   Home,
-  Database
+  Database,
+  PlusCircle
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -431,6 +432,38 @@ const WardFunds = () => {
       remaining
     };
   });
+
+  // Add new record manually
+  const handleAddNewRecord = () => {
+    if (isGuest) {
+      showToast('Khách không có quyền thêm mới dữ liệu đóng quỹ!', 'warning');
+      return;
+    }
+    const newRecord: WardFund = {
+      id: generateUUID(),
+      year: selectedYear,
+      full_name: '',
+      dob: '',
+      address: '',
+      contributions: {},
+      note: ''
+    };
+    setEditingRecord(newRecord);
+    setFullNameInput('');
+    setDobInput('');
+    setAddressInput('');
+    setNote('');
+
+    const inputs: Record<string, { expected: string; actual: string; date: string }> = {};
+    activeFunds.forEach(fund => {
+      inputs[fund.name] = {
+        expected: fund.target.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."),
+        actual: '0',
+        date: new Date().toISOString().slice(0, 10)
+      };
+    });
+    setContribInputs(inputs);
+  };
 
   // Open Edit Modal
   const handleOpenPay = (record: WardFund) => {
@@ -4658,27 +4691,27 @@ const WardFunds = () => {
             {!isGuest && (
               <button
                 type="button"
-                onClick={handleAutoInitFromResidents}
+                onClick={handleAddNewRecord}
                 style={{
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #fde68a',
-                  background: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
-                  color: '#b45309',
+                  border: '1px solid #bbf7d0',
+                  background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                  color: '#15803d',
                   fontWeight: '700',
                   fontSize: '0.85rem',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(217, 119, 6, 0.15)',
+                  boxShadow: '0 2px 4px rgba(21, 128, 61, 0.15)',
                   transition: 'all 0.15s ease'
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #fef3c7, #fde68a)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #fffbeb, #fef3c7)'}
-                title="Tự động lập/lấy danh sách thu các khoản UBND Phường từ dữ liệu nhân khẩu"
+                onMouseOver={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #dcfce7, #bbf7d0)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'linear-gradient(135deg, #f0fdf4, #dcfce7)'}
+                title="Tự nhập bổ sung thêm cá nhân / hộ dân mới vào danh sách"
               >
-                <Users size={16} /> Lấy / Khởi tạo danh sách
+                <PlusCircle size={16} /> Thêm người / Hộ mới
               </button>
             )}
             {/* Data Actions Dropdown */}
