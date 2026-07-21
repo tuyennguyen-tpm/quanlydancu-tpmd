@@ -249,6 +249,37 @@ const WardFunds = () => {
     return headNames;
   }, [households, residents]);
 
+  // Pre-calculated O(1) Maps for zero-latency page renders
+  const householdMap = useMemo(() => {
+    const map = new Map<string, Household>();
+    households.forEach(h => map.set(h.id, h));
+    return map;
+  }, [households]);
+
+  const residentsByNameMap = useMemo(() => {
+    const map = new Map<string, Resident[]>();
+    residents.forEach(r => {
+      const k = r.full_name.trim().toLowerCase();
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(r);
+    });
+    return map;
+  }, [residents]);
+
+  const headNameForHHMap = useMemo(() => {
+    const resIdMap = new Map<string, Resident>();
+    residents.forEach(r => resIdMap.set(r.id, r));
+
+    const headMap = new Map<string, string>();
+    households.forEach(h => {
+      if (h.head_of_household_id) {
+        const head = resIdMap.get(h.head_of_household_id);
+        if (head) headMap.set(h.id, head.full_name);
+      }
+    });
+    return headMap;
+  }, [households, residents]);
+
   // A fast O(1) helper function to find resident info by name and dob
   const findResidentGroupAndHead = (name: string, dob: string) => {
     const nameKey = name.trim().toLowerCase();
@@ -302,8 +333,8 @@ const WardFunds = () => {
     const yearClean = dobClean.match(/\d{4}/)?.[0] || '';
     const addrClean = (f.address || '').trim().toLowerCase();
 
-    // 1. Lọc tất cả nhân khẩu trùng tên trong CSDL
-    const candidates = residents.filter(r => r.full_name.trim().toLowerCase() === nameKey);
+    // 1. Lọc tất cả nhân khẩu trùng tên trong CSDL (O(1) lookup)
+    const candidates = residentsByNameMap.get(nameKey) || [];
 
     let matchedResident: Resident | undefined = undefined;
 
@@ -332,7 +363,7 @@ const WardFunds = () => {
       // c. Tiếp theo khớp Địa chỉ hoặc Tổ tự quản của Hộ
       if (filtered.length > 1 && addrClean) {
         const addrMatch = filtered.filter(r => {
-          const hh = households.find(h => h.id === r.household_id);
+          const hh = householdMap.get(r.household_id);
           if (!hh) return false;
           const hhAddr = (hh.address || '').trim().toLowerCase();
           return hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean);
@@ -343,18 +374,12 @@ const WardFunds = () => {
       matchedResident = filtered[0];
     }
 
-    const headNameForHH = new Map<string, string>();
-    households.forEach(h => {
-      const head = residents.find(r => r.id === h.head_of_household_id);
-      if (head) headNameForHH.set(h.id, head.full_name);
-    });
-
     if (matchedResident) {
-      const hh = households.find(h => h.id === matchedResident!.household_id);
+      const hh = householdMap.get(matchedResident.household_id);
       return {
         householdId: matchedResident.household_id,
         address: hh?.address || f.address || '',
-        headName: headNameForHH.get(matchedResident.household_id) || f.full_name,
+        headName: headNameForHHMap.get(matchedResident.household_id) || f.full_name,
         groupName: (hh as any)?.self_management_group || getGroupOfFundRecord(f)
       };
     }
@@ -371,7 +396,7 @@ const WardFunds = () => {
         return {
           householdId: matchedHh.id,
           address: matchedHh.address || f.address || '',
-          headName: headNameForHH.get(matchedHh.id) || f.full_name,
+          headName: headNameForHHMap.get(matchedHh.id) || f.full_name,
           groupName: (matchedHh as any)?.self_management_group || getGroupOfFundRecord(f)
         };
       }
