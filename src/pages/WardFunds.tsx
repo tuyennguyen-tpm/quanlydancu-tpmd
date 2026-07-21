@@ -566,13 +566,47 @@ const WardFunds = () => {
       const today = new Date().toISOString().slice(0, 10);
 
       // 1. Lưu đóng quỹ Phường
-      await Promise.all(members.map(async m => {
-        const newC: Record<string, any> = { ...m.contributions };
-        activeFunds.forEach(fund => {
-          const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          newC[fund.name] = { expected: c.expected, actual: shouldPay ? (c.expected || c.actual) : 0, date: shouldPay ? today : '' };
-        });
-        await db.saveWardFund({ ...m, contributions: newC, note: shouldPay ? 'Đã nộp đủ đợt tập trung' : '' });
+      const memberContribMaps = members.map(m => ({ ...m.contributions }));
+
+      activeFunds.forEach(fund => {
+        const isHouseholdFund = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('cao tuổi') || fund.name.toLowerCase().includes('người cao tuổi');
+        
+        if (isHouseholdFund) {
+          let primaryIndex = members.findIndex(m => (m.contributions?.[fund.name]?.expected || 0) > 0);
+          if (primaryIndex < 0) primaryIndex = 0;
+
+          members.forEach((m, idx) => {
+            const c = m.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            if (idx === primaryIndex) {
+              const targetExp = c.expected > 0 ? c.expected : fund.target;
+              memberContribMaps[idx][fund.name] = {
+                expected: targetExp,
+                actual: shouldPay ? targetExp : 0,
+                date: shouldPay ? today : ''
+              };
+            } else {
+              memberContribMaps[idx][fund.name] = {
+                expected: c.expected || 0,
+                actual: 0,
+                date: ''
+              };
+            }
+          });
+        } else {
+          members.forEach((m, idx) => {
+            const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+            const expVal = c.expected !== undefined ? c.expected : fund.target;
+            memberContribMaps[idx][fund.name] = {
+              expected: expVal,
+              actual: shouldPay ? (expVal || fund.target) : 0,
+              date: shouldPay ? today : ''
+            };
+          });
+        }
+      });
+
+      await Promise.all(members.map(async (m, idx) => {
+        await db.saveWardFund({ ...m, contributions: memberContribMaps[idx], note: shouldPay ? 'Đã nộp đủ đợt tập trung' : '' });
       }));
 
       // 2. Lưu đóng quỹ TDP và đồng bộ Sổ quỹ chung
