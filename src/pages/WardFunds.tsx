@@ -249,6 +249,52 @@ const WardFunds = () => {
     return headNames;
   }, [households, residents]);
 
+  // A fast O(1) helper function to find resident info by name and dob
+  const findResidentGroupAndHead = (name: string, dob: string) => {
+    const nameKey = name.trim().toLowerCase();
+    const list = residentsInfoLookup.get(nameKey);
+    if (!list || list.length === 0) return { group: '', headName: '', isHead: false };
+    
+    const cleanDob = dob.trim();
+    if (cleanDob) {
+      const matched = list.find(r => r.dob.includes(cleanDob) || cleanDob.includes(r.dob));
+      if (matched) return matched;
+      const noDobMatch = list.find(r => !r.dob);
+      if (noDobMatch) return noDobMatch;
+      return { group: '', headName: '', isHead: false };
+    }
+    
+    if (list.length === 1) return list[0];
+    return { group: '', headName: '', isHead: false };
+  };
+
+  // Helper to resolve group/tổ of a fund record directly
+  const getGroupOfFundRecord = (f: WardFund) => {
+    // 1. Quét địa chỉ trước để lấy tổ/cụm thực tế ghi trên địa chỉ (độ ưu tiên cao nhất)
+    const addr = (f.address || '').toLowerCase();
+    for (const g of groups) {
+      const gLower = g.toLowerCase();
+      if (addr.includes(gLower)) {
+        return g;
+      }
+      const numMatch = g.match(/\d+/);
+      if (numMatch) {
+        const num = numMatch[0];
+        if (addr.includes(`tổ ${num}`) || addr.includes(`tổ: ${num}`) || addr.includes(`tổ tự quản ${num}`) || addr.includes(`tổ tự quản số ${num}`)) {
+          return g;
+        }
+      }
+    }
+
+    // 2. Nếu địa chỉ không ghi rõ tổ/cụm cụ thể, đối chiếu với danh sách nhân khẩu trong cơ sở dữ liệu
+    const info = findResidentGroupAndHead(f.full_name, f.dob || '');
+    if (info.group) {
+      return info.group;
+    }
+    
+    return '';
+  };
+
   // Hàm tra cứu khớp chính xác Hộ gia đình cho từng bản ghi quỹ Phường dựa trên Tên, Ngày sinh, Tổ (user_id) & Địa chỉ
   const findMatchingHouseholdForWardFund = (f: WardFund) => {
     const nameKey = f.full_name.trim().toLowerCase();
@@ -341,29 +387,6 @@ const WardFunds = () => {
     };
   };
 
-  // A fast O(1) helper function to find resident info by name and dob
-  const findResidentGroupAndHead = (name: string, dob: string) => {
-    const nameKey = name.trim().toLowerCase();
-    const list = residentsInfoLookup.get(nameKey);
-    if (!list || list.length === 0) return { group: '', headName: '', isHead: false };
-    
-    const cleanDob = dob.trim();
-    if (cleanDob) {
-      const matched = list.find(r => r.dob.includes(cleanDob) || cleanDob.includes(r.dob));
-      if (matched) return matched;
-      // Nếu có năm sinh nhưng không trùng khớp với bất kỳ ai có năm sinh đó trong DB,
-      // thì không được tự ý khớp bừa với người khác trùng tên nhưng khác năm sinh.
-      // Chỉ cho phép khớp nếu người trong DB không có năm sinh.
-      const noDobMatch = list.find(r => !r.dob);
-      if (noDobMatch) return noDobMatch;
-      return { group: '', headName: '', isHead: false };
-    }
-    
-    // Nếu bản ghi quỹ không có DOB, chỉ tự động khớp nếu trong DB chỉ có duy nhất 1 người trùng tên
-    if (list.length === 1) return list[0];
-    return { group: '', headName: '', isHead: false };
-  };
-
   // Pre-calculate metadata (group, household info) for all fund records to ensure 60fps search/filter performance
   const fundMetaMap = useMemo(() => {
     const map = new Map<string, { householdId: string; address: string; headName: string; groupName: string }>();
@@ -372,12 +395,7 @@ const WardFunds = () => {
       map.set(f.id, info);
     });
     return map;
-  }, [funds, residents, households, groups]);
-
-  // Helper to resolve group/tổ of a fund record
-  const getGroupOfFundRecord = (f: WardFund) => {
-    return fundMetaMap.get(f.id)?.groupName || '';
-  };
+  }, [funds, residents, households, groups, residentsInfoLookup]);
 
   // Filtered List
   const filteredFunds = useMemo(() => {
