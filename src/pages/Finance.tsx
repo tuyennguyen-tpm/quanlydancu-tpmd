@@ -3760,8 +3760,11 @@ const Finance = () => {
                         {percent}%
                       </div>
                     </div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: color.text, lineHeight: '1.2' }}>
-                      {formatCurrency(totalCollectedForFund)} <span style={{ fontSize: '0.78rem', fontWeight: '600', color: '#94a3b8' }}>đ</span>
+                    <div style={{ fontSize: '1.1rem', fontWeight: '800', color: color.text, lineHeight: '1.2' }}>
+                      {targetAmount > 0 ? `${formatCurrency(targetAmount)} đ/hộ` : '—'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#64748b', marginTop: '4px' }}>
+                      Đã thu: <strong style={{ color: '#16a34a' }}>{formatCurrency(totalCollectedForFund)} đ</strong> ({paidCount} hộ)
                     </div>
                   </div>
                 );
