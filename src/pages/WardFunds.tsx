@@ -3643,20 +3643,42 @@ const WardFunds = () => {
     wardActiveFunds.forEach((wf: any) => {
       const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
       
-      // Tính toán định mức đóng góp kỳ vọng của hộ đối với quỹ này
+      // Tính chỉ tiêu kỳ vọng ĐÚNG theo tuổi/giới tính thực tế (không dùng giá trị cũ trong DB)
       const getExpectedForMember = (r: WardFund) => {
-        const contrib = r.contributions?.[wf.name];
-        if (contrib !== undefined) {
-          return contrib.expected || 0;
-        }
-        // Dự phòng nếu chưa khởi tạo bản ghi đóng góp
-        if (isHousehold) {
-          return wf.target;
+        if (isHousehold) return wf.target;
+
+        // Tính tuổi từ dob của bản ghi quỹ (f.dob của chính người đó)
+        const currentYearReceipt = new Date().getFullYear();
+        const rDob = r.dob || '';
+        const rBirthYear = parseInt(rDob.match(/\d{4}/)?.[0] || '0', 10);
+        const rAge = rBirthYear > 0 ? currentYearReceipt - rBirthYear : 30;
+
+        // Xác định giới tính: ưu tiên từ CSDL nhân khẩu, dự phòng tên "Thị"
+        const matchedMember = members.find(m => m.id === r.user_id)
+          || members.find(m => m.full_name.trim().toLowerCase() === r.full_name.trim().toLowerCase()
+              && (!r.dob || m.dob === r.dob));
+        let rIsFemale = false;
+        if (matchedMember) {
+          const g = (matchedMember.gender || '').toString().toLowerCase().trim();
+          rIsFemale = g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f');
         } else {
-          const age = getResidentAge(r.dob || '');
-          const isLabor = age >= 18 && age <= 60;
-          return isLabor ? wf.target : 0;
+          const n = (r.full_name || '').toLowerCase();
+          rIsFemale = n.includes(' thị ') || n.endsWith(' thị');
         }
+
+        // Lấy giới hạn tuổi từ cài đặt quỹ
+        const ageRangeStr = (wf.age_range || '').toLowerCase();
+        let maleMin = 18, maleMax = 61, femaleMin = 18, femaleMax = 58;
+        const mM = ageRangeStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+        if (mM) { maleMin = parseInt(mM[1], 10); maleMax = parseInt(mM[2], 10); }
+        const fM = ageRangeStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || ageRangeStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+        if (fM) { femaleMin = parseInt(fM[1], 10); femaleMax = parseInt(fM[2], 10); }
+
+        const shouldPay = rIsFemale
+          ? rAge >= femaleMin && rAge <= femaleMax
+          : rAge >= maleMin && rAge <= maleMax;
+
+        return shouldPay ? wf.target : 0;
       };
 
       const expectedTotalForHH = memberWardRecords.reduce((sum, r) => sum + getExpectedForMember(r), 0);
