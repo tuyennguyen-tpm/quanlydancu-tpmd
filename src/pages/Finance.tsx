@@ -1412,6 +1412,14 @@ const Finance = () => {
           <button class="toolbar-btn btn-close" onclick="window.close()">✖️ Đóng</button>
           
           <div style="display: flex; gap: 6px; align-items: center; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 10px; margin-left: 5px;">
+            <!-- Bold, Italic, Underline -->
+            <button class="toolbar-btn-format" onclick="document.execCommand('bold')" title="Chữ đậm (Ctrl+B)" style="font-weight: bold; width: 32px; padding: 6px 0; text-align: center;">B</button>
+            <button class="toolbar-btn-format" onclick="document.execCommand('italic')" title="Chữ nghiêng (Ctrl+I)" style="font-style: italic; width: 32px; padding: 6px 0; text-align: center;">I</button>
+            <button class="toolbar-btn-format" onclick="document.execCommand('underline')" title="Gạch chân (Ctrl+U)" style="text-decoration: underline; width: 32px; padding: 6px 0; text-align: center;">U</button>
+            
+            <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.25); margin: 0 4px;"></div>
+
+            <!-- Alignment -->
             <button class="toolbar-btn-format" onclick="document.execCommand('justifyLeft')" title="Căn lề trái">◀️ Căn trái</button>
             <button class="toolbar-btn-format" onclick="document.execCommand('justifyCenter')" title="Căn giữa">🔼 Căn giữa</button>
             <button class="toolbar-btn-format" onclick="document.execCommand('justifyRight')" title="Căn lề phải">▶️ Căn phải</button>
