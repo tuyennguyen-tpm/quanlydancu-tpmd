@@ -179,6 +179,21 @@ const WardFunds = () => {
     return nameMap;
   }, [residents, households]);
 
+  // Tập hợp tên các CHỦ HỘ từ CSDL hộ khẩu để đối chiếu nhanh và chính xác cho Tab 2
+  const headNamesSet = useMemo(() => {
+    const headIds = new Set<string>();
+    households.forEach(h => {
+      if (h.head_of_household_id) headIds.add(h.head_of_household_id);
+    });
+    const headNames = new Set<string>();
+    residents.forEach(r => {
+      if (headIds.has(r.id)) {
+        headNames.add(r.full_name.trim().toLowerCase());
+      }
+    });
+    return headNames;
+  }, [households, residents]);
+
   // A fast O(1) helper function to find resident info by name and dob
   const findResidentGroupAndHead = (name: string, dob: string) => {
     const nameKey = name.trim().toLowerCase();
@@ -261,13 +276,23 @@ const WardFunds = () => {
       return true;
     });
 
-    // Lọc chỉ giữ lại chủ hộ nếu ở Tab thu theo Hộ
-    const filteredByMode = subTabMode === 'household_list'
-      ? list.filter(f => {
-          const info = findResidentGroupAndHead(f.full_name, f.dob || '');
-          return info.isHead === true;
-        })
-      : list;
+    // Lọc chỉ giữ lại chủ hộ nếu ở Tab thu theo Hộ:
+    // Dùng headNamesSet để đối chiếu trực tiếp thay vì dùng name+dob matching dễ thất bại
+    let filteredByMode: WardFund[];
+    if (subTabMode === 'household_list') {
+      const seenNames = new Set<string>();
+      filteredByMode = list.filter(f => {
+        const nameKey = f.full_name.trim().toLowerCase();
+        // Kiểm tra xem người này có phải chủ hộ theo CSDL không
+        if (!headNamesSet.has(nameKey)) return false;
+        // Chỉ giữ lại 1 bản ghi per chủ hộ (loại bỏ trùng lặp nếu 1 chủ hộ có nhiều entries)
+        if (seenNames.has(nameKey)) return false;
+        seenNames.add(nameKey);
+        return true;
+      });
+    } else {
+      filteredByMode = list;
+    }
 
     // Sắp xếp thứ tự ưu tiên theo Cụm/Tổ đã cấu hình (Ví dụ: Tổ Việt Trung -> Tổ 4 -> Tổ 5...)
     return filteredByMode.sort((a, b) => {
@@ -287,7 +312,7 @@ const WardFunds = () => {
       // Cùng Tổ thì xếp theo Tên tiếng Việt A-Z
       return a.full_name.localeCompare(b.full_name, 'vi');
     });
-  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, residents, households, groups]);
+  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, residents, households, groups, headNamesSet]);
 
   // Calculate Statistics dynamically
   const fundStats = activeFunds.map(fund => {
