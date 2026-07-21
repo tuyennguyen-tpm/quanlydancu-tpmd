@@ -1362,7 +1362,7 @@ const Finance = () => {
 
     return `
       ${generateSingleReceipt('Liên 1: TDP lưu trữ')}
-      <div style="margin-top: 15px;"></div>
+      <div style="page-break-before: always; margin-top: 20px;"></div>
       ${generateSingleReceipt('Liên 2: Giao cho người nộp tiền')}
     `;
   };
@@ -1473,8 +1473,8 @@ const Finance = () => {
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 10pt;
-            line-height: 1.35;
+            font-size: 9.5pt;
+            line-height: 1.3;
             color: #000;
             padding: 5px;
             padding-top: 55px;
@@ -1482,6 +1482,7 @@ const Finance = () => {
           .receipt-container {
             width: 100%;
             box-sizing: border-box;
+            font-size: inherit;
           }
           .receipt-header-table {
             width: 100%;
@@ -1494,49 +1495,49 @@ const Finance = () => {
           }
           .receipt-org-title {
             font-weight: bold;
-            font-size: 10pt !important;
+            font-size: 1.05em;
             line-height: 1.3;
           }
           .receipt-form-title {
             text-align: right;
-            font-size: 9.5pt !important;
+            font-size: 0.95em;
             line-height: 1.25;
           }
           .receipt-title-container {
             text-align: center;
-            margin-top: 6px !important;
-            margin-bottom: 6px !important;
+            margin-top: 4px;
+            margin-bottom: 4px;
           }
           .receipt-title {
-            font-size: 15.5pt !important;
+            font-size: 1.5em;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 2px !important;
+            margin-bottom: 2px;
           }
           .receipt-subtitle {
             font-style: italic;
-            font-size: 9.5pt !important;
+            font-size: 0.95em;
           }
           .receipt-info-table {
             width: 100%;
-            margin-bottom: 4px !important;
+            margin-bottom: 4px;
             border-collapse: collapse;
           }
           .receipt-info-table td {
-            padding: 2px 0 !important;
-            font-size: 10pt !important;
+            padding: 1px 0;
+            font-size: 1em;
           }
           .receipt-details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 4px !important;
-            margin-bottom: 4px !important;
+            margin-top: 3px;
+            margin-bottom: 3px;
           }
           .receipt-details-table th, .receipt-details-table td {
-            border: 1px solid #000 !important;
-            padding: 4px 6px !important;
-            font-size: 9.5pt !important;
+            border: 1px solid #000;
+            padding: 3px 5px;
+            font-size: 0.95em;
             vertical-align: middle;
           }
           .receipt-details-table th {
@@ -1547,15 +1548,15 @@ const Finance = () => {
           .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px !important;
-            page-break-inside: avoid !important;
+            margin-top: 6px;
+            page-break-inside: avoid;
           }
           .receipt-signatures-table td {
             border: none;
             text-align: center;
-            font-size: 9.5pt !important;
+            font-size: 0.95em;
             vertical-align: top;
-            padding: 2px !important;
+            padding: 1px;
           }
           
           /* Custom edit toolbar style */
