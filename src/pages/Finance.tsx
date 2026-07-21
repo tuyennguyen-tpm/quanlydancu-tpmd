@@ -1080,19 +1080,47 @@ const Finance = () => {
       return fundYear - year;
     };
 
+    const activeFundsList = (db as any).getWardFundList() || [];
+    const personFund = activeFundsList.find((af: any) => af.scope === 'person' || af.name.toLowerCase().includes('thiên tai') || af.name.toLowerCase().includes('đáp nghĩa'));
+
+    const parseAgeRange = (ageRangeStr: string | undefined) => {
+      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+      if (!ageRangeStr) return result;
+      const cleanStr = ageRangeStr.toLowerCase();
+      const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+      if (maleMatch) {
+        result.maleMin = parseInt(maleMatch[1], 10);
+        result.maleMax = parseInt(maleMatch[2], 10);
+      }
+      const femaleMatch = cleanStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || cleanStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+      if (femaleMatch) {
+        result.femaleMin = parseInt(femaleMatch[1], 10);
+        result.femaleMax = parseInt(femaleMatch[2], 10);
+      }
+      const generalMatch = cleanStr.match(/(?:từ\s*)?(\d+)\s*-\s*(\d+)/);
+      if (generalMatch && !maleMatch && !femaleMatch) {
+        result.generalMin = parseInt(generalMatch[1], 10);
+        result.generalMax = parseInt(generalMatch[2], 10);
+      }
+      return result;
+    };
+
+    const ageLimits = parseAgeRange(personFund?.age_range);
+
     const laborResidents = members.filter(r => {
       const statusClean = r.status || 'resident';
       if (statusClean === 'deceased') return false;
       const age = getResidentAge(r.dob);
-      const gStr = (r.gender || '').toString().toLowerCase();
-      const isMale = gStr === 'male' || gStr === 'nam';
-      const isFemale = gStr === 'female' || gStr === 'nữ';
+      const gStr = (r.gender || '').toString().toLowerCase().trim();
+      const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị');
+      const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
+      const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
       if (isMale) {
-        return age >= 18 && age <= 61;
+        return age >= ageLimits.maleMin && age <= ageLimits.maleMax;
       } else if (isFemale) {
-        return age >= 18 && age <= 58;
+        return age >= ageLimits.femaleMin && age <= ageLimits.femaleMax;
       }
-      return age >= 18 && age <= 60;
+      return age >= ageLimits.generalMin && age <= ageLimits.generalMax;
     });
     const laborCount = laborResidents.length;
 

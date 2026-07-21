@@ -1191,16 +1191,17 @@ const WardFunds = () => {
             }
           }
 
-          // D. Kiểm tra giới tính linh hoạt (nam / male / nữ / female)
-          const gStr = (r.gender || '').toString().toLowerCase();
-          const isMale = gStr === 'male' || gStr === 'nam';
-          const isFemale = gStr === 'female' || gStr === 'nữ';
+          // D. Kiểm tra giới tính linh hoạt (hỗ trợ viết tắt, không dấu và tự động nhận diện đệm "Thị" của Nữ)
+          const gStr = (r.gender || '').toString().toLowerCase().trim();
+          const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị');
+          const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
+          const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
 
           // E. Tính toán mức đóng góp của từng quỹ dựa trên quy định pháp luật
           const contributions: Record<string, any> = {};
           let shouldAdd = false;
 
-          activeFundsList.forEach((fund: { name: string; target: number }) => {
+          activeFundsList.forEach((fund: any) => {
             const isPCTT = fund.name.toLowerCase().includes('thiên tai');
             const isDOdn = fund.name.toLowerCase().includes('đền ơn đáp nghĩa') || fund.name.toLowerCase().includes('đền ơn');
             
@@ -1221,11 +1222,34 @@ const WardFunds = () => {
                 // Người hưởng lương hưu được miễn Quỹ Thiên tai và Đền ơn đáp nghĩa
                 expected = 0;
               } else {
-                if (isPCTT || isDOdn) {
-                  // Quỹ Thiên tai & Đền ơn đáp nghĩa: Nam 18-61, Nữ 18-58 trong độ tuổi lao động
-                  const isMaleInAge = isMale ? (age >= 18 && age <= 61) : false;
-                  const isFemaleInAge = isFemale ? (age >= 18 && age <= 58) : false;
-                  const isGeneralInAge = (!isMale && !isFemale) ? (age >= 18 && age <= 60) : false;
+                if (fund.scope === 'person' || isPCTT || isDOdn) {
+                  // Parse giới hạn độ tuổi cấu hình động từ người dùng (ví dụ: "Nam 18-61, Nữ 18-58")
+                  const parseAgeRange = (ageRangeStr: string | undefined) => {
+                    const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+                    if (!ageRangeStr) return result;
+                    const cleanStr = ageRangeStr.toLowerCase();
+                    const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+                    if (maleMatch) {
+                      result.maleMin = parseInt(maleMatch[1], 10);
+                      result.maleMax = parseInt(maleMatch[2], 10);
+                    }
+                    const femaleMatch = cleanStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || cleanStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+                    if (femaleMatch) {
+                      result.femaleMin = parseInt(femaleMatch[1], 10);
+                      result.femaleMax = parseInt(femaleMatch[2], 10);
+                    }
+                    const generalMatch = cleanStr.match(/(?:từ\s*)?(\d+)\s*-\s*(\d+)/);
+                    if (generalMatch && !maleMatch && !femaleMatch) {
+                      result.generalMin = parseInt(generalMatch[1], 10);
+                      result.generalMax = parseInt(generalMatch[2], 10);
+                    }
+                    return result;
+                  };
+
+                  const ageLimits = parseAgeRange(fund.age_range);
+                  const isMaleInAge = isMale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
+                  const isFemaleInAge = isFemale ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
+                  const isGeneralInAge = (!isMale && !isFemale) ? (age >= ageLimits.generalMin && age <= ageLimits.generalMax) : false;
 
                   if (isMaleInAge || isFemaleInAge || isGeneralInAge) {
                     expected = fund.target;
@@ -1365,6 +1389,7 @@ const WardFunds = () => {
       const hhList = await db.getHouseholds();
       const currentFunds = await db.getWardFunds(selectedYear);
 
+      const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu'];
       let matchedCount = 0;
       const updatedFunds: WardFund[] = [];
 
@@ -1425,6 +1450,7 @@ const WardFunds = () => {
         let newUserId = f.user_id;
         let newDob = f.dob;
         let newAddress = f.address;
+        let newContributions = f.contributions ? { ...f.contributions } : {};
 
         if (matchedRes) {
           const hh = hhList.find(h => h.id === matchedRes!.household_id);
@@ -1440,6 +1466,94 @@ const WardFunds = () => {
             newAddress = hh.address;
             updated = true;
           }
+
+          // Tự động tính toán lại chỉ tiêu đóng góp kỳ vọng của quỹ Phường dựa trên tuổi/giới tính mới cập nhật
+          const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
+          let age = 30;
+          let parsedYear = 0;
+          if (matchedRes.dob) {
+            parsedYear = parseInt(matchedRes.dob.match(/\d{4}/)?.[0] || '0', 10);
+            if (parsedYear > 0) {
+              age = selectedYear - parsedYear;
+            }
+          }
+
+          const mGStr = (matchedRes.gender || '').toString().toLowerCase().trim();
+          const hasThi = matchedRes.full_name.toLowerCase().includes(' thị ') || matchedRes.full_name.toLowerCase().includes(' thị');
+          const isFemale = mGStr === 'female' || mGStr === 'nữ' || mGStr === 'nu' || mGStr.startsWith('f') || hasThi;
+          const isMale = !isFemale && (mGStr === 'male' || mGStr === 'nam' || mGStr.startsWith('m'));
+
+          const activeFundsList = (db as any).getWardFundList() || [];
+          activeFundsList.forEach((fund: any) => {
+            const isPCTT = fund.name.toLowerCase().includes('thiên tai');
+            const isDOdn = fund.name.toLowerCase().includes('đền ơn đáp nghĩa') || fund.name.toLowerCase().includes('đền ơn');
+            
+            let expected = 0;
+            if (isPolicyHousehold) {
+              expected = 0;
+            } else {
+              const occLower = (matchedRes!.occupation || '').toLowerCase();
+              const notesLower = (matchedRes!.notes || '').toLowerCase();
+              const isPensioner = pensionKeywords.some((key: string) => occLower.includes(key) || notesLower.includes(key));
+              
+              if (isPensioner) {
+                expected = 0;
+              } else {
+                if (fund.scope === 'person' || isPCTT || isDOdn) {
+                  const parseAgeRange = (ageRangeStr: string | undefined) => {
+                    const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+                    if (!ageRangeStr) return result;
+                    const cleanStr = ageRangeStr.toLowerCase();
+                    const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+                    if (maleMatch) {
+                      result.maleMin = parseInt(maleMatch[1], 10);
+                      result.maleMax = parseInt(maleMatch[2], 10);
+                    }
+                    const femaleMatch = cleanStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || cleanStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+                    if (femaleMatch) {
+                      result.femaleMin = parseInt(femaleMatch[1], 10);
+                      result.femaleMax = parseInt(femaleMatch[2], 10);
+                    }
+                    const generalMatch = cleanStr.match(/(?:từ\s*)?(\d+)\s*-\s*(\d+)/);
+                    if (generalMatch && !maleMatch && !femaleMatch) {
+                      result.generalMin = parseInt(generalMatch[1], 10);
+                      result.generalMax = parseInt(generalMatch[2], 10);
+                    }
+                    return result;
+                  };
+
+                  const ageLimits = parseAgeRange(fund.age_range);
+                  const isMaleInAge = isMale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
+                  const isFemaleInAge = isFemale ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
+                  const isGeneralInAge = (!isMale && !isFemale) ? (age >= ageLimits.generalMin && age <= ageLimits.generalMax) : false;
+                  
+                  if (isMaleInAge || isFemaleInAge || isGeneralInAge) {
+                    expected = fund.target;
+                  }
+                } else {
+                  const isHouseholdScope = fund.scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
+                  if (isHouseholdScope) {
+                    if (matchedRes!.is_head && age >= 18) {
+                      expected = fund.target;
+                    }
+                  } else {
+                    if (age >= 18) {
+                      expected = fund.target;
+                    }
+                  }
+                }
+              }
+            }
+
+            const currentExpected = newContributions[fund.name]?.expected || 0;
+            if (currentExpected !== expected) {
+              newContributions[fund.name] = {
+                expected,
+                actual: newContributions[fund.name]?.actual || 0
+              };
+              updated = true;
+            }
+          });
         } else if (addrClean) {
           const matchedHhByHead = hhList.find(h => {
             if (!h.head_of_household_id) return false;
@@ -1480,7 +1594,8 @@ const WardFunds = () => {
             ...f,
             user_id: newUserId,
             dob: newDob,
-            address: newAddress
+            address: newAddress,
+            contributions: newContributions
           });
         } else {
           updatedFunds.push(f);
@@ -3319,19 +3434,47 @@ const WardFunds = () => {
       return selectedYear - year;
     };
 
+    const activeFundsList = (db as any).getWardFundList() || [];
+    const personFund = activeFundsList.find((af: any) => af.scope === 'person' || af.name.toLowerCase().includes('thiên tai') || af.name.toLowerCase().includes('đáp nghĩa'));
+
+    const parseAgeRange = (ageRangeStr: string | undefined) => {
+      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+      if (!ageRangeStr) return result;
+      const cleanStr = ageRangeStr.toLowerCase();
+      const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+      if (maleMatch) {
+        result.maleMin = parseInt(maleMatch[1], 10);
+        result.maleMax = parseInt(maleMatch[2], 10);
+      }
+      const femaleMatch = cleanStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || cleanStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+      if (femaleMatch) {
+        result.femaleMin = parseInt(femaleMatch[1], 10);
+        result.femaleMax = parseInt(femaleMatch[2], 10);
+      }
+      const generalMatch = cleanStr.match(/(?:từ\s*)?(\d+)\s*-\s*(\d+)/);
+      if (generalMatch && !maleMatch && !femaleMatch) {
+        result.generalMin = parseInt(generalMatch[1], 10);
+        result.generalMax = parseInt(generalMatch[2], 10);
+      }
+      return result;
+    };
+
+    const ageLimits = parseAgeRange(personFund?.age_range);
+
     const laborResidents = members.filter(r => {
       const statusClean = r.status || 'resident';
       if (statusClean === 'deceased') return false;
       const age = getResidentAge(r.dob);
-      const gStr = (r.gender || '').toString().toLowerCase();
-      const isMale = gStr === 'male' || gStr === 'nam';
-      const isFemale = gStr === 'female' || gStr === 'nữ';
+      const gStr = (r.gender || '').toString().toLowerCase().trim();
+      const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị');
+      const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
+      const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
       if (isMale) {
-        return age >= 18 && age <= 61;
+        return age >= ageLimits.maleMin && age <= ageLimits.maleMax;
       } else if (isFemale) {
-        return age >= 18 && age <= 58;
+        return age >= ageLimits.femaleMin && age <= ageLimits.femaleMax;
       }
-      return age >= 18 && age <= 60;
+      return age >= ageLimits.generalMin && age <= ageLimits.generalMax;
     });
     const laborCount = laborResidents.length;
 
