@@ -1091,14 +1091,18 @@ const Finance = () => {
           note: actualPaid === 0 ? 'Chưa nộp' : ''
         });
       } else {
-        const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        const paidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
+        const rawActualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+        const rawPaidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
+        
+        const paidCount = (laborCount > 0 && rawPaidCount > laborCount) ? laborCount : rawPaidCount;
+        const actualPaid = (laborCount > 0 && rawPaidCount > laborCount) ? (paidCount * wf.target) : rawActualPaid;
+
         receiptRows.push({
           name: '[UBND] ' + wf.name,
           type: 'Nhân khẩu LĐ',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
           amount: actualPaid,
-          note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount} khẩu LĐ - Chưa nộp`
+          note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount > 0 ? laborCount : 1} khẩu LĐ - Chưa nộp`
         });
       }
     });

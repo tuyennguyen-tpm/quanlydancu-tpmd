@@ -765,12 +765,25 @@ const WardFunds = () => {
           });
         } else {
           members.forEach((m, idx) => {
-            const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-            const expVal = c.expected !== undefined ? c.expected : fund.target;
+            const c = m.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            
+            let inLaborAge = true;
+            if (m.dob) {
+              const year = parseInt(m.dob.match(/\d{4}/)?.[0] || '0', 10);
+              if (year > 0) {
+                const age = selectedYear - year;
+                const gender = (m as any).gender;
+                if (gender === 'male') inLaborAge = age >= 18 && age <= 61;
+                else if (gender === 'female') inLaborAge = age >= 18 && age <= 58;
+                else inLaborAge = age >= 18 && age <= 60;
+              }
+            }
+
+            const expVal = inLaborAge ? (c.expected > 0 ? c.expected : fund.target) : (c.expected > 0 ? c.expected : 0);
             memberContribMaps[idx][fund.name] = {
               expected: expVal,
-              actual: shouldPay ? (expVal || fund.target) : 0,
-              date: shouldPay ? today : ''
+              actual: (shouldPay && expVal > 0) ? expVal : 0,
+              date: (shouldPay && expVal > 0) ? today : ''
             };
           });
         }
@@ -3236,14 +3249,18 @@ const WardFunds = () => {
           note: actualPaid === 0 ? 'Chưa nộp' : ''
         });
       } else {
-        const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        const paidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
+        const rawActualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+        const rawPaidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
+        
+        const paidCount = (laborCount > 0 && rawPaidCount > laborCount) ? laborCount : rawPaidCount;
+        const actualPaid = (laborCount > 0 && rawPaidCount > laborCount) ? (paidCount * wf.target) : rawActualPaid;
+
         receiptRows.push({
           name: '[UBND Phường] ' + wf.name,
           type: 'Nhân khẩu LĐ',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
           amount: actualPaid,
-          note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount} khẩu LĐ - Chưa nộp`
+          note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount > 0 ? laborCount : 1} khẩu LĐ - Chưa nộp`
         });
       }
     });
