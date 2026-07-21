@@ -2793,44 +2793,43 @@ const WardFunds = () => {
 
     const receiptRows: Array<{ name: string; type: string; rate: string; amount: number; note: string }> = [];
 
-    householdPaidFunds.forEach(hf => {
-      if (hf.amount > 0) {
-        receiptRows.push({
-          name: '[Quỹ TDP] ' + hf.fund_name,
-          type: 'Hộ gia đình',
-          rate: hf.amount.toLocaleString('vi-VN') + ' đ/hộ',
-          amount: hf.amount,
-          note: hf.note || ''
-        });
-      }
+    // Luôn hiển thị tất cả quỹ TDP đang hoạt động (kể cả chưa nộp)
+    const tdpActiveFunds = (db as any).getFundList() as { name: string; target: number }[];
+    tdpActiveFunds.forEach((fund: { name: string; target: number }) => {
+      const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
+      const paidAmount = paidFund?.amount || 0;
+      receiptRows.push({
+        name: '[Quỹ TDP] ' + fund.name,
+        type: 'Hộ gia đình',
+        rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
+        amount: paidAmount,
+        note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : '')
+      });
     });
 
+    // Luôn hiển thị tất cả quỹ Phường đang hoạt động (kể cả chưa nộp)
     const wardActiveFunds = (db as any).getWardFundList();
     wardActiveFunds.forEach((wf: any) => {
       const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
       if (isHousehold) {
         const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        if (actualPaid > 0) {
-          receiptRows.push({
-            name: '[Quỹ Phường] ' + wf.name,
-            type: 'Hộ gia đình',
-            rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
-            amount: actualPaid,
-            note: ''
-          });
-        }
+        receiptRows.push({
+          name: '[Quỹ Phường] ' + wf.name,
+          type: 'Hộ gia đình',
+          rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
+          amount: actualPaid,
+          note: actualPaid === 0 ? 'Chưa nộp' : ''
+        });
       } else {
         const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
         const paidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
-        if (actualPaid > 0) {
-          receiptRows.push({
-            name: '[Quỹ Phường] ' + wf.name,
-            type: 'Nhân khẩu LĐ',
-            rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
-            amount: actualPaid,
-            note: `${paidCount} khẩu lao động`
-          });
-        }
+        receiptRows.push({
+          name: '[Quỹ Phường] ' + wf.name,
+          type: 'Nhân khẩu LĐ',
+          rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
+          amount: actualPaid,
+          note: actualPaid > 0 ? `${paidCount} khẩu lao động` : `${laborCount} khẩu LĐ - Chưa nộp`
+        });
       }
     });
 
