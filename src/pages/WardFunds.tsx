@@ -2856,6 +2856,161 @@ const WardFunds = () => {
       flexDirection: 'column',
       gap: '20px'
     }}>
+      <style>{`
+        .premium-input-3d {
+          width: 100%;
+          padding: 8px 12px 8px 36px;
+          border-radius: 10px;
+          border: 1.5px solid #cbd5e1;
+          font-size: 0.88rem;
+          outline: none;
+          background-color: #fff;
+          color: var(--text-main);
+          box-sizing: border-box;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.04);
+          transition: all 0.2s ease;
+        }
+        .premium-input-3d:focus {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 3px rgba(37,99,235,0.15), inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .premium-select-3d {
+          padding: 8px 12px;
+          border-radius: 10px;
+          border: 1.5px solid #cbd5e1;
+          background-color: #fff;
+          font-size: 0.88rem;
+          color: var(--text-main);
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.04), inset 0 -2px 0 rgba(0,0,0,0.05);
+          transition: all 0.2s ease;
+        }
+        .premium-select-3d:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px rgba(0,0,0,0.06), inset 0 -2px 0 rgba(0,0,0,0.05);
+        }
+        .premium-select-3d:active {
+          transform: translateY(1px);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.04), inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .btn-3d-data {
+          padding: 8px 16px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border: 1.5px solid #bfdbfe;
+          color: #1e40af;
+          font-weight: 700;
+          font-size: 0.85rem;
+          cursor: pointer;
+          box-shadow: 0 3px 6px rgba(37,99,235,0.1), inset 0 -2.5px 0 rgba(37,99,235,0.15);
+          transition: all 0.15s ease;
+        }
+        .btn-3d-data:hover {
+          transform: translateY(-1.5px);
+          box-shadow: 0 5px 10px rgba(37,99,235,0.15), inset 0 -2.5px 0 rgba(37,99,235,0.15);
+        }
+        .btn-3d-data:active {
+          transform: translateY(1px);
+          box-shadow: 0 1px 3px rgba(37,99,235,0.08), inset 0 1.5px 3px rgba(37,99,235,0.25);
+        }
+
+        .btn-3d-print {
+          padding: 8px 16px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+          border: 1.5px solid #ddd6fe;
+          color: #6d28d9;
+          font-weight: 700;
+          font-size: 0.85rem;
+          cursor: pointer;
+          box-shadow: 0 3px 6px rgba(124,58,237,0.1), inset 0 -2.5px 0 rgba(124,58,237,0.15);
+          transition: all 0.15s ease;
+        }
+        .btn-3d-print:hover {
+          transform: translateY(-1.5px);
+          box-shadow: 0 5px 10px rgba(124,58,237,0.15), inset 0 -2.5px 0 rgba(124,58,237,0.15);
+        }
+        .btn-3d-print:active {
+          transform: translateY(1px);
+          box-shadow: 0 1px 3px rgba(124,58,237,0.08), inset 0 1.5px 3px rgba(124,58,237,0.25);
+        }
+
+        .btn-3d-delete {
+          padding: 8px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+          border: 1.5px solid #fecaca;
+          color: #dc2626;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 3px 6px rgba(220,38,38,0.08), inset 0 -2.5px 0 rgba(220,38,38,0.12);
+          transition: all 0.15s ease;
+        }
+        .btn-3d-delete:hover {
+          transform: translateY(-1.5px);
+          box-shadow: 0 5px 10px rgba(220,38,38,0.12), inset 0 -2.5px 0 rgba(220,38,38,0.12);
+        }
+        .btn-3d-delete:active {
+          transform: translateY(1px);
+          box-shadow: 0 1px 3px rgba(220,38,38,0.05), inset 0 1.5px 3px rgba(220,38,38,0.2);
+        }
+
+        .segmented-control-3d {
+          display: flex;
+          background-color: #e2e8f0;
+          padding: 4px;
+          border-radius: 12px;
+          margin-bottom: 16px;
+          gap: 4px;
+          width: 100%;
+          box-sizing: border-box;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .segmented-control-btn-3d {
+          flex: 1;
+          padding: 10px 12px;
+          border-radius: 9px;
+          border: none;
+          font-weight: 750;
+          font-size: 0.86rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .segmented-control-btn-3d.active-blue {
+          background-color: #fff;
+          color: #2563eb;
+          box-shadow: 0 3px 6px rgba(0,0,0,0.08), inset 0 -2px 0 rgba(37,99,235,0.06);
+          transform: scale(1.01);
+        }
+        .segmented-control-btn-3d.active-green {
+          background-color: #fff;
+          color: #10b981;
+          box-shadow: 0 3px 6px rgba(0,0,0,0.08), inset 0 -2px 0 rgba(16,185,129,0.06);
+          transform: scale(1.01);
+        }
+        .segmented-control-btn-3d.inactive {
+          background-color: transparent;
+          color: #64748b;
+        }
+        .segmented-control-btn-3d.inactive:hover {
+          background-color: rgba(255, 255, 255, 0.4);
+          color: #334155;
+        }
+      `}</style>
       
       {/* Top Header */}
       <div style={{ 
@@ -2998,59 +3153,18 @@ const WardFunds = () => {
       </div>
 
       {/* ─── 2 Sub-Tabs Segmented Control Style ─── */}
-      <div style={{
-        display: 'flex',
-        backgroundColor: 'var(--bg-secondary, #f1f5f9)',
-        padding: '4px',
-        borderRadius: '10px',
-        marginBottom: '16px',
-        gap: '4px',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
+      <div className="segmented-control-3d">
         <button
           type="button"
           onClick={() => setSubTabMode('ward_list')}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: subTabMode === 'ward_list' ? '#fff' : 'transparent',
-            color: subTabMode === 'ward_list' ? '#2563eb' : 'var(--text-muted, #64748b)',
-            fontWeight: '700',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            boxShadow: subTabMode === 'ward_list' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
-            transition: 'all 0.2s ease'
-          }}
+          className={`segmented-control-btn-3d ${subTabMode === 'ward_list' ? 'active-blue' : 'inactive'}`}
         >
           📜 1. Danh sách gốc Phường giao ({funds.length} cá nhân)
         </button>
         <button
           type="button"
           onClick={() => setSubTabMode('household_list')}
-          style={{
-            flex: 1,
-            padding: '8px 12px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: subTabMode === 'household_list' ? '#fff' : 'transparent',
-            color: subTabMode === 'household_list' ? '#10b981' : 'var(--text-muted, #64748b)',
-            fontWeight: '700',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            boxShadow: subTabMode === 'household_list' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
-            transition: 'all 0.2s ease'
-          }}
+          className={`segmented-control-btn-3d ${subTabMode === 'household_list' ? 'active-green' : 'inactive'}`}
         >
           🏡 2. Danh sách Quỹ thu theo Hộ ({households.length} hộ)
         </button>
@@ -3083,17 +3197,7 @@ const WardFunds = () => {
               placeholder="Tìm theo tên người dân, địa chỉ..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px 8px 36px',
-                borderRadius: '8px',
-                border: '1.5px solid var(--border)',
-                fontSize: '0.88rem',
-                outline: 'none',
-                backgroundColor: 'var(--bg-main)',
-                color: 'var(--text-main)',
-                boxSizing: 'border-box'
-              }}
+              className="premium-input-3d"
             />
           </div>
 
@@ -3101,14 +3205,8 @@ const WardFunds = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="premium-select-3d"
             style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              border: '1.5px solid var(--border)',
-              backgroundColor: '#fff',
-              fontSize: '0.88rem',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
               flex: '1 1 150px',
               minWidth: '140px'
             }}
@@ -3122,14 +3220,8 @@ const WardFunds = () => {
           <select
             value={groupFilter}
             onChange={(e) => setGroupFilter(e.target.value)}
+            className="premium-select-3d"
             style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              border: '1.5px solid var(--border)',
-              backgroundColor: '#fff',
-              fontSize: '0.88rem',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
               flex: '1 1 150px',
               minWidth: '140px'
             }}
@@ -3166,19 +3258,7 @@ const WardFunds = () => {
                   setShowDataMenu(!showDataMenu);
                   setShowPrintMenu(false);
                 }}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#eff6ff',
-                  border: '1.5px solid #bfdbfe',
-                  color: '#2563eb',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer'
-                }}
+                className="btn-3d-data"
               >
                 <Database size={16} /> Thao tác dữ liệu ▼
               </button>
@@ -3321,19 +3401,7 @@ const WardFunds = () => {
                     setShowPrintMenu(!showPrintMenu);
                     setShowDataMenu(false);
                   }}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    backgroundColor: '#f5f3ff',
-                    border: '1.5px solid #ddd6fe',
-                    color: '#7c3aed',
-                    fontWeight: '700',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
+                  className="btn-3d-print"
                 >
                   <Printer size={16} /> In ấn & Xuất bản ▼
                 </button>
@@ -3465,17 +3533,7 @@ const WardFunds = () => {
                 type="button"
                 onClick={handleClearYearData}
                 title="Xóa hết danh sách năm nay"
-                style={{
-                  padding: '8px',
-                  borderRadius: '8px',
-                  backgroundColor: '#fef2f2',
-                  border: '1.5px solid #fecaca',
-                  color: '#ef4444',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                className="btn-3d-delete"
               >
                 <Trash2 size={16} />
               </button>
