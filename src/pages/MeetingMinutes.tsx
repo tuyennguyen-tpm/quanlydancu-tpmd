@@ -1616,7 +1616,8 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 resize: 'none',
                 fontFamily: 'monospace',
                 fontSize: '0.85rem',
-                lineHeight: '1.5'
+                lineHeight: lineHeight,
+                textAlign: textAlign
               }}
             />
           </div>
