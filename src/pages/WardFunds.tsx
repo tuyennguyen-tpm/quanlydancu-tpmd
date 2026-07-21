@@ -1284,6 +1284,17 @@ const WardFunds = () => {
             }
           }
           if (filtered.length > 1 && addrClean) {
+            const headMatch = filtered.filter(r => {
+              const hh = hhList.find(h => h.id === r.household_id);
+              if (!hh || !hh.head_of_household_id) return false;
+              const headRes = resList.find(res => res.id === hh.head_of_household_id);
+              const headName = headRes?.full_name.toLowerCase() || '';
+              return headName && (addrClean.includes(headName) || headName.includes(addrClean));
+            });
+            if (headMatch.length > 0) filtered = headMatch;
+          }
+
+          if (filtered.length > 1 && addrClean) {
             const aMatch = filtered.filter(r => {
               const hh = hhList.find(h => h.id === r.household_id);
               if (!hh) return false;
@@ -1315,18 +1326,35 @@ const WardFunds = () => {
             updated = true;
           }
         } else if (addrClean) {
-          const matchedHh = hhList.find(h => {
-            const hAddr = (h.address || '').trim().toLowerCase();
-            return hAddr === addrClean || addrClean.includes(hAddr) || hAddr.includes(addrClean);
+          const matchedHhByHead = hhList.find(h => {
+            if (!h.head_of_household_id) return false;
+            const headRes = resList.find(r => r.id === h.head_of_household_id);
+            const headName = headRes?.full_name.toLowerCase();
+            return headName && addrClean.includes(headName);
           });
-          if (matchedHh) {
-            if (matchedHh.user_id && f.user_id !== matchedHh.user_id) {
-              newUserId = matchedHh.user_id;
+          if (matchedHhByHead) {
+            if (matchedHhByHead.user_id && f.user_id !== matchedHhByHead.user_id) {
+              newUserId = matchedHhByHead.user_id;
               updated = true;
             }
-            if (matchedHh.address && f.address !== matchedHh.address) {
-              newAddress = matchedHh.address;
+            if (matchedHhByHead.address && f.address !== matchedHhByHead.address) {
+              newAddress = matchedHhByHead.address;
               updated = true;
+            }
+          } else {
+            const matchedHh = hhList.find(h => {
+              const hAddr = (h.address || '').trim().toLowerCase();
+              return hAddr === addrClean || addrClean.includes(hAddr) || hAddr.includes(addrClean);
+            });
+            if (matchedHh) {
+              if (matchedHh.user_id && f.user_id !== matchedHh.user_id) {
+                newUserId = matchedHh.user_id;
+                updated = true;
+              }
+              if (matchedHh.address && f.address !== matchedHh.address) {
+                newAddress = matchedHh.address;
+                updated = true;
+              }
             }
           }
         }
@@ -1452,6 +1480,16 @@ const WardFunds = () => {
               }
             }
             if (filtered.length > 1 && addrClean) {
+              const headMatch = filtered.filter(r => {
+                const hh = households.find(h => h.id === r.household_id);
+                if (!hh || !hh.head_of_household_id) return false;
+                const headRes = residents.find(res => res.id === hh.head_of_household_id);
+                const headName = headRes?.full_name.toLowerCase() || '';
+                return headName && (addrClean.includes(headName) || headName.includes(addrClean));
+              });
+              if (headMatch.length > 0) filtered = headMatch;
+            }
+            if (filtered.length > 1 && addrClean) {
               const addrMatch = filtered.filter(r => {
                 const hh = households.find(h => h.id === r.household_id);
                 if (!hh) return false;
@@ -1470,6 +1508,19 @@ const WardFunds = () => {
           if (matchedResident) {
             const hh = households.find(h => h.id === matchedResident!.household_id);
             if (hh?.address) finalAddr = hh.address;
+          }
+
+          if (!matchedTdpId && addrClean) {
+            const matchedHhByHead = households.find(h => {
+              if (!h.head_of_household_id) return false;
+              const headRes = residents.find(r => r.id === h.head_of_household_id);
+              const headName = headRes?.full_name.toLowerCase();
+              return headName && addrClean.includes(headName);
+            });
+            if (matchedHhByHead) {
+              matchedTdpId = matchedHhByHead.user_id;
+              if (matchedHhByHead.address) finalAddr = matchedHhByHead.address;
+            }
           }
 
           if (!matchedTdpId) {
