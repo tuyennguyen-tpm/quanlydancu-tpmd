@@ -69,6 +69,7 @@ const WardFunds = () => {
   const [contribInputs, setContribInputs] = useState<Record<string, { expected: string; actual: string; date: string }>>({});
   const [showDataMenu, setShowDataMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [note, setNote] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
