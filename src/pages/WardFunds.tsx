@@ -1184,6 +1184,125 @@ const WardFunds = () => {
     }
   };
 
+  // Tự động quét, đối chiếu và đồng bộ chuẩn thông tin Hộ, Tổ, Ngày sinh với CSDL Hộ khẩu
+  const handleAutoSyncWithDB = async () => {
+    if (isGuest) {
+      showToast('Khách không có quyền sửa dữ liệu!', 'warning');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const resList = await db.getResidents();
+      const hhList = await db.getHouseholds();
+      const currentFunds = await db.getWardFunds(selectedYear);
+
+      let matchedCount = 0;
+      const updatedFunds: WardFund[] = [];
+
+      currentFunds.forEach(f => {
+        const nameKey = f.full_name.trim().toLowerCase();
+        const dobClean = (f.dob || '').trim();
+        const yearClean = dobClean.match(/\d{4}/)?.[0] || '';
+        const addrClean = (f.address || '').trim().toLowerCase();
+
+        // 1. Lọc tất cả nhân khẩu trùng tên
+        const candidates = resList.filter(r => r.full_name.trim().toLowerCase() === nameKey);
+        let matchedRes: Resident | undefined = undefined;
+
+        if (candidates.length === 1) {
+          matchedRes = candidates[0];
+        } else if (candidates.length > 1) {
+          let filtered = candidates;
+          if (f.user_id) {
+            const uMatch = filtered.filter(r => r.user_id === f.user_id);
+            if (uMatch.length > 0) filtered = uMatch;
+          }
+          if (filtered.length > 1 && dobClean) {
+            const dobMatch = filtered.filter(r => r.dob && (r.dob.trim() === dobClean || r.dob.includes(dobClean)));
+            if (dobMatch.length > 0) filtered = dobMatch;
+            else if (yearClean) {
+              const yMatch = filtered.filter(r => (r.dob || '').includes(yearClean));
+              if (yMatch.length > 0) filtered = yMatch;
+            }
+          }
+          if (filtered.length > 1 && addrClean) {
+            const aMatch = filtered.filter(r => {
+              const hh = hhList.find(h => h.id === r.household_id);
+              if (!hh) return false;
+              const hAddr = (hh.address || '').trim().toLowerCase();
+              return hAddr === addrClean || addrClean.includes(hAddr) || hAddr.includes(addrClean);
+            });
+            if (aMatch.length > 0) filtered = aMatch;
+          }
+          matchedRes = filtered[0];
+        }
+
+        let updated = false;
+        let newUserId = f.user_id;
+        let newDob = f.dob;
+        let newAddress = f.address;
+
+        if (matchedRes) {
+          const hh = hhList.find(h => h.id === matchedRes!.household_id);
+          if (matchedRes.user_id && f.user_id !== matchedRes.user_id) {
+            newUserId = matchedRes.user_id;
+            updated = true;
+          }
+          if (matchedRes.dob && f.dob !== matchedRes.dob) {
+            newDob = matchedRes.dob;
+            updated = true;
+          }
+          if (hh?.address && f.address !== hh.address) {
+            newAddress = hh.address;
+            updated = true;
+          }
+        } else if (addrClean) {
+          const matchedHh = hhList.find(h => {
+            const hAddr = (h.address || '').trim().toLowerCase();
+            return hAddr === addrClean || addrClean.includes(hAddr) || hAddr.includes(addrClean);
+          });
+          if (matchedHh) {
+            if (matchedHh.user_id && f.user_id !== matchedHh.user_id) {
+              newUserId = matchedHh.user_id;
+              updated = true;
+            }
+            if (matchedHh.address && f.address !== matchedHh.address) {
+              newAddress = matchedHh.address;
+              updated = true;
+            }
+          }
+        }
+
+        if (updated) {
+          matchedCount++;
+          updatedFunds.push({
+            ...f,
+            user_id: newUserId,
+            dob: newDob,
+            address: newAddress
+          });
+        } else {
+          updatedFunds.push(f);
+        }
+      });
+
+      if (matchedCount > 0) {
+        await db.saveWardFundsBatch(updatedFunds);
+        showToast(`Đồng bộ thành công! Đã tự động khớp và chuẩn hóa thông tin cho ${matchedCount} bản ghi theo CSDL Hộ khẩu.`, 'success');
+        loadData();
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } else {
+        showToast('Tất cả bản ghi trong danh sách Quỹ Phường đều đã khớp chuẩn với CSDL Hộ khẩu!', 'info');
+      }
+    } catch (e) {
+      showToast('Thao tác đồng bộ thất bại!', 'danger');
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Excel Bulk Import Logic (Dynamic columns matching with TDP distribution)
   const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isGuest) {
@@ -1245,45 +1364,82 @@ const WardFunds = () => {
         let successCount = 0;
 
         worksheet.eachRow((row, rowNum) => {
-          // Bỏ quan dòng tiêu đề và header
+          // Bỏ qua dòng tiêu đề và header
           if (rowNum < 4) return;
 
           const name = row.getCell(2).value?.toString() || '';
           const dobVal = row.getCell(3).value?.toString() || '';
           const addr = row.getCell(4).value?.toString() || '';
 
-          // Bỏ qua dòng trống không có tên
           if (!name.trim()) return;
 
-          // Phân loại dòng này thuộc về Tổ dân phố nào
-          let matchedTdpId: string | undefined = undefined;
-          if (tdpProfiles.length > 0) {
-            // 1. Ưu tiên đối chiếu với danh sách nhân khẩu đã tải để tìm TDP
-            const matchedResident = residents.find(r => 
-              r.full_name.trim().toLowerCase() === name.trim().toLowerCase() &&
-              (dobVal ? (r.dob && r.dob.includes(dobVal)) : true)
-            );
-            if (matchedResident && matchedResident.user_id) {
-              matchedTdpId = matchedResident.user_id;
-            } else {
-              // 2. Nếu không khớp nhân khẩu, đối chiếu từ khóa địa chỉ với tên của TDP
-              const addrLower = addr.toLowerCase();
-              const matched = tdpProfiles.find(p => {
-                const nameLower = (p.tdp_name || '').toLowerCase();
-                if (nameLower && addrLower.includes(nameLower)) return true;
-                const numMatch = nameLower.match(/\d+/);
-                if (numMatch) {
-                  const num = numMatch[0];
-                  if (addrLower.includes(`tổ ${num}`) || addrLower.includes(`tổ: ${num}`) || addrLower.includes(`tổ tự quản ${num}`)) {
-                    return true;
-                  }
-                }
-                return false;
-              });
-              if (matched) {
-                matchedTdpId = matched.id;
+          const nameKey = name.trim().toLowerCase();
+          const dobClean = dobVal.trim();
+          const yearClean = dobClean.match(/\d{4}/)?.[0] || '';
+          const addrClean = addr.trim().toLowerCase();
+
+          // Dò tìm nhân khẩu trùng khớp trong CSDL
+          const candidates = residents.filter(r => r.full_name.trim().toLowerCase() === nameKey);
+          let matchedResident: Resident | undefined = undefined;
+
+          if (candidates.length === 1) {
+            matchedResident = candidates[0];
+          } else if (candidates.length > 1) {
+            let filtered = candidates;
+            if (dobClean) {
+              const exactDobMatch = filtered.filter(r => r.dob && (r.dob.trim() === dobClean || r.dob.includes(dobClean)));
+              if (exactDobMatch.length > 0) filtered = exactDobMatch;
+              else if (yearClean) {
+                const yearMatch = filtered.filter(r => (r.dob || '').includes(yearClean));
+                if (yearMatch.length > 0) filtered = yearMatch;
               }
             }
+            if (filtered.length > 1 && addrClean) {
+              const addrMatch = filtered.filter(r => {
+                const hh = households.find(h => h.id === r.household_id);
+                if (!hh) return false;
+                const hhAddr = (hh.address || '').trim().toLowerCase();
+                return hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean);
+              });
+              if (addrMatch.length > 0) filtered = addrMatch;
+            }
+            matchedResident = filtered[0];
+          }
+
+          let matchedTdpId: string | undefined = matchedResident?.user_id;
+          let finalDob = matchedResident?.dob || (dobVal ? dobVal.trim() : undefined);
+          let finalAddr = addr ? addr.trim() : undefined;
+
+          if (matchedResident) {
+            const hh = households.find(h => h.id === matchedResident!.household_id);
+            if (hh?.address) finalAddr = hh.address;
+          }
+
+          if (!matchedTdpId) {
+            const matchedHh = households.find(h => {
+              const hhAddr = (h.address || '').trim().toLowerCase();
+              return hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean);
+            });
+            if (matchedHh) {
+              matchedTdpId = matchedHh.user_id;
+              if (matchedHh.address) finalAddr = matchedHh.address;
+            }
+          }
+
+          if (!matchedTdpId && tdpProfiles.length > 0 && addrClean) {
+            const matched = tdpProfiles.find(p => {
+              const nameLower = (p.tdp_name || '').toLowerCase();
+              if (nameLower && addrClean.includes(nameLower)) return true;
+              const numMatch = nameLower.match(/\d+/);
+              if (numMatch) {
+                const num = numMatch[0];
+                if (addrClean.includes(`tổ ${num}`) || addrClean.includes(`tổ: ${num}`) || addrClean.includes(`tổ tự quản ${num}`)) {
+                  return true;
+                }
+              }
+              return false;
+            });
+            if (matched) matchedTdpId = matched.id;
           }
 
           // Parse quỹ động
@@ -1307,9 +1463,9 @@ const WardFunds = () => {
             id: generateUUID(),
             year: selectedYear,
             full_name: name.trim(),
-            dob: dobVal ? dobVal.trim() : undefined,
-            address: addr ? addr.trim() : undefined,
-            user_id: matchedTdpId, // Tự động gán cho TDP tương ứng
+            dob: finalDob,
+            address: finalAddr,
+            user_id: matchedTdpId,
             contributions
           };
           batchFunds.push(record);
@@ -4846,6 +5002,33 @@ const WardFunds = () => {
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <Users size={14} /> Khởi tạo từ Nhân khẩu
+                    </button>
+                  )}
+                  {!isGuest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDataMenu(false);
+                        handleAutoSyncWithDB();
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#0284c7',
+                        fontWeight: '600',
+                        fontSize: '0.82rem',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e0f2fe'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <RefreshCw size={14} /> Khớp & Đồng bộ với CSDL
                     </button>
                   )}
                   {!isGuest && subTabMode !== 'ward_list' && (
