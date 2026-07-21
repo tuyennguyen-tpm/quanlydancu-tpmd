@@ -106,6 +106,19 @@ const WardFunds = () => {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
 
+  // Cache tra cứu hộ gia đình để tránh tính toán lại khi thanh toán hoặc thay đổi input tìm kiếm
+  const matchCacheRef = useRef<Map<string, { householdId: string; address: string; headName: string; groupName: string }>>(new Map());
+  const prevDBStateRef = useRef({ residents, households, groups });
+
+  if (
+    prevDBStateRef.current.residents !== residents ||
+    prevDBStateRef.current.households !== households ||
+    prevDBStateRef.current.groups !== groups
+  ) {
+    matchCacheRef.current.clear();
+    prevDBStateRef.current = { residents, households, groups };
+  }
+
   
   // Cấu hình quỹ của Phường động
   const [activeFunds, setActiveFunds] = useState<{ name: string; target: number }[]>([]);
@@ -204,14 +217,19 @@ const WardFunds = () => {
 
   // 1. Memoized lookups for rapid O(1) resident search
   const residentsInfoLookup = useMemo(() => {
+    const resIdMap = new Map<string, Resident>();
+    residents.forEach(r => resIdMap.set(r.id, r));
+
     const hhHeadMap = new Map<string, string>(); // household_id -> headName
     const hhGroupMap = new Map<string, string>(); // household_id -> self_management_group
 
     households.forEach(h => {
       hhGroupMap.set(h.id, (h.self_management_group || '').trim());
-      const head = residents.find(r => r.id === h.head_of_household_id);
-      if (head) {
-        hhHeadMap.set(h.id, head.full_name);
+      if (h.head_of_household_id) {
+        const head = resIdMap.get(h.head_of_household_id);
+        if (head) {
+          hhHeadMap.set(h.id, head.full_name);
+        }
       }
     });
 
@@ -447,8 +465,15 @@ const WardFunds = () => {
   // Pre-calculate metadata (group, household info) for all fund records to ensure 60fps search/filter performance
   const fundMetaMap = useMemo(() => {
     const map = new Map<string, { householdId: string; address: string; headName: string; groupName: string }>();
+    const cache = matchCacheRef.current;
+    
     funds.forEach(f => {
-      const info = findMatchingHouseholdForWardFund(f);
+      const key = `${f.full_name}_${f.dob || ''}_${f.address || ''}_${f.user_id || ''}`;
+      let info = cache.get(key);
+      if (!info) {
+        info = findMatchingHouseholdForWardFund(f);
+        cache.set(key, info);
+      }
       map.set(f.id, info);
     });
     return map;
@@ -3247,7 +3272,7 @@ const WardFunds = () => {
         type: 'Hộ gia đình',
         rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
         amount: paidAmount,
-        note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : '')
+        note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : (paidAmount >= fund.target ? 'Thu đủ' : `Đã nộp ${paidAmount.toLocaleString('vi-VN')} đ`))
       });
     });
 
@@ -3262,7 +3287,7 @@ const WardFunds = () => {
           type: 'Hộ gia đình',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
           amount: actualPaid,
-          note: actualPaid === 0 ? 'Chưa nộp' : ''
+          note: actualPaid === 0 ? 'Chưa nộp' : (actualPaid >= wf.target ? 'Thu đủ' : `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ`)
         });
       } else {
         const rawActualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);

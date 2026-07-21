@@ -126,9 +126,25 @@ const Finance = () => {
     };
   }, []);
 
+  // 0. Tối ưu hóa hiệu năng: Tạo Map tra cứu nhanh tên chủ hộ của từng hộ gia đình
+  const headNameMap = useMemo(() => {
+    const resMap = new Map<string, Resident>();
+    residents.forEach(r => resMap.set(r.id, r));
+    
+    const map = new Map<string, string>();
+    households.forEach(hh => {
+      if (hh.head_of_household_id) {
+        const head = resMap.get(hh.head_of_household_id);
+        if (head) {
+          map.set(hh.id, head.full_name);
+        }
+      }
+    });
+    return map;
+  }, [residents, households]);
+
   const getHouseholdHeadName = (hh: Household) => {
-    const head = residents.find(r => r.id === hh.head_of_household_id);
-    return head ? head.full_name : 'Hộ số: ' + hh.household_number;
+    return headNameMap.get(hh.id) || 'Hộ số: ' + hh.household_number;
   };
 
   const handleOpenFundPay = (hhId: string, fundName: string) => {
@@ -1076,7 +1092,7 @@ const Finance = () => {
         type: 'Hộ gia đình',
         rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
         amount: paidAmount,
-        note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : '')
+        note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : (paidAmount >= fund.target ? 'Thu đủ' : `Đã nộp ${paidAmount.toLocaleString('vi-VN')} đ`))
       });
     });
 
@@ -1091,7 +1107,7 @@ const Finance = () => {
           type: 'Hộ gia đình',
           rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
           amount: actualPaid,
-          note: actualPaid === 0 ? 'Chưa nộp' : ''
+          note: actualPaid === 0 ? 'Chưa nộp' : (actualPaid >= wf.target ? 'Thu đủ' : `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ`)
         });
       } else {
         const rawActualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
