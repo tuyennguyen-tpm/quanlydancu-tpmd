@@ -14,11 +14,12 @@ import {
   XCircle,
   Printer,
   MapPin,
-  Filter
+  Filter,
+  Check
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import type { FinancialRecord, Household, Resident, HouseholdFund } from '../types';
+import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
 const Finance = () => {
@@ -1002,6 +1003,631 @@ const Finance = () => {
     printWindow.document.close();
   };
 
+  const generateHouseholdReceiptHtml = (
+    household: Household,
+    members: Resident[],
+    memberWardRecords: WardFund[],
+    householdPaidFunds: HouseholdFund[],
+    dateText: string,
+    tdpNameVal: string,
+    wardNameVal: string,
+    leaderName: string,
+    leaderSigUrl: string
+  ) => {
+    const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
+    const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
+
+    const getResidentAge = (dobStr: string) => {
+      if (!dobStr) return 0;
+      const year = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
+      if (!year) return 0;
+      return fundYear - year;
+    };
+
+    const laborResidents = members.filter(r => {
+      const statusClean = r.status || 'resident';
+      if (statusClean === 'deceased') return false;
+      const age = getResidentAge(r.dob);
+      if (r.gender === 'male') {
+        return age >= 18 && age <= 61;
+      } else if (r.gender === 'female') {
+        return age >= 18 && age <= 58;
+      }
+      return age >= 18 && age <= 60;
+    });
+    const laborCount = laborResidents.length;
+
+    const receiptRows: Array<{ name: string; type: string; rate: string; amount: number; note: string }> = [];
+
+    householdPaidFunds.forEach(hf => {
+      if (hf.amount > 0) {
+        receiptRows.push({
+          name: '[Quỹ TDP] ' + hf.fund_name,
+          type: 'Hộ gia đình',
+          rate: hf.amount.toLocaleString('vi-VN') + ' đ/hộ',
+          amount: hf.amount,
+          note: hf.note || ''
+        });
+      }
+    });
+
+    const wardActiveFunds = (db as any).getWardFundList();
+    wardActiveFunds.forEach((wf: any) => {
+      const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
+      if (isHousehold) {
+        const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+        if (actualPaid > 0) {
+          receiptRows.push({
+            name: '[Quỹ Phường] ' + wf.name,
+            type: 'Hộ gia đình',
+            rate: wf.target.toLocaleString('vi-VN') + ' đ/hộ',
+            amount: actualPaid,
+            note: ''
+          });
+        }
+      } else {
+        const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+        const paidCount = memberWardRecords.filter(r => (r.contributions?.[wf.name]?.actual || 0) > 0).length;
+        if (actualPaid > 0) {
+          receiptRows.push({
+            name: '[Quỹ Phường] ' + wf.name,
+            type: 'Nhân khẩu LĐ',
+            rate: wf.target.toLocaleString('vi-VN') + ' đ/khẩu',
+            amount: actualPaid,
+            note: `${paidCount} khẩu lao động`
+          });
+        }
+      }
+    });
+
+    const grandTotal = receiptRows.reduce((sum, r) => sum + r.amount, 0);
+
+    const docSoTien = (number: number): string => {
+      if (number === 0) return 'Không đồng';
+      const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+      
+      const readTriple = (n: number, showZero: boolean): string => {
+        let tram = Math.floor(n / 100);
+        let chuc = Math.floor((n % 100) / 10);
+        let donvi = n % 10;
+        let res = "";
+        
+        if (tram > 0 || showZero) {
+          res += arrays[tram] + " trăm ";
+        }
+        
+        if (chuc === 0 && donvi > 0) {
+          res += "lẻ ";
+        } else if (chuc === 1) {
+          res += "mười ";
+        } else if (chuc > 1) {
+          res += arrays[chuc] + " mươi ";
+        }
+        
+        if (donvi === 1 && chuc > 1) {
+          res += "mốt";
+        } else if (donvi === 5 && chuc > 0) {
+          res += "lăm";
+        } else if (donvi > 0) {
+          res += arrays[donvi];
+        }
+        return res.trim();
+      };
+
+      let str = "";
+      let units = ["", " nghìn", " triệu", " tỷ"];
+      let temp = number;
+      let i = 0;
+      
+      while (temp > 0) {
+        let triple = temp % 1000;
+        if (triple > 0) {
+          let s = readTriple(triple, i > 0);
+          str = s + units[i] + " " + str;
+        }
+        temp = Math.floor(temp / 1000);
+        i++;
+      }
+      const finalStr = str.trim();
+      return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+    };
+
+    const textAmountWords = docSoTien(grandTotal);
+
+    let keToanName = '';
+    let keToanSigUrl = '';
+    let thuQuyName = '';
+    let thuQuySigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const kt = sigs.find((s: any) => s.id === 'ke_toan');
+      if (kt?.name?.trim()) keToanName = kt.name.trim();
+      if (kt?.signatureUrl?.trim()) keToanSigUrl = kt.signatureUrl.trim();
+
+      const tq = sigs.find((s: any) => s.id === 'thu_quy');
+      if (tq?.name?.trim()) thuQuyName = tq.name.trim();
+      if (tq?.signatureUrl?.trim()) thuQuySigUrl = tq.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const rowsHtml = receiptRows.map((r, idx) => `
+      <tr>
+        <td style="text-align: center;">${idx + 1}</td>
+        <td style="font-weight: bold; text-align: left;">${r.name}</td>
+        <td style="text-align: center;">${r.type}</td>
+        <td style="text-align: right;">${r.rate}</td>
+        <td style="text-align: right; font-weight: bold;">${r.amount.toLocaleString('vi-VN')} đ</td>
+        <td style="text-align: left;">${r.note}</td>
+      </tr>
+    `).join('');
+
+    const generateSingleReceipt = (lienName: string) => `
+      <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #777;">
+        <table class="receipt-header-table">
+          <tr>
+            <td style="width: 50%;">
+              <div class="receipt-org-title">
+                Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
+                Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
+                Địa chỉ: ${household.address || tdpNameVal}
+              </div>
+            </td>
+            <td style="width: 50%; text-align: right; vertical-align: top;">
+              <div style="display: inline-block; text-align: center; width: 260px;">
+                <div class="receipt-form-title" style="text-align: center;">
+                  <strong>Mẫu số 01 - TT</strong><br/>
+                  <span style="font-size: 8pt; font-style: italic;">
+                    (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
+                    Ngày 22/12/2014 của Bộ Tài chính)
+                  </span>
+                </div>
+                <div style="text-align: left; font-size: 8.5pt; margin-top: 4px; font-weight: normal; line-height: 1.2; padding-left: 45px;">
+                  Quyển số: ....................<br/>
+                  Số: ....................<br/>
+                  Nợ: ....................<br/>
+                  Có: ....................
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="receipt-title-container">
+          <h1 class="receipt-title">PHIẾU THU TỔNG HỢP</h1>
+          <p class="receipt-subtitle" style="margin-top: 2px; font-weight: bold; color: #1e3a8a;">${lienName}</p>
+          <p class="receipt-subtitle">${dateText}</p>
+        </div>
+
+        <table class="receipt-info-table">
+          <tr>
+            <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
+            <td style="text-align: left;">
+              <strong>${headName}</strong> (Đại diện Hộ gia đình)
+            </td>
+          </tr>
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
+            <td style="text-align: left;">${household.address || tdpNameVal}</td>
+          </tr>
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Mã số hộ | Nhân khẩu LĐ:</td>
+            <td style="text-align: left;"><strong>${household.household_number || '—'}</strong> | Số khẩu trong độ tuổi lao động đóng góp: <strong>${laborCount} khẩu</strong></td>
+          </tr>
+          <tr>
+            <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
+            <td style="text-align: left;">Thu tổng hợp các khoản đóng góp tự nguyện (Quỹ TDP + Quỹ Phường) năm ${fundYear}</td>
+          </tr>
+        </table>
+
+        <table class="receipt-details-table" style="width:100%; border-collapse:collapse; margin-top:5px;">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">STT</th>
+              <th style="text-align: left;">Nội dung đóng góp</th>
+              <th style="width: 90px; text-align: center;">Đối tượng</th>
+              <th style="width: 110px; text-align: right;">Định mức</th>
+              <th style="width: 120px; text-align: right;">Số tiền nộp</th>
+              <th style="text-align: left;">Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666;">Chưa nộp khoản đóng góp nào.</td></tr>'}
+            <tr class="receipt-total-row" style="font-weight: bold;">
+              <td colspan="4" style="text-align: center;">TỔNG CỘNG THỰC THU (TĐP + PHƯỜNG)</td>
+              <td style="text-align: right; color: #15803d;">${grandTotal.toLocaleString('vi-VN')} đ</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="font-size: 9.5pt; font-style: italic; margin-bottom: 6px; text-align: left;">
+          Số tiền bằng chữ: <strong>${textAmountWords}</strong>
+        </div>
+
+        <table class="receipt-signatures-table" style="width:100%; border-collapse:collapse;">
+          <tr>
+            <td colspan="4"></td>
+            <td style="font-style: italic; font-size: 8.5pt; padding-bottom: 2px; text-align: center;">
+              ${wardNameVal.replace(/Phường\s+/gi, '') || 'Quảng Giao'}, ${dateText}
+            </td>
+          </tr>
+          <tr style="font-weight: bold; text-align: center;">
+            <td style="width: 20%;">Thủ trưởng đơn vị</td>
+            <td style="width: 20%;">Kế toán trưởng</td>
+            <td style="width: 20%;">Thủ quỹ</td>
+            <td style="width: 20%;">Người lập phiếu</td>
+            <td style="width: 20%;">Người nộp tiền</td>
+          </tr>
+          <tr style="font-style: italic; font-size: 8pt; color: #555; text-align: center; line-height: 1.1;">
+            <td>(Ký, đóng dấu, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+            <td>(Ký, họ tên)</td>
+          </tr>
+          <tr style="text-align: center;">
+            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+              <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${leaderName}</strong>
+            </td>
+            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+              <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${keToanSigUrl ? `<img src="${keToanSigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${keToanName}</strong>
+            </td>
+            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+              <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
+                ${thuQuySigUrl ? `<img src="${thuQuySigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
+              </div>
+              <strong>${thuQuyName}</strong>
+            </td>
+            <td style="vertical-align: bottom;"><strong>Ban Quản lý Quỹ</strong></td>
+            <td style="vertical-align: bottom;"><strong>${headName}</strong></td>
+          </tr>
+        </table>
+      </div>
+    `;
+
+    return `
+      ${generateSingleReceipt('Liên 1: TDP lưu trữ')}
+      <div style="page-break-before: always; margin-top: 20px;"></div>
+      ${generateSingleReceipt('Liên 2: Giao cho người nộp tiền')}
+    `;
+  };
+
+  const handlePrintHouseholdReceipt = async (householdIdOrHh: string | Household) => {
+    const household = typeof householdIdOrHh === 'string'
+      ? households.find(h => h.id === householdIdOrHh)
+      : householdIdOrHh;
+    if (!household) {
+      showToast('Không tìm thấy thông tin hộ gia đình!', 'danger');
+      return;
+    }
+    const householdId = household.id;
+
+    const members = residents.filter(r => r.household_id === householdId);
+    if (members.length === 0) {
+      showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
+      return;
+    }
+
+    const memberNames = members.map(m => m.full_name.trim().toLowerCase());
+    
+    let wardFundsList: WardFund[] = [];
+    try {
+      wardFundsList = await db.getWardFunds(fundYear);
+    } catch { /* ignore */ }
+
+    const memberWardRecords = wardFundsList.filter(f => {
+      const nameKey = f.full_name.trim().toLowerCase();
+      return memberNames.includes(nameKey);
+    });
+
+    const filteredHhFunds = householdFunds.filter(hf => hf.household_id === householdId && hf.year === fundYear);
+
+    const totalTdp = filteredHhFunds.reduce((sum, hf) => sum + hf.amount, 0);
+    const wardActiveFunds = (db as any).getWardFundList();
+    const totalWard = memberWardRecords.reduce((sum, r) => {
+      let rSum = 0;
+      wardActiveFunds.forEach((fund: any) => {
+        rSum += r.contributions?.[fund.name]?.actual || 0;
+      });
+      return sum + rSum;
+    }, 0);
+
+    if (totalTdp + totalWard === 0) {
+      showToast('Hộ gia đình này chưa nộp khoản đóng góp nào trong năm nay!', 'warning');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+
+    const tdpNameVal = isWardUser 
+      ? (tdpFilter !== 'all' ? (tdpMap[tdpFilter] || 'Tổ dân phố') : 'Tất cả TDP')
+      : (localStorage.getItem('tdp_name') || 'Tổ dân phố');
+    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
+    const today = new Date();
+    const dateText = `ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+
+    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
+    let leaderSigUrl = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
+      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
+      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
+    } catch { /* ignore */ }
+
+    const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
+    const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
+
+    const receiptHtml = generateHouseholdReceiptHtml(
+      household,
+      members,
+      memberWardRecords,
+      filteredHhFunds,
+      dateText,
+      tdpNameVal,
+      wardNameVal,
+      leaderName,
+      leaderSigUrl
+    );
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Phiếu thu tổng hợp - Hộ ${headName}</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 8mm 12mm;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 10pt;
+            line-height: 1.35;
+            color: #000;
+            padding: 5px;
+          }
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 10pt !important;
+            line-height: 1.3;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 6px !important;
+            margin-bottom: 6px !important;
+          }
+          .receipt-title {
+            font-size: 15.5pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 9.5pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 4px !important;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 2px 0 !important;
+            font-size: 10pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000;
+            padding: 4px 6px !important;
+            font-size: 9.5pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px !important;
+            page-break-inside: avoid !important;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 9.5pt !important;
+            vertical-align: top;
+            padding: 2px !important;
+          }
+        </style>
+      </head>
+      <body>
+        ${receiptHtml}
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const handleQuickPayHouseholdFinance = async (hh: Household) => {
+    if (isGuest) {
+      showToast('Khách không có quyền sửa đổi dữ liệu thu quỹ!', 'warning');
+      return;
+    }
+    const householdId = hh.id;
+    try {
+      const members = residents.filter(r => r.household_id === householdId);
+      if (members.length === 0) {
+        showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      // --- 1. Ghi nhận đóng Quỹ Phường ---
+      let wardFundsList: WardFund[] = [];
+      try {
+        wardFundsList = await db.getWardFunds(fundYear);
+      } catch { /* ignore */ }
+
+      const memberNames = members.map(m => m.full_name.trim().toLowerCase());
+      const memberWardRecords = wardFundsList.filter(f => {
+        const nameKey = f.full_name.trim().toLowerCase();
+        return memberNames.includes(nameKey);
+      });
+
+      const wardActiveFunds = (db as any).getWardFundList() || [];
+
+      const allWardPaid = memberWardRecords.length > 0 && memberWardRecords.every(m =>
+        wardActiveFunds.every((fund: any) => {
+          const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          return c.actual >= c.expected && c.expected > 0;
+        })
+      );
+
+      // --- 2. Ghi nhận đóng Quỹ TDP ---
+      const tdpActiveFunds = (db as any).getFundList() || [];
+      const filteredHhFunds = householdFunds.filter(hf => hf.household_id === householdId && hf.year === fundYear);
+
+      const allTdpPaid = tdpActiveFunds.every((fund: any) => {
+        const paidFund = filteredHhFunds.find(hf => hf.fund_name === fund.name);
+        return paidFund && paidFund.amount >= fund.target;
+      });
+
+      const shouldPay = !allWardPaid || !allTdpPaid;
+
+      // Lưu quỹ Phường
+      await Promise.all(members.map(async m => {
+        const nameKey = m.full_name.trim().toLowerCase();
+        const wardRec = memberWardRecords.find(f => f.full_name.trim().toLowerCase() === nameKey);
+        if (!wardRec) return;
+
+        const newContributions: Record<string, any> = { ...wardRec.contributions };
+        wardActiveFunds.forEach((fund: any) => {
+          const c = wardRec.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+          newContributions[fund.name] = {
+            expected: c.expected,
+            actual: shouldPay ? (c.expected || c.actual) : 0,
+            date: shouldPay ? today : ''
+          };
+        });
+
+        await db.saveWardFund({
+          ...wardRec,
+          contributions: newContributions,
+          note: shouldPay ? 'Đã nộp đủ đợt tập trung' : ''
+        });
+      }));
+
+      // Lưu quỹ TDP & Sổ quỹ chung
+      const headResident = members.find(r => r.id === hh.head_of_household_id || r.is_head);
+      const headName = headResident ? headResident.full_name : (hh.martyr_name || 'Đại diện hộ');
+
+      for (const fund of tdpActiveFunds) {
+        const existing = filteredHhFunds.find(hf => hf.fund_name === fund.name);
+        const targetId = existing ? existing.id : generateUUID();
+        const flagText = `[QUY_${targetId}]`;
+        const matchedGeneral = records.find(r => r.description.includes(flagText));
+
+        if (shouldPay) {
+          const payload: HouseholdFund = {
+            id: targetId,
+            household_id: householdId,
+            year: fundYear,
+            fund_name: fund.name,
+            amount: fund.target,
+            paid_at: today,
+            note: 'Đã thu đủ theo thông báo'
+          };
+          await db.saveHouseholdFund(payload);
+
+          const generalRecord: FinancialRecord = {
+            id: matchedGeneral ? matchedGeneral.id : generateUUID(),
+            group_id: db.getGroupId(),
+            type: 'income',
+            amount: fund.target,
+            category: fund.name,
+            description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
+            recorded_by: 'Hệ thống tự động',
+            date: today,
+            created_at: matchedGeneral ? matchedGeneral.created_at : new Date().toISOString()
+          };
+          await db.saveFinancialRecord(generalRecord);
+        } else {
+          if (matchedGeneral) {
+            await db.deleteFinancialRecord(matchedGeneral.id);
+          }
+          if (existing) {
+            await db.deleteHouseholdFund(targetId);
+          }
+        }
+      }
+
+      showToast(
+        shouldPay 
+          ? `✅ Đã thu đủ các khoản TDP & Phường cho hộ ${headName}!` 
+          : `↩ Đã hủy ghi nhận đóng quỹ cho hộ ${headName}!`, 
+        'success'
+      );
+
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (err) {
+      showToast('Có lỗi xảy ra khi cập nhật thu nhanh!', 'danger');
+    }
+  };
+
   // In Thông báo dự kiến thu các khoản đóng góp tự nguyện (Mẫu chuẩn gộp TDP & Phường)
   const handlePrintCombinedNotice = () => {
     const printWindow = window.open('', '_blank');
@@ -1783,169 +2409,59 @@ const Finance = () => {
     `;
   };
 
-  const handlePrintHouseholdReceipt = (hh: Household) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
-      return;
-    }
-
-    const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
-    const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
-    const today = new Date();
-    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
-
-    let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
-    let leaderSigUrl = '';
-    try {
-      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
-      const toTruong = sigs.find((s: {id:string;name:string;signatureUrl?:string}) => s.id === 'to_truong');
-      if (toTruong?.name?.trim()) leaderName = toTruong.name.trim();
-      if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
-    } catch { /* ignore */ }
-
-    const receiptHtml = generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Biên lai thu tiền - ${getHouseholdHeadName(hh)}</title>
-        <meta charset="utf-8" />
-        <style>
-          @media print {
-            @page {
-              size: A4 portrait;
-              margin: 6mm 10mm;
-            }
-            html, body {
-              margin: 0;
-              padding: 0;
-              height: 100%;
-              overflow: hidden;
-            }
-            .receipt-container {
-              max-height: 275mm !important;
-              page-break-inside: avoid !important;
-              page-break-after: avoid !important;
-              page-break-before: avoid !important;
-            }
-          }
-          body {
-            font-family: "Times New Roman", Times, serif;
-            font-size: 10pt;
-            line-height: 1.3;
-            color: #000;
-            padding: 5px;
-          }
-          .receipt-container {
-            width: 100%;
-            box-sizing: border-box;
-          }
-          .receipt-header-table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          .receipt-header-table td {
-            border: none;
-            padding: 0;
-            vertical-align: top;
-          }
-          .receipt-org-title {
-            font-weight: bold;
-            font-size: 9.5pt;
-            line-height: 1.3;
-            text-align: left;
-          }
-          .receipt-form-title {
-            text-align: right;
-            font-size: 9pt;
-            line-height: 1.2;
-          }
-          .receipt-title-container {
-            text-align: center;
-            margin-top: 10px;
-            margin-bottom: 12px;
-          }
-          .receipt-title {
-            font-size: 14pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin: 0 0 2px 0;
-            letter-spacing: 0.5px;
-          }
-          .receipt-subtitle {
-            font-style: italic;
-            font-size: 9.5pt;
-            margin: 0;
-          }
-          .receipt-info-table {
-            width: 100%;
-            margin-bottom: 4px;
-            border-collapse: collapse;
-          }
-          .receipt-info-table td {
-            padding: 2px 0;
-            font-size: 10pt;
-          }
-          .receipt-details-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 4px;
-            margin-bottom: 4px;
-          }
-          .receipt-details-table th, .receipt-details-table td {
-            border: 1px solid #000;
-            padding: 3.5px 6px;
-            font-size: 9.5pt;
-            vertical-align: middle;
-          }
-          .receipt-details-table th {
-            font-weight: bold;
-            text-align: center;
-            background-color: #f2f2f2;
-          }
-          .receipt-total-row {
-            font-weight: bold;
-            background-color: #fafafa;
-          }
-          .receipt-signatures-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 6px;
-            page-break-inside: avoid;
-          }
-          .receipt-signatures-table td {
-            border: none;
-            text-align: center;
-            font-size: 9.5pt;
-            vertical-align: top;
-            padding: 2px;
-          }
-        </style>
-      </head>
-      <body>
-        ${receiptHtml}
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          };
-        </script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-  };
-
-  const handlePrintBulkReceiptsA5 = () => {
+  const handlePrintBulkReceiptsA5 = async () => {
     if (filteredHouseholdsForFunds.length === 0) {
       showToast('Không có dữ liệu hộ dân nào để in!', 'warning');
       return;
     }
+
+    let wardFundsList: WardFund[] = [];
+    try {
+      wardFundsList = await db.getWardFunds(fundYear);
+    } catch { /* ignore */ }
+
+    const listToPrint: Array<{
+      household: Household;
+      members: Resident[];
+      memberWardRecords: WardFund[];
+      filteredHhFunds: HouseholdFund[];
+    }> = [];
+
+    for (const hh of filteredHouseholdsForFunds) {
+      const hhFunds = householdFunds.filter(hf => hf.household_id === hh.id && hf.year === fundYear);
+      const totalTdp = hhFunds.reduce((sum, hf) => sum + hf.amount, 0);
+
+      const members = residents.filter(r => r.household_id === hh.id);
+      const memberNames = members.map(m => m.full_name.trim().toLowerCase());
+      const memberWardRecords = wardFundsList.filter(f => {
+        const nameKey = f.full_name.trim().toLowerCase();
+        return memberNames.includes(nameKey);
+      });
+
+      const totalWard = memberWardRecords.reduce((sum, r) => {
+        let rSum = 0;
+        const wardActiveFunds = (db as any).getWardFundList();
+        wardActiveFunds.forEach((fund: any) => {
+          rSum += r.contributions?.[fund.name]?.actual || 0;
+        });
+        return sum + rSum;
+      }, 0);
+
+      if (totalTdp + totalWard > 0) {
+        listToPrint.push({
+          household: hh,
+          members,
+          memberWardRecords,
+          filteredHhFunds: hhFunds
+        });
+      }
+    }
+
+    if (listToPrint.length === 0) {
+      showToast('Không có hộ gia đình nào đã nộp tiền để in phiếu thu!', 'warning');
+      return;
+    }
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
@@ -1954,7 +2470,7 @@ const Finance = () => {
 
     const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     const today = new Date();
-    const dateText = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+    const dateText = `ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
 
     let leaderName = localStorage.getItem('leader_name') || 'Kim Tuyến';
     let leaderSigUrl = '';
@@ -1965,64 +2481,58 @@ const Finance = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    // Sắp xếp hộ dân theo Tổ/Cụm rồi đến tên chủ hộ trước khi in
-    const sortedHouseholds = [...filteredHouseholdsForFunds].sort((a, b) => {
-      const gA = a.self_management_group || '';
-      const gB = b.self_management_group || '';
-      
+    const sortedList = [...listToPrint].sort((a, b) => {
+      const gA = a.household.self_management_group || '';
+      const gB = b.household.self_management_group || '';
       const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
       const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
-      
-      const rankA = idxA !== -1 ? idxA : 999;
-      const rankB = idxB !== -1 ? idxB : 999;
-      
-      if (rankA !== rankB) {
-        return rankA - rankB;
-      }
-      
-      const nameA = getHouseholdHeadName(a).toLowerCase();
-      const nameB = getHouseholdHeadName(b).toLowerCase();
+      const rA = idxA !== -1 ? idxA : 999;
+      const rB = idxB !== -1 ? idxB : 999;
+      if (rA !== rB) return rA - rB;
+      const nameA = getHouseholdHeadName(a.household).toLowerCase();
+      const nameB = getHouseholdHeadName(b.household).toLowerCase();
       return nameA.localeCompare(nameB, 'vi');
     });
 
-    const householdsToPrint = sortedHouseholds.filter(hh => {
-      const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
-      const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
-      return totalPaid > 0;
-    });
-
-    if (householdsToPrint.length === 0) {
-      showToast('Không có hộ gia đình nào đã nộp tiền trong danh sách để in phiếu thu!', 'warning');
-      printWindow.close();
-      return;
-    }
-
-    const receiptsHtml = householdsToPrint.map(hh => {
-      const tdpNameVal = tdpMap[hh.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
-      return generateStateReceiptHtml(hh, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+    const receiptsHtml = sortedList.map((item, idx) => {
+      const tdpNameVal = tdpMap[item.household.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
+      const receiptBody = generateHouseholdReceiptHtml(
+        item.household,
+        item.members,
+        item.memberWardRecords,
+        item.filteredHhFunds,
+        dateText,
+        tdpNameVal,
+        wardNameVal,
+        leaderName,
+        leaderSigUrl
+      );
+      const isLast = idx === sortedList.length - 1;
+      return `
+        <div class="receipt-bulk-item" style="${isLast ? '' : 'page-break-after: always;'}">
+          ${receiptBody}
+        </div>
+      `;
     }).join('\n');
 
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>In loạt phiếu thu A5 - ${householdsToPrint.length} hộ</title>
+        <title>In loạt phiếu thu tổng hợp theo Hộ</title>
         <meta charset="utf-8" />
         <style>
           @media print {
             @page {
-              size: A5 landscape;
+              size: A4 portrait;
+              margin: 8mm 12mm;
+            }
+            html, body {
               margin: 0;
+              padding: 0;
             }
-            body {
-              margin: 0;
-              padding: 8mm 10mm;
-            }
-            .receipt-container {
-              page-break-after: always;
-            }
-            .receipt-container:last-child {
-              page-break-after: avoid;
+            .receipt-bulk-item {
+              page-break-inside: avoid !important;
             }
           }
           body {
@@ -2047,51 +2557,49 @@ const Finance = () => {
           }
           .receipt-org-title {
             font-weight: bold;
-            font-size: 9.5pt;
+            font-size: 10pt !important;
             line-height: 1.3;
-            text-align: left;
           }
           .receipt-form-title {
             text-align: right;
-            font-size: 9pt;
-            line-height: 1.2;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
           }
           .receipt-title-container {
             text-align: center;
-            margin-top: 10px;
-            margin-bottom: 12px;
+            margin-top: 6px !important;
+            margin-bottom: 6px !important;
           }
           .receipt-title {
-            font-size: 14pt;
+            font-size: 15.5pt !important;
             font-weight: bold;
             text-transform: uppercase;
-            margin: 0 0 2px 0;
             letter-spacing: 0.5px;
+            margin-bottom: 2px !important;
           }
           .receipt-subtitle {
             font-style: italic;
-            font-size: 9.5pt;
-            margin: 0;
+            font-size: 9.5pt !important;
           }
           .receipt-info-table {
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 4px !important;
             border-collapse: collapse;
           }
           .receipt-info-table td {
-            padding: 3px 0;
-            font-size: 10pt;
+            padding: 2px 0 !important;
+            font-size: 10pt !important;
           }
           .receipt-details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
-            margin-bottom: 8px;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
           }
           .receipt-details-table th, .receipt-details-table td {
             border: 1px solid #000;
-            padding: 4px 6px;
-            font-size: 9.5pt;
+            padding: 4px 6px !important;
+            font-size: 9.5pt !important;
             vertical-align: middle;
           }
           .receipt-details-table th {
@@ -2099,22 +2607,18 @@ const Finance = () => {
             text-align: center;
             background-color: #f2f2f2;
           }
-          .receipt-total-row {
-            font-weight: bold;
-            background-color: #fafafa;
-          }
           .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-            page-break-inside: avoid;
+            margin-top: 8px !important;
+            page-break-inside: avoid !important;
           }
           .receipt-signatures-table td {
             border: none;
             text-align: center;
-            font-size: 9.5pt;
+            font-size: 9.5pt !important;
             vertical-align: top;
-            padding: 2px;
+            padding: 2px !important;
           }
         </style>
       </head>
@@ -3508,29 +4012,61 @@ const Finance = () => {
                       
                       {/* Cột in biên lai */}
                       <td style={{ textAlign: 'center' }}>
-                        <button 
-                          onClick={() => handlePrintHouseholdReceipt(hh)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: '1.5px solid #cbd5e1',
-                            backgroundColor: '#fff',
-                            color: '#475569',
-                            fontWeight: '700',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-                          onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-                          title="In biên lai thu quỹ hộ này"
-                        >
-                          <Printer size={13} />
-                          <span>In biên lai</span>
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center', justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => handlePrintHouseholdReceipt(hh)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              border: '1.5px solid #cbd5e1',
+                              backgroundColor: '#fff',
+                              color: '#475569',
+                              fontWeight: '700',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              width: '95px',
+                              justifyContent: 'center'
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                            title="In biên lai thu quỹ hộ này"
+                          >
+                            <Printer size={13} />
+                            <span>In biên lai</span>
+                          </button>
+                          {!isGuest && (
+                            <button 
+                              onClick={() => handleQuickPayHouseholdFinance(hh)}
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                backgroundColor: '#10b981',
+                                color: '#fff',
+                                fontWeight: '700',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                width: '95px',
+                                justifyContent: 'center',
+                                boxShadow: '0 2px 4px rgba(16,185,129,0.2)'
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#059669'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#10b981'; }}
+                              title="Ghi nhận thu nhanh toàn bộ các quỹ TDP và Phường theo thông báo"
+                            >
+                              <Check size={13} />
+                              <span>Thu đủ</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
