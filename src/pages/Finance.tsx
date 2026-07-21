@@ -1616,7 +1616,7 @@ const Finance = () => {
     printWindow.document.close();
   };
 
-  const handleQuickPayHouseholdFinance = async (hh: Household) => {
+  const handleQuickPayHouseholdFinance = async (hh: Household, forceCancel?: boolean) => {
     if (isGuest) {
       showToast('Khách không có quyền sửa đổi dữ liệu thu quỹ!', 'warning');
       return;
@@ -1661,7 +1661,7 @@ const Finance = () => {
         return paidFund && paidFund.amount >= fund.target;
       });
 
-      const shouldPay = !allWardPaid || !allTdpPaid;
+      const shouldPay = forceCancel !== undefined ? !forceCancel : (!allWardPaid || !allTdpPaid);
 
       // Lưu quỹ Phường
       await Promise.all(members.map(async m => {
@@ -4057,6 +4057,10 @@ const Finance = () => {
                   const headName = getHouseholdHeadName(hh);
                   const hhFunds = hhFundsMap.get(hh.id) || [];
                   const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+                  const isAllTdpPaid = fundList.length > 0 && fundList.every((fund) => {
+                    const paidFund = hhFunds.find(f => f.fund_name === fund.name);
+                    return paidFund && paidFund.amount >= fund.target;
+                  });
                   
                   return (
                     <tr key={hh.id}>
@@ -4156,13 +4160,13 @@ const Finance = () => {
                           </button>
                           {!isGuest && (
                             <button 
-                              onClick={() => handleQuickPayHouseholdFinance(hh)}
+                              onClick={() => handleQuickPayHouseholdFinance(hh, isAllTdpPaid)}
                               style={{
                                 padding: '4px 10px',
                                 borderRadius: '6px',
                                 border: 'none',
-                                backgroundColor: '#10b981',
-                                color: '#fff',
+                                backgroundColor: isAllTdpPaid ? '#e2e8f0' : '#10b981',
+                                color: isAllTdpPaid ? '#64748b' : '#fff',
                                 fontWeight: '700',
                                 fontSize: '0.75rem',
                                 cursor: 'pointer',
@@ -4172,14 +4176,14 @@ const Finance = () => {
                                 gap: '4px',
                                 width: '95px',
                                 justifyContent: 'center',
-                                boxShadow: '0 2px 4px rgba(16,185,129,0.2)'
+                                boxShadow: isAllTdpPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.2)'
                               }}
-                              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#059669'; }}
-                              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#10b981'; }}
-                              title="Ghi nhận thu nhanh toàn bộ các quỹ TDP và Phường theo thông báo"
+                              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = isAllTdpPaid ? '#cbd5e1' : '#059669'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = isAllTdpPaid ? '#e2e8f0' : '#10b981'; }}
+                              title={isAllTdpPaid ? "Hủy ghi nhận đóng quỹ cho hộ này" : "Ghi nhận thu nhanh toàn bộ các quỹ TDP và Phường theo thông báo"}
                             >
-                              <Check size={13} />
-                              <span>Thu đủ</span>
+                              {isAllTdpPaid ? <X size={13} /> : <Check size={13} />}
+                              <span>{isAllTdpPaid ? 'Hủy' : 'Thu đủ'}</span>
                             </button>
                           )}
                         </div>

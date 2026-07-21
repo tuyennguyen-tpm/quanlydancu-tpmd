@@ -500,7 +500,7 @@ const WardFunds = () => {
   };
 
   // Thu nhanh toàn bộ thành viên của 1 hộ gia đình cùng 1 lần (gồm Quỹ Phường + Quỹ TDP theo thông báo)
-  const handleQuickPayHousehold = async (members: WardFund[]) => {
+  const handleQuickPayHousehold = async (members: WardFund[], forceCancel?: boolean) => {
     if (isGuest) { showToast('Khách không có quyền sửa!', 'warning'); return; }
     try {
       const firstMember = members[0];
@@ -536,7 +536,7 @@ const WardFunds = () => {
         return paidFund && paidFund.amount >= fund.target;
       });
 
-      const shouldPay = !allWardPaid || !allTdpPaid;
+      const shouldPay = forceCancel !== undefined ? !forceCancel : (!allWardPaid || !allTdpPaid);
       const today = new Date().toISOString().slice(0, 10);
 
       // 1. Lưu đóng quỹ Phường
@@ -5023,7 +5023,7 @@ const WardFunds = () => {
                           </button>
                         )}
                         {!isGuest && (
-                          <button type="button" onClick={() => handleQuickPayHousehold(group.members)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
+                          <button type="button" onClick={() => handleQuickPayHousehold(group.members, allPaid)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
                             {allPaid ? '↩ Hủy' : '✓ Thu đủ cả nhà'}
                           </button>
                         )}
