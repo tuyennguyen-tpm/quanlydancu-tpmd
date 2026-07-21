@@ -2859,31 +2859,7 @@ const WardFunds = () => {
           </table>
     `;
 
-    const freshFooterHtml = `
-          <table class="footer-table">
-            <tr>
-              <td style="width: 45%;"></td>
-              <td style="width: 55%;">
-                <div style="font-style: italic; margin-bottom: 3px; font-size: 10.5pt;">Nam Sầm Sơn, ${dateTextVal}</div>
-                <div style="font-weight: bold; font-size: 11.5pt;">TỔ TRƯỜNG TỔ DÂN PHỐ</div>
-                <div style="font-style: italic; font-size: 10pt; margin-bottom: 5px;">(Ký, ghi rõ họ tên)</div>
-                <div style="height: 55px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; margin-top: 5px;">
-                  ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 55px; max-height: 55px; max-width: 150px; object-fit: contain;" />` : '<div style="height: 55px;"></div>'}
-                </div>
-                <div style="font-weight: bold; font-size: 11.5pt;">${leaderName}</div>
-              </td>
-            </tr>
-          </table>
-    `.trim();
-
-    let editorContentHtml = savedHtml || defaultEditorHtml;
-    if (savedHtml) {
-      if (editorContentHtml.includes('<table class="footer-table">')) {
-        editorContentHtml = editorContentHtml.replace(/<table class="footer-table">[\s\S]*?<\/table>/i, freshFooterHtml);
-      } else {
-        editorContentHtml += '\n' + freshFooterHtml;
-      }
-    }
+    const editorContentHtml = savedHtml || defaultEditorHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -2961,6 +2937,7 @@ const WardFunds = () => {
           }
           .btn-print { background: #10b981; color: white; }
           .btn-save { background: #3b82f6; color: white; }
+          .btn-reset { background: #f59e0b; color: white; }
           .btn-close { background: #ef4444; color: white; }
           
           .toolbar-btn-format {
@@ -3103,6 +3080,7 @@ const WardFunds = () => {
           </select>
 
           <button class="toolbar-btn btn-save" id="btnSave">💾 Lưu mẫu</button>
+          <button class="toolbar-btn btn-reset" id="btnReset">🔄 Khôi phục</button>
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-close" onclick="window.close()">✖️ Đóng</button>
           
@@ -3224,6 +3202,16 @@ const WardFunds = () => {
               }
             }
             this.value = ""; // reset select
+          });
+
+          // Khôi phục mặc định
+          const btnReset = document.getElementById('btnReset');
+          btnReset.addEventListener('click', function() {
+            if (confirm('Bạn có chắc chắn muốn khôi phục về mẫu thông báo mặc định không? Mọi chỉnh sửa đã lưu trước đó sẽ bị xóa.')) {
+              localStorage.removeItem('notice_template_html_${selectedYear}');
+              localStorage.removeItem('notice_template_fontsize_${selectedYear}');
+              window.location.reload();
+            }
           });
 
           // Keyboard shortcut: Ctrl+P to print
