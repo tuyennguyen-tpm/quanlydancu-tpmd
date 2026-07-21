@@ -575,10 +575,10 @@ const WardFunds = () => {
     return filteredByMode.sort((a, b) => {
       const grpA = fundMetaMap.get(a.id)?.groupName || '';
       const grpB = fundMetaMap.get(b.id)?.groupName || '';
-      
+
       const idxA = groups.findIndex(g => g.trim().toLowerCase() === grpA.trim().toLowerCase());
       const idxB = groups.findIndex(g => g.trim().toLowerCase() === grpB.trim().toLowerCase());
-      
+
       const rankA = idxA !== -1 ? idxA : 999;
       const rankB = idxB !== -1 ? idxB : 999;
 
@@ -589,6 +589,72 @@ const WardFunds = () => {
       return a.full_name.localeCompare(b.full_name, 'vi');
     });
   }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, fundMetaMap, groups, headNamesSet]);
+
+  // *** Map tính chỉ tiêu kỳ vọng ĐÚNG theo tuổi/giới tính thực tế từ CSDL nhân khẩu ***
+  // Override giá trị lưu trong DB để hiển thị đúng ngay lập tức, không cần đồng bộ thủ công
+  const computedExpectedMap = useMemo(() => {
+    const currentYear = new Date().getFullYear(); // Luôn dùng năm hiện tại để tính tuổi
+
+    const parseAgeRange = (ageRangeStr: string | undefined) => {
+      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58 };
+      if (!ageRangeStr) return result;
+      const s = ageRangeStr.toLowerCase();
+      const mM = s.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+      if (mM) { result.maleMin = parseInt(mM[1], 10); result.maleMax = parseInt(mM[2], 10); }
+      const fM = s.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || s.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+      if (fM) { result.femaleMin = parseInt(fM[1], 10); result.femaleMax = parseInt(fM[2], 10); }
+      return result;
+    };
+
+    const resultMap = new Map<string, Record<string, number>>();
+    funds.forEach(f => {
+      const expected: Record<string, number> = {};
+
+      // Tìm nhân khẩu khớp để lấy giới tính + ngày sinh chính xác
+      let matchedRes: Resident | undefined;
+      if (f.user_id) matchedRes = residents.find(r => r.id === f.user_id);
+      if (!matchedRes && f.full_name) {
+        const cands = residentsByNameMap.get(f.full_name.trim().toLowerCase()) || [];
+        if (cands.length === 1) matchedRes = cands[0];
+        else if (cands.length > 1) {
+          matchedRes = f.dob ? cands.find(r => r.dob === f.dob) || cands[0] : cands[0];
+        }
+      }
+
+      // Giới tính: ưu tiên từ nhân khẩu, dự phòng tên "Thị"
+      let isFemale = false;
+      if (matchedRes) {
+        const g = (matchedRes.gender || '').toString().toLowerCase().trim();
+        isFemale = g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f');
+      } else {
+        const n = (f.full_name || '').toLowerCase();
+        isFemale = n.includes(' thị ') || n.endsWith(' thị');
+      }
+
+      // Tính tuổi = năm hiện tại - năm sinh
+      const dobStr = matchedRes?.dob || f.dob || '';
+      const birthYear = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
+      const age = birthYear > 0 ? currentYear - birthYear : 30;
+
+      // Tính expected đúng cho từng quỹ cấp cá nhân
+      activeFunds.forEach((fund: any) => {
+        const isHH = fund.scope === 'household'
+          || fund.name.toLowerCase().includes('hộ')
+          || fund.name.toLowerCase().includes('người cao tuổi')
+          || fund.name.toLowerCase().includes('cao tuổi');
+        if (isHH) return;
+
+        const lim = parseAgeRange(fund.age_range);
+        const shouldPay = isFemale
+          ? age >= lim.femaleMin && age <= lim.femaleMax
+          : age >= lim.maleMin && age <= lim.maleMax;
+        expected[fund.name] = shouldPay ? fund.target : 0;
+      });
+
+      resultMap.set(f.id, expected);
+    });
+    return resultMap;
+  }, [funds, residents, residentsByNameMap, activeFunds]);
 
   // Danh sách gom theo hộ gia đình cho chế độ xem “Thu gom theo Hộ”
   const householdGroupedFunds = useMemo(() => {
@@ -5837,9 +5903,11 @@ const WardFunds = () => {
               ) : (
                 <>
                   {householdGroupedFunds.slice(0, visibleCount).map(group => {
-                    const totalExpected = group.members.reduce((sum, m) =>
-                      sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
-                        s + (m.contributions?.[fund.name]?.expected || 0), 0), 0);
+                    const totalExpected = group.members.reduce((sum, m) => {
+                      const compExp = computedExpectedMap.get(m.id) || {};
+                      return sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
+                        s + (compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected || 0)), 0);
+                    }, 0);
                     const totalActual = group.members.reduce((sum, m) =>
                       sum + activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) =>
                         s + (m.contributions?.[fund.name]?.actual || 0), 0), 0);
@@ -5938,7 +6006,8 @@ const WardFunds = () => {
                     </div>
                     {/* Danh sách thành viên */}
                     {group.members.map((member, idx) => {
-                      const mExp = activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) => s + (member.contributions?.[fund.name]?.expected || 0), 0);
+                      const computedExp = computedExpectedMap.get(member.id) || {};
+                      const mExp = activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) => s + (computedExp[fund.name] ?? (member.contributions?.[fund.name]?.expected || 0)), 0);
                       const mAct = activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').reduce((s, fund) => s + (member.contributions?.[fund.name]?.actual || 0), 0);
                       const mPaid = mAct >= mExp && mExp > 0;
                       const isHead = headNamesSet.has(member.full_name.trim().toLowerCase());
@@ -5951,11 +6020,13 @@ const WardFunds = () => {
                           </div>
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: '2' }}>
                             {activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').map(fund => {
-                              const c = member.contributions?.[fund.name] || { expected: 0, actual: 0 };
-                              const paid = c.actual >= c.expected && c.expected > 0;
+                              const storedActual = member.contributions?.[fund.name]?.actual || 0;
+                              // Dùng expected tính động theo tuổi/giới tính thực tế
+                              const dynExpected = computedExp[fund.name] ?? (member.contributions?.[fund.name]?.expected || 0);
+                              const paid = storedActual >= dynExpected && dynExpected > 0;
                               return (
-                                <span key={fund.name} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', background: c.expected === 0 ? '#f1f5f9' : paid ? '#dcfce7' : '#fee2e2', color: c.expected === 0 ? '#94a3b8' : paid ? '#166534' : '#991b1b', whiteSpace: 'nowrap' }}>
-                                  {fund.name.split(' ').slice(-2).join(' ')}: {c.expected === 0 ? 'Miễn' : `${c.actual.toLocaleString('vi-VN')}/${c.expected.toLocaleString('vi-VN')}đ`}
+                                <span key={fund.name} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', background: dynExpected === 0 ? '#f1f5f9' : paid ? '#dcfce7' : '#fee2e2', color: dynExpected === 0 ? '#94a3b8' : paid ? '#166534' : '#991b1b', whiteSpace: 'nowrap' }}>
+                                  {fund.name.split(' ').slice(-2).join(' ')}: {dynExpected === 0 ? 'Miễn' : `${storedActual.toLocaleString('vi-VN')}/${dynExpected.toLocaleString('vi-VN')}đ`}
                                 </span>
                               );
                             })}
