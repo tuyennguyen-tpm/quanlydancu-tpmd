@@ -458,9 +458,13 @@ const WardFunds = () => {
   const filteredFunds = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     const list = funds.filter(f => {
+      const meta = fundMetaMap.get(f.id);
+      const headName = meta?.headName || '';
+
       const matchesSearch = !term || 
         f.full_name.toLowerCase().includes(term) || 
-        (f.address && f.address.toLowerCase().includes(term));
+        (f.address && f.address.toLowerCase().includes(term)) ||
+        (headName && headName.toLowerCase().includes(term));
       
       if (!matchesSearch) return false;
 
@@ -4945,7 +4949,7 @@ const WardFunds = () => {
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Tìm theo tên người dân, địa chỉ..."
+              placeholder="Tìm theo tên người nộp, tên chủ hộ, địa chỉ..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="premium-input-3d"
