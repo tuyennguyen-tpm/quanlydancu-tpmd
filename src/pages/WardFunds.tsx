@@ -378,9 +378,13 @@ const WardFunds = () => {
     });
   }, [filteredFunds, residentToHouseholdMap, headNamesSet, groups]);
 
-  // Calculate Statistics dynamically
+  // Calculate Statistics dynamically - luôn dùng chỉ tiêu mới nhất từ cấu hình
   const fundStats = activeFunds.map(fund => {
-    const expected = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0);
+    // Nếu bản ghi có expected > 0 thì dùng, nếu = 0 thì tính theo fund.target
+    const expected = funds.reduce((sum, f) => {
+      const stored = f.contributions?.[fund.name]?.expected || 0;
+      return sum + (stored > 0 ? stored : fund.target);
+    }, 0);
     const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
     const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
     const remaining = expected - actual;
@@ -405,12 +409,14 @@ const WardFunds = () => {
     setAddressInput(record.address || '');
     setNote(record.note || '');
 
-    // Khởi tạo các ô nhập tiền động cho các quỹ
+    // Khởi tạo các ô nhập tiền động cho các quỹ - luôn dùng fund.target mới nhất từ cấu hình
     const inputs: Record<string, { expected: string; actual: string; date: string }> = {};
     activeFunds.forEach(fund => {
-      const contrib = record.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+      const contrib = record.contributions?.[fund.name] || { expected: 0, actual: 0 };
+      // Luôn lấy chỉ tiêu mới nhất từ cấu hình (fund.target) thay vì bản ghi cũ
+      const latestExpected = fund.target;
       inputs[fund.name] = {
-        expected: contrib.expected.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."),
+        expected: latestExpected.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."),
         actual: contrib.actual.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."),
         date: contrib.date || new Date().toISOString().slice(0, 10)
       };
@@ -434,9 +440,11 @@ const WardFunds = () => {
       const newContributions: Record<string, any> = { ...record.contributions };
       activeFunds.forEach(fund => {
         const existing = record.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+        // Luôn lấy chỉ tiêu mới nhất từ cấu hình nếu bản ghi cũ có expected = 0
+        const latestExpected = existing.expected > 0 ? existing.expected : fund.target;
         newContributions[fund.name] = {
-          expected: existing.expected,
-          actual: isCurrentlyPaid ? 0 : existing.expected, // Nếu đã đóng đủ thì hủy đóng, ngược lại đóng đủ
+          expected: latestExpected,
+          actual: isCurrentlyPaid ? 0 : latestExpected, // Nếu đã đóng đủ thì hủy đóng, ngược lại đóng đủ
           date: isCurrentlyPaid ? '' : (existing.date || new Date().toISOString().slice(0, 10))
         };
       });
@@ -1924,7 +1932,7 @@ const WardFunds = () => {
             </td>
           </tr>
           <tr style="font-weight: bold; text-align: center;">
-            <td style="width: 20%;">Thủ trưởng đơn vị</td>
+            <td style="width: 20%;">Tổ trưởng tổ dân phố</td>
             <td style="width: 20%;">Kế toán trưởng</td>
             <td style="width: 20%;">Thủ quỹ</td>
             <td style="width: 20%;">Người lập phiếu</td>
@@ -3004,7 +3012,7 @@ const WardFunds = () => {
             </td>
           </tr>
           <tr style="font-weight: bold; text-align: center;">
-            <td style="width: 20%;">Thủ trưởng đơn vị</td>
+            <td style="width: 20%;">Tổ trưởng tổ dân phố</td>
             <td style="width: 20%;">Kế toán trưởng</td>
             <td style="width: 20%;">Thủ quỹ</td>
             <td style="width: 20%;">Người lập phiếu</td>

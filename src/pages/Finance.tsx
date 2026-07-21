@@ -1250,7 +1250,7 @@ const Finance = () => {
             </td>
           </tr>
           <tr style="font-weight: bold; text-align: center;">
-            <td style="width: 20%;">Thủ trưởng đơn vị</td>
+            <td style="width: 20%;">Tổ trưởng tổ dân phố</td>
             <td style="width: 20%;">Kế toán trưởng</td>
             <td style="width: 20%;">Thủ quỹ</td>
             <td style="width: 20%;">Người lập phiếu</td>
