@@ -1829,7 +1829,7 @@ const Finance = () => {
               const rows = table.querySelectorAll('tbody tr');
               let tdpTotal = 0;
               let wardTotal = 0;
-              let grandTotal = 0;
+              let otherTotal = 0;
               
               const ths = table.querySelectorAll('thead th');
               const is6ColTable = (ths.length >= 6);
@@ -1839,27 +1839,25 @@ const Finance = () => {
                 const tds = row.querySelectorAll('td');
                 
                 if (is6ColTable && tds.length >= 5) {
-                  const fundName = tds[1].innerText || '';
+                  const fundName = (tds[1].innerText || '').toLowerCase();
                   const amountText = tds[4].innerText || '';
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
 
-                  if (fundName.includes('[TDP]')) {
+                  if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
                     tdpTotal += num;
-                  } else if (fundName.includes('[UBND') || fundName.includes('[Phường]')) {
+                  } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
                     wardTotal += num;
                   } else {
-                    grandTotal += num;
+                    otherTotal += num;
                   }
                 } else if (!is6ColTable && tds.length >= 3) {
                   const amountText = tds[2].innerText || '';
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
-                  grandTotal += num;
+                  otherTotal += num;
                 }
               });
 
-              if (is6ColTable) {
-                grandTotal = tdpTotal + wardTotal + grandTotal;
-              }
+              const grandTotal = tdpTotal + wardTotal + otherTotal;
 
               const totalRow = table.querySelector('tr.receipt-total-row');
               if (totalRow) {
@@ -1868,11 +1866,11 @@ const Finance = () => {
                   const labelTd = totalTds[0];
                   let printModeText = '';
                   if (tdpTotal > 0 && wardTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' + UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
                   } else if (wardTotal > 0) {
-                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
                   } else if (tdpTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ')';
                   } else {
                     printModeText = '';
                   }

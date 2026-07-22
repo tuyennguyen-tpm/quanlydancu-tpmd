@@ -3212,6 +3212,37 @@ const WardFunds = () => {
             const containers = document.querySelectorAll('.receipt-container');
             if (containers.length === 0) return;
 
+            // Sync cell content across multiple liens (if Lien 1 and Lien 2 exist)
+            if (containers.length > 1) {
+              const activeEl = document.activeElement;
+              if (activeEl && editor.contains(activeEl)) {
+                const activeContainer = activeEl.closest('.receipt-container');
+                const activeRow = activeEl.closest('tr');
+                if (activeContainer && activeRow && !activeRow.classList.contains('receipt-total-row')) {
+                  const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
+                  const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
+                  const rowIndex = sourceRows.indexOf(activeRow);
+                  
+                  if (rowIndex >= 0) {
+                    const cellIndex = Array.from(activeRow.children).indexOf(activeEl.closest('td') || activeEl);
+                    const newValue = activeEl.innerText;
+                    
+                    containers.forEach((cnt, idx) => {
+                      if (idx !== sourceContainerIndex) {
+                        const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
+                        if (targetRows[rowIndex]) {
+                          const targetTd = targetRows[rowIndex].children[cellIndex];
+                          if (targetTd && targetTd !== activeEl && targetTd.innerText !== newValue) {
+                            targetTd.innerText = newValue;
+                          }
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+            }
+
             containers.forEach(container => {
               const table = container.querySelector('.receipt-details-table');
               if (!table) return;
@@ -3219,7 +3250,7 @@ const WardFunds = () => {
               const rows = table.querySelectorAll('tbody tr');
               let tdpTotal = 0;
               let wardTotal = 0;
-              let grandTotal = 0;
+              let otherTotal = 0;
               
               const ths = table.querySelectorAll('thead th');
               const is6ColTable = (ths.length >= 6);
@@ -3229,27 +3260,25 @@ const WardFunds = () => {
                 const tds = row.querySelectorAll('td');
                 
                 if (is6ColTable && tds.length >= 5) {
-                  const fundName = tds[1].innerText || '';
+                  const fundName = (tds[1].innerText || '').toLowerCase();
                   const amountText = tds[4].innerText || '';
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
 
-                  if (fundName.includes('[TDP]')) {
+                  if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
                     tdpTotal += num;
-                  } else if (fundName.includes('[UBND') || fundName.includes('[Phường]')) {
+                  } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
                     wardTotal += num;
                   } else {
-                    grandTotal += num;
+                    otherTotal += num;
                   }
                 } else if (!is6ColTable && tds.length >= 3) {
                   const amountText = tds[2].innerText || '';
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
-                  grandTotal += num;
+                  otherTotal += num;
                 }
               });
 
-              if (is6ColTable) {
-                grandTotal = tdpTotal + wardTotal + grandTotal;
-              }
+              const grandTotal = tdpTotal + wardTotal + otherTotal;
 
               const totalRow = table.querySelector('tr.receipt-total-row');
               if (totalRow) {
@@ -3258,11 +3287,11 @@ const WardFunds = () => {
                   const labelTd = totalTds[0];
                   let printModeText = '';
                   if (tdpTotal > 0 && wardTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' + UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
                   } else if (wardTotal > 0) {
-                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
                   } else if (tdpTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ')';
                   } else {
                     printModeText = '';
                   }
@@ -4705,7 +4734,7 @@ const WardFunds = () => {
             const containers = document.querySelectorAll('.receipt-container');
             if (containers.length === 0) return;
 
-            // Sync cell content across multiple liens (if multiple receipt containers exist)
+            // Sync cell content across multiple liens (if Lien 1 and Lien 2 exist)
             if (containers.length > 1) {
               const activeEl = document.activeElement;
               if (activeEl && editor.contains(activeEl)) {
@@ -4743,7 +4772,7 @@ const WardFunds = () => {
               const rows = table.querySelectorAll('tbody tr');
               let tdpTotal = 0;
               let wardTotal = 0;
-              let grandTotal = 0;
+              let otherTotal = 0;
               
               const ths = table.querySelectorAll('thead th');
               const is6ColTable = (ths.length >= 6);
@@ -4753,27 +4782,25 @@ const WardFunds = () => {
                 const tds = row.querySelectorAll('td');
                 
                 if (is6ColTable && tds.length >= 5) {
-                  const fundName = tds[1].innerText || '';
+                  const fundName = (tds[1].innerText || '').toLowerCase();
                   const amountText = tds[4].innerText || '';
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
 
-                  if (fundName.includes('[TDP]')) {
+                  if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
                     tdpTotal += num;
-                  } else if (fundName.includes('[UBND') || fundName.includes('[Phường]')) {
+                  } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
                     wardTotal += num;
                   } else {
-                    grandTotal += num;
+                    otherTotal += num;
                   }
                 } else if (!is6ColTable && tds.length >= 3) {
                   const amountText = tds[2].innerText || '';
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
-                  grandTotal += num;
+                  otherTotal += num;
                 }
               });
 
-              if (is6ColTable) {
-                grandTotal = tdpTotal + wardTotal + grandTotal;
-              }
+              const grandTotal = tdpTotal + wardTotal + otherTotal;
 
               const totalRow = table.querySelector('tr.receipt-total-row');
               if (totalRow) {
@@ -4782,11 +4809,11 @@ const WardFunds = () => {
                   const labelTd = totalTds[0];
                   let printModeText = '';
                   if (tdpTotal > 0 && wardTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' + UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
                   } else if (wardTotal > 0) {
-                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
                   } else if (tdpTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ')';
                   } else {
                     printModeText = '';
                   }
