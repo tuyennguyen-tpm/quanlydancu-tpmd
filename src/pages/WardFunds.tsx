@@ -1282,7 +1282,7 @@ const WardFunds = () => {
     }
   };
 
-  // Auto-initialize Ward Funds based on 100% Households + working-age residents (Female 18-58, Male 18-61)
+  // Auto-initialize Ward Funds covering 100% Households & Residents across all data sources
   const handleAutoInitFromResidents = async () => {
     if (isGuest) {
       showToast('Bạn không có quyền khởi tạo dữ liệu đóng quỹ!', 'warning');
@@ -1291,7 +1291,7 @@ const WardFunds = () => {
 
     if (window.confirm(`Bạn có chắc chắn muốn TỰ ĐỘNG KHỞI TẠO danh sách thu quỹ năm ${selectedYear} cho 100% Hộ gia đình & Nhân khẩu không?\n\n` +
       `Chi tiết quy tắc khởi tạo:\n` +
-      `1. Đảm bảo 100% tất cả các Hộ gia đình trong CSDL đều được tạo bản ghi (đại diện tên Chủ hộ) để sẵn sàng cho việc thu Quỹ Tổ dân phố.\n` +
+      `1. Quét toàn bộ CSDL Hộ khẩu và Nhân khẩu để đảm bảo 100% các Hộ dân đều có bản ghi đại diện (Chủ hộ).\n` +
       `2. Tự động tính Quỹ Phường cho nhân khẩu trong độ tuổi lao động: Nữ từ 18-58 tuổi, Nam từ 18-61 tuổi.\n` +
       `3. Các hộ/cá nhân thuộc diện miễn đóng Quỹ Phường vẫn sẽ có tên đại diện trong danh sách (mức thu Quỹ Phường = 0 VNĐ).`)) {
       
@@ -1369,36 +1369,57 @@ const WardFunds = () => {
           return { contributions, isInAgeRange };
         };
 
-        // PASS 1: Quét 100% các Hộ gia đình trong CSDL để đảm bảo tất cả các hộ đều có mặt làm căn cứ thu Quỹ Tổ
-        hhList.forEach(hh => {
-          const members = resList.filter(r => r.household_id === hh.id && r.status !== 'deceased');
+        // BẢN ĐỒ TRA CỨU HỘ GIA ĐÌNH & NHÂN KHẨU
+        const hhMap = new Map<string, Household>();
+        hhList.forEach(h => hhMap.set(h.id, h));
+
+        const resByHhId = new Map<string, Resident[]>();
+        resList.forEach(r => {
+          if (r.status === 'deceased') return;
+          if (!r.household_id) return;
+          if (!resByHhId.has(r.household_id)) {
+            resByHhId.set(r.household_id, []);
+          }
+          resByHhId.get(r.household_id)!.push(r);
+        });
+
+        // Gom tất cả Household ID từ cả bảng Households lẫn bảng Residents
+        const allHouseholdIds = new Set<string>();
+        hhList.forEach(h => allHouseholdIds.add(h.id));
+        resByHhId.forEach((_, hhId) => allHouseholdIds.add(hhId));
+
+        // PASS 1: Khởi tạo tất cả Hộ gia đình (Bản ghi Chủ hộ / Đại diện Hộ)
+        allHouseholdIds.forEach(hhId => {
+          const hh = hhMap.get(hhId);
+          const members = resByHhId.get(hhId) || [];
           
-          if (members.length > 0) {
-            // Tìm chủ hộ
-            const head = members.find(m => m.is_head) || 
-                         members.find(m => hh.head_of_household_id === m.id) || 
-                         members.find(m => m.relationship_with_head && m.relationship_with_head.toLowerCase().trim() === 'chủ hộ') || 
-                         members[0];
+          let head = members.find(m => m.is_head) || 
+                     members.find(m => hh && hh.head_of_household_id === m.id) || 
+                     members.find(m => m.relationship_with_head && m.relationship_with_head.toLowerCase().trim() === 'chủ hộ') || 
+                     members[0];
 
-            if (head) {
-              addedResidentIds.add(head.id);
-              const { contributions } = calculateContributions(head, hh, true);
+          if (!head && hh && hh.head_of_household_id) {
+            head = resList.find(r => r.id === hh.head_of_household_id && r.status !== 'deceased');
+          }
 
-              batchFunds.push({
-                id: generateUUID(),
-                year: selectedYear,
-                full_name: head.full_name.trim(),
-                dob: head.dob ? formatDateVN(head.dob.trim()) : undefined,
-                address: hh.address,
-                user_id: head.user_id || hh.user_id,
-                note: 'Chủ hộ (Bản ghi Hộ gia đình)',
-                contributions
-              });
-              successCount++;
-            }
-          } else {
-            // Trường hợp Hộ gia đình trống thành viên trong CSDL -> Vẫn tạo bản ghi Hộ để thu Quỹ Tổ
-            const placeholderName = hh.household_number ? `Hộ ${hh.household_number}` : `Hộ tại ${hh.address}`;
+          if (head) {
+            addedResidentIds.add(head.id);
+            const { contributions } = calculateContributions(head, hh, true);
+
+            batchFunds.push({
+              id: generateUUID(),
+              year: selectedYear,
+              full_name: head.full_name.trim(),
+              dob: head.dob ? formatDateVN(head.dob.trim()) : undefined,
+              address: hh ? hh.address : (head.permanent_address || head.temporary_address),
+              user_id: head.user_id || (hh ? hh.user_id : undefined),
+              note: 'Chủ hộ (Bản ghi Hộ gia đình)',
+              contributions
+            });
+            successCount++;
+          } else if (hh) {
+            // Trường hợp Hộ gia đình không có nhân khẩu trong CSDL
+            const headTitle = hh.martyr_name ? `Hộ ${hh.martyr_name}` : (hh.household_number ? `Hộ ${hh.household_number}` : `Hộ tại ${hh.address}`);
             const emptyContributions: Record<string, any> = {};
             activeFundsList.forEach((fund: any) => {
               emptyContributions[fund.name] = { expected: 0, actual: 0 };
@@ -1407,7 +1428,7 @@ const WardFunds = () => {
             batchFunds.push({
               id: generateUUID(),
               year: selectedYear,
-              full_name: placeholderName,
+              full_name: headTitle,
               address: hh.address,
               user_id: hh.user_id,
               note: 'Hộ chưa có nhân khẩu trong CSDL',
@@ -1422,7 +1443,7 @@ const WardFunds = () => {
           if (r.status === 'deceased') return;
           if (addedResidentIds.has(r.id)) return; // Đã thêm ở Pass 1 làm chủ hộ
 
-          const hh = hhList.find(h => h.id === r.household_id);
+          const hh = r.household_id ? hhMap.get(r.household_id) : undefined;
           const { contributions, isInAgeRange } = calculateContributions(r, hh, false);
 
           const hasExpectedValue = Object.values(contributions).some((c: any) => c.expected > 0);
@@ -1432,7 +1453,7 @@ const WardFunds = () => {
               year: selectedYear,
               full_name: r.full_name.trim(),
               dob: r.dob ? formatDateVN(r.dob.trim()) : undefined,
-              address: hh ? hh.address : undefined,
+              address: hh ? hh.address : (r.permanent_address || r.temporary_address),
               user_id: r.user_id,
               contributions
             });
@@ -1447,7 +1468,7 @@ const WardFunds = () => {
           await db.clearWardFunds(selectedYear);
           // Lưu hàng loạt vào bảng ward_funds
           await db.saveWardFundsBatch(batchFunds);
-          showToast(`Khởi tạo thành công! Đã tạo danh sách ${successCount} bản ghi Hộ gia đình & Nhân khẩu đóng quỹ năm ${selectedYear}.`, 'success');
+          showToast(`Khởi tạo thành công! Đã quét và khởi tạo ${successCount} bản ghi Hộ gia đình & Nhân khẩu cho năm ${selectedYear}.`, 'success');
           loadData();
           window.dispatchEvent(new CustomEvent('db-changed'));
         }
