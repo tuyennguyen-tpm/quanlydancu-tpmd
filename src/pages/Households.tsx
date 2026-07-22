@@ -173,8 +173,8 @@ const Households = () => {
   const userRoleVal = localStorage.getItem('user_role') || 'tdp_leader';
   const isWardAdmin = userRoleVal === 'ward_admin' || userRoleVal === 'super_admin';
 
-  // Quyền in danh sách & xuất Excel: không cho phép demo (Trang chủ) và guest_mode
-  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
 
   // State for Transfer / Split Household
   const [transferringMember, setTransferringMember] = useState<Resident | null>(null);

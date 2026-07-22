@@ -128,7 +128,8 @@ const WardFunds = () => {
   // Cấp quyền sửa cho to_truong, admin, chung
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
     (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan');
-  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
   
   // State
   const [funds, setFunds] = useState<WardFund[]>([]);
@@ -6885,7 +6886,7 @@ const WardFunds = () => {
                         <span style={{ fontWeight: '700', fontSize: '0.9rem', color: allPaid ? '#16a34a' : hasPartial ? '#92400e' : '#dc2626' }}>
                           {formatCurrency(totalActual)} / {formatCurrency(totalExpected)}
                         </span>
-                        {group.householdId && !group.householdId.startsWith('addr__') && (
+                        {group.householdId && !group.householdId.startsWith('addr__') && canPrintExport && (
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               type="button"
@@ -7092,7 +7093,7 @@ const WardFunds = () => {
                       {!isGuest && <th style={{ width: '130px', padding: '12px 10px', textAlign: 'center', position: 'sticky', top: 0, backgroundColor: '#f8fafc', zIndex: 10 }}>Thao tác</th>}
                     </tr>
                   </thead>
-                  <tbody>
+<tbody>
                     {filteredFunds.slice(0, visibleCount).map((item, idx) => {
                       return (
                         <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>

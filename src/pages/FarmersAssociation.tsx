@@ -70,6 +70,8 @@ const FarmersAssociation = () => {
 
   const currentRole = localStorage.getItem('current_role') || 'demo';
   const isGuest = localStorage.getItem('guest_mode') === 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
 
   const handleAddMember = async (resident: Resident) => {
     if (isGuest) {
@@ -445,25 +447,29 @@ const FarmersAssociation = () => {
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button 
-            onClick={handleExportExcel} 
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2', transition: 'all 0.15s ease' }}
-            onMouseOver={(e) => { e.currentTarget.style.background = '#cffafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = '#ecfeff'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <FileDown size={16} />
-            Xuất Excel/CSV
-          </button>
+          {canPrintExport && (
+            <>
+              <button 
+                onClick={handleExportExcel} 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#cffafe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = '#ecfeff'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <FileDown size={16} />
+                Xuất Excel/CSV
+              </button>
 
-          <button 
-            onClick={handlePrint} 
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6', transition: 'all 0.15s ease' }}
-            onMouseOver={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <Printer size={16} />
-            In danh sách
-          </button>
+              <button 
+                onClick={handlePrint} 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = '#f5f3ff'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <Printer size={16} />
+                In danh sách
+              </button>
+            </>
+          )}
 
           <select
             value={groupFilter}

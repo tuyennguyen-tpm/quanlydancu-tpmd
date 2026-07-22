@@ -73,7 +73,8 @@ const Finance = () => {
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
                   (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan') ||
                   isWardUser;
-  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchInput, setSearchInput] = useState('');

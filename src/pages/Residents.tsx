@@ -317,7 +317,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
-  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

@@ -66,7 +66,8 @@ const PartyCell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'members' | 'meetings' | 'evaluations' | 'fees'>('members');
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'bi_thu' && currentRole !== 'admin');
-  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
@@ -615,7 +616,8 @@ const PartyCell: React.FC = () => {
 // ═══════════════════════════════════════════════════════════
 const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const currentRole = localStorage.getItem('current_role') || 'mat_tran';
-  const canPrintExport = currentRole !== 'demo' && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
   const [members, setMembers] = useState<PartyMember[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
