@@ -1393,7 +1393,7 @@ const WardFunds = () => {
           const hh = hhMap.get(hhId);
           const members = resByHhId.get(hhId) || [];
           
-          let head = members.find(m => m.is_head) || 
+          let head: Resident | undefined = members.find(m => m.is_head) || 
                      members.find(m => hh && hh.head_of_household_id === m.id) || 
                      members.find(m => m.relationship_with_head && m.relationship_with_head.toLowerCase().trim() === 'chủ hộ') || 
                      members[0];
