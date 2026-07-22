@@ -1132,16 +1132,18 @@ const Finance = () => {
     // Luôn hiển thị tất cả quỹ TDP đang hoạt động (kể cả chưa nộp)
     const tdpActiveFunds = (db as any).getFundList() as { name: string; target: number }[];
     tdpActiveFunds.forEach(fund => {
+    tdpActiveFunds.forEach(fund => {
+      const targetVal = typeof fund.target === 'number' ? fund.target : (parseInt((fund.target || '0').toString().replace(/[^\d]/g, ''), 10) || 0);
       const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
       const paidAmount = (paidFund && typeof paidFund.amount === 'number' && paidFund.amount > 0)
         ? paidFund.amount
-        : fund.target;
+        : targetVal;
       receiptRows.push({
         name: '[TDP] ' + fund.name,
         type: 'Hộ gia đình',
-        rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
-        amount: paidAmount,
-        note: paidFund?.note || (paidFund && paidFund.amount > 0 ? (paidFund.amount >= fund.target ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidFund.amount.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
+        rate: targetVal.toLocaleString('vi-VN') + ' đ/hộ',
+        amount: Number(paidAmount) || 0,
+        note: paidFund?.note || (paidFund && paidFund.amount > 0 ? (paidFund.amount >= targetVal ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidFund.amount.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
       });
     });
 
@@ -1150,26 +1152,7 @@ const Finance = () => {
       const wardActiveFunds = (db as any).getWardFundList();
       wardActiveFunds.forEach((wf: any) => {
         const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
-        
-        // Tính toán định mức đóng góp kỳ vọng của hộ đối với quỹ này
-        const getExpectedForMember = (r: WardFund) => {
-          const contrib = r.contributions?.[wf.name];
-          if (contrib !== undefined && typeof contrib.expected === 'number') {
-            return contrib.expected;
-          }
-          // Dự phòng nếu chưa khởi tạo bản ghi đóng góp
-          if (isHousehold) {
-            const isHead = headResident && (
-              headResident.id === r.user_id ||
-              headResident.full_name.trim().toLowerCase() === r.full_name.trim().toLowerCase()
-            );
-            return isHead ? wf.target : 0;
-          } else {
-            const age = getResidentAge(r.dob || '');
-            const isLabor = age >= 18 && age <= 60;
-            return isLabor ? wf.target : 0;
-          }
-        };
+        const wfTargetVal = typeof wf.target === 'number' ? wf.target : (parseInt((wf.target || '0').toString().replace(/[^\d]/g, ''), 10) || 0);
 
         const isPolicyHousehold = household && (household.policy_type === 'poor' || household.policy_type === 'near_poor' || household.policy_type === 'policy_family');
 
@@ -1177,9 +1160,9 @@ const Finance = () => {
         if (isPolicyHousehold) {
           expectedTotalForHH = 0;
         } else if (isHousehold) {
-          expectedTotalForHH = wf.target;
+          expectedTotalForHH = wfTargetVal;
         } else {
-          expectedTotalForHH = wf.target * laborCount;
+          expectedTotalForHH = wfTargetVal * laborCount;
         }
 
         const actualPaidSum = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
@@ -1197,18 +1180,18 @@ const Finance = () => {
         }
 
         receiptRows.push({
-          name: '[UBND] ' + wf.name,
+          name: '[UBND Phường] ' + wf.name,
           type: isHousehold ? 'Hộ gia đình' : 'Nhân khẩu LĐ',
-          rate: wf.target.toLocaleString('vi-VN') + (isHousehold ? ' đ/hộ' : ' đ/khẩu'),
-          amount: actualPaid,
+          rate: wfTargetVal.toLocaleString('vi-VN') + (isHousehold ? ' đ/hộ' : ' đ/khẩu'),
+          amount: Number(actualPaid) || 0,
           note: noteText
         });
       });
     }
 
-    const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + r.amount, 0);
-    const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + r.amount, 0);
-    const grandTotal = receiptRows.reduce((sum, r) => sum + r.amount, 0);
+    const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const grandTotal = receiptRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
