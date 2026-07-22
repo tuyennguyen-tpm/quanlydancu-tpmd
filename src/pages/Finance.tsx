@@ -1365,7 +1365,7 @@ const Finance = () => {
                    ? `(UBND: ${wardTotal.toLocaleString('vi-VN')} đ)` 
                    : ((printMode as string) === 'tdp_only' 
                      ? `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ)` 
-                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${(wardTotal + otherTotal).toLocaleString('vi-VN')} đ)`)}
+                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${wardTotal.toLocaleString('vi-VN')} đ)`)}
                </td>
                <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
                <td style="border: 1px solid #000; padding: 4px 6px;"></td>
