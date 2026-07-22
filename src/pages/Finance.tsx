@@ -1988,13 +1988,15 @@ const Finance = () => {
             });
           });
 
-          if (editor) {
-            ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
-              editor.addEventListener(evtType, function() {
-                recalculateReceiptTotals();
-              }, true);
-            });
-          }
+          ['input', 'keyup', 'change', 'blur', 'paste', 'DOMSubtreeModified'].forEach(function(evtType) {
+            document.addEventListener(evtType, recalculateReceiptTotals, true);
+            window.addEventListener(evtType, recalculateReceiptTotals, true);
+            if (editor) {
+              editor.addEventListener(evtType, recalculateReceiptTotals, true);
+            }
+          });
+
+          setInterval(recalculateReceiptTotals, 300);
 
           try {
             recalculateReceiptTotals();
