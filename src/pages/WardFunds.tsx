@@ -6159,7 +6159,7 @@ const WardFunds = () => {
                       onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef3c7'}
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      <Users size={14} /> Khởi tạo từ Nhân khẩu
+                      <Home size={14} /> Khởi tạo từ Hộ gia đình
                     </button>
                   )}
                   {!isGuest && (
