@@ -3328,7 +3328,7 @@ const WardFunds = () => {
                 }
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn');
+                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
                 
                 if (isWard) {
                   wardTotal += num;
@@ -4878,12 +4878,11 @@ const WardFunds = () => {
                 }
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
-                  tdpTotal += num;
-                } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
+                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
+                if (isWard) {
                   wardTotal += num;
                 } else {
-                  otherTotal += num;
+                  tdpTotal += num;
                 }
               });
 
