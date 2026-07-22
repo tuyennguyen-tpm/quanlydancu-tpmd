@@ -1217,8 +1217,11 @@ const WardFunds = () => {
       return;
     }
 
-    if (window.confirm(`Bạn có chắc chắn muốn TỰ ĐỘNG KHỞI TẠO danh sách thu quỹ Phường năm ${selectedYear} từ dữ liệu Nhân khẩu không?\n` +
-      `Lưu ý: Hệ thống sẽ tự động lọc độ tuổi lao động, loại trừ người cao tuổi, trẻ em, hộ nghèo, cận nghèo, gia đình chính sách và người hưởng lương hưu theo quy định của pháp luật.`)) {
+    if (window.confirm(`Bạn có chắc chắn muốn TỰ ĐỘNG KHỞI TẠO danh sách thu quỹ Phường năm ${selectedYear} từ dữ liệu Nhân khẩu & Hộ gia đình không?\n\n` +
+      `Chi tiết quy tắc khởi tạo:\n` +
+      `1. Đảm bảo 100% giữ lại Chủ hộ để phục vụ quản lý, tìm kiếm và gom nhóm theo Hộ gia đình.\n` +
+      `2. Lọc nhân khẩu theo độ tuổi lao động: Nữ từ 18-58 tuổi, Nam từ 18-61 tuổi.\n` +
+      `3. Tự động áp dụng chính sách miễn thu đối với hộ nghèo, cận nghèo, gia đình chính sách và người hưởng lương hưu theo quy định.`)) {
       
       setIsLoading(true);
       try {
@@ -1244,8 +1247,9 @@ const WardFunds = () => {
           // A. Bỏ qua nếu nhân khẩu đã mất
           if (r.status === 'deceased') return;
 
-          // B. Lấy thông tin hộ khẩu
+          // B. Lấy thông tin hộ khẩu & xác định vai trò Chủ hộ
           const hh = hhList.find(h => h.id === r.household_id);
+          const isHead = !!(r.is_head || (hh && hh.head_of_household_id === r.id) || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ'));
           const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
 
           // C. Tính tuổi của nhân khẩu trong năm selectedYear
@@ -1264,78 +1268,40 @@ const WardFunds = () => {
           const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
           const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
 
-          // E. Tính toán mức đóng góp của từng quỹ dựa trên quy định pháp luật
+          // E. Kiểm tra độ tuổi lao động đóng quỹ: Nữ 18-58 tuổi, Nam 18-61 tuổi
+          const isFemaleInAge = isFemale ? (age >= 18 && age <= 58) : false;
+          const isMaleInAge = isMale ? (age >= 18 && age <= 61) : false;
+          const isGeneralInAge = (!isFemale && !isMale) ? (age >= 18 && age <= 60) : false;
+          const isInAgeRange = isFemaleInAge || isMaleInAge || isGeneralInAge;
+
+          // F. Kiểm tra nghề nghiệp/ghi chú về hưu
+          const occLower = (r.occupation || '').toLowerCase();
+          const notesLower = (r.notes || '').toLowerCase();
+          const isPensioner = pensionKeywords.some(key => occLower.includes(key) || notesLower.includes(key));
+
+          // G. Tính toán mức đóng góp của từng quỹ
           const contributions: Record<string, any> = {};
-          let shouldAdd = false;
 
           activeFundsList.forEach((fund: any) => {
-            const isPCTT = fund.name.toLowerCase().includes('thiên tai');
-            const isDOdn = fund.name.toLowerCase().includes('đền ơn đáp nghĩa') || fund.name.toLowerCase().includes('đền ơn');
-            
-            // Mặc định miễn đóng
             let expected = 0;
 
-            // Kiểm tra miễn đóng theo luật Việt Nam:
-            // 1. Hộ nghèo, cận nghèo, gia đình chính sách được miễn toàn bộ
             if (isPolicyHousehold) {
+              // Hộ nghèo, cận nghèo, gia đình chính sách -> Miễn đóng
+              expected = 0;
+            } else if (isPensioner) {
+              // Người hưởng lương hưu -> Miễn đóng quỹ đầu người
               expected = 0;
             } else {
-              // 2. Kiểm tra nghề nghiệp/ghi chú về hưu
-              const occLower = (r.occupation || '').toLowerCase();
-              const notesLower = (r.notes || '').toLowerCase();
-              const isPensioner = pensionKeywords.some(key => occLower.includes(key) || notesLower.includes(key));
-
-              if (isPensioner) {
-                // Người hưởng lương hưu được miễn Quỹ Thiên tai và Đền ơn đáp nghĩa
-                expected = 0;
+              const isHouseholdScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ');
+              if (isHouseholdScope) {
+                // Quỹ thu theo Hộ: Chỉ tính tiền cho Chủ hộ (nếu Chủ hộ >= 18 tuổi)
+                if (isHead && age >= 18) {
+                  expected = fund.target;
+                }
               } else {
-                if (fund.scope === 'person' || isPCTT || isDOdn) {
-                  // Parse giới hạn độ tuổi cấu hình động từ người dùng (ví dụ: "Nam 18-61, Nữ 18-58")
-                  const parseAgeRange = (ageRangeStr: string | undefined) => {
-                    const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
-                    if (!ageRangeStr) return result;
-                    const cleanStr = ageRangeStr.toLowerCase();
-                    const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
-                    if (maleMatch) {
-                      result.maleMin = parseInt(maleMatch[1], 10);
-                      result.maleMax = parseInt(maleMatch[2], 10);
-                    }
-                    const femaleMatch = cleanStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || cleanStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
-                    if (femaleMatch) {
-                      result.femaleMin = parseInt(femaleMatch[1], 10);
-                      result.femaleMax = parseInt(femaleMatch[2], 10);
-                    }
-                    const generalMatch = cleanStr.match(/(?:từ\s*)?(\d+)\s*-\s*(\d+)/);
-                    if (generalMatch && !maleMatch && !femaleMatch) {
-                      result.generalMin = parseInt(generalMatch[1], 10);
-                      result.generalMax = parseInt(generalMatch[2], 10);
-                    }
-                    return result;
-                  };
-
-                  const ageLimits = parseAgeRange(fund.age_range);
-                  const isMaleInAge = isMale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
-                  const isFemaleInAge = isFemale ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
-                  const isGeneralInAge = (!isMale && !isFemale) ? (age >= ageLimits.generalMin && age <= ageLimits.generalMax) : false;
-
-                  if (isMaleInAge || isFemaleInAge || isGeneralInAge) {
-                    expected = fund.target;
-                    shouldAdd = true;
-                  }
-                } else {
-                  // Các quỹ khác: Tự động phân biệt thu theo Hộ (chỉ Chủ hộ nộp) hoặc thu theo Đầu người
-                  const isHouseholdScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
-                  if (isHouseholdScope) {
-                    if (r.is_head && age >= 18) {
-                      expected = fund.target;
-                      shouldAdd = true;
-                    }
-                  } else {
-                    if (age >= 18) {
-                      expected = fund.target;
-                      shouldAdd = true;
-                    }
-                  }
+                // Quỹ thu theo Đầu người: Chỉ tính tiền nếu thuộc độ tuổi lao động (Nam 18-61, Nữ 18-58)
+                if (isInAgeRange) {
+                  expected = fund.target;
                 }
               }
             }
@@ -1346,9 +1312,13 @@ const WardFunds = () => {
             };
           });
 
-          // Nếu có ít nhất một quỹ phải đóng > 0, đưa vào danh sách
+          // H. Tiêu chí thêm bản ghi:
+          // 1. Luôn giữ Chủ hộ (isHead = true) để bao phủ đủ 100% số hộ gia đình cho việc tra cứu/gom hộ
+          // 2. Với thành viên khác (!isHead): Phải nằm trong độ tuổi lao động VÀ có nghĩa vụ đóng > 0
           const hasExpectedValue = Object.values(contributions).some((c: any) => c.expected > 0);
-          if (hasExpectedValue) {
+          const shouldAdd = isHead || (isInAgeRange && hasExpectedValue);
+
+          if (shouldAdd) {
             batchFunds.push({
               id: generateUUID(),
               year: selectedYear,
@@ -1367,7 +1337,7 @@ const WardFunds = () => {
         } else {
           // Lưu hàng loạt vào bảng ward_funds
           await db.saveWardFundsBatch(batchFunds);
-          showToast(`Khởi tạo thành công! Đã thêm ${successCount} nhân khẩu thuộc diện phải đóng quỹ năm ${selectedYear}.`, 'success');
+          showToast(`Khởi tạo thành công! Đã tạo danh sách ${successCount} nhân khẩu & chủ hộ đóng quỹ năm ${selectedYear}.`, 'success');
           loadData();
           window.dispatchEvent(new CustomEvent('db-changed'));
         }
