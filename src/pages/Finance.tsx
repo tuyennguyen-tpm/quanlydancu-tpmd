@@ -1924,37 +1924,39 @@ const Finance = () => {
               const activeEl = document.activeElement;
               const isEditingTotal = activeEl && totalRow && totalRow.contains(activeEl);
 
-              if (totalRow && !isEditingTotal) {
+              if (totalRow) {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (totalTds.length >= 2) {
                   const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
                   const ths = Array.from(table.querySelectorAll('thead th'));
                   const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
                   
-                  if (is6Col && totalTds.length >= 2) {
-                    const labelTd = totalTds[0];
-                    labelTd.setAttribute('colspan', '4');
-                    let printModeText = '';
-                    if (activePrintMode === 'tdp_only') {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
-                    } else if (activePrintMode === 'ward_only') {
-                      printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                  if (!isEditingTotal) {
+                    if (is6Col && totalTds.length >= 2) {
+                      const labelTd = totalTds[0];
+                      labelTd.setAttribute('colspan', '4');
+                      let printModeText = '';
+                      if (activePrintMode === 'tdp_only') {
+                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                      } else if (activePrintMode === 'ward_only') {
+                        printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      } else {
+                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      }
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+
+                      if (totalTds.length >= 3) {
+                        totalTds[2].innerHTML = '';
+                      }
                     } else {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      const labelTd = totalTds[0];
+                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                     }
-                    labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
-
-                    const amountTd = totalTds[1];
-                    amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-
-                    if (totalTds.length >= 3) {
-                      totalTds[2].innerHTML = '';
-                    }
-                  } else {
-                    const labelTd = totalTds[0];
-                    labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
-                    const amountTd = totalTds[1];
-                    amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                   }
                 }
               }
