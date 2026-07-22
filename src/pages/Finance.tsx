@@ -1149,12 +1149,16 @@ const Finance = () => {
         // Tính toán định mức đóng góp kỳ vọng của hộ đối với quỹ này
         const getExpectedForMember = (r: WardFund) => {
           const contrib = r.contributions?.[wf.name];
-          if (contrib !== undefined) {
-            return contrib.expected || 0;
+          if (contrib !== undefined && typeof contrib.expected === 'number') {
+            return contrib.expected;
           }
           // Dự phòng nếu chưa khởi tạo bản ghi đóng góp
           if (isHousehold) {
-            return wf.target;
+            const isHead = headResident && (
+              headResident.id === r.user_id ||
+              headResident.full_name.trim().toLowerCase() === r.full_name.trim().toLowerCase()
+            );
+            return isHead ? wf.target : 0;
           } else {
             const age = getResidentAge(r.dob || '');
             const isLabor = age >= 18 && age <= 60;

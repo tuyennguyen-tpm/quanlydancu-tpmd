@@ -610,7 +610,16 @@ const WardFunds = () => {
     funds.forEach(f => {
       const expected: Record<string, number> = {};
 
-      // Tìm nhân khẩu khớp để lấy giới tính + ngày sinh chính xác
+      // Ưu tiên sử dụng mức chỉ tiêu expected đã được khởi tạo/lưu trong contributions của bản ghi
+      if (f.contributions) {
+        Object.keys(f.contributions).forEach(k => {
+          if (typeof f.contributions[k]?.expected === 'number') {
+            expected[k] = f.contributions[k].expected;
+          }
+        });
+      }
+
+      // Dự phòng nếu chưa có thông tin trong contributions
       let matchedRes: Resident | undefined;
       if (f.user_id) matchedRes = residents.find(r => r.id === f.user_id);
       if (!matchedRes && f.full_name) {
@@ -621,29 +630,47 @@ const WardFunds = () => {
         }
       }
 
-      // Giới tính: ưu tiên từ nhân khẩu, dự phòng tên "Thị"
-      let isFemale = false;
-      if (matchedRes) {
-        const g = (matchedRes.gender || '').toString().toLowerCase().trim();
-        isFemale = g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f');
-      } else {
-        const n = (f.full_name || '').toLowerCase();
-        isFemale = n.includes(' thị ') || n.endsWith(' thị');
-      }
-
-      // Tính tuổi = năm hiện tại - năm sinh của chính bản ghi quỹ (f.dob)
-      // KHÔNG dùng matchedRes.dob để tránh nhầm người trùng tên
-      const dobStr = f.dob || '';
-      const birthYear = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
-      const age = birthYear > 0 ? currentYear - birthYear : 30;
-
-      // Tính expected đúng cho từng quỹ cấp cá nhân
       activeFunds.forEach((fund: any) => {
+        if (expected[fund.name] !== undefined) return;
+
         const isHH = fund.scope === 'household'
           || fund.name.toLowerCase().includes('hộ')
           || fund.name.toLowerCase().includes('người cao tuổi')
           || fund.name.toLowerCase().includes('cao tuổi');
-        if (isHH) return;
+        if (isHH) {
+          expected[fund.name] = 0;
+          return;
+        }
+
+        if (matchedRes) {
+          const hh = households.find(h => h.id === matchedRes!.household_id);
+          const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
+          if (isPolicyHousehold) {
+            expected[fund.name] = 0;
+            return;
+          }
+
+          const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu'];
+          const occLower = (matchedRes.occupation || '').toLowerCase();
+          const notesLower = (matchedRes.notes || '').toLowerCase();
+          if (pensionKeywords.some(k => occLower.includes(k) || notesLower.includes(k))) {
+            expected[fund.name] = 0;
+            return;
+          }
+        }
+
+        let isFemale = false;
+        if (matchedRes) {
+          const g = (matchedRes.gender || '').toString().toLowerCase().trim();
+          isFemale = g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f');
+        } else {
+          const n = (f.full_name || '').toLowerCase();
+          isFemale = n.includes(' thị ') || n.endsWith(' thị');
+        }
+
+        const dobStr = f.dob || '';
+        const birthYear = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
+        const age = birthYear > 0 ? currentYear - birthYear : 30;
 
         const lim = parseAgeRange(fund.age_range);
         const shouldPay = isFemale
@@ -655,7 +682,7 @@ const WardFunds = () => {
       resultMap.set(f.id, expected);
     });
     return resultMap;
-  }, [funds, residents, residentsByNameMap, activeFunds]);
+  }, [funds, residents, residentsByNameMap, activeFunds, households]);
 
   // Danh sách gom theo hộ gia đình cho chế độ xem “Thu gom theo Hộ”
   const householdGroupedFunds = useMemo(() => {
@@ -3649,20 +3676,42 @@ const WardFunds = () => {
     wardActiveFunds.forEach((wf: any) => {
       const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
       
-      // Tính chỉ tiêu kỳ vọng ĐÚNG theo tuổi/giới tính thực tế (không dùng giá trị cũ trong DB)
+      // Tính chỉ tiêu kỳ vọng dựa trên thông tin đã lưu hoặc tính toán chính xác
       const getExpectedForMember = (r: WardFund) => {
-        if (isHousehold) return wf.target;
+        const contrib = r.contributions?.[wf.name];
+        if (contrib !== undefined && typeof contrib.expected === 'number') {
+          return contrib.expected;
+        }
 
-        // Tính tuổi từ dob của bản ghi quỹ (f.dob của chính người đó)
+        if (isHousehold) {
+          const isHead = headResident && (
+            headResident.id === r.user_id ||
+            headResident.full_name.trim().toLowerCase() === r.full_name.trim().toLowerCase()
+          );
+          return isHead ? wf.target : 0;
+        }
+
+        const isPolicyHousehold = household && (household.policy_type === 'poor' || household.policy_type === 'near_poor' || household.policy_type === 'policy_family');
+        if (isPolicyHousehold) return 0;
+
+        const matchedMember = members.find(m => m.id === r.user_id)
+          || members.find(m => m.full_name.trim().toLowerCase() === r.full_name.trim().toLowerCase()
+              && (!r.dob || m.dob === r.dob));
+
+        if (matchedMember) {
+          const occLower = (matchedMember.occupation || '').toLowerCase();
+          const notesLower = (matchedMember.notes || '').toLowerCase();
+          const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu'];
+          if (pensionKeywords.some(k => occLower.includes(k) || notesLower.includes(k))) {
+            return 0;
+          }
+        }
+
         const currentYearReceipt = new Date().getFullYear();
         const rDob = r.dob || '';
         const rBirthYear = parseInt(rDob.match(/\d{4}/)?.[0] || '0', 10);
         const rAge = rBirthYear > 0 ? currentYearReceipt - rBirthYear : 30;
 
-        // Xác định giới tính: ưu tiên từ CSDL nhân khẩu, dự phòng tên "Thị"
-        const matchedMember = members.find(m => m.id === r.user_id)
-          || members.find(m => m.full_name.trim().toLowerCase() === r.full_name.trim().toLowerCase()
-              && (!r.dob || m.dob === r.dob));
         let rIsFemale = false;
         if (matchedMember) {
           const g = (matchedMember.gender || '').toString().toLowerCase().trim();
@@ -3672,7 +3721,6 @@ const WardFunds = () => {
           rIsFemale = n.includes(' thị ') || n.endsWith(' thị');
         }
 
-        // Lấy giới hạn tuổi từ cài đặt quỹ
         const ageRangeStr = (wf.age_range || '').toLowerCase();
         let maleMin = 18, maleMax = 61, femaleMin = 18, femaleMax = 58;
         const mM = ageRangeStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
