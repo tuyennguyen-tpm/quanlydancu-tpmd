@@ -281,18 +281,25 @@ const WardFunds = () => {
 
   // Tập hợp tên các CHỦ HỘ từ CSDL hộ khẩu để đối chiếu nhanh và chính xác cho Tab 2
   const headNamesSet = useMemo(() => {
-    const headIds = new Set<string>();
-    households.forEach(h => {
-      if (h.head_of_household_id) headIds.add(h.head_of_household_id);
-    });
     const headNames = new Set<string>();
+    households.forEach(h => {
+      if (h.head_of_household_id) {
+        const headRes = residents.find(r => r.id === h.head_of_household_id);
+        if (headRes) headNames.add(headRes.full_name.trim().toLowerCase());
+      }
+    });
     residents.forEach(r => {
-      if (headIds.has(r.id)) {
+      if (r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) {
         headNames.add(r.full_name.trim().toLowerCase());
       }
     });
+    funds.forEach(f => {
+      if (f.note && (f.note.includes('Chủ hộ') || f.note.includes('Hộ'))) {
+        headNames.add(f.full_name.trim().toLowerCase());
+      }
+    });
     return headNames;
-  }, [households, residents]);
+  }, [households, residents, funds]);
 
   // Pre-calculated O(1) Maps for zero-latency page renders
   const householdMap = useMemo(() => {
@@ -556,16 +563,35 @@ const WardFunds = () => {
       return true;
     });
 
-    // Lọc chỉ giữ lại chủ hộ nếu ở Tab thu theo Hộ:
+    // Lọc chỉ giữ lại đại diện hộ nếu ở Tab thu theo Hộ:
     let filteredByMode: WardFund[];
     if (subTabMode === 'household_list') {
+      const seenHouseholdIds = new Set<string>();
       const seenNames = new Set<string>();
       filteredByMode = list.filter(f => {
         const nameKey = f.full_name.trim().toLowerCase();
-        if (!headNamesSet.has(nameKey)) return false;
+        const meta = fundMetaMap.get(f.id);
+        const hhId = meta?.householdId;
+
+        if (hhId && seenHouseholdIds.has(hhId)) return false;
         if (seenNames.has(nameKey)) return false;
-        seenNames.add(nameKey);
-        return true;
+
+        const isHead = headNamesSet.has(nameKey) || (f.note && (f.note.includes('Chủ hộ') || f.note.includes('Hộ')));
+        
+        if (isHead) {
+          if (hhId) seenHouseholdIds.add(hhId);
+          seenNames.add(nameKey);
+          return true;
+        }
+
+        // Đảm bảo mọi Hộ dân xuất hiện ít nhất 1 dòng đại diện trong Tab Hộ
+        if (hhId && !seenHouseholdIds.has(hhId)) {
+          seenHouseholdIds.add(hhId);
+          seenNames.add(nameKey);
+          return true;
+        }
+
+        return false;
       });
     } else {
       filteredByMode = list;
