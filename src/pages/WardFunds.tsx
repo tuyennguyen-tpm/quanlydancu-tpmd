@@ -4939,9 +4939,7 @@ const WardFunds = () => {
             }, true);
           });
 
-          try {
-            recalculateReceiptTotals();
-          } catch (e) {}
+
 
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
@@ -4987,14 +4985,7 @@ const WardFunds = () => {
             }
           });
 
-          if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            recalculateReceiptTotals();
-          }
-          window.addEventListener('DOMContentLoaded', recalculateReceiptTotals);
-          window.addEventListener('load', recalculateReceiptTotals);
-          setTimeout(recalculateReceiptTotals, 50);
-          setTimeout(recalculateReceiptTotals, 200);
-          setTimeout(recalculateReceiptTotals, 500);
+
         </script>
       </body>
       </html>
@@ -5343,9 +5334,7 @@ const WardFunds = () => {
           }
 
           window.onload = function() {
-            try { recalculateReceiptTotals(); } catch(e) {}
             setTimeout(function() {
-              try { recalculateReceiptTotals(); } catch(e) {}
               window.print();
             }, 300);
           };

@@ -1998,9 +1998,7 @@ const Finance = () => {
             }
           } catch (e) {}
 
-          try {
-            recalculateReceiptTotals();
-          } catch (e) {}
+
 
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
@@ -2045,21 +2043,7 @@ const Finance = () => {
             }
           });
 
-          if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            recalculateReceiptTotals();
-          }
-          window.addEventListener('DOMContentLoaded', recalculateReceiptTotals);
-          window.addEventListener('load', recalculateReceiptTotals);
-          setTimeout(recalculateReceiptTotals, 50);
-          setTimeout(recalculateReceiptTotals, 150);
-          setTimeout(recalculateReceiptTotals, 300);
-          setTimeout(recalculateReceiptTotals, 600);
-          setTimeout(recalculateReceiptTotals, 1200);
-          window.addEventListener('DOMContentLoaded', recalculateReceiptTotals);
-          window.addEventListener('load', recalculateReceiptTotals);
-          setTimeout(recalculateReceiptTotals, 50);
-          setTimeout(recalculateReceiptTotals, 200);
-          setTimeout(recalculateReceiptTotals, 500);
+
         </script>
       </body>
       </html>
@@ -3330,9 +3314,7 @@ const Finance = () => {
           }
 
           window.onload = function() {
-            try { recalculateReceiptTotals(); } catch(e) {}
             setTimeout(function() {
-              try { recalculateReceiptTotals(); } catch(e) {}
               window.print();
             }, 300);
           };
