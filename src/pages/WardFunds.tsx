@@ -4845,11 +4845,16 @@ const WardFunds = () => {
                 const tds = Array.from(row.querySelectorAll('td'));
                 if (tds.length < 2) return;
 
-                let amountTd = row.querySelector('.receipt-amount-cell');
-                if (!amountTd) {
-                  if (tds.length >= 6) amountTd = tds[4];
-                  else if (tds.length >= 4) amountTd = tds[2];
-                  else amountTd = tds[tds.length - 2];
+                let amountTd = null;
+                if (amountColIdx >= 0 && tds[amountColIdx]) {
+                  amountTd = tds[amountColIdx];
+                } else {
+                  amountTd = row.querySelector('.receipt-amount-cell');
+                  if (!amountTd) {
+                    if (tds.length >= 6) amountTd = tds[4];
+                    else if (tds.length >= 4) amountTd = tds[2];
+                    else amountTd = tds[tds.length - 2];
+                  }
                 }
 
                 const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
