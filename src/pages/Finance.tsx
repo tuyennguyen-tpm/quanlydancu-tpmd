@@ -1192,12 +1192,17 @@ const Finance = () => {
       });
     }
 
+    const parseNumVal = (val: any): number => {
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      const digits = String(val || '0').replace(/[^\d]/g, '');
+      return parseInt(digits, 10) || 0;
+    };
     const isWardFund = (name: string) => {
       const n = name.toLowerCase();
       return n.includes('ubnd') || n.includes('phường') || n.includes('thiên tai') || n.includes('đền ơn') || n.includes('cao tuổi');
     };
-    const tdpTotal = receiptRows.filter(r => !isWardFund(r.name)).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const wardTotal = receiptRows.filter(r => isWardFund(r.name)).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const tdpTotal = receiptRows.filter(r => !isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
+    const wardTotal = receiptRows.filter(r => isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
     const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {
