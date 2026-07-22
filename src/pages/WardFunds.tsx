@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge } from '../utils/dateUtils';
+import { calculateExactAge, formatDateVN } from '../utils/dateUtils';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -7474,14 +7474,16 @@ const WardFunds = () => {
                           Ngày nộp
                         </label>
                         <input 
-                          type="date"
-                          value={input.date}
+                          type="text"
+                          placeholder="dd/mm/yyyy"
+                          value={formatDateVN(input.date)}
                           onChange={(e) => {
+                            const val = e.target.value;
                             setContribInputs({
                               ...contribInputs,
                               [fund.name]: {
                                 ...input,
-                                date: e.target.value
+                                date: val
                               }
                             });
                           }}

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge } from '../utils/dateUtils';
+import { calculateExactAge, formatDateVN } from '../utils/dateUtils';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -4936,10 +4936,11 @@ const Finance = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Ngày nộp *</label>
+                    <label>Ngày nộp (DD/MM/YYYY) *</label>
                     <input 
-                      type="date" 
-                      value={fundDateInput}
+                      type="text" 
+                      placeholder="dd/mm/yyyy"
+                      value={formatDateVN(fundDateInput)}
                       onChange={(e) => setFundDateInput(e.target.value)}
                       required
                     />
