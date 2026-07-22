@@ -4874,10 +4874,7 @@ const WardFunds = () => {
                 effectiveTotal = wardTotal;
               }
 
-              const activeEl = document.activeElement;
-              const isEditingTotal = activeEl && totalRow && totalRow.contains(activeEl);
-
-              if (totalRow && !isEditingTotal) {
+              if (totalRow) {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (totalTds.length >= 2) {
                   const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
@@ -4916,18 +4913,11 @@ const WardFunds = () => {
                 || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
               
               if (wordsContainer) {
-                let finalWordsAmount = effectiveTotal;
-                if (isEditingTotal && totalRow) {
-                  const totalTds = totalRow.querySelectorAll('td');
-                  const valStr = totalTds[1] ? (totalTds[1].textContent || totalTds[1].innerText || '') : '';
-                  const parsedUserNum = parseInt(valStr.replace(/[^\d]/g, ''), 10);
-                  if (!isNaN(parsedUserNum)) finalWordsAmount = parsedUserNum;
-                }
                 const strongEl = wordsContainer.querySelector('strong');
                 if (strongEl) {
-                  strongEl.innerText = docSoTien(finalWordsAmount);
+                  strongEl.innerText = docSoTien(effectiveTotal);
                 } else {
-                  wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(finalWordsAmount) + '</strong>';
+                  wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
                 }
               }
             });
