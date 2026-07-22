@@ -392,11 +392,6 @@ const WardFunds = () => {
     // 1. Lọc tất cả nhân khẩu trùng tên trong CSDL (O(1) lookup)
     let candidates = residentsByNameMap.get(nameKey) || [];
 
-    // Nếu bản ghi quỹ có user_id rõ ràng, chỉ đối chiếu với nhân khẩu cùng tổ (TDP) để tránh lẫn lộn chéo tổ
-    if (f.user_id) {
-      candidates = candidates.filter(r => r.user_id === f.user_id);
-    }
-
     let matchedResident: Resident | undefined = undefined;
 
     if (candidates.length === 1) {
@@ -526,17 +521,41 @@ const WardFunds = () => {
     return map;
   }, [funds, residents, households, groups, residentsInfoLookup]);
 
-  // Filtered List
+  // Helper loại bỏ dấu tiếng Việt để phục vụ tìm kiếm không dấu linh hoạt
+  const removeAccents = (str: string): string => {
+    return (str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase()
+      .trim();
+  };
+
+  // Filtered List với Tìm kiếm siêu thông minh (Hỗ trợ Không dấu + Tìm theo tên mọi thành viên trong hộ + Địa chỉ + Ghi chú + Tổ)
   const filteredFunds = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const rawTerm = searchTerm.trim().toLowerCase();
+    const termNoAccent = removeAccents(rawTerm);
+
     const list = funds.filter(f => {
       const meta = fundMetaMap.get(f.id);
       const headName = meta?.headName || '';
+      const groupName = meta?.groupName || '';
+      const hhId = meta?.householdId;
 
-      const matchesSearch = !term || 
-        f.full_name.toLowerCase().includes(term) || 
-        (f.address && f.address.toLowerCase().includes(term)) ||
-        (headName && headName.toLowerCase().includes(term));
+      // Gom tất cả tên thành viên trong hộ gia đình này để khi gõ tên bất kỳ thành viên nào cũng tìm thấy Hộ
+      let memberNamesStr = '';
+      if (hhId && !hhId.startsWith('addr__')) {
+        const hhMembers = residents.filter(r => r.household_id === hhId);
+        memberNamesStr = hhMembers.map(m => m.full_name).join(' ');
+      }
+
+      const searchableText = `${f.full_name} ${f.address || ''} ${f.note || ''} ${f.dob || ''} ${headName} ${groupName} ${memberNamesStr}`.toLowerCase();
+      const searchableNoAccent = removeAccents(searchableText);
+
+      const matchesSearch = !rawTerm || 
+        searchableText.includes(rawTerm) || 
+        searchableNoAccent.includes(termNoAccent);
       
       if (!matchesSearch) return false;
 
@@ -556,7 +575,7 @@ const WardFunds = () => {
 
       // Filter group
       if (groupFilter !== 'all') {
-        const fundGroup = fundMetaMap.get(f.id)?.groupName || '';
+        const fundGroup = meta?.groupName || '';
         if (fundGroup !== groupFilter) return false;
       }
 
