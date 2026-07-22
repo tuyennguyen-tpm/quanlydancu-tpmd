@@ -3312,6 +3312,22 @@ const WardFunds = () => {
                 if (totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
+                    const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
+                    const existingDigits = existingText.replace(/[^\d]/g, '');
+                    const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
+
+                    if (effectiveTotal === 0 && existingNum > 0) {
+                      const hasAnyNonEmptyRow = rows.some(r => {
+                        if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
+                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
+                        const cellDigits = cell ? (cell.textContent || '').replace(/[^\d]/g, '') : '';
+                        return cellDigits.length > 0;
+                      });
+                      if (hasAnyNonEmptyRow) {
+                        effectiveTotal = existingNum;
+                      }
+                    }
+
                     const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
                     const ths = Array.from(table.querySelectorAll('thead th'));
                     const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
@@ -4876,6 +4892,22 @@ const WardFunds = () => {
                 if (totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
+                    const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
+                    const existingDigits = existingText.replace(/[^\d]/g, '');
+                    const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
+
+                    if (effectiveTotal === 0 && existingNum > 0) {
+                      const hasAnyNonEmptyRow = rows.some(r => {
+                        if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
+                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
+                        const cellDigits = cell ? (cell.textContent || '').replace(/[^\d]/g, '') : '';
+                        return cellDigits.length > 0;
+                      });
+                      if (hasAnyNonEmptyRow) {
+                        effectiveTotal = existingNum;
+                      }
+                    }
+
                     const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
                     const ths = Array.from(table.querySelectorAll('thead th'));
                     const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
