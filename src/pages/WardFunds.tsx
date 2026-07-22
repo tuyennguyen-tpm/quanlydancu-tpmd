@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge, formatDateVN } from '../utils/dateUtils';
+import { calculateExactAge } from '../utils/dateUtils';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -35,6 +35,9 @@ interface DebouncedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEl
 const formatDateVN = (dateStr?: string | null): string => {
   if (!dateStr || !dateStr.trim()) return '';
   const str = dateStr.trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+    return str;
+  }
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
     const [y, m, d] = str.split('-');
     return `${d}/${m}/${y}`;
@@ -46,6 +49,21 @@ const formatDateVN = (dateStr?: string | null): string => {
   if (/^\d{4}\/\d{2}\/\d{2}$/.test(str)) {
     const [y, m, d] = str.split('/');
     return `${d}/${m}/${y}`;
+  }
+  if (/^\d{1,2}[-\/. ]\d{1,2}[-\/. ]\d{4}$/.test(str)) {
+    const parts = str.split(/[-\/. ]/);
+    const p1 = parseInt(parts[0], 10);
+    const p2 = parseInt(parts[1], 10);
+    const y = parts[2];
+    if (p1 <= 12 && p2 > 12) {
+      const m = String(p1).padStart(2, '0');
+      const d = String(p2).padStart(2, '0');
+      return `${d}/${m}/${y}`;
+    } else {
+      const d = String(p1).padStart(2, '0');
+      const m = String(p2).padStart(2, '0');
+      return `${d}/${m}/${y}`;
+    }
   }
   return str;
 };
