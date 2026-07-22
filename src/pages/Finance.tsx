@@ -1192,10 +1192,13 @@ const Finance = () => {
       });
     }
 
-    const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const otherTotal = receiptRows.filter(r => !r.name.toLowerCase().includes('tdp') && !r.name.toLowerCase().includes('tổ dân phố') && !r.name.toLowerCase().includes('ubnd') && !r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const grandTotal = tdpTotal + wardTotal + otherTotal;
+    const isWardFund = (name: string) => {
+      const n = name.toLowerCase();
+      return n.includes('ubnd') || n.includes('phường') || n.includes('thiên tai') || n.includes('đền ơn') || n.includes('cao tuổi');
+    };
+    const tdpTotal = receiptRows.filter(r => !isWardFund(r.name)).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const wardTotal = receiptRows.filter(r => isWardFund(r.name)).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
@@ -1352,7 +1355,7 @@ const Finance = () => {
                    ? `(UBND: ${wardTotal.toLocaleString('vi-VN')} đ)` 
                    : ((printMode as string) === 'tdp_only' 
                      ? `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ)` 
-                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${(wardTotal + otherTotal).toLocaleString('vi-VN')} đ)`)}
+                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${wardTotal.toLocaleString('vi-VN')} đ)`)}
                </td>
                <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
                <td style="border: 1px solid #000; padding: 4px 6px;"></td>
