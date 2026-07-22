@@ -1398,6 +1398,8 @@ const WardFunds = () => {
         if (batchFunds.length === 0) {
           showToast('Không tìm thấy dữ liệu Hộ gia đình hoặc Nhân khẩu để khởi tạo!', 'info');
         } else {
+          // Xóa dữ liệu cũ của năm trước khi lưu danh sách mới khởi tạo để tránh nhân đôi bản ghi
+          await db.clearWardFunds(selectedYear);
           // Lưu hàng loạt vào bảng ward_funds
           await db.saveWardFundsBatch(batchFunds);
           showToast(`Khởi tạo thành công! Đã tạo danh sách ${successCount} bản ghi Hộ gia đình & Nhân khẩu đóng quỹ năm ${selectedYear}.`, 'success');
@@ -3735,8 +3737,21 @@ const WardFunds = () => {
         return shouldPay ? wf.target : 0;
       };
 
-      const expectedTotalForHH = memberWardRecords.reduce((sum, r) => sum + getExpectedForMember(r), 0);
-      const actualPaid = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+      const isPolicyHousehold = household && (household.policy_type === 'poor' || household.policy_type === 'near_poor' || household.policy_type === 'policy_family');
+
+      let expectedTotalForHH = 0;
+      if (isPolicyHousehold) {
+        expectedTotalForHH = 0;
+      } else if (isHousehold) {
+        expectedTotalForHH = wf.target;
+      } else {
+        expectedTotalForHH = wf.target * laborCount;
+      }
+
+      const actualPaidSum = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+      const actualPaid = (expectedTotalForHH > 0 && actualPaidSum >= expectedTotalForHH)
+        ? expectedTotalForHH
+        : (actualPaidSum > 0 ? actualPaidSum : 0);
 
       let noteText = '';
       if (expectedTotalForHH === 0) {
@@ -3750,8 +3765,7 @@ const WardFunds = () => {
           if (isHousehold) {
             noteText = 'Chưa nộp';
           } else {
-            const expectedCount = Math.round(expectedTotalForHH / wf.target) || 1;
-            noteText = `${expectedCount} khẩu LĐ - Chưa nộp`;
+            noteText = `${laborCount} khẩu LĐ - Chưa nộp`;
           }
         }
       }
