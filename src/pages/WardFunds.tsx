@@ -3206,7 +3206,10 @@ const WardFunds = () => {
             return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
           }
 
+          let isRecalculating = false;
           function recalculateReceiptTotals() {
+            if (isRecalculating) return;
+            isRecalculating = true;
             try {
               const containers = document.querySelectorAll('.receipt-container');
               if (containers.length === 0) return;
@@ -3275,15 +3278,32 @@ const WardFunds = () => {
                   if (tds.length < 2) return;
 
                   let amountTd = row.querySelector('.receipt-amount-cell');
-                  if (!amountTd) {
-                    if (tds.length >= 6) amountTd = tds[4];
-                    else if (tds.length >= 4) amountTd = tds[2];
-                    else amountTd = tds[tds.length - 2];
+                  let rateTd = null;
+
+                  if (tds.length >= 6) {
+                    rateTd = tds[3];
+                    if (!amountTd) amountTd = tds[4];
+                  } else if (tds.length >= 5) {
+                    rateTd = tds[2];
+                    if (!amountTd) amountTd = tds[3];
+                  } else if (tds.length >= 4) {
+                    rateTd = tds[1];
+                    if (!amountTd) amountTd = tds[2];
+                  } else {
+                    if (!amountTd) amountTd = tds[tds.length - 1];
                   }
 
                   const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
                   const digits = cellText.replace(/[^\d]/g, '');
-                  const num = digits ? parseInt(digits, 10) : 0;
+                  let num = digits ? parseInt(digits, 10) : 0;
+
+                  if (num === 0 && rateTd) {
+                    const rateText = rateTd.textContent || rateTd.innerText || '';
+                    const rateDigits = rateText.replace(/[^\d]/g, '');
+                    if (rateDigits) {
+                      num = parseInt(rateDigits, 10);
+                    }
+                  }
 
                   const fundTypeAttr = row.getAttribute('data-fund-type');
                   const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
@@ -3324,19 +3344,30 @@ const WardFunds = () => {
                       } else {
                         printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       }
-                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+                      const newLabelText = 'TỔNG CỘNG THỰC THU ' + printModeText;
+                      if (labelTd.innerHTML !== newLabelText) {
+                        labelTd.innerHTML = newLabelText;
+                      }
 
                       const amountTd = totalTds[1];
-                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      const newAmountText = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      if (amountTd.innerHTML !== newAmountText) {
+                        amountTd.innerHTML = newAmountText;
+                      }
 
-                      if (totalTds.length >= 3) {
+                      if (totalTds.length >= 3 && totalTds[2].innerHTML !== '') {
                         totalTds[2].innerHTML = '';
                       }
                     } else {
                       const labelTd = totalTds[0];
-                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      if (labelTd.innerHTML !== 'TỔNG CỘNG CÁC KHOẢN') {
+                        labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      }
                       const amountTd = totalTds[1];
-                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      const newAmountText = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      if (amountTd.innerHTML !== newAmountText) {
+                        amountTd.innerHTML = newAmountText;
+                      }
                     }
                   }
                 }
@@ -3346,15 +3377,23 @@ const WardFunds = () => {
                 
                 if (wordsContainer) {
                   const strongEl = wordsContainer.querySelector('strong');
+                  const wordsText = docSoTien(effectiveTotal);
                   if (strongEl) {
-                    strongEl.innerText = docSoTien(effectiveTotal);
+                    if (strongEl.innerText !== wordsText) {
+                      strongEl.innerText = wordsText;
+                    }
                   } else {
-                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
+                    const newWordsHtml = 'Số tiền bằng chữ: <strong>' + wordsText + '</strong>';
+                    if (wordsContainer.innerHTML !== newWordsHtml) {
+                      wordsContainer.innerHTML = newWordsHtml;
+                    }
                   }
                 }
               });
             } catch (err) {
               console.error('Error recalculating totals:', err);
+            } finally {
+              isRecalculating = false;
             }
           }
 
@@ -3364,20 +3403,13 @@ const WardFunds = () => {
             });
           });
 
-          ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
-            editor.addEventListener(evtType, function() {
-              recalculateReceiptTotals();
-            }, true);
-          });
-
-          try {
-            const observer = new MutationObserver(function() {
-              recalculateReceiptTotals();
+          if (editor) {
+            ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
+              editor.addEventListener(evtType, function() {
+                recalculateReceiptTotals();
+              }, true);
             });
-            if (editor) {
-              observer.observe(editor, { childList: true, subtree: true, characterData: true });
-            }
-          } catch (e) {}
+          }
 
           try {
             recalculateReceiptTotals();
@@ -4777,7 +4809,10 @@ const WardFunds = () => {
             return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
           }
 
+          let isRecalculating = false;
           function recalculateReceiptTotals() {
+            if (isRecalculating) return;
+            isRecalculating = true;
             try {
               const containers = document.querySelectorAll('.receipt-container');
               if (containers.length === 0) return;
@@ -4845,15 +4880,32 @@ const WardFunds = () => {
                   if (tds.length < 2) return;
 
                   let amountTd = row.querySelector('.receipt-amount-cell');
-                  if (!amountTd) {
-                    if (tds.length >= 6) amountTd = tds[4];
-                    else if (tds.length >= 4) amountTd = tds[2];
-                    else amountTd = tds[tds.length - 2];
+                  let rateTd = null;
+
+                  if (tds.length >= 6) {
+                    rateTd = tds[3];
+                    if (!amountTd) amountTd = tds[4];
+                  } else if (tds.length >= 5) {
+                    rateTd = tds[2];
+                    if (!amountTd) amountTd = tds[3];
+                  } else if (tds.length >= 4) {
+                    rateTd = tds[1];
+                    if (!amountTd) amountTd = tds[2];
+                  } else {
+                    if (!amountTd) amountTd = tds[tds.length - 1];
                   }
 
                   const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
                   const digits = cellText.replace(/[^\d]/g, '');
-                  const num = digits ? parseInt(digits, 10) : 0;
+                  let num = digits ? parseInt(digits, 10) : 0;
+
+                  if (num === 0 && rateTd) {
+                    const rateText = rateTd.textContent || rateTd.innerText || '';
+                    const rateDigits = rateText.replace(/[^\d]/g, '');
+                    if (rateDigits) {
+                      num = parseInt(rateDigits, 10);
+                    }
+                  }
 
                   const fundTypeAttr = row.getAttribute('data-fund-type');
                   const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
@@ -4894,19 +4946,30 @@ const WardFunds = () => {
                       } else {
                         printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       }
-                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+                      const newLabelText = 'TỔNG CỘNG THỰC THU ' + printModeText;
+                      if (labelTd.innerHTML !== newLabelText) {
+                        labelTd.innerHTML = newLabelText;
+                      }
 
                       const amountTd = totalTds[1];
-                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      const newAmountText = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      if (amountTd.innerHTML !== newAmountText) {
+                        amountTd.innerHTML = newAmountText;
+                      }
 
-                      if (totalTds.length >= 3) {
+                      if (totalTds.length >= 3 && totalTds[2].innerHTML !== '') {
                         totalTds[2].innerHTML = '';
                       }
                     } else {
                       const labelTd = totalTds[0];
-                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      if (labelTd.innerHTML !== 'TỔNG CỘNG CÁC KHOẢN') {
+                        labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      }
                       const amountTd = totalTds[1];
-                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      const newAmountText = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      if (amountTd.innerHTML !== newAmountText) {
+                        amountTd.innerHTML = newAmountText;
+                      }
                     }
                   }
                 }
@@ -4916,15 +4979,23 @@ const WardFunds = () => {
                 
                 if (wordsContainer) {
                   const strongEl = wordsContainer.querySelector('strong');
+                  const wordsText = docSoTien(effectiveTotal);
                   if (strongEl) {
-                    strongEl.innerText = docSoTien(effectiveTotal);
+                    if (strongEl.innerText !== wordsText) {
+                      strongEl.innerText = wordsText;
+                    }
                   } else {
-                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
+                    const newWordsHtml = 'Số tiền bằng chữ: <strong>' + wordsText + '</strong>';
+                    if (wordsContainer.innerHTML !== newWordsHtml) {
+                      wordsContainer.innerHTML = newWordsHtml;
+                    }
                   }
                 }
               });
             } catch (err) {
               console.error('Error recalculating totals:', err);
+            } finally {
+              isRecalculating = false;
             }
           }
 
@@ -4934,11 +5005,17 @@ const WardFunds = () => {
             });
           });
 
-          ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
-            editor.addEventListener(evtType, function() {
-              recalculateReceiptTotals();
-            }, true);
-          });
+          if (editor) {
+            ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
+              editor.addEventListener(evtType, function() {
+                recalculateReceiptTotals();
+              }, true);
+            });
+          }
+
+          try {
+            recalculateReceiptTotals();
+          } catch (e) {}
 
 
 
