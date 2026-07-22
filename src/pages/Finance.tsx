@@ -1211,9 +1211,9 @@ const Finance = () => {
       });
     }
 
-    const tdpTotal = receiptRows.filter(r => r.name.startsWith('[TDP]')).reduce((sum, r) => sum + r.amount, 0);
-    const wardTotal = receiptRows.filter(r => r.name.startsWith('[UBND]') || r.name.startsWith('[UBND Phường]')).reduce((sum, r) => sum + r.amount, 0);
-    const grandTotal = tdpTotal + wardTotal;
+    const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + r.amount, 0);
+    const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + r.amount, 0);
+    const grandTotal = receiptRows.reduce((sum, r) => sum + r.amount, 0);
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
