@@ -738,7 +738,16 @@ const WardFunds = () => {
     funds.forEach(f => {
       const expected: Record<string, number> = {};
 
-      // Tìm nhân khẩu khớp trong CSDL để lấy giới tính & hộ chính sách / hưu trí
+      // Ưu tiên sử dụng mức chỉ tiêu expected đã được khởi tạo/lưu trong contributions của bản ghi
+      if (f.contributions) {
+        Object.keys(f.contributions).forEach(k => {
+          if (typeof f.contributions[k]?.expected === 'number') {
+            expected[k] = f.contributions[k].expected;
+          }
+        });
+      }
+
+      // Dự phòng nếu chưa có thông tin trong contributions
       let matchedRes: Resident | undefined;
       if (f.user_id) matchedRes = residents.find(r => r.id === f.user_id);
       if (!matchedRes && f.full_name) {
@@ -750,6 +759,7 @@ const WardFunds = () => {
       }
 
       activeFunds.forEach((fund: any) => {
+        if (expected[fund.name] !== undefined) return;
 
         const isHH = fund.scope === 'household'
           || fund.name.toLowerCase().includes('hộ')
@@ -841,13 +851,13 @@ const WardFunds = () => {
       || fund.name.toLowerCase().includes('người cao tuổi')
       || fund.name.toLowerCase().includes('cao tuổi');
 
-    // Tính tổng số tiền phải thu từ map tính động chỉ tiêu theo tuổi/giới tính thực tế
-    const expected = isHouseholdScope
-      ? fund.target * new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
-      : funds.reduce((sum, f) => {
-          const compExp = computedExpectedMap.get(f.id);
-          return sum + (compExp?.[fund.name] ?? (f.contributions?.[fund.name]?.expected || 0));
-        }, 0);
+    // Tính tổng số tiền phải thu: chỉ tính từ bản ghi có expected > 0
+    const recordsWithExpected = funds.filter(f => (f.contributions?.[fund.name]?.expected || 0) > 0);
+    const expected = recordsWithExpected.length > 0
+      ? recordsWithExpected.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0)
+      : fund.target * (isHouseholdScope
+          ? new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
+          : funds.length);
 
     const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
     const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
@@ -2676,20 +2686,18 @@ const WardFunds = () => {
     const tdpFundsConfig = (db as any).getFundList() || [];
     const householdFundsList = (db as any).getHouseholdFunds() || [];
 
-    // Tính tiền Quỹ Phường
+    // Tính tiền Quỹ Phường thực tế đã nộp (actual)
     let wardTotal = 0;
     const wardRows = activeFunds.map((fund, idx) => {
       const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-      const expectedVal = typeof contrib.expected === 'number' && contrib.expected > 0 ? contrib.expected : (typeof fund.target === 'number' ? fund.target : (parseInt(String(fund.target || '0').replace(/[^\d]/g, ''), 10) || 0));
       const rawPaid = contrib.actual ?? 0;
-      const paidNum = typeof rawPaid === 'number'
+      const amountPaid = typeof rawPaid === 'number'
         ? rawPaid
         : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
-      const amountPaid = paidNum > 0 ? paidNum : expectedVal;
       wardTotal += amountPaid;
       const note = contrib.date 
         ? new Date(contrib.date).toLocaleDateString('vi-VN') 
-        : (paidNum > 0 ? 'Đã thu' : 'Đã thu đủ theo thông báo');
+        : '—';
       return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
@@ -2700,21 +2708,19 @@ const WardFunds = () => {
       `;
     });
 
-    // Tính tiền Quỹ TDP
+    // Tính tiền Quỹ TDP thực tế đã nộp (nếu khớp Hộ gia đình)
     let tdpTotal = 0;
     const tdpRows: string[] = [];
     if (hhOfRes && tdpFundsConfig.length > 0) {
       const hhFunds = householdFundsList.filter((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear);
       tdpFundsConfig.forEach((tf: any, idx: number) => {
-        const targetVal = typeof tf.target === 'number' ? tf.target : (parseInt(String(tf.target || '0').replace(/[^\d]/g, ''), 10) || 0);
         const fundRec = hhFunds.find((hf: any) => hf.fund_name === tf.name);
         const rawPaid = fundRec ? fundRec.amount : 0;
-        const paidNum = typeof rawPaid === 'number'
+        const amountPaid = typeof rawPaid === 'number'
           ? rawPaid
           : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
-        const amountPaid = paidNum > 0 ? paidNum : targetVal;
         tdpTotal += amountPaid;
-        const note = fundRec?.paid_at ? new Date(fundRec.paid_at).toLocaleDateString('vi-VN') : 'Đã thu đủ theo thông báo';
+        const note = fundRec?.paid_at ? new Date(fundRec.paid_at).toLocaleDateString('vi-VN') : '—';
         tdpRows.push(`
           <tr>
             <td style="text-align: center;">${wardRows.length + idx + 1}</td>
@@ -2960,7 +2966,7 @@ const WardFunds = () => {
     const SAVE_KEY = `receipt_html_ward_indiv_${item.id}_${selectedYear}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
     const hasSavedVersion = !!savedReceiptHtml;
-    const receiptHtml = freshReceiptHtml;
+    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -3286,7 +3292,7 @@ const WardFunds = () => {
               let amountColIdx = -1;
               ths.forEach((th, idx) => {
                 const text = (th.textContent || th.innerText || '').toLowerCase();
-                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('nộp')) {
+                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
                   amountColIdx = idx;
                 }
               });
@@ -3311,28 +3317,11 @@ const WardFunds = () => {
                   else targetCellIdx = tds.length - 2;
                 }
 
-                let num = 0;
-                if (tds[targetCellIdx]) {
-                  const cellText = tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '';
-                  const digits = cellText.replace(/[^\d]/g, '');
-                  if (digits) num = parseInt(digits, 10) || 0;
-                }
-                if (num === 0) {
-                  tds.forEach((td, idx) => {
-                    if (idx === 0) return;
-                    const txt = td.textContent || td.innerText || '';
-                    if (txt.includes('đ') || txt.includes('VNĐ') || txt.includes('đ/')) {
-                      const digits = txt.replace(/[^\d]/g, '');
-                      if (digits) {
-                        const val = parseInt(digits, 10) || 0;
-                        if (val > 0) num = val;
-                      }
-                    }
-                  });
-                }
+                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
+                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
+                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn');
                 
                 if (isWard) {
                   wardTotal += num;
@@ -4237,37 +4226,10 @@ const WardFunds = () => {
       });
     });
 
-    const parseNumVal = (val: any): number => {
-      if (typeof val === 'number') return isNaN(val) ? 0 : val;
-      const digits = String(val || '0').replace(/[^\d]/g, '');
-      return parseInt(digits, 10) || 0;
-    };
-    let tdpTotal = 0;
-    let wardTotal = 0;
-    receiptRows.forEach(r => {
-      const nameLower = (r.name || '').toLowerCase();
-      const amt = parseNumVal(r.amount);
-      if (nameLower.includes('[ubnd') || nameLower.includes('ubnd') || nameLower.includes('phường') || nameLower.includes('thiên tai') || nameLower.includes('đền ơn') || nameLower.includes('cao tuổi')) {
-        wardTotal += amt;
-      } else {
-        tdpTotal += amt;
-      }
-    });
-
-    if (tdpTotal === 0 && (printMode as string) !== 'ward_only') {
-      const defaultTdpList = (db as any).getFundList() || [];
-      tdpTotal = defaultTdpList.reduce((sum: number, f: any) => sum + parseNumVal(f.target || 50000), 0);
-    }
-
-    if (wardTotal === 0 && (printMode as string) !== 'tdp_only') {
-      const defaultWardList = (db as any).getWardFundList() || [];
-      wardTotal = defaultWardList.reduce((sum: number, wf: any) => {
-        const tgt = parseNumVal(wf.target || 20000);
-        return sum + (wf.scope === 'person' ? tgt * (laborCount || 1) : tgt);
-      }, 0);
-    }
-
-    const grandTotal = tdpTotal + wardTotal;
+    const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const otherTotal = receiptRows.filter(r => !r.name.toLowerCase().includes('tdp') && !r.name.toLowerCase().includes('tổ dân phố') && !r.name.toLowerCase().includes('ubnd') && !r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const grandTotal = tdpTotal + wardTotal + otherTotal;
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
@@ -4424,7 +4386,7 @@ const WardFunds = () => {
                    ? `(UBND: ${wardTotal.toLocaleString('vi-VN')} đ)` 
                    : ((printMode as string) === 'tdp_only' 
                      ? `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ)` 
-                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${wardTotal.toLocaleString('vi-VN')} đ)`)}
+                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${(wardTotal + otherTotal).toLocaleString('vi-VN')} đ)`)}
                </td>
                <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
                <td style="border: 1px solid #000; padding: 4px 6px;"></td>
@@ -4569,10 +4531,7 @@ const WardFunds = () => {
     );
     const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-    if (savedReceiptHtml && (savedReceiptHtml.includes('(TDP: 0 đ + UBND: 0 đ)') || savedReceiptHtml.includes('>0 đ<') || savedReceiptHtml.includes('Không đồng'))) {
-      localStorage.removeItem(SAVE_KEY);
-    }
-    const hasSavedVersion = !savedReceiptHtml ? false : !savedReceiptHtml.includes('(TDP: 0 đ + UBND: 0 đ)');
+    const hasSavedVersion = !!savedReceiptHtml;
     const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
@@ -4866,7 +4825,7 @@ const WardFunds = () => {
               let amountColIdx = -1;
               ths.forEach((th, idx) => {
                 const text = (th.textContent || th.innerText || '').toLowerCase();
-                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('nộp')) {
+                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
                   amountColIdx = idx;
                 }
               });
@@ -4891,36 +4850,20 @@ const WardFunds = () => {
                   else targetCellIdx = tds.length - 2;
                 }
 
-                let num = 0;
-                if (tds[targetCellIdx]) {
-                  const cellText = tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '';
-                  const digits = cellText.replace(/[^\d]/g, '');
-                  if (digits) num = parseInt(digits, 10) || 0;
-                }
-                if (num === 0) {
-                  tds.forEach((td, idx) => {
-                    if (idx === 0) return;
-                    const txt = td.textContent || td.innerText || '';
-                    if (txt.includes('đ') || txt.includes('VNĐ') || txt.includes('đ/')) {
-                      const digits = txt.replace(/[^\d]/g, '');
-                      if (digits) {
-                        const val = parseInt(digits, 10) || 0;
-                        if (val > 0) num = val;
-                      }
-                    }
-                  });
-                }
+                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
+                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                const isWard = fundName.includes('[ubnd') || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
-                if (isWard) {
+                if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
+                  tdpTotal += num;
+                } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
                   wardTotal += num;
                 } else {
-                  tdpTotal += num;
+                  otherTotal += num;
                 }
               });
 
-              const grandTotal = tdpTotal + wardTotal;
+              const grandTotal = tdpTotal + wardTotal + otherTotal;
               const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
 
               const activeEl = document.activeElement;
@@ -4941,7 +4884,7 @@ const WardFunds = () => {
                     } else if (activePrintMode === 'ward_only') {
                       printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     } else {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + (wardTotal + otherTotal).toLocaleString('vi-VN') + ' đ)';
                     }
                     labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
 
@@ -6981,11 +6924,9 @@ const WardFunds = () => {
                           <td style={{ padding: '12px 10px' }}>{item.address || '—'}</td>
                           
                           {displayedActiveFunds.map(fund => {
-                            const compExp = computedExpectedMap.get(item.id) || {};
-                            const expVal = compExp[fund.name] ?? (item.contributions?.[fund.name]?.expected ?? fund.target);
-                            const actVal = item.contributions?.[fund.name]?.actual || 0;
-                            const paid = actVal >= expVal && expVal > 0;
-                            const hasPartial = actVal > 0 && actVal < expVal;
+                            const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+                            const paid = contrib.actual >= contrib.expected && contrib.expected > 0;
+                            const hasPartial = contrib.actual > 0 && contrib.actual < contrib.expected;
                             
                             return (
                               <td 
@@ -6998,8 +6939,8 @@ const WardFunds = () => {
                                   display: 'inline-block',
                                   padding: '6px 12px',
                                   borderRadius: '8px',
-                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (expVal === 0 ? '#f1f5f9' : '#fee2e2')),
-                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (expVal === 0 ? '#64748b' : '#991b1b')),
+                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (contrib.expected === 0 ? '#f1f5f9' : '#fee2e2')),
+                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (contrib.expected === 0 ? '#64748b' : '#991b1b')),
                                   fontWeight: '600',
                                   fontSize: '0.85rem',
                                   transition: 'transform 0.1s',
@@ -7007,13 +6948,13 @@ const WardFunds = () => {
                                 onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
                                 onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                                 >
-                                  {expVal === 0 ? (
+                                  {contrib.expected === 0 ? (
                                     <span style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>Miễn / 0đ</span>
                                   ) : (
                                     <>
-                                      {formatCurrency(actVal)}
+                                      {formatCurrency(contrib.actual)}
                                       <div style={{ fontSize: '0.72rem', opacity: 0.8, marginTop: '2px' }}>
-                                        / {formatCurrency(expVal)}
+                                        / {formatCurrency(contrib.expected)}
                                       </div>
                                     </>
                                   )}

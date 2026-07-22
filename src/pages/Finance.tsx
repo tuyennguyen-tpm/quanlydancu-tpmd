@@ -1192,37 +1192,10 @@ const Finance = () => {
       });
     }
 
-    const parseNumVal = (val: any): number => {
-      if (typeof val === 'number') return isNaN(val) ? 0 : val;
-      const digits = String(val || '0').replace(/[^\d]/g, '');
-      return parseInt(digits, 10) || 0;
-    };
-    let tdpTotal = 0;
-    let wardTotal = 0;
-    receiptRows.forEach(r => {
-      const nameLower = (r.name || '').toLowerCase();
-      const amt = parseNumVal(r.amount);
-      if (nameLower.includes('[ubnd') || nameLower.includes('ubnd') || nameLower.includes('phường') || nameLower.includes('thiên tai') || nameLower.includes('đền ơn') || nameLower.includes('cao tuổi')) {
-        wardTotal += amt;
-      } else {
-        tdpTotal += amt;
-      }
-    });
-
-    if (tdpTotal === 0 && (printMode as string) !== 'ward_only') {
-      const defaultTdpList = (db as any).getFundList() || [];
-      tdpTotal = defaultTdpList.reduce((sum: number, f: any) => sum + parseNumVal(f.target || 50000), 0);
-    }
-
-    if (wardTotal === 0 && (printMode as string) !== 'tdp_only') {
-      const defaultWardList = (db as any).getWardFundList() || [];
-      wardTotal = defaultWardList.reduce((sum: number, wf: any) => {
-        const tgt = parseNumVal(wf.target || 20000);
-        return sum + (wf.scope === 'person' ? tgt * (laborCount || 1) : tgt);
-      }, 0);
-    }
-
-    const grandTotal = tdpTotal + wardTotal;
+    const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const otherTotal = receiptRows.filter(r => !r.name.toLowerCase().includes('tdp') && !r.name.toLowerCase().includes('tổ dân phố') && !r.name.toLowerCase().includes('ubnd') && !r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const grandTotal = tdpTotal + wardTotal + otherTotal;
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
@@ -1379,7 +1352,7 @@ const Finance = () => {
                    ? `(UBND: ${wardTotal.toLocaleString('vi-VN')} đ)` 
                    : ((printMode as string) === 'tdp_only' 
                      ? `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ)` 
-                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${wardTotal.toLocaleString('vi-VN')} đ)`)}
+                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${(wardTotal + otherTotal).toLocaleString('vi-VN')} đ)`)}
                </td>
                <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
                <td style="border: 1px solid #000; padding: 4px 6px;"></td>
@@ -1560,10 +1533,7 @@ const Finance = () => {
 
     const SAVE_KEY = `receipt_html_${householdId}_${fundYear}_${printMode}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-    if (savedReceiptHtml && (savedReceiptHtml.includes('(TDP: 0 đ + UBND: 0 đ)') || savedReceiptHtml.includes('>0 đ<') || savedReceiptHtml.includes('Không đồng'))) {
-      localStorage.removeItem(SAVE_KEY);
-    }
-    const hasSavedVersion = !savedReceiptHtml ? false : !savedReceiptHtml.includes('(TDP: 0 đ + UBND: 0 đ)');
+    const hasSavedVersion = !!savedReceiptHtml;
     const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
@@ -1858,7 +1828,7 @@ const Finance = () => {
               let amountColIdx = -1;
               ths.forEach((th, idx) => {
                 const text = (th.textContent || th.innerText || '').toLowerCase();
-                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('nộp')) {
+                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
                   amountColIdx = idx;
                 }
               });
@@ -1883,36 +1853,20 @@ const Finance = () => {
                   else targetCellIdx = tds.length - 2;
                 }
 
-                let num = 0;
-                if (tds[targetCellIdx]) {
-                  const cellText = tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '';
-                  const digits = cellText.replace(/[^\d]/g, '');
-                  if (digits) num = parseInt(digits, 10) || 0;
-                }
-                if (num === 0) {
-                  tds.forEach((td, idx) => {
-                    if (idx === 0) return;
-                    const txt = td.textContent || td.innerText || '';
-                    if (txt.includes('đ') || txt.includes('VNĐ') || txt.includes('đ/')) {
-                      const digits = txt.replace(/[^\d]/g, '');
-                      if (digits) {
-                        const val = parseInt(digits, 10) || 0;
-                        if (val > 0) num = val;
-                      }
-                    }
-                  });
-                }
+                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
+                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                const isWard = fundName.includes('[ubnd') || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
-                if (isWard) {
+                if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
+                  tdpTotal += num;
+                } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
                   wardTotal += num;
                 } else {
-                  tdpTotal += num;
+                  otherTotal += num;
                 }
               });
 
-              const grandTotal = tdpTotal + wardTotal;
+              const grandTotal = tdpTotal + wardTotal + otherTotal;
               const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
 
               const activeEl = document.activeElement;
@@ -1933,7 +1887,7 @@ const Finance = () => {
                     } else if (activePrintMode === 'ward_only') {
                       printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     } else {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + (wardTotal + otherTotal).toLocaleString('vi-VN') + ' đ)';
                     }
                     labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
 
