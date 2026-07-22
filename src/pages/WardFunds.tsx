@@ -757,16 +757,6 @@ const WardFunds = () => {
     funds.forEach(f => {
       const expected: Record<string, number> = {};
 
-      // Ưu tiên sử dụng mức chỉ tiêu expected đã được khởi tạo/lưu trong contributions của bản ghi
-      if (f.contributions) {
-        Object.keys(f.contributions).forEach(k => {
-          if (typeof f.contributions[k]?.expected === 'number') {
-            expected[k] = f.contributions[k].expected;
-          }
-        });
-      }
-
-      // Dự phòng nếu chưa có thông tin trong contributions
       let matchedRes: Resident | undefined;
       if (f.user_id) matchedRes = residents.find(r => r.id === f.user_id);
       if (!matchedRes && f.full_name) {
@@ -778,8 +768,6 @@ const WardFunds = () => {
       }
 
       activeFunds.forEach((fund: any) => {
-        if (expected[fund.name] !== undefined) return;
-
         const isHH = fund.scope === 'household'
           || fund.name.toLowerCase().includes('hộ')
           || fund.name.toLowerCase().includes('người cao tuổi')
@@ -820,19 +808,43 @@ const WardFunds = () => {
         const dobStr = f.dob || (matchedRes ? matchedRes.dob : '');
         const age = calculateExactAge(dobStr, selectedYear);
 
-        const lim = parseAgeRange(fund.age_range);
-        let shouldPay = false;
+        const parseAgeLimits = (ageRangeStr: string | undefined) => {
+          const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58 };
+          if (!ageRangeStr || !ageRangeStr.trim()) return result;
+          const cleanStr = ageRangeStr.toLowerCase().trim();
+          const mM = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
+          if (mM) { result.maleMin = parseInt(mM[1], 10); result.maleMax = parseInt(mM[2], 10); }
+          const fM = cleanStr.match(/(?:nữ|nu)[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
+          if (fM) { result.femaleMin = parseInt(fM[1], 10); result.femaleMax = parseInt(fM[2], 10); }
+          const gM = cleanStr.match(/(?:từ\s*)?(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
+          if (gM && !mM && !fM) {
+            const min = parseInt(gM[1], 10);
+            const max = parseInt(gM[2], 10);
+            result.maleMin = min; result.maleMax = max;
+            result.femaleMin = min; result.femaleMax = max;
+          }
+          return result;
+        };
+
+        const lim = parseAgeLimits(fund.age_range);
+        let inAgeRange = false;
         if (isFemale) {
-          shouldPay = age >= lim.femaleMin && age <= lim.femaleMax;
+          inAgeRange = age >= lim.femaleMin && age <= lim.femaleMax;
         } else {
           const isMale = matchedRes && ((matchedRes.gender || '').toString().toLowerCase().trim().startsWith('m') || (matchedRes.gender || '').toString().toLowerCase().trim().includes('nam'));
           if (isMale) {
-            shouldPay = age >= lim.maleMin && age <= lim.maleMax;
+            inAgeRange = age >= lim.maleMin && age <= lim.maleMax;
           } else {
-            shouldPay = age >= lim.femaleMin && age <= lim.femaleMax;
+            inAgeRange = age >= lim.femaleMin && age <= lim.femaleMax;
           }
         }
-        expected[fund.name] = shouldPay ? fund.target : 0;
+
+        if (!inAgeRange) {
+          expected[fund.name] = 0;
+        } else {
+          const stored = f.contributions?.[fund.name]?.expected;
+          expected[fund.name] = (typeof stored === 'number' && stored > 0) ? stored : fund.target;
+        }
       });
 
       resultMap.set(f.id, expected);
