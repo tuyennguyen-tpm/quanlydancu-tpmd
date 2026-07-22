@@ -1899,7 +1899,7 @@ const Finance = () => {
                 }
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
+                const isWard = fundName.includes('[ubnd') || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
                 if (isWard) {
                   wardTotal += num;
                 } else {
@@ -1907,7 +1907,7 @@ const Finance = () => {
                 }
               });
 
-              const grandTotal = tdpTotal + wardTotal + otherTotal;
+              const grandTotal = tdpTotal + wardTotal;
               const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
 
               const activeEl = document.activeElement;
@@ -1928,7 +1928,7 @@ const Finance = () => {
                     } else if (activePrintMode === 'ward_only') {
                       printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     } else {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + (wardTotal + otherTotal).toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     }
                     labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
 
