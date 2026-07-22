@@ -3306,12 +3306,6 @@ const WardFunds = () => {
                   effectiveTotal = wardTotal;
                 }
 
-                let activeEl = document.activeElement;
-                if (activeEl && activeEl.nodeType === 3) {
-                  activeEl = activeEl.parentElement;
-                }
-                const isEditingTotal = activeEl && typeof activeEl.closest === 'function' && totalRow && totalRow.contains(activeEl);
-
                 if (totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
@@ -3319,32 +3313,30 @@ const WardFunds = () => {
                     const ths = Array.from(table.querySelectorAll('thead th'));
                     const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
                     
-                    if (!isEditingTotal) {
-                      if (is6Col && totalTds.length >= 2) {
-                        const labelTd = totalTds[0];
-                        labelTd.setAttribute('colspan', '4');
-                        let printModeText = '';
-                        if (activePrintMode === 'tdp_only') {
-                          printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
-                        } else if (activePrintMode === 'ward_only') {
-                          printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
-                        } else {
-                          printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
-                        }
-                        labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
-
-                        const amountTd = totalTds[1];
-                        amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-
-                        if (totalTds.length >= 3) {
-                          totalTds[2].innerHTML = '';
-                        }
+                    if (is6Col && totalTds.length >= 2) {
+                      const labelTd = totalTds[0];
+                      labelTd.setAttribute('colspan', '4');
+                      let printModeText = '';
+                      if (activePrintMode === 'tdp_only') {
+                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                      } else if (activePrintMode === 'ward_only') {
+                        printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       } else {
-                        const labelTd = totalTds[0];
-                        labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
-                        const amountTd = totalTds[1];
-                        amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       }
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+
+                      if (totalTds.length >= 3) {
+                        totalTds[2].innerHTML = '';
+                      }
+                    } else {
+                      const labelTd = totalTds[0];
+                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                     }
                   }
                 }
@@ -3353,20 +3345,11 @@ const WardFunds = () => {
                   || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
                 
                 if (wordsContainer) {
-                  let finalWordsAmount = effectiveTotal;
-                  if (isEditingTotal && totalRow) {
-                    const totalTds = totalRow.querySelectorAll('td');
-                    const valStr = totalTds[1] ? (totalTds[1].textContent || totalTds[1].innerText || '') : '';
-                    const parsedUserNum = parseInt(valStr.replace(/[^\d]/g, ''), 10);
-                    if (!isNaN(parsedUserNum) && parsedUserNum > 0) {
-                      finalWordsAmount = parsedUserNum;
-                    }
-                  }
                   const strongEl = wordsContainer.querySelector('strong');
                   if (strongEl) {
-                    strongEl.innerText = docSoTien(finalWordsAmount);
+                    strongEl.innerText = docSoTien(effectiveTotal);
                   } else {
-                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(finalWordsAmount) + '</strong>';
+                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
                   }
                 }
               });
@@ -4893,12 +4876,6 @@ const WardFunds = () => {
                   effectiveTotal = wardTotal;
                 }
 
-                let activeEl = document.activeElement;
-                if (activeEl && activeEl.nodeType === 3) {
-                  activeEl = activeEl.parentElement;
-                }
-                const isEditingTotal = activeEl && typeof activeEl.closest === 'function' && totalRow && totalRow.contains(activeEl);
-
                 if (totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
@@ -4906,32 +4883,30 @@ const WardFunds = () => {
                     const ths = Array.from(table.querySelectorAll('thead th'));
                     const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
                     
-                    if (!isEditingTotal) {
-                      if (is6Col && totalTds.length >= 2) {
-                        const labelTd = totalTds[0];
-                        labelTd.setAttribute('colspan', '4');
-                        let printModeText = '';
-                        if (activePrintMode === 'tdp_only') {
-                          printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
-                        } else if (activePrintMode === 'ward_only') {
-                          printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
-                        } else {
-                          printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
-                        }
-                        labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
-
-                        const amountTd = totalTds[1];
-                        amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-
-                        if (totalTds.length >= 3) {
-                          totalTds[2].innerHTML = '';
-                        }
+                    if (is6Col && totalTds.length >= 2) {
+                      const labelTd = totalTds[0];
+                      labelTd.setAttribute('colspan', '4');
+                      let printModeText = '';
+                      if (activePrintMode === 'tdp_only') {
+                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                      } else if (activePrintMode === 'ward_only') {
+                        printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       } else {
-                        const labelTd = totalTds[0];
-                        labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
-                        const amountTd = totalTds[1];
-                        amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       }
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+
+                      if (totalTds.length >= 3) {
+                        totalTds[2].innerHTML = '';
+                      }
+                    } else {
+                      const labelTd = totalTds[0];
+                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                     }
                   }
                 }
@@ -4940,20 +4915,11 @@ const WardFunds = () => {
                   || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
                 
                 if (wordsContainer) {
-                  let finalWordsAmount = effectiveTotal;
-                  if (isEditingTotal && totalRow) {
-                    const totalTds = totalRow.querySelectorAll('td');
-                    const valStr = totalTds[1] ? (totalTds[1].textContent || totalTds[1].innerText || '') : '';
-                    const parsedUserNum = parseInt(valStr.replace(/[^\d]/g, ''), 10);
-                    if (!isNaN(parsedUserNum) && parsedUserNum > 0) {
-                      finalWordsAmount = parsedUserNum;
-                    }
-                  }
                   const strongEl = wordsContainer.querySelector('strong');
                   if (strongEl) {
-                    strongEl.innerText = docSoTien(finalWordsAmount);
+                    strongEl.innerText = docSoTien(effectiveTotal);
                   } else {
-                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(finalWordsAmount) + '</strong>';
+                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
                   }
                 }
               });
