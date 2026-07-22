@@ -4226,10 +4226,23 @@ const WardFunds = () => {
       });
     });
 
-    const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const otherTotal = receiptRows.filter(r => !r.name.toLowerCase().includes('tdp') && !r.name.toLowerCase().includes('tổ dân phố') && !r.name.toLowerCase().includes('ubnd') && !r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const grandTotal = tdpTotal + wardTotal + otherTotal;
+    // Bước 3 & 4: Duyệt qua toàn bộ receiptRows (nguồn dữ liệu ô "Số tiền nộp") và phân loại theo tên khoản
+    let tdpTotal = 0;
+    let wardTotal = 0;
+    receiptRows.forEach(r => {
+      const itemAmount = typeof r.amount === 'number' ? r.amount : (parseInt(String(r.amount || '0').replace(/[^\d]/g, ''), 10) || 0);
+      const nameStr = r.name.trim();
+      if (nameStr.startsWith('[TDP]') || nameStr.toLowerCase().includes('tdp') || nameStr.toLowerCase().includes('tổ dân phố')) {
+        tdpTotal += itemAmount;
+      } else if (nameStr.startsWith('[UBND Phường]') || nameStr.toLowerCase().includes('ubnd') || nameStr.toLowerCase().includes('phường')) {
+        wardTotal += itemAmount;
+      } else {
+        tdpTotal += itemAmount;
+      }
+    });
+
+    // Bước 5: Tổng cộng thực thu = Tổng TDP + Tổng UBND Phường
+    const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
