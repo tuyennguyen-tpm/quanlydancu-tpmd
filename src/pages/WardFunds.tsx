@@ -806,21 +806,31 @@ const WardFunds = () => {
         }
 
         let isFemale = false;
+        const fullNameCheck = (matchedRes ? matchedRes.full_name : f.full_name || '').toLowerCase();
+        const hasThi = fullNameCheck.includes(' thị ') || fullNameCheck.includes(' thị') || fullNameCheck.startsWith('thị ') || fullNameCheck.includes('bà ') || fullNameCheck.includes('chị ');
+
         if (matchedRes) {
           const g = (matchedRes.gender || '').toString().toLowerCase().trim();
-          isFemale = g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f');
+          isFemale = g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f') || hasThi;
         } else {
-          const n = (f.full_name || '').toLowerCase();
-          isFemale = n.includes(' thị ') || n.endsWith(' thị');
+          isFemale = hasThi;
         }
 
         const dobStr = f.dob || (matchedRes ? matchedRes.dob : '');
         const age = calculateExactAge(dobStr, selectedYear);
 
         const lim = parseAgeRange(fund.age_range);
-        const shouldPay = isFemale
-          ? age >= lim.femaleMin && age <= lim.femaleMax
-          : age >= lim.maleMin && age <= lim.maleMax;
+        let shouldPay = false;
+        if (isFemale) {
+          shouldPay = age >= lim.femaleMin && age <= lim.femaleMax;
+        } else {
+          const isMale = matchedRes && ((matchedRes.gender || '').toString().toLowerCase().trim().startsWith('m') || (matchedRes.gender || '').toString().toLowerCase().trim().includes('nam'));
+          if (isMale) {
+            shouldPay = age >= lim.maleMin && age <= lim.maleMax;
+          } else {
+            shouldPay = age >= lim.femaleMin && age <= lim.femaleMax;
+          }
+        }
         expected[fund.name] = shouldPay ? fund.target : 0;
       });
 
@@ -1778,9 +1788,8 @@ const WardFunds = () => {
                   const ageLimits = parseAgeRange(fund.age_range);
                   const isMaleInAge = isMale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
                   const isFemaleInAge = (isFemale || !isMale) ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
-                  const isGeneralInAge = (!isMale && !isFemale) ? (age >= ageLimits.generalMin && age <= ageLimits.generalMax) : false;
                   
-                  if (isMaleInAge || isFemaleInAge || isGeneralInAge) {
+                  if (isMaleInAge || isFemaleInAge) {
                     expected = fund.target;
                   }
                 } else {
