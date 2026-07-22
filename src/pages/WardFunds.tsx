@@ -3292,7 +3292,7 @@ const WardFunds = () => {
               let amountColIdx = -1;
               ths.forEach((th, idx) => {
                 const text = (th.textContent || th.innerText || '').toLowerCase();
-                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
+                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('nộp')) {
                   amountColIdx = idx;
                 }
               });
@@ -3317,8 +3317,25 @@ const WardFunds = () => {
                   else targetCellIdx = tds.length - 2;
                 }
 
-                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
-                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
+                let num = 0;
+                if (tds[targetCellIdx]) {
+                  const cellText = tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '';
+                  const digits = cellText.replace(/[^\d]/g, '');
+                  if (digits) num = parseInt(digits, 10) || 0;
+                }
+                if (num === 0) {
+                  tds.forEach((td, idx) => {
+                    if (idx === 0) return;
+                    const txt = td.textContent || td.innerText || '';
+                    if (txt.includes('đ') || txt.includes('VNĐ') || txt.includes('đ/')) {
+                      const digits = txt.replace(/[^\d]/g, '');
+                      if (digits) {
+                        const val = parseInt(digits, 10) || 0;
+                        if (val > 0) num = val;
+                      }
+                    }
+                  });
+                }
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
                 const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn');
@@ -4825,7 +4842,7 @@ const WardFunds = () => {
               let amountColIdx = -1;
               ths.forEach((th, idx) => {
                 const text = (th.textContent || th.innerText || '').toLowerCase();
-                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
+                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('nộp')) {
                   amountColIdx = idx;
                 }
               });
@@ -4850,8 +4867,25 @@ const WardFunds = () => {
                   else targetCellIdx = tds.length - 2;
                 }
 
-                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
-                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
+                let num = 0;
+                if (tds[targetCellIdx]) {
+                  const cellText = tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '';
+                  const digits = cellText.replace(/[^\d]/g, '');
+                  if (digits) num = parseInt(digits, 10) || 0;
+                }
+                if (num === 0) {
+                  tds.forEach((td, idx) => {
+                    if (idx === 0) return;
+                    const txt = td.textContent || td.innerText || '';
+                    if (txt.includes('đ') || txt.includes('VNĐ') || txt.includes('đ/')) {
+                      const digits = txt.replace(/[^\d]/g, '');
+                      if (digits) {
+                        const val = parseInt(digits, 10) || 0;
+                        if (val > 0) num = val;
+                      }
+                    }
+                  });
+                }
 
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
                 if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
