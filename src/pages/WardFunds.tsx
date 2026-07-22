@@ -3280,8 +3280,8 @@ const WardFunds = () => {
 
                 const fundTypeAttr = row.getAttribute('data-fund-type');
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn');
-                
+                const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
+
                 if (isWard) {
                   wardTotal += num;
                 } else {
@@ -3294,9 +3294,9 @@ const WardFunds = () => {
               const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
               let effectiveTotal = grandTotal;
               if (activePrintMode === 'tdp_only') {
-                effectiveTotal = tdpTotal > 0 ? tdpTotal : grandTotal;
+                effectiveTotal = tdpTotal;
               } else if (activePrintMode === 'ward_only') {
-                effectiveTotal = wardTotal > 0 ? wardTotal : grandTotal;
+                effectiveTotal = wardTotal;
               }
 
               if (totalRow) {
@@ -3311,9 +3311,9 @@ const WardFunds = () => {
                     labelTd.setAttribute('colspan', '4');
                     let printModeText = '';
                     if (activePrintMode === 'tdp_only') {
-                      printModeText = '(TDP: ' + effectiveTotal.toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
                     } else if (activePrintMode === 'ward_only') {
-                      printModeText = '(UBND: ' + effectiveTotal.toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     } else {
                       printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     }
@@ -4823,18 +4823,9 @@ const WardFunds = () => {
                 if (totalRow) totalRow.classList.add('receipt-total-row');
               }
 
-              const ths = Array.from(table.querySelectorAll('thead th'));
-              let amountColIdx = -1;
-              ths.forEach((th, idx) => {
-                const text = (th.textContent || th.innerText || '').toLowerCase();
-                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
-                  amountColIdx = idx;
-                }
-              });
-
+              let grandTotal = 0;
               let tdpTotal = 0;
               let wardTotal = 0;
-              let otherTotal = 0;
 
               rows.forEach(row => {
                 const rText = (row.textContent || row.innerText || '').toUpperCase();
@@ -4845,16 +4836,11 @@ const WardFunds = () => {
                 const tds = Array.from(row.querySelectorAll('td'));
                 if (tds.length < 2) return;
 
-                let amountTd = null;
-                if (amountColIdx >= 0 && tds[amountColIdx]) {
-                  amountTd = tds[amountColIdx];
-                } else {
-                  amountTd = row.querySelector('.receipt-amount-cell');
-                  if (!amountTd) {
-                    if (tds.length >= 6) amountTd = tds[4];
-                    else if (tds.length >= 4) amountTd = tds[2];
-                    else amountTd = tds[tds.length - 2];
-                  }
+                let amountTd = row.querySelector('.receipt-amount-cell');
+                if (!amountTd) {
+                  if (tds.length >= 6) amountTd = tds[4];
+                  else if (tds.length >= 4) amountTd = tds[2];
+                  else amountTd = tds[tds.length - 2];
                 }
 
                 const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
@@ -4863,17 +4849,24 @@ const WardFunds = () => {
 
                 const fundTypeAttr = row.getAttribute('data-fund-type');
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                if (fundTypeAttr === 'tdp' || fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
-                  tdpTotal += num;
-                } else if (fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường')) {
+                const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
+
+                if (isWard) {
                   wardTotal += num;
                 } else {
-                  otherTotal += num;
+                  tdpTotal += num;
                 }
+
+                grandTotal += num;
               });
 
-              const grandTotal = tdpTotal + wardTotal + otherTotal;
               const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
+              let effectiveTotal = grandTotal;
+              if (activePrintMode === 'tdp_only') {
+                effectiveTotal = tdpTotal;
+              } else if (activePrintMode === 'ward_only') {
+                effectiveTotal = wardTotal;
+              }
 
               const activeEl = document.activeElement;
               const isEditingTotal = activeEl && totalRow && totalRow.contains(activeEl);
@@ -4882,6 +4875,7 @@ const WardFunds = () => {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (totalTds.length >= 2) {
                   const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
+                  const ths = Array.from(table.querySelectorAll('thead th'));
                   const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
                   
                   if (is6Col && totalTds.length >= 2) {
@@ -4893,12 +4887,12 @@ const WardFunds = () => {
                     } else if (activePrintMode === 'ward_only') {
                       printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     } else {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + (wardTotal + otherTotal).toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                     }
                     labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
 
                     const amountTd = totalTds[1];
-                    amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                    amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
 
                     if (totalTds.length >= 3) {
                       totalTds[2].innerHTML = '';
@@ -4907,7 +4901,7 @@ const WardFunds = () => {
                     const labelTd = totalTds[0];
                     labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
                     const amountTd = totalTds[1];
-                    amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                    amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                   }
                 }
               }
@@ -4916,7 +4910,7 @@ const WardFunds = () => {
                 || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
               
               if (wordsContainer) {
-                let finalWordsAmount = grandTotal;
+                let finalWordsAmount = effectiveTotal;
                 if (isEditingTotal && totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   const valStr = totalTds[1] ? (totalTds[1].textContent || totalTds[1].innerText || '') : '';
