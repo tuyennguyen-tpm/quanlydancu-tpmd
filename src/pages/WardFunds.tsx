@@ -4821,6 +4821,7 @@ const WardFunds = () => {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (is6ColTable && totalTds.length >= 2) {
                   const labelTd = totalTds[0];
+                  labelTd.setAttribute('colspan', '4');
                   let printModeText = '';
                   if (currentPrintMode === 'ward_only') {
                     printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
@@ -4837,6 +4838,10 @@ const WardFunds = () => {
 
                   const amountTd = totalTds[1];
                   amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+
+                  if (totalTds.length >= 3) {
+                    totalTds[2].innerHTML = '';
+                  }
                 } else if (!is6ColTable && totalTds.length >= 2) {
                   const amountTd = totalTds[1];
                   amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';

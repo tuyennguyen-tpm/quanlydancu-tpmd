@@ -1878,6 +1878,7 @@ const Finance = () => {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (is6ColTable && totalTds.length >= 2) {
                   const labelTd = totalTds[0];
+                  labelTd.setAttribute('colspan', '4');
                   let printModeText = '';
                   if (currentPrintMode === 'tdp_only') {
                     printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ')';
@@ -1896,6 +1897,10 @@ const Finance = () => {
 
                   const amountTd = totalTds[1];
                   amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+
+                  if (totalTds.length >= 3) {
+                    totalTds[2].innerHTML = '';
+                  }
                 } else if (!is6ColTable && totalTds.length >= 2) {
                   const amountTd = totalTds[1];
                   amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
