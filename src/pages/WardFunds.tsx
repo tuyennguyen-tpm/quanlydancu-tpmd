@@ -4550,7 +4550,10 @@ const WardFunds = () => {
     );
     const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-    const hasSavedVersion = !!savedReceiptHtml;
+    if (savedReceiptHtml && (savedReceiptHtml.includes('(TDP: 0 đ + UBND: 0 đ)') || savedReceiptHtml.includes('>0 đ<') || savedReceiptHtml.includes('Không đồng'))) {
+      localStorage.removeItem(SAVE_KEY);
+    }
+    const hasSavedVersion = !savedReceiptHtml ? false : !savedReceiptHtml.includes('(TDP: 0 đ + UBND: 0 đ)');
     const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
