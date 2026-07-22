@@ -15,7 +15,9 @@ import {
   Printer,
   MapPin,
   Filter,
-  Check
+  Check,
+  BookOpen,
+  Users
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -1507,10 +1509,6 @@ const Finance = () => {
       return sum + rSum;
     }, 0);
 
-    // Luôn tạo phiếu mới từ dữ liệu thực - bản lưu chỉ dùng khi người dùng tự chọn
-    const savedReceiptHtml = localStorage.getItem(`receipt_html_${householdId}_${fundYear}`);
-    const hasSavedVersion = !!savedReceiptHtml;
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
@@ -1536,7 +1534,6 @@ const Finance = () => {
     const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
-    // Luôn dùng dữ liệu mới nhất từ hệ thống
     const freshReceiptHtml = generateHouseholdReceiptHtml(
       household,
       members,
@@ -1549,7 +1546,11 @@ const Finance = () => {
       leaderSigUrl,
       printMode
     );
-    const receiptHtml = freshReceiptHtml;
+
+    const SAVE_KEY = `receipt_html_${householdId}_${fundYear}`;
+    const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
+    const hasSavedVersion = !!savedReceiptHtml;
+    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -1567,11 +1568,20 @@ const Finance = () => {
               margin: 0;
               padding: 0;
             }
+            .print-toolbar {
+              display: none !important;
+            }
+            #saved-notice {
+              display: none !important;
+            }
+            body {
+              padding-top: 5px !important;
+            }
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 9.5pt;
-            line-height: 1.3;
+            font-size: 10pt;
+            line-height: 1.35;
             color: #000;
             padding: 5px;
             padding-top: 55px;
@@ -1579,62 +1589,56 @@ const Finance = () => {
           .receipt-container {
             width: 100%;
             box-sizing: border-box;
-            font-size: inherit;
           }
           .receipt-header-table {
             width: 100%;
             border-collapse: collapse;
           }
-          .receipt-header-table td {
-            border: none;
-            padding: 0;
-            vertical-align: top;
-          }
           .receipt-org-title {
             font-weight: bold;
-            font-size: 1.05em;
+            font-size: 10pt !important;
             line-height: 1.3;
           }
           .receipt-form-title {
             text-align: right;
-            font-size: 0.95em;
+            font-size: 9.5pt !important;
             line-height: 1.25;
           }
           .receipt-title-container {
             text-align: center;
-            margin-top: 4px;
-            margin-bottom: 4px;
+            margin-top: 6px !important;
+            margin-bottom: 6px !important;
           }
           .receipt-title {
-            font-size: 1.5em;
+            font-size: 15.5pt !important;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 2px;
+            margin-bottom: 2px !important;
           }
           .receipt-subtitle {
             font-style: italic;
-            font-size: 0.95em;
+            font-size: 9.5pt !important;
           }
           .receipt-info-table {
             width: 100%;
-            margin-bottom: 4px;
+            margin-bottom: 4px !important;
             border-collapse: collapse;
           }
           .receipt-info-table td {
-            padding: 1px 0;
-            font-size: 1em;
+            padding: 2px 0 !important;
+            font-size: 10pt !important;
           }
           .receipt-details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 3px;
-            margin-bottom: 3px;
+            margin-top: 4px !important;
+            margin-bottom: 4px !important;
           }
           .receipt-details-table th, .receipt-details-table td {
-            border: 1px solid #000;
-            padding: 3px 5px;
-            font-size: 0.95em;
+            border: 1px solid #000 !important;
+            padding: 4px 6px !important;
+            font-size: 9.5pt !important;
             vertical-align: middle;
           }
           .receipt-details-table th {
@@ -1645,18 +1649,17 @@ const Finance = () => {
           .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
-            page-break-inside: avoid;
+            margin-top: 8px !important;
+            page-break-inside: avoid !important;
           }
           .receipt-signatures-table td {
             border: none;
             text-align: center;
-            font-size: 0.95em;
+            font-size: 9.5pt !important;
             vertical-align: top;
-            padding: 1px;
+            padding: 2px !important;
           }
           
-          /* Custom edit toolbar style */
           .print-toolbar {
             position: fixed;
             top: 8px;
@@ -1687,8 +1690,6 @@ const Finance = () => {
           .btn-print:hover { background: #059669; }
           .btn-save { background: #3b82f6; color: white; }
           .btn-save:hover { background: #2563eb; }
-          .btn-load { background: #8b5cf6; color: white; }
-          .btn-load:hover { background: #7c3aed; }
           .btn-reset { background: #f59e0b; color: white; }
           .btn-reset:hover { background: #d97706; }
           .btn-close { background: #ef4444; color: white; }
@@ -1710,30 +1711,20 @@ const Finance = () => {
             display: flex;
             align-items: center;
           }
-          
-          @media print {
-            .print-toolbar {
-              display: none !important;
-            }
-            body {
-              padding-top: 5px !important;
-            }
-          }
         </style>
       </head>
       <body>
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
-          ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>' : ''}
-          <button class="toolbar-btn btn-reset" id="btn-reset">🗑 Xóa bản lưu</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
             <option value="7pt">7pt</option>
             <option value="7.5pt">7.5pt</option>
             <option value="8pt">8pt</option>
             <option value="8.5pt">8.5pt</option>
-            <option value="9pt" selected>9pt (mặc định)</option>
+            <option value="9pt" selected>9pt</option>
             <option value="9.5pt">9.5pt</option>
             <option value="10pt">10pt</option>
             <option value="10.5pt">10.5pt</option>
@@ -1743,10 +1734,9 @@ const Finance = () => {
           <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
         </div>
 
-        ${hasSavedVersion ? `
-        <div id="saved-notice" style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;display:flex;align-items:center;gap:10px;">
-          ⚠️ <strong>Có bản chỉnh sửa đã lưu.</strong> Đang hiển thị dữ liệu mới nhất từ hệ thống. Nhấn <strong>📂 Mở bản đã lưu</strong> nếu muốn xem bản chỉnh sửa cũ.
-        </div>` : ''}
+        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
+          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây đã được giữ nguyên. (Bấm <strong>🔄 Tải dữ liệu gốc từ hệ thống</strong> nếu muốn hủy bỏ chỉnh sửa).
+        </div>
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
           ${receiptHtml}
@@ -1754,12 +1744,157 @@ const Finance = () => {
         
         <script>
           const SAVE_KEY = 'receipt_html_${householdId}_${fundYear}';
-          const freshHtml = document.querySelector('.editor-area').innerHTML;
+          const freshHtml = ${JSON.stringify(freshReceiptHtml)};
           const btnSave = document.getElementById('btn-save');
           const btnReset = document.getElementById('btn-reset');
-          const btnLoad = document.getElementById('btn-load');
           const editor = document.querySelector('.editor-area');
           const fontSizeSelect = document.getElementById('font-size-select');
+
+          function docSoTien(number) {
+            if (isNaN(number) || number === 0) return 'Không đồng';
+            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            
+            function readTriple(n, showZero) {
+              let tram = Math.floor(n / 100);
+              let chuc = Math.floor((n % 100) / 10);
+              let donvi = n % 10;
+              let res = "";
+              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) res += "lẻ ";
+              else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += arrays[chuc] + " mươi ";
+              
+              if (donvi === 1 && chuc > 1) res += "mốt";
+              else if (donvi === 5 && chuc > 0) res += "lăm";
+              else if (donvi > 0) res += arrays[donvi];
+              return res.trim();
+            }
+
+            let str = "";
+            let units = ["", " nghìn", " triệu", " tỷ"];
+            let temp = Math.abs(Math.floor(number));
+            let i = 0;
+            while (temp > 0) {
+              let triple = temp % 1000;
+              if (triple > 0) {
+                let s = readTriple(triple, i > 0);
+                str = s + units[i] + " " + str;
+              }
+              temp = Math.floor(temp / 1000);
+              i++;
+            }
+            const finalStr = str.trim();
+            if (!finalStr) return "Không đồng";
+            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+          }
+
+          function recalculateReceiptTotals() {
+            const containers = document.querySelectorAll('.receipt-container');
+            if (containers.length === 0) return;
+
+            if (containers.length > 1) {
+              const activeEl = document.activeElement;
+              if (activeEl && editor.contains(activeEl)) {
+                const activeContainer = activeEl.closest('.receipt-container');
+                const activeRow = activeEl.closest('tr');
+                if (activeContainer && activeRow && !activeRow.classList.contains('receipt-total-row')) {
+                  const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
+                  const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
+                  const rowIndex = sourceRows.indexOf(activeRow);
+                  
+                  if (rowIndex >= 0) {
+                    const cellIndex = Array.from(activeRow.children).indexOf(activeEl.closest('td') || activeEl);
+                    const newValue = activeEl.innerText;
+                    
+                    containers.forEach((cnt, idx) => {
+                      if (idx !== sourceContainerIndex) {
+                        const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
+                        if (targetRows[rowIndex]) {
+                          const targetTd = targetRows[rowIndex].children[cellIndex];
+                          if (targetTd && targetTd !== activeEl && targetTd.innerText !== newValue) {
+                            targetTd.innerText = newValue;
+                          }
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+            }
+
+            containers.forEach(container => {
+              const table = container.querySelector('.receipt-details-table');
+              if (!table) return;
+
+              const rows = table.querySelectorAll('tbody tr');
+              let tdpTotal = 0;
+              let wardTotal = 0;
+              let grandTotal = 0;
+              
+              const ths = table.querySelectorAll('thead th');
+              const is6ColTable = (ths.length >= 6);
+
+              rows.forEach(row => {
+                if (row.classList.contains('receipt-total-row')) return;
+                const tds = row.querySelectorAll('td');
+                
+                if (is6ColTable && tds.length >= 5) {
+                  const fundName = tds[1].innerText || '';
+                  const amountText = tds[4].innerText || '';
+                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
+
+                  if (fundName.includes('[TDP]')) {
+                    tdpTotal += num;
+                  } else if (fundName.includes('[UBND') || fundName.includes('[Phường]')) {
+                    wardTotal += num;
+                  } else {
+                    grandTotal += num;
+                  }
+                } else if (!is6ColTable && tds.length >= 3) {
+                  const amountText = tds[2].innerText || '';
+                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
+                  grandTotal += num;
+                }
+              });
+
+              if (is6ColTable) {
+                grandTotal = tdpTotal + wardTotal + grandTotal;
+              }
+
+              const totalRow = table.querySelector('tr.receipt-total-row');
+              if (totalRow) {
+                const totalTds = totalRow.querySelectorAll('td');
+                if (is6ColTable && totalTds.length >= 2) {
+                  const labelTd = totalTds[0];
+                  let printModeText = '';
+                  if (tdpTotal > 0 && wardTotal > 0) {
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else if (wardTotal > 0) {
+                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else if (tdpTotal > 0) {
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else {
+                    printModeText = '';
+                  }
+                  labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                  const amountTd = totalTds[1];
+                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                } else if (!is6ColTable && totalTds.length >= 2) {
+                  const amountTd = totalTds[1];
+                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                }
+              }
+
+              const wordsContainer = container.querySelector('.receipt-amount-words') || container.querySelector('div[style*="Số tiền bằng chữ"]');
+              if (wordsContainer) {
+                const strongEl = wordsContainer.querySelector('strong');
+                if (strongEl) {
+                  strongEl.innerText = docSoTien(grandTotal);
+                }
+              }
+            });
+          }
 
           fontSizeSelect.addEventListener('change', function() {
             document.querySelectorAll('.receipt-container').forEach(function(el) {
@@ -1767,33 +1902,38 @@ const Finance = () => {
             });
           });
 
+          editor.addEventListener('input', function() {
+            recalculateReceiptTotals();
+          });
+          editor.addEventListener('blur', function() {
+            recalculateReceiptTotals();
+          }, true);
+
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
             const notice = document.getElementById('saved-notice');
-            if (notice) notice.remove();
-            btnLoad && (btnLoad.style.display = 'inline-flex');
-            alert('Đã lưu bản chỉnh sửa phiếu thu! Lần sau mở phiếu này bạn có thể chọn xem bản đã lưu.');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của hộ này đã được lưu lại cho các lần mở tiếp theo.';
+            }
+            alert('Đã lưu bản chỉnh sửa phiếu thu thành công! Lần sau mở phiếu thu của hộ này ra, hệ thống sẽ tự động hiển thị nội dung bạn vừa lưu.');
           });
-
-          if (btnLoad) {
-            btnLoad.addEventListener('click', function() {
-              const saved = localStorage.getItem(SAVE_KEY);
-              if (saved) {
-                editor.innerHTML = saved;
-                document.getElementById('saved-notice').innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu</strong>. Nhấn 💾 Lưu chỉnh sửa để cập nhật bản lưu sau khi sửa thêm.';
-              }
-            });
-          }
 
           btnReset.addEventListener('click', function() {
-            if (confirm('Xóa bản lưu chỉnh sửa? Phiếu sẽ luôn hiển thị dữ liệu mới nhất từ hệ thống.')) {
+            if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
               localStorage.removeItem(SAVE_KEY);
               editor.innerHTML = freshHtml;
+              recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
-              if (notice) notice.remove();
-              if (btnLoad) btnLoad.style.display = 'none';
+              if (notice) notice.style.display = 'none';
+              alert('Đã khôi phục về dữ liệu gốc từ hệ thống!');
             }
           });
+
+          recalculateReceiptTotals();
         </script>
       </body>
       </html>
@@ -3599,43 +3739,70 @@ const Finance = () => {
         </div>
       </div>
 
-      {/* Điều hướng tab cấp 2 */}
-      <div className="finance-tabs-nav" style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--border)', marginBottom: '24px' }}>
+      {/* Điều hướng tab cấp 2 - Phong cách 3D / 2D Premium */}
+      <div className="finance-tabs-nav" style={{
+        display: 'flex',
+        gap: '10px',
+        marginBottom: '24px',
+        padding: '6px',
+        background: 'var(--bg-card)',
+        borderRadius: '16px',
+        border: '1px solid var(--border)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        width: 'fit-content',
+        flexWrap: 'wrap'
+      }}>
         <button 
           className={`finance-tab-btn ${subTab === 'ledger' ? 'active' : ''}`}
           onClick={() => setSubTab('ledger')}
           style={{
-            padding: '10px 20px',
-            background: 'none',
-            border: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '11px 24px',
+            borderRadius: '12px',
+            border: subTab === 'ledger' ? 'none' : '1.5px solid var(--border)',
             cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: '700',
-            color: subTab === 'ledger' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: subTab === 'ledger' ? '3px solid var(--primary)' : '3px solid transparent',
-            transition: 'all 0.2s',
-            marginBottom: '-2px'
+            fontSize: '0.92rem',
+            fontWeight: '750',
+            background: subTab === 'ledger' 
+              ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' 
+              : 'var(--bg-main)',
+            color: subTab === 'ledger' ? '#ffffff' : 'var(--text-main)',
+            boxShadow: subTab === 'ledger' 
+              ? '0 6px 16px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -3px 0 rgba(0,0,0,0.2)' 
+              : '0 2px 4px rgba(0,0,0,0.02)',
+            transform: subTab === 'ledger' ? 'translateY(-2px)' : 'none',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
-          Sổ quỹ thu chi
+          <BookOpen size={17} /> 📙 Sổ quỹ thu chi
         </button>
         <button 
           className={`finance-tab-btn ${subTab === 'funds' ? 'active' : ''}`}
           onClick={() => setSubTab('funds')}
           style={{
-            padding: '10px 20px',
-            background: 'none',
-            border: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '11px 24px',
+            borderRadius: '12px',
+            border: subTab === 'funds' ? 'none' : '1.5px solid var(--border)',
             cursor: 'pointer',
-            fontSize: '0.95rem',
-            fontWeight: '700',
-            color: subTab === 'funds' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: subTab === 'funds' ? '3px solid var(--primary)' : '3px solid transparent',
-            transition: 'all 0.2s',
-            marginBottom: '-2px'
+            fontSize: '0.92rem',
+            fontWeight: '750',
+            background: subTab === 'funds' 
+              ? 'linear-gradient(135deg, #10b981, #059669)' 
+              : 'var(--bg-main)',
+            color: subTab === 'funds' ? '#ffffff' : 'var(--text-main)',
+            boxShadow: subTab === 'funds' 
+              ? '0 6px 16px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -3px 0 rgba(0,0,0,0.2)' 
+              : '0 2px 4px rgba(0,0,0,0.02)',
+            transform: subTab === 'funds' ? 'translateY(-2px)' : 'none',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
-          Quản lý thu Quỹ theo Hộ dân
+          <Users size={17} /> 🏡 Quản lý thu Quỹ theo Hộ dân
         </button>
       </div>
 

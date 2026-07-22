@@ -2964,7 +2964,11 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const receiptHtml = generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+    const freshReceiptHtml = generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
+    const SAVE_KEY = `receipt_html_ward_indiv_${item.id}_${selectedYear}`;
+    const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
+    const hasSavedVersion = !!savedReceiptHtml;
+    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -2981,14 +2985,15 @@ const WardFunds = () => {
             html, body {
               margin: 0;
               padding: 0;
-              height: 100%;
-              overflow: hidden;
             }
-            .receipt-container {
-              max-height: 275mm !important;
-              page-break-inside: avoid !important;
-              page-break-after: avoid !important;
-              page-break-before: avoid !important;
+            .print-toolbar {
+              display: none !important;
+            }
+            #saved-notice {
+              display: none !important;
+            }
+            body {
+              padding-top: 5px !important;
             }
           }
           body {
@@ -2997,6 +3002,7 @@ const WardFunds = () => {
             line-height: 1.3;
             color: #000;
             padding: 5px;
+            padding-top: 55px;
           }
           .receipt-container {
             width: 100%;
@@ -3076,16 +3082,248 @@ const WardFunds = () => {
             vertical-align: top;
             padding: 4px !important;
           }
+          .print-toolbar {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 6px 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 10px;
+            z-index: 99999;
+          }
+          .toolbar-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 9pt;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+          }
+          .btn-print { background: #10b981; color: white; }
+          .btn-print:hover { background: #059669; }
+          .btn-save { background: #3b82f6; color: white; }
+          .btn-save:hover { background: #2563eb; }
+          .btn-reset { background: #f59e0b; color: white; }
+          .btn-reset:hover { background: #d97706; }
+          .btn-close { background: #ef4444; color: white; }
+          .btn-close:hover { background: #dc2626; }
+          .font-size-select {
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 8.5pt;
+            font-weight: 600;
+            cursor: pointer;
+            background: #f8fafc;
+            color: #334155;
+          }
+          .toolbar-label {
+            font-size: 8pt;
+            color: #64748b;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+          }
         </style>
       </head>
       <body>
-        ${receiptHtml}
+        <div class="print-toolbar">
+          <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
+          <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
+          <span class="toolbar-label">📝 Cỡ chữ:</span>
+          <select class="font-size-select" id="font-size-select">
+            <option value="8pt">8pt</option>
+            <option value="8.5pt">8.5pt</option>
+            <option value="9pt">9pt</option>
+            <option value="9.5pt">9.5pt</option>
+            <option value="10pt" selected>10pt (mặc định)</option>
+            <option value="10.5pt">10.5pt</option>
+            <option value="11pt">11pt</option>
+            <option value="12pt">12pt</option>
+          </select>
+          <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
+        </div>
+
+        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
+          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của cá nhân này.</strong> Mọi chỉnh sửa trước đây đã được giữ nguyên. (Bấm <strong>🔄 Tải dữ liệu gốc từ hệ thống</strong> nếu muốn hủy bỏ chỉnh sửa).
+        </div>
+
+        <div class="editor-area" contenteditable="true" style="outline: none;">
+          ${receiptHtml}
+        </div>
+
         <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          };
+          const SAVE_KEY = 'receipt_html_ward_indiv_${item.id}_${selectedYear}';
+          const freshHtml = ${JSON.stringify(freshReceiptHtml)};
+          const btnSave = document.getElementById('btn-save');
+          const btnReset = document.getElementById('btn-reset');
+          const editor = document.querySelector('.editor-area');
+          const fontSizeSelect = document.getElementById('font-size-select');
+
+          function docSoTien(number) {
+            if (isNaN(number) || number === 0) return 'Không đồng';
+            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            
+            function readTriple(n, showZero) {
+              let tram = Math.floor(n / 100);
+              let chuc = Math.floor((n % 100) / 10);
+              let donvi = n % 10;
+              let res = "";
+              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) res += "lẻ ";
+              else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += arrays[chuc] + " mươi ";
+              
+              if (donvi === 1 && chuc > 1) res += "mốt";
+              else if (donvi === 5 && chuc > 0) res += "lăm";
+              else if (donvi > 0) res += arrays[donvi];
+              return res.trim();
+            }
+
+            let str = "";
+            let units = ["", " nghìn", " triệu", " tỷ"];
+            let temp = Math.abs(Math.floor(number));
+            let i = 0;
+            while (temp > 0) {
+              let triple = temp % 1000;
+              if (triple > 0) {
+                let s = readTriple(triple, i > 0);
+                str = s + units[i] + " " + str;
+              }
+              temp = Math.floor(temp / 1000);
+              i++;
+            }
+            const finalStr = str.trim();
+            if (!finalStr) return "Không đồng";
+            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+          }
+
+          function recalculateReceiptTotals() {
+            const containers = document.querySelectorAll('.receipt-container');
+            if (containers.length === 0) return;
+
+            containers.forEach(container => {
+              const table = container.querySelector('.receipt-details-table');
+              if (!table) return;
+
+              const rows = table.querySelectorAll('tbody tr');
+              let tdpTotal = 0;
+              let wardTotal = 0;
+              let grandTotal = 0;
+              
+              const ths = table.querySelectorAll('thead th');
+              const is6ColTable = (ths.length >= 6);
+
+              rows.forEach(row => {
+                if (row.classList.contains('receipt-total-row')) return;
+                const tds = row.querySelectorAll('td');
+                
+                if (is6ColTable && tds.length >= 5) {
+                  const fundName = tds[1].innerText || '';
+                  const amountText = tds[4].innerText || '';
+                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
+
+                  if (fundName.includes('[TDP]')) {
+                    tdpTotal += num;
+                  } else if (fundName.includes('[UBND') || fundName.includes('[Phường]')) {
+                    wardTotal += num;
+                  } else {
+                    grandTotal += num;
+                  }
+                } else if (!is6ColTable && tds.length >= 3) {
+                  const amountText = tds[2].innerText || '';
+                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
+                  grandTotal += num;
+                }
+              });
+
+              if (is6ColTable) {
+                grandTotal = tdpTotal + wardTotal + grandTotal;
+              }
+
+              const totalRow = table.querySelector('tr.receipt-total-row');
+              if (totalRow) {
+                const totalTds = totalRow.querySelectorAll('td');
+                if (is6ColTable && totalTds.length >= 2) {
+                  const labelTd = totalTds[0];
+                  let printModeText = '';
+                  if (tdpTotal > 0 && wardTotal > 0) {
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else if (wardTotal > 0) {
+                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else if (tdpTotal > 0) {
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else {
+                    printModeText = '';
+                  }
+                  labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                  const amountTd = totalTds[1];
+                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                } else if (!is6ColTable && totalTds.length >= 2) {
+                  const amountTd = totalTds[1];
+                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                }
+              }
+
+              const wordsContainer = container.querySelector('.receipt-amount-words') || container.querySelector('div[style*="Số tiền bằng chữ"]');
+              if (wordsContainer) {
+                const strongEl = wordsContainer.querySelector('strong');
+                if (strongEl) {
+                  strongEl.innerText = docSoTien(grandTotal);
+                }
+              }
+            });
+          }
+
+          fontSizeSelect.addEventListener('change', function() {
+            document.querySelectorAll('.receipt-container').forEach(function(el) {
+              el.style.fontSize = fontSizeSelect.value;
+            });
+          });
+
+          editor.addEventListener('input', function() {
+            recalculateReceiptTotals();
+          });
+          editor.addEventListener('blur', function() {
+            recalculateReceiptTotals();
+          }, true);
+
+          btnSave.addEventListener('click', function() {
+            localStorage.setItem(SAVE_KEY, editor.innerHTML);
+            const notice = document.getElementById('saved-notice');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của cá nhân này đã được lưu lại cho các lần mở tiếp theo.';
+            }
+            alert('Đã lưu bản chỉnh sửa phiếu thu thành công! Lần sau mở phiếu thu của cá nhân này ra, hệ thống sẽ tự động hiển thị nội dung bạn vừa lưu.');
+          });
+
+          btnReset.addEventListener('click', function() {
+            if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
+              localStorage.removeItem(SAVE_KEY);
+              editor.innerHTML = freshHtml;
+              recalculateReceiptTotals();
+              const notice = document.getElementById('saved-notice');
+              if (notice) notice.style.display = 'none';
+              alert('Đã khôi phục về dữ liệu gốc từ hệ thống!');
+            }
+          });
+
+          recalculateReceiptTotals();
         </script>
       </body>
       </html>
@@ -4187,10 +4425,6 @@ const WardFunds = () => {
       return sum + rSum;
     }, 0);
 
-    // Luôn tạo phiếu mới từ dữ liệu thực - bản lưu chỉ dùng khi người dùng tự chọn
-    const savedReceiptHtml = localStorage.getItem(`receipt_html_${householdId}_${selectedYear}`);
-    const hasSavedVersion = !!savedReceiptHtml;
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
@@ -4227,7 +4461,10 @@ const WardFunds = () => {
       leaderSigUrl,
       printMode
     );
-    const receiptHtml = freshReceiptHtml;
+    const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}`;
+    const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
+    const hasSavedVersion = !!savedReceiptHtml;
+    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -4244,6 +4481,15 @@ const WardFunds = () => {
             html, body {
               margin: 0;
               padding: 0;
+            }
+            .print-toolbar {
+              display: none !important;
+            }
+            #saved-notice {
+              display: none !important;
+            }
+            body {
+              padding-top: 5px !important;
             }
           }
           body {
@@ -4327,29 +4573,6 @@ const WardFunds = () => {
             vertical-align: top;
             padding: 2px !important;
           }
-          .btn-print { background: #10b981; color: white; }
-          .btn-print:hover { background: #059669; }
-          .btn-save { background: #3b82f6; color: white; }
-          .btn-save:hover { background: #2563eb; }
-          .btn-load { background: #8b5cf6; color: white; }
-          .btn-load:hover { background: #7c3aed; }
-          .font-size-select {
-            padding: 5px 8px;
-            border-radius: 6px;
-            border: 1.5px solid #cbd5e1;
-            font-size: 8.5pt;
-            font-weight: 600;
-            cursor: pointer;
-            background: #f8fafc;
-            color: #334155;
-          }
-          .toolbar-label {
-            font-size: 8pt;
-            color: #64748b;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-          }
           .print-toolbar {
             position: fixed;
             top: 8px;
@@ -4380,8 +4603,6 @@ const WardFunds = () => {
           .btn-print:hover { background: #059669; }
           .btn-save { background: #3b82f6; color: white; }
           .btn-save:hover { background: #2563eb; }
-          .btn-load { background: #8b5cf6; color: white; }
-          .btn-load:hover { background: #7c3aed; }
           .btn-reset { background: #f59e0b; color: white; }
           .btn-reset:hover { background: #d97706; }
           .btn-close { background: #ef4444; color: white; }
@@ -4403,23 +4624,13 @@ const WardFunds = () => {
             display: flex;
             align-items: center;
           }
-          
-          @media print {
-            .print-toolbar {
-              display: none !important;
-            }
-            body {
-              padding-top: 5px !important;
-            }
-          }
         </style>
       </head>
       <body>
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
-          ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>' : ''}
-          <button class="toolbar-btn btn-reset" id="btn-reset">🗑 Xóa bản lưu</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
             <option value="7pt">7pt</option>
@@ -4436,10 +4647,9 @@ const WardFunds = () => {
           <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
         </div>
 
-        ${hasSavedVersion ? `
-        <div id="saved-notice" style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;display:flex;align-items:center;gap:10px;">
-          ⚠️ <strong>Có bản chỉnh sửa đã lưu.</strong> Đang hiển thị dữ liệu mới nhất từ hệ thống. Nhấn <strong>📂 Mở bản đã lưu</strong> nếu muốn xem bản chỉnh sửa cũ.
-        </div>` : ''}
+        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
+          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây đã được giữ nguyên. (Bấm <strong>🔄 Tải dữ liệu gốc từ hệ thống</strong> nếu muốn hủy bỏ chỉnh sửa).
+        </div>
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
           ${receiptHtml}
@@ -4447,12 +4657,158 @@ const WardFunds = () => {
         
         <script>
           const SAVE_KEY = 'receipt_html_${householdId}_${selectedYear}';
-          const freshHtml = document.querySelector('.editor-area').innerHTML;
+          const freshHtml = ${JSON.stringify(freshReceiptHtml)};
           const btnSave = document.getElementById('btn-save');
           const btnReset = document.getElementById('btn-reset');
-          const btnLoad = document.getElementById('btn-load');
           const editor = document.querySelector('.editor-area');
           const fontSizeSelect = document.getElementById('font-size-select');
+
+          function docSoTien(number) {
+            if (isNaN(number) || number === 0) return 'Không đồng';
+            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            
+            function readTriple(n, showZero) {
+              let tram = Math.floor(n / 100);
+              let chuc = Math.floor((n % 100) / 10);
+              let donvi = n % 10;
+              let res = "";
+              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) res += "lẻ ";
+              else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += arrays[chuc] + " mươi ";
+              
+              if (donvi === 1 && chuc > 1) res += "mốt";
+              else if (donvi === 5 && chuc > 0) res += "lăm";
+              else if (donvi > 0) res += arrays[donvi];
+              return res.trim();
+            }
+
+            let str = "";
+            let units = ["", " nghìn", " triệu", " tỷ"];
+            let temp = Math.abs(Math.floor(number));
+            let i = 0;
+            while (temp > 0) {
+              let triple = temp % 1000;
+              if (triple > 0) {
+                let s = readTriple(triple, i > 0);
+                str = s + units[i] + " " + str;
+              }
+              temp = Math.floor(temp / 1000);
+              i++;
+            }
+            const finalStr = str.trim();
+            if (!finalStr) return "Không đồng";
+            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+          }
+
+          function recalculateReceiptTotals() {
+            const containers = document.querySelectorAll('.receipt-container');
+            if (containers.length === 0) return;
+
+            // Sync cell content across multiple liens (if multiple receipt containers exist)
+            if (containers.length > 1) {
+              const activeEl = document.activeElement;
+              if (activeEl && editor.contains(activeEl)) {
+                const activeContainer = activeEl.closest('.receipt-container');
+                const activeRow = activeEl.closest('tr');
+                if (activeContainer && activeRow && !activeRow.classList.contains('receipt-total-row')) {
+                  const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
+                  const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
+                  const rowIndex = sourceRows.indexOf(activeRow);
+                  
+                  if (rowIndex >= 0) {
+                    const cellIndex = Array.from(activeRow.children).indexOf(activeEl.closest('td') || activeEl);
+                    const newValue = activeEl.innerText;
+                    
+                    containers.forEach((cnt, idx) => {
+                      if (idx !== sourceContainerIndex) {
+                        const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
+                        if (targetRows[rowIndex]) {
+                          const targetTd = targetRows[rowIndex].children[cellIndex];
+                          if (targetTd && targetTd !== activeEl && targetTd.innerText !== newValue) {
+                            targetTd.innerText = newValue;
+                          }
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+            }
+
+            containers.forEach(container => {
+              const table = container.querySelector('.receipt-details-table');
+              if (!table) return;
+
+              const rows = table.querySelectorAll('tbody tr');
+              let tdpTotal = 0;
+              let wardTotal = 0;
+              let grandTotal = 0;
+              
+              const ths = table.querySelectorAll('thead th');
+              const is6ColTable = (ths.length >= 6);
+
+              rows.forEach(row => {
+                if (row.classList.contains('receipt-total-row')) return;
+                const tds = row.querySelectorAll('td');
+                
+                if (is6ColTable && tds.length >= 5) {
+                  const fundName = tds[1].innerText || '';
+                  const amountText = tds[4].innerText || '';
+                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
+
+                  if (fundName.includes('[TDP]')) {
+                    tdpTotal += num;
+                  } else if (fundName.includes('[UBND') || fundName.includes('[Phường]')) {
+                    wardTotal += num;
+                  } else {
+                    grandTotal += num;
+                  }
+                } else if (!is6ColTable && tds.length >= 3) {
+                  const amountText = tds[2].innerText || '';
+                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
+                  grandTotal += num;
+                }
+              });
+
+              if (is6ColTable) {
+                grandTotal = tdpTotal + wardTotal + grandTotal;
+              }
+
+              const totalRow = table.querySelector('tr.receipt-total-row');
+              if (totalRow) {
+                const totalTds = totalRow.querySelectorAll('td');
+                if (is6ColTable && totalTds.length >= 2) {
+                  const labelTd = totalTds[0];
+                  let printModeText = '';
+                  if (tdpTotal > 0 && wardTotal > 0) {
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else if (wardTotal > 0) {
+                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else if (tdpTotal > 0) {
+                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                  } else {
+                    printModeText = '';
+                  }
+                  labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                  const amountTd = totalTds[1];
+                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                } else if (!is6ColTable && totalTds.length >= 2) {
+                  const amountTd = totalTds[1];
+                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
+                }
+              }
+
+              const wordsContainer = container.querySelector('.receipt-amount-words') || container.querySelector('div[style*="Số tiền bằng chữ"]');
+              if (wordsContainer) {
+                const strongEl = wordsContainer.querySelector('strong');
+                if (strongEl) {
+                  strongEl.innerText = docSoTien(grandTotal);
+                }
+              }
+            });
+          }
 
           fontSizeSelect.addEventListener('change', function() {
             document.querySelectorAll('.receipt-container').forEach(function(el) {
@@ -4460,33 +4816,38 @@ const WardFunds = () => {
             });
           });
 
+          editor.addEventListener('input', function() {
+            recalculateReceiptTotals();
+          });
+          editor.addEventListener('blur', function() {
+            recalculateReceiptTotals();
+          }, true);
+
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
             const notice = document.getElementById('saved-notice');
-            if (notice) notice.remove();
-            btnLoad && (btnLoad.style.display = 'inline-flex');
-            alert('Đã lưu bản chỉnh sửa phiếu thu! Lần sau mở phiếu này bạn có thể chọn xem bản đã lưu.');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của hộ này đã được lưu lại cho các lần mở tiếp theo.';
+            }
+            alert('Đã lưu bản chỉnh sửa phiếu thu thành công! Lần sau mở phiếu thu của hộ này ra, hệ thống sẽ tự động hiển thị nội dung bạn vừa lưu.');
           });
-
-          if (btnLoad) {
-            btnLoad.addEventListener('click', function() {
-              const saved = localStorage.getItem(SAVE_KEY);
-              if (saved) {
-                editor.innerHTML = saved;
-                document.getElementById('saved-notice').innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu</strong>. Nhấn 💾 Lưu chỉnh sửa để cập nhật bản lưu sau khi sửa thêm.';
-              }
-            });
-          }
 
           btnReset.addEventListener('click', function() {
-            if (confirm('Xóa bản lưu chỉnh sửa? Phiếu sẽ luôn hiển thị dữ liệu mới nhất từ hệ thống.')) {
+            if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
               localStorage.removeItem(SAVE_KEY);
               editor.innerHTML = freshHtml;
+              recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
-              if (notice) notice.remove();
-              if (btnLoad) btnLoad.style.display = 'none';
+              if (notice) notice.style.display = 'none';
+              alert('Đã khôi phục về dữ liệu gốc từ hệ thống!');
             }
           });
+
+          recalculateReceiptTotals();
         </script>
       </body>
       </html>
