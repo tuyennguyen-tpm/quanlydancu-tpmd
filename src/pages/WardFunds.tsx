@@ -4444,10 +4444,14 @@ const WardFunds = () => {
       return;
     }
 
+    const memberIds = new Set(members.map(m => m.id));
+    const memberNames = new Set(members.map(m => m.full_name.trim().toLowerCase()));
+
     const memberWardRecords = funds.filter(f => {
       if (f.year !== selectedYear) return false;
-      const meta = fundMetaMap.get(f.id);
-      return meta && meta.householdId === householdId;
+      if (f.user_id && memberIds.has(f.user_id)) return true;
+      if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
+      return false;
     });
 
     let householdPaidFunds: HouseholdFund[] = [];
