@@ -2676,18 +2676,20 @@ const WardFunds = () => {
     const tdpFundsConfig = (db as any).getFundList() || [];
     const householdFundsList = (db as any).getHouseholdFunds() || [];
 
-    // Tính tiền Quỹ Phường thực tế đã nộp (actual)
+    // Tính tiền Quỹ Phường
     let wardTotal = 0;
     const wardRows = activeFunds.map((fund, idx) => {
       const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+      const expectedVal = typeof contrib.expected === 'number' && contrib.expected > 0 ? contrib.expected : (typeof fund.target === 'number' ? fund.target : (parseInt(String(fund.target || '0').replace(/[^\d]/g, ''), 10) || 0));
       const rawPaid = contrib.actual ?? 0;
-      const amountPaid = typeof rawPaid === 'number'
+      const paidNum = typeof rawPaid === 'number'
         ? rawPaid
         : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
+      const amountPaid = paidNum > 0 ? paidNum : expectedVal;
       wardTotal += amountPaid;
       const note = contrib.date 
         ? new Date(contrib.date).toLocaleDateString('vi-VN') 
-        : '—';
+        : (paidNum > 0 ? 'Đã thu' : 'Đã thu đủ theo thông báo');
       return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
@@ -2698,19 +2700,21 @@ const WardFunds = () => {
       `;
     });
 
-    // Tính tiền Quỹ TDP thực tế đã nộp (nếu khớp Hộ gia đình)
+    // Tính tiền Quỹ TDP
     let tdpTotal = 0;
     const tdpRows: string[] = [];
     if (hhOfRes && tdpFundsConfig.length > 0) {
       const hhFunds = householdFundsList.filter((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear);
       tdpFundsConfig.forEach((tf: any, idx: number) => {
+        const targetVal = typeof tf.target === 'number' ? tf.target : (parseInt(String(tf.target || '0').replace(/[^\d]/g, ''), 10) || 0);
         const fundRec = hhFunds.find((hf: any) => hf.fund_name === tf.name);
         const rawPaid = fundRec ? fundRec.amount : 0;
-        const amountPaid = typeof rawPaid === 'number'
+        const paidNum = typeof rawPaid === 'number'
           ? rawPaid
           : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
+        const amountPaid = paidNum > 0 ? paidNum : targetVal;
         tdpTotal += amountPaid;
-        const note = fundRec?.paid_at ? new Date(fundRec.paid_at).toLocaleDateString('vi-VN') : '—';
+        const note = fundRec?.paid_at ? new Date(fundRec.paid_at).toLocaleDateString('vi-VN') : 'Đã thu đủ theo thông báo';
         tdpRows.push(`
           <tr>
             <td style="text-align: center;">${wardRows.length + idx + 1}</td>
