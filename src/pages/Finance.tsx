@@ -1794,7 +1794,7 @@ const Finance = () => {
 
             if (containers.length > 1) {
               const activeEl = document.activeElement;
-              if (activeEl && editor && editor.contains(activeEl)) {
+              if (activeEl && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
                 const activeContainer = activeEl.closest('.receipt-container');
                 const activeRow = activeEl.closest('tr');
                 if (activeContainer && activeRow && !activeRow.classList.contains('receipt-total-row') && !(activeRow.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
@@ -1835,65 +1835,89 @@ const Finance = () => {
                 if (totalRow) totalRow.classList.add('receipt-total-row');
               }
 
+              const ths = Array.from(table.querySelectorAll('thead th'));
+              let amountColIdx = -1;
+              ths.forEach((th, idx) => {
+                const text = (th.textContent || th.innerText || '').toLowerCase();
+                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
+                  amountColIdx = idx;
+                }
+              });
+
+              let grandTotal = 0;
               let tdpTotal = 0;
               let wardTotal = 0;
-              let otherTotal = 0;
-              
-              const ths = table.querySelectorAll('thead th');
-              const is6ColTable = (ths.length >= 6);
 
               rows.forEach(row => {
                 const rText = (row.textContent || row.innerText || '').toUpperCase();
                 if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
                   return;
                 }
-                const tds = row.querySelectorAll('td');
-                
-                if (is6ColTable && tds.length >= 5) {
-                  const fundName = (tds[1].textContent || tds[1].innerText || '').toLowerCase();
-                  const amountText = (tds[4].textContent || tds[4].innerText || '');
-                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
 
-                  if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
-                    tdpTotal += num;
-                  } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
-                    wardTotal += num;
-                  } else {
-                    otherTotal += num;
-                  }
-                } else if (!is6ColTable && tds.length >= 3) {
-                  const amountText = (tds[2].textContent || tds[2].innerText || '');
-                  const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
-                  otherTotal += num;
+                const tds = Array.from(row.querySelectorAll('td'));
+                if (tds.length < 2) return;
+
+                let targetCellIdx = amountColIdx;
+                if (targetCellIdx < 0 || targetCellIdx >= tds.length) {
+                  if (tds.length >= 6) targetCellIdx = 4;
+                  else if (tds.length >= 4) targetCellIdx = 2;
+                  else targetCellIdx = tds.length - 2;
                 }
+
+                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
+                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
+
+                const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
+                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn');
+                
+                if (isWard) {
+                  wardTotal += num;
+                } else {
+                  tdpTotal += num;
+                }
+
+                grandTotal += num;
               });
 
-              const grandTotal = tdpTotal + wardTotal + otherTotal;
+              const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
+              let effectiveTotal = grandTotal;
+              if (activePrintMode === 'tdp_only') {
+                effectiveTotal = tdpTotal > 0 ? tdpTotal : grandTotal;
+              } else if (activePrintMode === 'ward_only') {
+                effectiveTotal = wardTotal > 0 ? wardTotal : grandTotal;
+              }
 
               if (totalRow) {
                 const totalTds = totalRow.querySelectorAll('td');
-                if (is6ColTable && totalTds.length >= 2) {
-                  const labelTd = totalTds[0];
-                  labelTd.setAttribute('colspan', '4');
-                  let printModeText = '';
-                  if (currentPrintMode === 'tdp_only') {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ')';
-                  } else if (currentPrintMode === 'ward_only') {
-                    printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
+                if (totalTds.length >= 2) {
+                  const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
+                  const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
+                  
+                  if (is6Col && totalTds.length >= 2) {
+                    const labelTd = totalTds[0];
+                    labelTd.setAttribute('colspan', '4');
+                    let printModeText = '';
+                    if (activePrintMode === 'tdp_only') {
+                      printModeText = '(TDP: ' + effectiveTotal.toLocaleString('vi-VN') + ' đ)';
+                    } else if (activePrintMode === 'ward_only') {
+                      printModeText = '(UBND: ' + effectiveTotal.toLocaleString('vi-VN') + ' đ)';
+                    } else {
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    }
+                    labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                    const amountTd = totalTds[1];
+                    amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+
+                    if (totalTds.length >= 3) {
+                      totalTds[2].innerHTML = '';
+                    }
                   } else {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' + UBND: ' + (wardTotal + otherTotal).toLocaleString('vi-VN') + ')';
+                    const labelTd = totalTds[0];
+                    labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                    const amountTd = totalTds[1];
+                    amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                   }
-                  labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
-
-                  const amountTd = totalTds[1];
-                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
-
-                  if (totalTds.length >= 3) {
-                    totalTds[2].innerHTML = '';
-                  }
-                } else if (!is6ColTable && totalTds.length >= 2) {
-                  const amountTd = totalTds[1];
-                  amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
                 }
               }
 
@@ -1903,9 +1927,9 @@ const Finance = () => {
               if (wordsContainer) {
                 const strongEl = wordsContainer.querySelector('strong');
                 if (strongEl) {
-                  strongEl.innerText = docSoTien(grandTotal);
+                  strongEl.innerText = docSoTien(effectiveTotal);
                 } else {
-                  wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(grandTotal) + '</strong>';
+                  wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
                 }
               }
             });
@@ -1978,6 +2002,13 @@ const Finance = () => {
           if (document.readyState === 'complete' || document.readyState === 'interactive') {
             recalculateReceiptTotals();
           }
+          window.addEventListener('DOMContentLoaded', recalculateReceiptTotals);
+          window.addEventListener('load', recalculateReceiptTotals);
+          setTimeout(recalculateReceiptTotals, 50);
+          setTimeout(recalculateReceiptTotals, 150);
+          setTimeout(recalculateReceiptTotals, 300);
+          setTimeout(recalculateReceiptTotals, 600);
+          setTimeout(recalculateReceiptTotals, 1200);
           window.addEventListener('DOMContentLoaded', recalculateReceiptTotals);
           window.addEventListener('load', recalculateReceiptTotals);
           setTimeout(recalculateReceiptTotals, 50);
@@ -2846,7 +2877,7 @@ const Finance = () => {
           </tbody>
         </table>
 
-        <div style="font-size: 9.5pt; font-style: italic; margin-bottom: 4px; margin-top: 2px; text-align: left;">
+        <div class="receipt-amount-words" style="font-size: 9.5pt; font-style: italic; margin-bottom: 4px; margin-top: 2px; text-align: left;">
           Số tiền bằng chữ: <strong>${textAmountWords}</strong>
         </div>
 
