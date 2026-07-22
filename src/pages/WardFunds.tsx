@@ -3412,16 +3412,7 @@ const WardFunds = () => {
             }
           });
 
-          if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            recalculateReceiptTotals();
-          }
-          window.addEventListener('DOMContentLoaded', recalculateReceiptTotals);
-          window.addEventListener('load', recalculateReceiptTotals);
-          setTimeout(recalculateReceiptTotals, 50);
-          setTimeout(recalculateReceiptTotals, 150);
-          setTimeout(recalculateReceiptTotals, 300);
-          setTimeout(recalculateReceiptTotals, 600);
-          setTimeout(recalculateReceiptTotals, 1200);
+
         </script>
       </body>
       </html>
