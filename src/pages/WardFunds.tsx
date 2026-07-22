@@ -4225,8 +4225,8 @@ const WardFunds = () => {
         return sum + val;
       }, 0);
 
-      // Số tiền hiển thị: nếu đã có dữ liệu thực → dùng thực; nếu chưa → dùng định mức (để biết phải nộp bao nhiêu)
-      const displayAmount = actualPaidSum > 0 ? actualPaidSum : expectedTotalForHH;
+      // Số tiền hiển thị của hộ: Luôn bằng mức phải thu của tổng số khẩu LĐ trong hộ (chỉ tăng nếu tự nguyện nộp dư)
+      const displayAmount = actualPaidSum > expectedTotalForHH ? actualPaidSum : expectedTotalForHH;
 
       let noteText = '';
       if (isPolicyHousehold) {
