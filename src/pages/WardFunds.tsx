@@ -4779,7 +4779,7 @@ const WardFunds = () => {
 
               let totalRow = table.querySelector('tr.receipt-total-row');
               if (!totalRow) {
-                totalRow = rows.find(r => (r.innerText || '').toUpperCase().includes('TỔNG CỘNG'));
+                totalRow = rows.find(r => (r.textContent || r.innerText || '').toUpperCase().includes('TỔNG CỘNG'));
                 if (totalRow) totalRow.classList.add('receipt-total-row');
               }
 
@@ -4791,14 +4791,15 @@ const WardFunds = () => {
               const is6ColTable = (ths.length >= 6);
 
               rows.forEach(row => {
-                if (row === totalRow || row.classList.contains('receipt-total-row') || (row.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
+                const rText = (row.textContent || row.innerText || '').toUpperCase();
+                if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
                   return;
                 }
                 const tds = row.querySelectorAll('td');
                 
                 if (is6ColTable && tds.length >= 5) {
-                  const fundName = (tds[1].innerText || '').toLowerCase();
-                  const amountText = tds[4].innerText || '';
+                  const fundName = (tds[1].textContent || tds[1].innerText || '').toLowerCase();
+                  const amountText = (tds[4].textContent || tds[4].innerText || '');
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
 
                   if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
@@ -4809,7 +4810,7 @@ const WardFunds = () => {
                     otherTotal += num;
                   }
                 } else if (!is6ColTable && tds.length >= 3) {
-                  const amountText = tds[2].innerText || '';
+                  const amountText = (tds[2].textContent || tds[2].innerText || '');
                   const num = parseInt(amountText.replace(/[^\d]/g, ''), 10) || 0;
                   otherTotal += num;
                 }
@@ -4843,7 +4844,7 @@ const WardFunds = () => {
               }
 
               const wordsContainer = container.querySelector('.receipt-amount-words') 
-                || Array.from(container.querySelectorAll('div')).find(d => (d.innerText || '').includes('Số tiền bằng chữ'));
+                || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
               
               if (wordsContainer) {
                 const strongEl = wordsContainer.querySelector('strong');
@@ -4913,6 +4914,8 @@ const WardFunds = () => {
           });
 
           recalculateReceiptTotals();
+          setTimeout(recalculateReceiptTotals, 50);
+          setTimeout(recalculateReceiptTotals, 300);
         </script>
       </body>
       </html>
