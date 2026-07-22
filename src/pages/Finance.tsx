@@ -1869,7 +1869,10 @@ const Finance = () => {
               const grandTotal = tdpTotal + wardTotal + otherTotal;
               const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
 
-              if (totalRow) {
+              const activeEl = document.activeElement;
+              const isEditingTotal = activeEl && totalRow && totalRow.contains(activeEl);
+
+              if (totalRow && !isEditingTotal) {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (totalTds.length >= 2) {
                   const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
@@ -1907,11 +1910,18 @@ const Finance = () => {
                 || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
               
               if (wordsContainer) {
+                let finalWordsAmount = grandTotal;
+                if (isEditingTotal && totalRow) {
+                  const totalTds = totalRow.querySelectorAll('td');
+                  const valStr = totalTds[1] ? (totalTds[1].textContent || totalTds[1].innerText || '') : '';
+                  const parsedUserNum = parseInt(valStr.replace(/[^\d]/g, ''), 10);
+                  if (!isNaN(parsedUserNum)) finalWordsAmount = parsedUserNum;
+                }
                 const strongEl = wordsContainer.querySelector('strong');
                 if (strongEl) {
-                  strongEl.innerText = docSoTien(grandTotal);
+                  strongEl.innerText = docSoTien(finalWordsAmount);
                 } else {
-                  wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(grandTotal) + '</strong>';
+                  wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(finalWordsAmount) + '</strong>';
                 }
               }
             });
