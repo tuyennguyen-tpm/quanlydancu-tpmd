@@ -2956,7 +2956,7 @@ const WardFunds = () => {
     const SAVE_KEY = `receipt_html_ward_indiv_${item.id}_${selectedYear}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
     const hasSavedVersion = !!savedReceiptHtml;
-    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
+    const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
