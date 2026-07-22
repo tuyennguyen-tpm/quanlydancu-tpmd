@@ -4212,7 +4212,14 @@ const WardFunds = () => {
         expectedTotalForHH = wfTargetVal * laborCount;
       }
 
+      const laborResidentIds = new Set(laborResidents.map(r => r.id));
+      const laborResidentNames = new Set(laborResidents.map(r => r.full_name.trim().toLowerCase()));
+
       const actualPaidSum = memberWardRecords.reduce((sum, r) => {
+        if (!isHousehold) {
+          const isLabor = (r.user_id && laborResidentIds.has(r.user_id)) || laborResidentNames.has((r.full_name || '').trim().toLowerCase());
+          if (!isLabor) return sum;
+        }
         const raw = r.contributions?.[wf.name]?.actual ?? 0;
         const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
         return sum + val;
