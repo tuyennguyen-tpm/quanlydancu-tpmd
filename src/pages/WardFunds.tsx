@@ -2690,7 +2690,10 @@ const WardFunds = () => {
     let wardTotal = 0;
     const wardRows = activeFunds.map((fund, idx) => {
       const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-      const amountPaid = contrib.actual || 0;
+      const rawPaid = contrib.actual ?? 0;
+      const amountPaid = typeof rawPaid === 'number'
+        ? rawPaid
+        : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
       wardTotal += amountPaid;
       const note = contrib.date 
         ? new Date(contrib.date).toLocaleDateString('vi-VN') 
@@ -2712,7 +2715,10 @@ const WardFunds = () => {
       const hhFunds = householdFundsList.filter((hf: any) => hf.household_id === hhOfRes.id && hf.year === selectedYear);
       tdpFundsConfig.forEach((tf: any, idx: number) => {
         const fundRec = hhFunds.find((hf: any) => hf.fund_name === tf.name);
-        const amountPaid = fundRec ? fundRec.amount : 0;
+        const rawPaid = fundRec ? fundRec.amount : 0;
+        const amountPaid = typeof rawPaid === 'number'
+          ? rawPaid
+          : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
         tdpTotal += amountPaid;
         const note = fundRec?.paid_at ? new Date(fundRec.paid_at).toLocaleDateString('vi-VN') : '—';
         tdpRows.push(`
@@ -3401,6 +3407,10 @@ const WardFunds = () => {
             if (editor) {
               observer.observe(editor, { childList: true, subtree: true, characterData: true });
             }
+          } catch (e) {}
+
+          try {
+            recalculateReceiptTotals();
           } catch (e) {}
 
           btnSave.addEventListener('click', function() {
@@ -4159,15 +4169,15 @@ const WardFunds = () => {
       tdpActiveFunds.forEach((fund: { name: string; target: any }) => {
         const targetVal = typeof fund.target === 'number' ? fund.target : (parseInt((fund.target || '0').toString().replace(/[^\d]/g, ''), 10) || 0);
         const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
-        const paidAmount = (paidFund && typeof paidFund.amount === 'number' && paidFund.amount > 0)
-          ? paidFund.amount
-          : targetVal;
+        const rawPaid = paidFund ? paidFund.amount : 0;
+        const paidAmountNum = typeof rawPaid === 'number' ? rawPaid : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
+        const paidAmount = paidAmountNum > 0 ? paidAmountNum : targetVal;
         receiptRows.push({
           name: '[TDP] ' + fund.name,
           type: 'Hộ gia đình',
           rate: targetVal.toLocaleString('vi-VN') + ' đ/hộ',
           amount: Number(paidAmount) || 0,
-          note: paidFund?.note || (paidFund && paidFund.amount > 0 ? (paidFund.amount >= targetVal ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidFund.amount.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
+          note: paidFund?.note || (paidFund && paidAmountNum > 0 ? (paidAmountNum >= targetVal ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidAmountNum.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
         });
       });
     }
@@ -4189,7 +4199,11 @@ const WardFunds = () => {
         expectedTotalForHH = wfTargetVal * laborCount;
       }
 
-      const actualPaidSum = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+      const actualPaidSum = memberWardRecords.reduce((sum, r) => {
+        const raw = r.contributions?.[wf.name]?.actual ?? 0;
+        const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
+        return sum + val;
+      }, 0);
       const actualPaid = (actualPaidSum > 0) ? actualPaidSum : expectedTotalForHH;
 
       let noteText = '';
@@ -4214,7 +4228,15 @@ const WardFunds = () => {
 
     const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
     const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const grandTotal = receiptRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    let effectiveTotal = 0;
+    if ((printMode as string) === 'tdp_only') {
+      effectiveTotal = tdpTotal;
+    } else if ((printMode as string) === 'ward_only') {
+      effectiveTotal = wardTotal;
+    } else {
+      effectiveTotal = tdpTotal + wardTotal;
+    }
+    const grandTotal = effectiveTotal;
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
@@ -4915,6 +4937,10 @@ const WardFunds = () => {
               recalculateReceiptTotals();
             }, true);
           });
+
+          try {
+            recalculateReceiptTotals();
+          } catch (e) {}
 
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);

@@ -1134,15 +1134,15 @@ const Finance = () => {
     tdpActiveFunds.forEach((fund: any) => {
       const targetVal = typeof fund.target === 'number' ? fund.target : (parseInt((fund.target || '0').toString().replace(/[^\d]/g, ''), 10) || 0);
       const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
-      const paidAmount = (paidFund && typeof paidFund.amount === 'number' && paidFund.amount > 0)
-        ? paidFund.amount
-        : targetVal;
+      const rawPaid = paidFund ? paidFund.amount : 0;
+      const paidAmountNum = typeof rawPaid === 'number' ? rawPaid : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
+      const paidAmount = paidAmountNum > 0 ? paidAmountNum : targetVal;
       receiptRows.push({
         name: '[TDP] ' + fund.name,
         type: 'Hộ gia đình',
         rate: targetVal.toLocaleString('vi-VN') + ' đ/hộ',
         amount: Number(paidAmount) || 0,
-        note: paidFund?.note || (paidFund && paidFund.amount > 0 ? (paidFund.amount >= targetVal ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidFund.amount.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
+        note: paidFund?.note || (paidFund && paidAmountNum > 0 ? (paidAmountNum >= targetVal ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidAmountNum.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
       });
     });
 
@@ -1164,7 +1164,11 @@ const Finance = () => {
           expectedTotalForHH = wfTargetVal * laborCount;
         }
 
-        const actualPaidSum = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
+        const actualPaidSum = memberWardRecords.reduce((sum, r) => {
+          const raw = r.contributions?.[wf.name]?.actual ?? 0;
+          const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
+          return sum + val;
+        }, 0);
         const actualPaid = (actualPaidSum > 0) ? actualPaidSum : expectedTotalForHH;
 
         let noteText = '';
@@ -1190,7 +1194,15 @@ const Finance = () => {
 
     const tdpTotal = receiptRows.filter(r => r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
     const wardTotal = receiptRows.filter(r => r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường')).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const grandTotal = receiptRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    let effectiveTotal = 0;
+    if ((printMode as string) === 'tdp_only') {
+      effectiveTotal = tdpTotal;
+    } else if ((printMode as string) === 'ward_only') {
+      effectiveTotal = wardTotal;
+    } else {
+      effectiveTotal = tdpTotal + wardTotal;
+    }
+    const grandTotal = effectiveTotal;
 
     const docSoTien = (number: number): string => {
       if (number === 0) return 'Không đồng';
@@ -1936,6 +1948,10 @@ const Finance = () => {
             if (editor) {
               observer.observe(editor, { childList: true, subtree: true, characterData: true });
             }
+          } catch (e) {}
+
+          try {
+            recalculateReceiptTotals();
           } catch (e) {}
 
           btnSave.addEventListener('click', function() {
@@ -2705,7 +2721,11 @@ const Finance = () => {
   const generateStateReceiptHtml = (hh: Household, dateText: string, tdpNameVal: string, wardNameVal: string, leaderName: string, leaderSigUrl: string) => {
     const headName = getHouseholdHeadName(hh);
     const hhFunds = householdFunds.filter(f => f.household_id === hh.id && f.year === fundYear);
-    const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
+    const totalPaid = hhFunds.reduce((sum, f) => {
+      const raw = f.amount ?? 0;
+      const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
+      return sum + val;
+    }, 0);
 
     // Tải chữ ký động cho Kế toán trưởng & Thủ quỹ
     let keToanName = '';
@@ -2725,7 +2745,8 @@ const Finance = () => {
 
     const paidFundsRowsHtml = fundNames.map((fundName, idx) => {
       const fundRecord = hhFunds.find(f => f.fund_name === fundName);
-      const amountPaid = fundRecord ? fundRecord.amount : 0;
+      const rawPaid = fundRecord ? fundRecord.amount : 0;
+      const amountPaid = typeof rawPaid === 'number' ? rawPaid : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
       const note = fundRecord ? fundRecord.note || '—' : '—';
       return `
         <tr>
