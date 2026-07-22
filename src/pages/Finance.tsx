@@ -1971,9 +1971,14 @@ const Finance = () => {
             }
           });
 
-          recalculateReceiptTotals();
+          if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            recalculateReceiptTotals();
+          }
+          window.addEventListener('DOMContentLoaded', recalculateReceiptTotals);
+          window.addEventListener('load', recalculateReceiptTotals);
           setTimeout(recalculateReceiptTotals, 50);
-          setTimeout(recalculateReceiptTotals, 300);
+          setTimeout(recalculateReceiptTotals, 200);
+          setTimeout(recalculateReceiptTotals, 500);
         </script>
       </body>
       </html>
