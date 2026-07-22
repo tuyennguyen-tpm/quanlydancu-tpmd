@@ -87,6 +87,7 @@ const Finance = () => {
   const [description, setDescription] = useState('');
   const [recordedBy, setRecordedBy] = useState(localStorage.getItem('user_full_name') || 'Nguyễn Kim Tuyến');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [formItems, setFormItems] = useState<Array<{ id: string; name: string; amount: string }>>([]);
 
   // Phân hệ Quản lý đóng quỹ mới bổ sung
   const [subTab, setSubTab] = useState<'ledger' | 'funds'>('ledger');
@@ -272,6 +273,7 @@ const Finance = () => {
     setDescription('');
     setRecordedBy('Ban Quản lý');
     setDate(new Date().toISOString().slice(0, 10));
+    setFormItems([]);
     setIsFormOpen(true);
   };
 
@@ -283,6 +285,7 @@ const Finance = () => {
     setDescription(record.description);
     setRecordedBy(record.recorded_by);
     setDate(record.date);
+    setFormItems([]);
     setIsFormOpen(true);
   };
 
@@ -1921,6 +1924,15 @@ const Finance = () => {
               recalculateReceiptTotals();
             }, true);
           });
+
+          try {
+            const observer = new MutationObserver(function() {
+              recalculateReceiptTotals();
+            });
+            if (editor) {
+              observer.observe(editor, { childList: true, subtree: true, characterData: true });
+            }
+          } catch (e) {}
 
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
@@ -3951,7 +3963,7 @@ const Finance = () => {
           {/* New Voucher Modal */}
           {isFormOpen && (
             <div className="modal-overlay">
-              <div className="modal-content">
+              <div className="modal-content" style={{ maxWidth: '650px', width: '90%' }}>
                 <div className="modal-header">
                   <h2>{editingRecord ? 'Chỉnh sửa phiếu thu / chi' : 'Lập phiếu thu / chi mới'}</h2>
                   <button className="close-btn" onClick={() => setIsFormOpen(false)}><X size={24} /></button>
@@ -3965,8 +3977,99 @@ const Finance = () => {
                     </select>
                   </div>
 
+                  {/* Bảng chi tiết các khoản - Tự động tính tổng */}
+                  <div className="form-group" style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontWeight: 'bold', color: '#1e293b', margin: 0, fontSize: '0.9rem' }}>
+                        📋 Chi tiết các khoản {type === 'income' ? 'thu' : 'chi'} (Tự động cộng tổng)
+                      </label>
+                      <button 
+                        type="button" 
+                        className="btn btn-secondary" 
+                        style={{ padding: '4px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#e2e8f0', color: '#1e293b', border: 'none', cursor: 'pointer' }}
+                        onClick={() => {
+                          setFormItems([...formItems, { id: generateUUID(), name: '', amount: '' }]);
+                        }}
+                      >
+                        <Plus size={14} /> Thêm khoản
+                      </button>
+                    </div>
+
+                    {formItems.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                        {formItems.map((item, index) => (
+                          <div key={item.id} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', minWidth: '18px', color: '#64748b' }}>{index + 1}.</span>
+                            <input 
+                              type="text" 
+                              placeholder="Tên khoản (VD: Quỹ VSMT, Quỹ An ninh...)" 
+                              value={item.name}
+                              onChange={(e) => {
+                                const newItems = [...formItems];
+                                newItems[index].name = e.target.value;
+                                setFormItems(newItems);
+                                const validItems = newItems.filter(i => i.name.trim() || i.amount);
+                                if (validItems.length > 0) {
+                                  const autoDesc = validItems.map(i => `${i.name || 'Khoản thu'}${i.amount ? ` (${i.amount}đ)` : ''}`).join(', ');
+                                  setDescription(autoDesc);
+                                }
+                              }}
+                              style={{ flex: 2, padding: '6px 10px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            />
+                            <input 
+                              type="text" 
+                              placeholder="Số tiền (VND)" 
+                              value={item.amount}
+                              onChange={(e) => {
+                                const formatted = formatInputNumber(e.target.value);
+                                const newItems = [...formItems];
+                                newItems[index].amount = formatted;
+                                setFormItems(newItems);
+
+                                const total = newItems.reduce((sum, it) => {
+                                  const num = parseInt((it.amount || '').replace(/[^\d]/g, ''), 10) || 0;
+                                  return sum + num;
+                                }, 0);
+
+                                if (total > 0) {
+                                  setAmount(total.toLocaleString('vi-VN'));
+                                } else {
+                                  setAmount('');
+                                }
+                              }}
+                              style={{ flex: 1.2, padding: '6px 10px', fontSize: '0.85rem', textAlign: 'right', fontWeight: '600', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+                            />
+                            <button 
+                              type="button"
+                              style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                              onClick={() => {
+                                const newItems = formItems.filter(i => i.id !== item.id);
+                                setFormItems(newItems);
+                                const total = newItems.reduce((sum, it) => {
+                                  const num = parseInt((it.amount || '').replace(/[^\d]/g, ''), 10) || 0;
+                                  return sum + num;
+                                }, 0);
+                                setAmount(total > 0 ? total.toLocaleString('vi-VN') : '');
+                              }}
+                              title="Xóa khoản này"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                        <div style={{ textAlign: 'right', fontSize: '0.85rem', fontWeight: 'bold', color: '#15803d', marginTop: '4px', paddingTop: '6px', borderTop: '1px dashed #cbd5e1' }}>
+                          👉 Tổng cộng các khoản: <span style={{ fontSize: '1rem', color: '#b91c1c' }}>{formItems.reduce((sum, it) => sum + (parseInt((it.amount || '').replace(/[^\d]/g, ''), 10) || 0), 0).toLocaleString('vi-VN')}</span> VNĐ
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, fontStyle: 'italic' }}>
+                        Bấm "+ Thêm khoản" nếu muốn nhập danh sách chi tiết các khoản thu/chi để hệ thống tự động tính tổng tiền.
+                      </p>
+                    )}
+                  </div>
+
                   <div className="form-group">
-                    <label>Số tiền (VND) *</label>
+                    <label>Tổng số tiền (VND) * {formItems.length > 0 && <span style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 'normal' }}>(Đã tự động tính tổng)</span>}</label>
                     <input 
                       type="text" 
                       value={amount}

@@ -3338,6 +3338,15 @@ const WardFunds = () => {
             }, true);
           });
 
+          try {
+            const observer = new MutationObserver(function() {
+              recalculateReceiptTotals();
+            });
+            if (editor) {
+              observer.observe(editor, { childList: true, subtree: true, characterData: true });
+            }
+          } catch (e) {}
+
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
             const notice = document.getElementById('saved-notice');
