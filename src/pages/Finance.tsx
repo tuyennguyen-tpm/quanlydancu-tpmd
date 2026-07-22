@@ -1888,44 +1888,36 @@ const Finance = () => {
                 let wardTotal = 0;
 
                 rows.forEach(row => {
+                  if (row === totalRow || row.classList.contains('receipt-total-row')) return;
                   const rText = (row.textContent || row.innerText || '').toUpperCase();
-                  if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
-                    return;
-                  }
+                  if (rText.includes('TỔNG CỘNG')) return;
 
                   const tds = Array.from(row.querySelectorAll('td'));
-                  if (tds.length < 2) return;
+                  if (tds.length === 0) return;
 
-                  let amountTd = row.querySelector('.receipt-amount-cell');
-                  let rateTd = null;
-
-                  if (tds.length >= 6) {
-                    rateTd = tds[3];
-                    if (!amountTd) amountTd = tds[4];
-                  } else if (tds.length >= 5) {
-                    rateTd = tds[2];
-                    if (!amountTd) amountTd = tds[3];
-                  } else if (tds.length >= 4) {
-                    rateTd = tds[1];
-                    if (!amountTd) amountTd = tds[2];
-                  } else {
-                    if (!amountTd) amountTd = tds[tds.length - 1];
+                  let num = 0;
+                  
+                  const amountCell = row.querySelector('.receipt-amount-cell');
+                  if (amountCell) {
+                    const txt = amountCell.textContent || amountCell.innerText || '';
+                    const digits = txt.replace(/[^\d]/g, '');
+                    if (digits) num = parseInt(digits, 10);
                   }
 
-                  const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
-                  const digits = cellText.replace(/[^\d]/g, '');
-                  let num = digits ? parseInt(digits, 10) : 0;
-
-                  if (num === 0 && rateTd) {
-                    const rateText = rateTd.textContent || rateTd.innerText || '';
-                    const rateDigits = rateText.replace(/[^\d]/g, '');
-                    if (rateDigits) {
-                      num = parseInt(rateDigits, 10);
+                  if (num === 0) {
+                    for (let i = tds.length - 1; i >= 0; i--) {
+                      if (i === 0 && tds.length > 2) continue;
+                      const txt = tds[i].textContent || tds[i].innerText || '';
+                      const digits = txt.replace(/[^\d]/g, '');
+                      if (digits && digits.length >= 2) {
+                        num = parseInt(digits, 10);
+                        break;
+                      }
                     }
                   }
 
                   const fundTypeAttr = row.getAttribute('data-fund-type');
-                  const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
+                  const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : row.textContent || '').toLowerCase();
                   const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
 
                   if (isWard) {
