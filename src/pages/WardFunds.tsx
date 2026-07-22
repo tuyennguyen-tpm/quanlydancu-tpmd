@@ -738,16 +738,7 @@ const WardFunds = () => {
     funds.forEach(f => {
       const expected: Record<string, number> = {};
 
-      // Ưu tiên sử dụng mức chỉ tiêu expected đã được khởi tạo/lưu trong contributions của bản ghi
-      if (f.contributions) {
-        Object.keys(f.contributions).forEach(k => {
-          if (typeof f.contributions[k]?.expected === 'number') {
-            expected[k] = f.contributions[k].expected;
-          }
-        });
-      }
-
-      // Dự phòng nếu chưa có thông tin trong contributions
+      // Tìm nhân khẩu khớp trong CSDL để lấy giới tính & hộ chính sách / hưu trí
       let matchedRes: Resident | undefined;
       if (f.user_id) matchedRes = residents.find(r => r.id === f.user_id);
       if (!matchedRes && f.full_name) {
@@ -759,7 +750,6 @@ const WardFunds = () => {
       }
 
       activeFunds.forEach((fund: any) => {
-        if (expected[fund.name] !== undefined) return;
 
         const isHH = fund.scope === 'household'
           || fund.name.toLowerCase().includes('hộ')
@@ -851,13 +841,13 @@ const WardFunds = () => {
       || fund.name.toLowerCase().includes('người cao tuổi')
       || fund.name.toLowerCase().includes('cao tuổi');
 
-    // Tính tổng số tiền phải thu: chỉ tính từ bản ghi có expected > 0
-    const recordsWithExpected = funds.filter(f => (f.contributions?.[fund.name]?.expected || 0) > 0);
-    const expected = recordsWithExpected.length > 0
-      ? recordsWithExpected.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0)
-      : fund.target * (isHouseholdScope
-          ? new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
-          : funds.length);
+    // Tính tổng số tiền phải thu từ map tính động chỉ tiêu theo tuổi/giới tính thực tế
+    const expected = isHouseholdScope
+      ? fund.target * new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
+      : funds.reduce((sum, f) => {
+          const compExp = computedExpectedMap.get(f.id);
+          return sum + (compExp?.[fund.name] ?? (f.contributions?.[fund.name]?.expected || 0));
+        }, 0);
 
     const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
     const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
@@ -6958,9 +6948,11 @@ const WardFunds = () => {
                           <td style={{ padding: '12px 10px' }}>{item.address || '—'}</td>
                           
                           {displayedActiveFunds.map(fund => {
-                            const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-                            const paid = contrib.actual >= contrib.expected && contrib.expected > 0;
-                            const hasPartial = contrib.actual > 0 && contrib.actual < contrib.expected;
+                            const compExp = computedExpectedMap.get(item.id) || {};
+                            const expVal = compExp[fund.name] ?? (item.contributions?.[fund.name]?.expected ?? fund.target);
+                            const actVal = item.contributions?.[fund.name]?.actual || 0;
+                            const paid = actVal >= expVal && expVal > 0;
+                            const hasPartial = actVal > 0 && actVal < expVal;
                             
                             return (
                               <td 
@@ -6973,8 +6965,8 @@ const WardFunds = () => {
                                   display: 'inline-block',
                                   padding: '6px 12px',
                                   borderRadius: '8px',
-                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (contrib.expected === 0 ? '#f1f5f9' : '#fee2e2')),
-                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (contrib.expected === 0 ? '#64748b' : '#991b1b')),
+                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (expVal === 0 ? '#f1f5f9' : '#fee2e2')),
+                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (expVal === 0 ? '#64748b' : '#991b1b')),
                                   fontWeight: '600',
                                   fontSize: '0.85rem',
                                   transition: 'transform 0.1s',
@@ -6982,13 +6974,13 @@ const WardFunds = () => {
                                 onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
                                 onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                                 >
-                                  {contrib.expected === 0 ? (
+                                  {expVal === 0 ? (
                                     <span style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>Miễn / 0đ</span>
                                   ) : (
                                     <>
-                                      {formatCurrency(contrib.actual)}
+                                      {formatCurrency(actVal)}
                                       <div style={{ fontSize: '0.72rem', opacity: 0.8, marginTop: '2px' }}>
-                                        / {formatCurrency(contrib.expected)}
+                                        / {formatCurrency(expVal)}
                                       </div>
                                     </>
                                   )}
