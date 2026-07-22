@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
+import { calculateExactAge } from '../utils/dateUtils';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -795,9 +796,8 @@ const WardFunds = () => {
           isFemale = n.includes(' thị ') || n.endsWith(' thị');
         }
 
-        const dobStr = f.dob || '';
-        const birthYear = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
-        const age = birthYear > 0 ? currentYear - birthYear : 30;
+        const dobStr = f.dob || (matchedRes ? matchedRes.dob : '');
+        const age = calculateExactAge(dobStr, new Date());
 
         const lim = parseAgeRange(fund.age_range);
         const shouldPay = isFemale
@@ -1719,14 +1719,7 @@ const WardFunds = () => {
 
           // Tự động tính toán lại chỉ tiêu đóng góp kỳ vọng của quỹ Phường dựa trên tuổi/giới tính mới cập nhật
           const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
-          let age = 30;
-          let parsedYear = 0;
-          if (matchedRes.dob) {
-            parsedYear = parseInt(matchedRes.dob.match(/\d{4}/)?.[0] || '0', 10);
-            if (parsedYear > 0) {
-              age = selectedYear - parsedYear;
-            }
-          }
+          const age = calculateExactAge(matchedRes.dob, new Date());
 
           const mGStr = (matchedRes.gender || '').toString().toLowerCase().trim();
           const hasThi = matchedRes.full_name.toLowerCase().includes(' thị ') || matchedRes.full_name.toLowerCase().includes(' thị');
@@ -1852,9 +1845,8 @@ const WardFunds = () => {
           return result;
         };
 
-        const fDobStr = f.dob || '';
-        const fBirthYear = parseInt(fDobStr.match(/\d{4}/)?.[0] || '0', 10);
-        const fAge = fBirthYear > 0 ? selectedYear - fBirthYear : 30;
+        const fDobStr = f.dob || (matchedRes ? matchedRes.dob : '');
+        const fAge = calculateExactAge(fDobStr, new Date());
         const fName = f.full_name || '';
 
         // Xác định giới tính: ưu tiên từ nhân khẩu đã khớp, rồi mới dùng tên "Thị" làm dự phòng
@@ -4046,10 +4038,7 @@ const WardFunds = () => {
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
     const getResidentAge = (dobStr: string) => {
-      if (!dobStr) return 0;
-      const year = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
-      if (!year) return 0;
-      return selectedYear - year;
+      return calculateExactAge(dobStr, new Date());
     };
 
     const activeFundsList = (db as any).getWardFundList() || [];
@@ -4152,10 +4141,8 @@ const WardFunds = () => {
           }
         }
 
-        const currentYearReceipt = new Date().getFullYear();
-        const rDob = r.dob || '';
-        const rBirthYear = parseInt(rDob.match(/\d{4}/)?.[0] || '0', 10);
-        const rAge = rBirthYear > 0 ? currentYearReceipt - rBirthYear : 30;
+        const rDob = r.dob || (matchedMember ? matchedMember.dob : '');
+        const rAge = calculateExactAge(rDob, new Date());
 
         let rIsFemale = false;
         if (matchedMember) {

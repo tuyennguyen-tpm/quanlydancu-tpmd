@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
+import { calculateExactAge } from '../utils/dateUtils';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -1079,10 +1080,7 @@ const Finance = () => {
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
     const getResidentAge = (dobStr: string) => {
-      if (!dobStr) return 0;
-      const year = parseInt(dobStr.match(/\d{4}/)?.[0] || '0', 10);
-      if (!year) return 0;
-      return fundYear - year;
+      return calculateExactAge(dobStr, new Date());
     };
 
     const activeFundsList = (db as any).getWardFundList() || [];

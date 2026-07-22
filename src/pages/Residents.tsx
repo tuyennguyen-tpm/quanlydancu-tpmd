@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, mapToUUID } from '../services/db';
 import { showToast } from '../utils/toast';
+import { calculateExactAge } from '../utils/dateUtils';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -519,10 +520,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   }, [residents]);
 
   const getAge = (dobString: string) => {
-    if (!dobString) return 0;
-    const birthYear = new Date(dobString).getFullYear();
-    const currentYear = new Date().getFullYear();
-    return currentYear - birthYear;
+    return calculateExactAge(dobString);
   };
 
   const handleOpenAdd = () => {
