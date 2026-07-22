@@ -1132,13 +1132,15 @@ const Finance = () => {
     const tdpActiveFunds = (db as any).getFundList() as { name: string; target: number }[];
     tdpActiveFunds.forEach(fund => {
       const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
-      const paidAmount = paidFund?.amount || 0;
+      const paidAmount = (paidFund && typeof paidFund.amount === 'number' && paidFund.amount > 0)
+        ? paidFund.amount
+        : fund.target;
       receiptRows.push({
         name: '[TDP] ' + fund.name,
         type: 'Hộ gia đình',
         rate: fund.target.toLocaleString('vi-VN') + ' đ/hộ',
         amount: paidAmount,
-        note: paidFund?.note || (paidAmount === 0 ? 'Chưa nộp' : (paidAmount >= fund.target ? 'Thu đủ' : `Đã nộp ${paidAmount.toLocaleString('vi-VN')} đ`))
+        note: paidFund?.note || (paidFund && paidFund.amount > 0 ? (paidFund.amount >= fund.target ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidFund.amount.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
       });
     });
 
@@ -1180,24 +1182,16 @@ const Finance = () => {
         }
 
         const actualPaidSum = memberWardRecords.reduce((sum, r) => sum + (r.contributions?.[wf.name]?.actual || 0), 0);
-        const actualPaid = (expectedTotalForHH > 0 && actualPaidSum >= expectedTotalForHH)
-          ? expectedTotalForHH
-          : (actualPaidSum > 0 ? actualPaidSum : 0);
+        const actualPaid = (actualPaidSum > 0) ? actualPaidSum : expectedTotalForHH;
 
         let noteText = '';
         if (expectedTotalForHH === 0) {
           noteText = actualPaid > 0 ? `Được miễn (tự nguyện đóng ${actualPaid.toLocaleString('vi-VN')} đ)` : 'Được miễn';
         } else {
-          if (actualPaid >= expectedTotalForHH) {
+          if (actualPaidSum >= expectedTotalForHH || actualPaidSum === 0) {
             noteText = 'Thu đủ';
-          } else if (actualPaid > 0) {
-            noteText = `Đã nộp ${actualPaid.toLocaleString('vi-VN')} đ`;
-          } else {
-            if (isHousehold) {
-              noteText = 'Chưa nộp';
-            } else {
-              noteText = `${laborCount} khẩu LĐ - Chưa nộp`;
-            }
+          } else if (actualPaidSum > 0) {
+            noteText = `Đã nộp ${actualPaidSum.toLocaleString('vi-VN')} đ`;
           }
         }
 
