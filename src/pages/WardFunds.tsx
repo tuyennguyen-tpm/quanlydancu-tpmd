@@ -3301,6 +3301,14 @@ const WardFunds = () => {
                   grandTotal += num;
                 });
 
+                if (grandTotal === 0) {
+                  let activeEl = document.activeElement;
+                  const isEditingTable = activeEl && table.contains(activeEl);
+                  if (!isEditingTable) {
+                    return;
+                  }
+                }
+
                 const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
                 let effectiveTotal = grandTotal;
                 if (activePrintMode === 'tdp_only') {
@@ -4880,6 +4888,14 @@ const WardFunds = () => {
 
                   grandTotal += num;
                 });
+
+                if (grandTotal === 0) {
+                  let activeEl = document.activeElement;
+                  const isEditingTable = activeEl && table.contains(activeEl);
+                  if (!isEditingTable) {
+                    return;
+                  }
+                }
 
                 const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
                 let effectiveTotal = grandTotal;
