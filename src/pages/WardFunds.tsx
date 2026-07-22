@@ -1415,24 +1415,16 @@ const WardFunds = () => {
         const calculateContributions = (r: Resident, hh?: Household, isHead: boolean = false) => {
           const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
 
-          let age = 30; // Mặc định trong độ tuổi lao động nếu r.dob thiếu
-          let parsedYear = 0;
-          if (r.dob) {
-            parsedYear = parseInt(r.dob.match(/\d{4}/)?.[0] || '0', 10);
-            if (parsedYear > 0) {
-              age = selectedYear - parsedYear;
-            }
-          }
+          let age = calculateExactAge(r.dob, selectedYear);
 
           const gStr = (r.gender || '').toString().toLowerCase().trim();
-          const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị');
+          const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị') || r.full_name.toLowerCase().startsWith('thị ');
           const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
           const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
 
-          const isFemaleInAge = isFemale ? (age >= 18 && age <= 58) : false;
+          const isFemaleInAge = (isFemale || !isMale) ? (age >= 18 && age <= 58) : false;
           const isMaleInAge = isMale ? (age >= 18 && age <= 61) : false;
-          const isGeneralInAge = (!isFemale && !isMale) ? (age >= 18 && age <= 60) : false;
-          const isInAgeRange = isFemaleInAge || isMaleInAge || isGeneralInAge;
+          const isInAgeRange = isFemaleInAge || isMaleInAge;
 
           const occLower = (r.occupation || '').toLowerCase();
           const notesLower = (r.notes || '').toLowerCase();
@@ -1765,17 +1757,17 @@ const WardFunds = () => {
                     const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
                     if (!ageRangeStr) return result;
                     const cleanStr = ageRangeStr.toLowerCase();
-                    const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
+                    const maleMatch = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
                     if (maleMatch) {
                       result.maleMin = parseInt(maleMatch[1], 10);
                       result.maleMax = parseInt(maleMatch[2], 10);
                     }
-                    const femaleMatch = cleanStr.match(/nữ\s*(\d+)\s*-\s*(\d+)/) || cleanStr.match(/nu\s*(\d+)\s*-\s*(\d+)/);
+                    const femaleMatch = cleanStr.match(/(?:nữ|nu)[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
                     if (femaleMatch) {
                       result.femaleMin = parseInt(femaleMatch[1], 10);
                       result.femaleMax = parseInt(femaleMatch[2], 10);
                     }
-                    const generalMatch = cleanStr.match(/(?:từ\s*)?(\d+)\s*-\s*(\d+)/);
+                    const generalMatch = cleanStr.match(/(?:từ\s*)?(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
                     if (generalMatch && !maleMatch && !femaleMatch) {
                       result.generalMin = parseInt(generalMatch[1], 10);
                       result.generalMax = parseInt(generalMatch[2], 10);
@@ -1785,7 +1777,7 @@ const WardFunds = () => {
 
                   const ageLimits = parseAgeRange(fund.age_range);
                   const isMaleInAge = isMale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
-                  const isFemaleInAge = isFemale ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
+                  const isFemaleInAge = (isFemale || !isMale) ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
                   const isGeneralInAge = (!isMale && !isFemale) ? (age >= ageLimits.generalMin && age <= ageLimits.generalMax) : false;
                   
                   if (isMaleInAge || isFemaleInAge || isGeneralInAge) {
@@ -1896,7 +1888,7 @@ const WardFunds = () => {
             const ageLimits2 = parseAgeRange2(fund2.age_range);
             let shouldPay2 = false;
             if (fIsMale) shouldPay2 = fAge >= ageLimits2.maleMin && fAge <= ageLimits2.maleMax;
-            else if (fIsFemale) shouldPay2 = fAge >= ageLimits2.femaleMin && fAge <= ageLimits2.femaleMax;
+            else if (fIsFemale || !fIsMale) shouldPay2 = fAge >= ageLimits2.femaleMin && fAge <= ageLimits2.femaleMax;
             else shouldPay2 = fAge >= ageLimits2.generalMin && fAge <= ageLimits2.generalMax;
             
             const newExpected2 = shouldPay2 ? fund2.target : 0;
@@ -4146,15 +4138,14 @@ const WardFunds = () => {
       if (statusClean === 'deceased') return false;
       const age = getResidentAge(r.dob);
       const gStr = (r.gender || '').toString().toLowerCase().trim();
-      const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị');
+      const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị') || r.full_name.toLowerCase().startsWith('thị ');
       const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
       const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
       if (isMale) {
         return age >= ageLimits.maleMin && age <= ageLimits.maleMax;
-      } else if (isFemale) {
+      } else {
         return age >= ageLimits.femaleMin && age <= ageLimits.femaleMax;
       }
-      return age >= ageLimits.generalMin && age <= ageLimits.generalMax;
     });
     const laborCount = laborResidents.length;
 

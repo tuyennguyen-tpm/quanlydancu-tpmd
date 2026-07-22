@@ -1115,15 +1115,14 @@ const Finance = () => {
       if (statusClean === 'deceased') return false;
       const age = getResidentAge(r.dob);
       const gStr = (r.gender || '').toString().toLowerCase().trim();
-      const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị');
+      const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị') || r.full_name.toLowerCase().startsWith('thị ');
       const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
       const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
       if (isMale) {
         return age >= ageLimits.maleMin && age <= ageLimits.maleMax;
-      } else if (isFemale) {
+      } else {
         return age >= ageLimits.femaleMin && age <= ageLimits.femaleMax;
       }
-      return age >= ageLimits.generalMin && age <= ageLimits.generalMax;
     });
     const laborCount = laborResidents.length;
 
