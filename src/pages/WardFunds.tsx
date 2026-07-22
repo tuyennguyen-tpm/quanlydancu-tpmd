@@ -6230,67 +6230,68 @@ const WardFunds = () => {
       </div>
 
       {/* Summary Dashboard (Dynamic summary cards) */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-        gap: '20px', 
-        marginBottom: '10px' 
-      }}>
-        {fundStats.map((stat, index) => {
-          const isPCTT = stat.name.includes('thiên tai');
-          const bgColor = isPCTT ? '#f0fdf4' : '#fffdf5';
-          const borderColor = isPCTT ? '#fef3c7' : '#fef3c7'; // clean border
-          const textColor = isPCTT ? '#065f46' : '#78350f';
-          const barColor = isPCTT ? '#10b981' : '#f59e0b';
-          const trackColor = isPCTT ? '#e8f5e9' : '#fff8e1';
-          
-          return (
-            <div 
-              key={stat.name}
-              style={{
-                backgroundColor: bgColor,
-                border: `1.5px solid ${isPCTT ? '#d1fae5' : '#fef3c7'}`,
-                borderRadius: '14px',
-                padding: '14px 18px',
-                boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <span style={{ fontSize: '0.78rem', fontWeight: '800', color: textColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {stat.name}
-                  </span>
-                  <h3 style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: '850', color: '#1e293b' }}>
-                    {formatCurrency(stat.target)} đ/{(stat as any).scope === 'household' ? 'hộ' : 'khẩu'}
-                  </h3>
+      {canPrintExport && (
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+          gap: '20px', 
+          marginBottom: '10px' 
+        }}>
+          {fundStats.map((stat, index) => {
+            const isPCTT = stat.name.includes('thiên tai');
+            const bgColor = isPCTT ? '#f0fdf4' : '#fffdf5';
+            const textColor = isPCTT ? '#065f46' : '#78350f';
+            const barColor = isPCTT ? '#10b981' : '#f59e0b';
+            const trackColor = isPCTT ? '#e8f5e9' : '#fff8e1';
+            
+            return (
+              <div 
+                key={stat.name}
+                style={{
+                  backgroundColor: bgColor,
+                  border: `1.5px solid ${isPCTT ? '#d1fae5' : '#fef3c7'}`,
+                  borderRadius: '14px',
+                  padding: '14px 18px',
+                  boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: textColor, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {stat.name}
+                    </span>
+                    <h3 style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: '850', color: '#1e293b' }}>
+                      {formatCurrency(stat.target)} đ/{(stat as any).scope === 'household' ? 'hộ' : 'khẩu'}
+                    </h3>
+                  </div>
+                  <div style={{
+                    backgroundColor: isPCTT ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                    color: barColor,
+                    borderRadius: '10px',
+                    padding: '6px 10px',
+                    fontSize: '0.8rem',
+                    fontWeight: '800'
+                  }}>
+                    Tiến độ {stat.percent}%
+                  </div>
                 </div>
-                <div style={{
-                  backgroundColor: isPCTT ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                  color: barColor,
-                  borderRadius: '10px',
-                  padding: '6px 10px',
-                  fontSize: '0.8rem',
-                  fontWeight: '800'
-                }}>
-                  Tiến độ {stat.percent}%
+
+                {/* Progress Bar */}
+                <div style={{ width: '100%', height: '6px', backgroundColor: trackColor, borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(stat.percent, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>
+                  <span>Đã thu: <strong style={{ color: '#16a34a' }}>{formatCurrency(stat.actual)} đ</strong></span>
+                  <span>Phải thu: {formatCurrency(stat.expected)} đ</span>
                 </div>
               </div>
-
-              {/* Progress Bar */}
-              <div style={{ width: '100%', height: '6px', backgroundColor: trackColor, borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(stat.percent, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>
-                <span>Đã thu: <strong style={{ color: '#16a34a' }}>{formatCurrency(stat.actual)} đ</strong></span>
-                <span>Phải thu: {formatCurrency(stat.expected)} đ</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ─── 2 Sub-Tabs Segmented Control Style ─── */}
       <div className="segmented-control-3d">

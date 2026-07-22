@@ -4353,7 +4353,7 @@ const Finance = () => {
       ) : (
         <div className="funds-matrix-view" style={{ animation: 'fadeIn 0.3s ease' }}>
           {/* Thống kê Quỹ nổi 3D */}
-          {!isWardUser && (
+          {!isWardUser && canPrintExport && (
             <div className="fund-stats-3d-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
