@@ -4242,12 +4242,17 @@ const WardFunds = () => {
       const digits = String(val || '0').replace(/[^\d]/g, '');
       return parseInt(digits, 10) || 0;
     };
-    const isWardFund = (name: string) => {
-      const n = name.toLowerCase();
-      return n.includes('ubnd') || n.includes('phường') || n.includes('thiên tai') || n.includes('đền ơn') || n.includes('cao tuổi');
-    };
-    let tdpTotal = receiptRows.filter(r => !isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
-    let wardTotal = receiptRows.filter(r => isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
+    let tdpTotal = 0;
+    let wardTotal = 0;
+    receiptRows.forEach(r => {
+      const nameLower = (r.name || '').toLowerCase();
+      const amt = parseNumVal(r.amount);
+      if (nameLower.includes('[ubnd') || nameLower.includes('ubnd') || nameLower.includes('phường') || nameLower.includes('thiên tai') || nameLower.includes('đền ơn') || nameLower.includes('cao tuổi')) {
+        wardTotal += amt;
+      } else {
+        tdpTotal += amt;
+      }
+    });
 
     if (tdpTotal === 0 && (printMode as string) !== 'ward_only') {
       const defaultTdpList = (db as any).getFundList() || [];
