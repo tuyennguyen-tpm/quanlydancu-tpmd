@@ -1313,10 +1313,10 @@ const Finance = () => {
       const _textAmountWords = docSoTien(_grandTotal);
 
       const _totalLabelText = (printMode as string) === 'ward_only' 
-        ? `(UBND: ${_wardTotal.toLocaleString('vi-VN')} đ)` 
+        ? '(UBND Phường)' 
         : ((printMode as string) === 'tdp_only' 
-          ? `(TDP: ${_tdpTotal.toLocaleString('vi-VN')} đ)` 
-          : `(TDP: ${_tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${_wardTotal.toLocaleString('vi-VN')} đ)`);
+          ? '(Tổ dân phố)' 
+          : '(TDP + UBND)');
 
       return `
       <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #777;">
@@ -1933,11 +1933,11 @@ const Finance = () => {
                     labelTd.setAttribute('colspan', '4');
                     let printModeText = '';
                     if (activePrintMode === 'tdp_only') {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(Tổ dân phố)';
                     } else if (activePrintMode === 'ward_only') {
-                      printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(UBND Phường)';
                     } else {
-                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      printModeText = '(TDP + UBND)';
                     }
                     labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
 
