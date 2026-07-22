@@ -3213,40 +3213,6 @@ const WardFunds = () => {
             // Sync cell content across multiple liens (if Lien 1 and Lien 2 exist)
             if (containers.length > 1) {
               const activeEl = document.activeElement;
-              if (activeEl && editor.contains(activeEl)) {
-                const activeContainer = activeEl.closest('.receipt-container');
-                const activeRow = activeEl.closest('tr');
-                if (activeContainer && activeRow && !activeRow.classList.contains('receipt-total-row')) {
-                  const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
-                  const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
-                  const rowIndex = sourceRows.indexOf(activeRow);
-                  
-                  if (rowIndex >= 0) {
-                    const cellIndex = Array.from(activeRow.children).indexOf(activeEl.closest('td') || activeEl);
-                    const newValue = activeEl.innerText;
-                    
-                    containers.forEach((cnt, idx) => {
-                      if (idx !== sourceContainerIndex) {
-                        const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
-                        if (targetRows[rowIndex]) {
-                          const targetTd = targetRows[rowIndex].children[cellIndex];
-                          if (targetTd && targetTd !== activeEl && targetTd.innerText !== newValue) {
-                            targetTd.innerText = newValue;
-                          }
-                        }
-                      }
-                    });
-                  }
-                }
-              }
-            }
-
-          function recalculateReceiptTotals() {
-            const containers = document.querySelectorAll('.receipt-container');
-            if (containers.length === 0) return;
-
-            if (containers.length > 1) {
-              const activeEl = document.activeElement;
               if (activeEl && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
                 const activeContainer = activeEl.closest('.receipt-container');
                 const activeRow = activeEl.closest('tr');
@@ -3288,15 +3254,6 @@ const WardFunds = () => {
                 if (totalRow) totalRow.classList.add('receipt-total-row');
               }
 
-              const ths = Array.from(table.querySelectorAll('thead th'));
-              let amountColIdx = -1;
-              ths.forEach((th, idx) => {
-                const text = (th.textContent || th.innerText || '').toLowerCase();
-                if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
-                  amountColIdx = idx;
-                }
-              });
-
               let grandTotal = 0;
               let tdpTotal = 0;
               let wardTotal = 0;
@@ -3310,18 +3267,20 @@ const WardFunds = () => {
                 const tds = Array.from(row.querySelectorAll('td'));
                 if (tds.length < 2) return;
 
-                let targetCellIdx = amountColIdx;
-                if (targetCellIdx < 0 || targetCellIdx >= tds.length) {
-                  if (tds.length >= 6) targetCellIdx = 4;
-                  else if (tds.length >= 4) targetCellIdx = 2;
-                  else targetCellIdx = tds.length - 2;
+                let amountTd = row.querySelector('.receipt-amount-cell');
+                if (!amountTd) {
+                  if (tds.length >= 6) amountTd = tds[4];
+                  else if (tds.length >= 4) amountTd = tds[2];
+                  else amountTd = tds[tds.length - 2];
                 }
 
-                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
-                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
+                const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
+                const digits = cellText.replace(/[^\d]/g, '');
+                const num = digits ? parseInt(digits, 10) : 0;
 
+                const fundTypeAttr = row.getAttribute('data-fund-type');
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                const isWard = fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn');
+                const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn');
                 
                 if (isWard) {
                   wardTotal += num;
@@ -3344,6 +3303,7 @@ const WardFunds = () => {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (totalTds.length >= 2) {
                   const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
+                  const ths = Array.from(table.querySelectorAll('thead th'));
                   const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
                   
                   if (is6Col && totalTds.length >= 2) {
@@ -4311,16 +4271,21 @@ const WardFunds = () => {
       if (tq?.signatureUrl?.trim()) thuQuySigUrl = tq.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const rowsHtml = receiptRows.map((r, idx) => `
-      <tr>
-        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${idx + 1}</td>
-        <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.name}</td>
-        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${r.type}</td>
-        <td style="text-align: right; border: 1px solid #000; padding: 4px 6px;">${r.rate}</td>
-        <td style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 4px 6px;">${r.amount.toLocaleString('vi-VN')} đ</td>
-        <td style="text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.note}</td>
-      </tr>
-    `).join('');
+    const rowsHtml = receiptRows.map((r, idx) => {
+      const isTdp = r.name.startsWith('[TDP]') || r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố');
+      const isWard = r.name.startsWith('[UBND') || r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường');
+      const fundType = isTdp ? 'tdp' : (isWard ? 'ward' : 'tdp');
+      return `
+        <tr data-fund-type="${fundType}">
+          <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${idx + 1}</td>
+          <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.name}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${r.type}</td>
+          <td style="text-align: right; border: 1px solid #000; padding: 4px 6px;">${r.rate}</td>
+          <td class="receipt-amount-cell" style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 4px 6px;">${r.amount.toLocaleString('vi-VN')} đ</td>
+          <td style="text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.note}</td>
+        </tr>
+      `;
+    }).join('');
 
     const generateSingleReceipt = (lienName: string) => `
       <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #777;">
@@ -4856,20 +4821,22 @@ const WardFunds = () => {
                 const tds = Array.from(row.querySelectorAll('td'));
                 if (tds.length < 2) return;
 
-                let targetCellIdx = amountColIdx;
-                if (targetCellIdx < 0 || targetCellIdx >= tds.length) {
-                  if (tds.length >= 6) targetCellIdx = 4;
-                  else if (tds.length >= 4) targetCellIdx = 2;
-                  else targetCellIdx = tds.length - 2;
+                let amountTd = row.querySelector('.receipt-amount-cell');
+                if (!amountTd) {
+                  if (tds.length >= 6) amountTd = tds[4];
+                  else if (tds.length >= 4) amountTd = tds[2];
+                  else amountTd = tds[tds.length - 2];
                 }
 
-                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
-                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
+                const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
+                const digits = cellText.replace(/[^\d]/g, '');
+                const num = digits ? parseInt(digits, 10) : 0;
 
+                const fundTypeAttr = row.getAttribute('data-fund-type');
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
+                if (fundTypeAttr === 'tdp' || fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
                   tdpTotal += num;
-                } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
+                } else if (fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường')) {
                   wardTotal += num;
                 } else {
                   otherTotal += num;

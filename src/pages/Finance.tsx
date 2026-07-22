@@ -1277,16 +1277,21 @@ const Finance = () => {
       if (tq?.signatureUrl?.trim()) thuQuySigUrl = tq.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const rowsHtml = receiptRows.map((r, idx) => `
-      <tr>
-        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${idx + 1}</td>
-        <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.name}</td>
-        <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${r.type}</td>
-        <td style="text-align: right; border: 1px solid #000; padding: 4px 6px;">${r.rate}</td>
-        <td style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 4px 6px;">${r.amount.toLocaleString('vi-VN')} đ</td>
-        <td style="text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.note}</td>
-      </tr>
-    `).join('');
+    const rowsHtml = receiptRows.map((r, idx) => {
+      const isTdp = r.name.startsWith('[TDP]') || r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố');
+      const isWard = r.name.startsWith('[UBND') || r.name.toLowerCase().includes('ubnd') || r.name.toLowerCase().includes('phường');
+      const fundType = isTdp ? 'tdp' : (isWard ? 'ward' : 'tdp');
+      return `
+        <tr data-fund-type="${fundType}">
+          <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${idx + 1}</td>
+          <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.name}</td>
+          <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${r.type}</td>
+          <td style="text-align: right; border: 1px solid #000; padding: 4px 6px;">${r.rate}</td>
+          <td class="receipt-amount-cell" style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 4px 6px;">${r.amount.toLocaleString('vi-VN')} đ</td>
+          <td style="text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.note}</td>
+        </tr>
+      `;
+    }).join('');
 
     const generateSingleReceipt = (lienName: string) => `
       <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #777;">
@@ -1859,20 +1864,22 @@ const Finance = () => {
                 const tds = Array.from(row.querySelectorAll('td'));
                 if (tds.length < 2) return;
 
-                let targetCellIdx = amountColIdx;
-                if (targetCellIdx < 0 || targetCellIdx >= tds.length) {
-                  if (tds.length >= 6) targetCellIdx = 4;
-                  else if (tds.length >= 4) targetCellIdx = 2;
-                  else targetCellIdx = tds.length - 2;
+                let amountTd = row.querySelector('.receipt-amount-cell');
+                if (!amountTd) {
+                  if (tds.length >= 6) amountTd = tds[4];
+                  else if (tds.length >= 4) amountTd = tds[2];
+                  else amountTd = tds[tds.length - 2];
                 }
 
-                const cellText = (tds[targetCellIdx] ? (tds[targetCellIdx].textContent || tds[targetCellIdx].innerText || '') : '');
-                const num = parseInt(cellText.replace(/[^\d]/g, ''), 10) || 0;
+                const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
+                const digits = cellText.replace(/[^\d]/g, '');
+                const num = digits ? parseInt(digits, 10) : 0;
 
+                const fundTypeAttr = row.getAttribute('data-fund-type');
                 const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                if (fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
+                if (fundTypeAttr === 'tdp' || fundName.includes('tdp') || fundName.includes('tổ dân phố')) {
                   tdpTotal += num;
-                } else if (fundName.includes('ubnd') || fundName.includes('phường')) {
+                } else if (fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường')) {
                   wardTotal += num;
                 } else {
                   otherTotal += num;
