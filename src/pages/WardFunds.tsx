@@ -797,7 +797,7 @@ const WardFunds = () => {
         }
 
         const dobStr = f.dob || (matchedRes ? matchedRes.dob : '');
-        const age = calculateExactAge(dobStr, new Date());
+        const age = calculateExactAge(dobStr, selectedYear);
 
         const lim = parseAgeRange(fund.age_range);
         const shouldPay = isFemale
@@ -1719,7 +1719,7 @@ const WardFunds = () => {
 
           // Tự động tính toán lại chỉ tiêu đóng góp kỳ vọng của quỹ Phường dựa trên tuổi/giới tính mới cập nhật
           const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
-          const age = calculateExactAge(matchedRes.dob, new Date());
+          const age = calculateExactAge(matchedRes.dob, selectedYear);
 
           const mGStr = (matchedRes.gender || '').toString().toLowerCase().trim();
           const hasThi = matchedRes.full_name.toLowerCase().includes(' thị ') || matchedRes.full_name.toLowerCase().includes(' thị');
@@ -1846,7 +1846,7 @@ const WardFunds = () => {
         };
 
         const fDobStr = f.dob || (matchedRes ? matchedRes.dob : '');
-        const fAge = calculateExactAge(fDobStr, new Date());
+        const fAge = calculateExactAge(fDobStr, selectedYear);
         const fName = f.full_name || '';
 
         // Xác định giới tính: ưu tiên từ nhân khẩu đã khớp, rồi mới dùng tên "Thị" làm dự phòng
@@ -4074,7 +4074,7 @@ const WardFunds = () => {
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
     const getResidentAge = (dobStr: string) => {
-      return calculateExactAge(dobStr, new Date());
+      return calculateExactAge(dobStr, selectedYear);
     };
 
     const activeFundsList = (db as any).getWardFundList() || [];
