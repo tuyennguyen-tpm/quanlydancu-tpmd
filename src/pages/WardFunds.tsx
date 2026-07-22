@@ -17,7 +17,8 @@ import {
   Users,
   Home,
   Database,
-  PlusCircle
+  PlusCircle,
+  UserPlus
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -157,6 +158,87 @@ const WardFunds = () => {
 
   // Lazy rendering state to prevent DOM bloating and typing lag
   const [visibleCount, setVisibleCount] = useState(150);
+
+  // Add Member to Household Modal State
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [addMemberTargetGroup, setAddMemberTargetGroup] = useState<any>(null);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberDob, setNewMemberDob] = useState('');
+  const [newMemberGender, setNewMemberGender] = useState<'Nữ' | 'Nam'>('Nữ');
+  const [newMemberNote, setNewMemberNote] = useState('');
+
+  const handleOpenAddMemberModal = (group: any) => {
+    setAddMemberTargetGroup(group);
+    setNewMemberName('');
+    setNewMemberDob('');
+    setNewMemberGender('Nữ');
+    setNewMemberNote('');
+    setIsAddMemberModalOpen(true);
+  };
+
+  const handleSaveNewMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemberName.trim()) {
+      showToast('Vui lòng nhập họ và tên nhân khẩu!', 'warning');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const activeFundsList = (db as any).getWardFundList();
+
+      let age = 30;
+      if (newMemberDob) {
+        const year = parseInt(newMemberDob.match(/\d{4}/)?.[0] || '0', 10);
+        if (year > 0) age = selectedYear - year;
+      }
+
+      const isFemale = newMemberGender === 'Nữ';
+      const isMale = newMemberGender === 'Nam';
+      const isFemaleInAge = isFemale ? (age >= 18 && age <= 58) : false;
+      const isMaleInAge = isMale ? (age >= 18 && age <= 61) : false;
+      const isInAgeRange = isFemaleInAge || isMaleInAge;
+
+      const occLower = newMemberNote.toLowerCase();
+      const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu'];
+      const isPensioner = pensionKeywords.some(key => occLower.includes(key));
+
+      const contributions: Record<string, any> = {};
+
+      activeFundsList.forEach((fund: any) => {
+        let expected = 0;
+        if (!isPensioner && !fund.scope && isInAgeRange) {
+          expected = fund.target;
+        }
+        contributions[fund.name] = {
+          expected,
+          actual: 0
+        };
+      });
+
+      const newRecord: WardFund = {
+        id: generateUUID(),
+        year: selectedYear,
+        full_name: newMemberName.trim(),
+        dob: newMemberDob ? formatDateVN(newMemberDob.trim()) : undefined,
+        address: addMemberTargetGroup?.address || '',
+        user_id: addMemberTargetGroup?.members?.[0]?.user_id || undefined,
+        note: newMemberNote.trim() || undefined,
+        contributions
+      };
+
+      await db.saveWardFund(newRecord);
+      showToast(`Đã thêm nhân khẩu "${newMemberName}" vào hộ thành công!`, 'success');
+      setIsAddMemberModalOpen(false);
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Lỗi khi thêm nhân khẩu mới!', 'danger');
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     setVisibleCount(150);
@@ -6155,9 +6237,34 @@ const WardFunds = () => {
                           </div>
                         )}
                         {!isGuest && (
-                          <button type="button" onClick={() => handleQuickPayHousehold(group.members, allPaid, group.householdId)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
-                            {allPaid ? '↩ Hủy' : '✓ Thu đủ cả nhà'}
-                          </button>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAddMemberModal(group)}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                border: '1.5px solid #0284c7',
+                                background: '#f0f9ff',
+                                color: '#0369a1',
+                                fontWeight: '700',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#e0f2fe'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f0f9ff'; }}
+                              title="Thêm thành viên mới vào danh sách đóng quỹ của hộ này"
+                            >
+                              <UserPlus size={13} /> Thêm nhân khẩu
+                            </button>
+                            <button type="button" onClick={() => handleQuickPayHousehold(group.members, allPaid, group.householdId)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
+                              {allPaid ? '↩ Hủy' : '✓ Thu đủ cả nhà'}
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -6195,6 +6302,9 @@ const WardFunds = () => {
                               </button>
                               <button onClick={() => handleOpenPay(member)} title="Cập nhật chi tiết" style={{ background: '#3b82f6', border: 'none', color: 'white', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                                 <Edit2 size={14} />
+                              </button>
+                              <button onClick={() => handleDeleteRecord(member.id, member.full_name)} title="Xóa nhân khẩu khỏi danh sách đóng quỹ" style={{ background: '#ef4444', border: 'none', color: 'white', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           )}
@@ -6761,6 +6871,209 @@ const WardFunds = () => {
                 </button>
               </div>
 
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL THÊM NHÂN KHẨU MỚI VÀO HỘ */}
+      {isAddMemberModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2), 0 8px 10px -6px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+            border: '1px solid var(--border)'
+          }}>
+            {/* Header Modal */}
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+              color: '#ffffff'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800' }}>
+                  ➕ Thêm nhân khẩu vào hộ
+                </h3>
+                <div style={{ fontSize: '0.8rem', opacity: 0.9, marginTop: '2px' }}>
+                  {addMemberTargetGroup?.headName ? `Hộ: ${addMemberTargetGroup.headName}` : `Hộ tại: ${addMemberTargetGroup?.address}`}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddMemberModalOpen(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <form onSubmit={handleSaveNewMember} style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Họ và tên nhân khẩu <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  placeholder="Ví dụ: Nguyễn Văn Ánh"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid var(--border)',
+                    fontSize: '0.9rem',
+                    fontWeight: '600'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                    Giới tính
+                  </label>
+                  <select
+                    value={newMemberGender}
+                    onChange={(e) => setNewMemberGender(e.target.value as any)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid var(--border)',
+                      fontSize: '0.9rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <option value="Nữ">Nữ (Tuổi LĐ: 18 - 58)</option>
+                    <option value="Nam">Nam (Tuổi LĐ: 18 - 61)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                    Ngày / Năm sinh
+                  </label>
+                  <input
+                    type="text"
+                    value={newMemberDob}
+                    onChange={(e) => setNewMemberDob(e.target.value)}
+                    placeholder="DD/MM/YYYY hoặc 1995"
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid var(--border)',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Địa chỉ hộ
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={addMemberTargetGroup?.address || ''}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid var(--border)',
+                    fontSize: '0.85rem',
+                    backgroundColor: 'var(--bg-main)',
+                    color: 'var(--text-muted)'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Nghề nghiệp / Ghi chú (Nếu là Hưu trí / Bảo trợ)
+                </label>
+                <input
+                  type="text"
+                  value={newMemberNote}
+                  onChange={(e) => setNewMemberNote(e.target.value)}
+                  placeholder="Ghi 'Hưu trí', 'Tàn tật'... nếu thuộc diện miễn Quỹ Phường"
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: '1.5px solid var(--border)',
+                    fontSize: '0.85rem'
+                  }}
+                />
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAddMemberModalOpen(false)}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1.5px solid var(--border)',
+                    color: 'var(--text-main)',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '9px 22px',
+                    borderRadius: '8px',
+                    backgroundColor: '#0284c7',
+                    border: 'none',
+                    color: '#fff',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ➕ Thêm vào hộ
+                </button>
+              </div>
             </form>
           </div>
         </div>
