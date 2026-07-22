@@ -4359,7 +4359,7 @@ const WardFunds = () => {
           </tbody>
         </table>
 
-        <div style="font-size: 9.5pt; font-style: italic; margin-bottom: 6px; text-align: left;">
+        <div class="receipt-amount-words" style="font-size: 9.5pt; font-style: italic; margin-bottom: 6px; text-align: left;">
           Số tiền bằng chữ: <strong>${textAmountWords}</strong>
         </div>
 
@@ -4742,10 +4742,10 @@ const WardFunds = () => {
             // Sync cell content across multiple liens (if Lien 1 and Lien 2 exist)
             if (containers.length > 1) {
               const activeEl = document.activeElement;
-              if (activeEl && editor.contains(activeEl)) {
+              if (activeEl && editor && editor.contains(activeEl)) {
                 const activeContainer = activeEl.closest('.receipt-container');
                 const activeRow = activeEl.closest('tr');
-                if (activeContainer && activeRow && !activeRow.classList.contains('receipt-total-row')) {
+                if (activeContainer && activeRow && !activeRow.classList.contains('receipt-total-row') && !(activeRow.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
                   const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
                   const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
                   const rowIndex = sourceRows.indexOf(activeRow);
@@ -4774,7 +4774,15 @@ const WardFunds = () => {
               const table = container.querySelector('.receipt-details-table');
               if (!table) return;
 
-              const rows = table.querySelectorAll('tbody tr');
+              const rows = Array.from(table.querySelectorAll('tbody tr'));
+              if (rows.length === 0) return;
+
+              let totalRow = table.querySelector('tr.receipt-total-row');
+              if (!totalRow) {
+                totalRow = rows.find(r => (r.innerText || '').toUpperCase().includes('TỔNG CỘNG'));
+                if (totalRow) totalRow.classList.add('receipt-total-row');
+              }
+
               let tdpTotal = 0;
               let wardTotal = 0;
               let otherTotal = 0;
@@ -4783,7 +4791,9 @@ const WardFunds = () => {
               const is6ColTable = (ths.length >= 6);
 
               rows.forEach(row => {
-                if (row.classList.contains('receipt-total-row')) return;
+                if (row === totalRow || row.classList.contains('receipt-total-row') || (row.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
+                  return;
+                }
                 const tds = row.querySelectorAll('td');
                 
                 if (is6ColTable && tds.length >= 5) {
@@ -4807,7 +4817,6 @@ const WardFunds = () => {
 
               const grandTotal = tdpTotal + wardTotal + otherTotal;
 
-              const totalRow = table.querySelector('tr.receipt-total-row');
               if (totalRow) {
                 const totalTds = totalRow.querySelectorAll('td');
                 if (is6ColTable && totalTds.length >= 2) {
@@ -4834,11 +4843,15 @@ const WardFunds = () => {
                 }
               }
 
-              const wordsContainer = container.querySelector('.receipt-amount-words') || container.querySelector('div[style*="Số tiền bằng chữ"]');
+              const wordsContainer = container.querySelector('.receipt-amount-words') 
+                || Array.from(container.querySelectorAll('div')).find(d => (d.innerText || '').includes('Số tiền bằng chữ'));
+              
               if (wordsContainer) {
                 const strongEl = wordsContainer.querySelector('strong');
                 if (strongEl) {
                   strongEl.innerText = docSoTien(grandTotal);
+                } else {
+                  wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(grandTotal) + '</strong>';
                 }
               }
             });
@@ -4850,12 +4863,11 @@ const WardFunds = () => {
             });
           });
 
-          editor.addEventListener('input', function() {
-            recalculateReceiptTotals();
+          ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
+            editor.addEventListener(evtType, function() {
+              recalculateReceiptTotals();
+            }, true);
           });
-          editor.addEventListener('blur', function() {
-            recalculateReceiptTotals();
-          }, true);
 
           btnSave.addEventListener('click', function() {
             localStorage.setItem(SAVE_KEY, editor.innerHTML);
