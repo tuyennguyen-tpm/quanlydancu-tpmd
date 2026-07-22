@@ -1130,9 +1130,8 @@ const Finance = () => {
     const receiptRows: Array<{ name: string; type: string; rate: string; amount: number; note: string }> = [];
 
     // Luôn hiển thị tất cả quỹ TDP đang hoạt động (kể cả chưa nộp)
-    const tdpActiveFunds = (db as any).getFundList() as { name: string; target: number }[];
-    tdpActiveFunds.forEach(fund => {
-    tdpActiveFunds.forEach(fund => {
+    const tdpActiveFunds = (db as any).getFundList() as any[];
+    tdpActiveFunds.forEach((fund: any) => {
       const targetVal = typeof fund.target === 'number' ? fund.target : (parseInt((fund.target || '0').toString().replace(/[^\d]/g, ''), 10) || 0);
       const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
       const paidAmount = (paidFund && typeof paidFund.amount === 'number' && paidFund.amount > 0)
