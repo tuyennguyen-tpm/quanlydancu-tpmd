@@ -2699,10 +2699,10 @@ const WardFunds = () => {
         ? new Date(contrib.date).toLocaleDateString('vi-VN') 
         : '—';
       return `
-        <tr>
+        <tr data-fund-type="ward">
           <td style="text-align: center;">${idx + 1}</td>
           <td style="font-weight: bold; text-align: left;">[UBND] ${fund.name} (${selectedYear})</td>
-          <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
+          <td class="receipt-amount-cell" style="text-align: right; font-weight: bold;">${amountPaid.toLocaleString('vi-VN')} đ</td>
           <td style="text-align: left;">${note}</td>
         </tr>
       `;
@@ -2722,10 +2722,10 @@ const WardFunds = () => {
         tdpTotal += amountPaid;
         const note = fundRec?.paid_at ? new Date(fundRec.paid_at).toLocaleDateString('vi-VN') : '—';
         tdpRows.push(`
-          <tr>
+          <tr data-fund-type="tdp">
             <td style="text-align: center;">${wardRows.length + idx + 1}</td>
             <td style="font-weight: bold; text-align: left;">[TDP] ${tf.name} (${selectedYear})</td>
-            <td style="text-align: right; font-weight: bold;">${formatCurrency(amountPaid)} đ</td>
+            <td class="receipt-amount-cell" style="text-align: right; font-weight: bold;">${amountPaid.toLocaleString('vi-VN')} đ</td>
             <td style="text-align: left;">${note}</td>
           </tr>
         `);
@@ -4125,19 +4125,22 @@ const WardFunds = () => {
 
     // Luôn hiển thị tất cả quỹ TDP đang hoạt động (kể cả chưa nộp)
     if (printMode === 'combined') {
-      const tdpActiveFunds = (db as any).getFundList() as { name: string; target: any }[];
+      const tdpActiveFunds = (db as any).getFundList() as { name: string; target: number }[];
       tdpActiveFunds.forEach((fund: { name: string; target: any }) => {
         const targetVal = typeof fund.target === 'number' ? fund.target : (parseInt((fund.target || '0').toString().replace(/[^\d]/g, ''), 10) || 0);
         const paidFund = householdPaidFunds.find(hf => hf.fund_name === fund.name);
         const rawPaid = paidFund ? paidFund.amount : 0;
         const paidAmountNum = typeof rawPaid === 'number' ? rawPaid : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
+        // Chỉ dùng số thực đã nộp. Nếu chưa nộp thì hiển thị định mức (để xem rõ phải nộp bao nhiêu)
         const paidAmount = paidAmountNum > 0 ? paidAmountNum : targetVal;
         receiptRows.push({
           name: '[TDP] ' + fund.name,
           type: 'Hộ gia đình',
           rate: targetVal.toLocaleString('vi-VN') + ' đ/hộ',
           amount: Number(paidAmount) || 0,
-          note: paidFund?.note || (paidFund && paidAmountNum > 0 ? (paidAmountNum >= targetVal ? 'Đã thu đủ theo thông báo' : `Đã nộp ${paidAmountNum.toLocaleString('vi-VN')} đ`) : 'Đã thu đủ theo thông báo')
+          note: paidFund && paidAmountNum > 0
+            ? (paidAmountNum >= targetVal ? 'Đã thu đủ' : `Đã nộp ${paidAmountNum.toLocaleString('vi-VN')} đ`)
+            : 'Theo định mức'
         });
       });
     }
@@ -4164,29 +4167,33 @@ const WardFunds = () => {
         const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
         return sum + val;
       }, 0);
-      const actualPaid = (actualPaidSum > 0) ? actualPaidSum : expectedTotalForHH;
+
+      // Số tiền hiển thị: nếu đã có dữ liệu thực → dùng thực; nếu chưa → dùng định mức (để biết phải nộp bao nhiêu)
+      const displayAmount = actualPaidSum > 0 ? actualPaidSum : expectedTotalForHH;
 
       let noteText = '';
-      if (expectedTotalForHH === 0) {
-        noteText = actualPaid > 0 ? `Được miễn (tự nguyện đóng ${actualPaid.toLocaleString('vi-VN')} đ)` : 'Được miễn';
+      if (isPolicyHousehold) {
+        noteText = actualPaidSum > 0 ? `Tự nguyện đóng ${actualPaidSum.toLocaleString('vi-VN')} đ` : 'Được miễn';
+      } else if (expectedTotalForHH === 0) {
+        noteText = 'Được miễn';
+      } else if (actualPaidSum === 0) {
+        noteText = 'Theo định mức';
+      } else if (actualPaidSum >= expectedTotalForHH) {
+        noteText = 'Đã thu đủ';
       } else {
-        if (actualPaidSum >= expectedTotalForHH || actualPaidSum === 0) {
-          noteText = 'Thu đủ';
-        } else if (actualPaidSum > 0) {
-          noteText = `Đã nộp ${actualPaidSum.toLocaleString('vi-VN')} đ`;
-        }
+        noteText = `Đã nộp ${actualPaidSum.toLocaleString('vi-VN')} đ`;
       }
 
       receiptRows.push({
         name: '[UBND Phường] ' + wf.name,
         type: isHousehold ? 'Hộ gia đình' : 'Nhân khẩu LĐ',
         rate: wfTargetVal.toLocaleString('vi-VN') + (isHousehold ? ' đ/hộ' : ' đ/khẩu'),
-        amount: Number(actualPaid) || 0,
+        amount: Number(displayAmount) || 0,
         note: noteText
       });
     });
 
-    // Bước 3 & 4: Duyệt qua toàn bộ receiptRows (nguồn dữ liệu ô "Số tiền nộp") và phân loại theo tên khoản
+    // Bước 3 & 4: Duyệt qua toàn bộ receiptRows và phân loại theo tên khoản
     let tdpTotal = 0;
     let wardTotal = 0;
     receiptRows.forEach(r => {
@@ -4194,14 +4201,13 @@ const WardFunds = () => {
       const nameStr = r.name.trim();
       if (nameStr.startsWith('[TDP]') || nameStr.toLowerCase().includes('tdp') || nameStr.toLowerCase().includes('tổ dân phố')) {
         tdpTotal += itemAmount;
-      } else if (nameStr.startsWith('[UBND Phường]') || nameStr.toLowerCase().includes('ubnd') || nameStr.toLowerCase().includes('phường')) {
-        wardTotal += itemAmount;
       } else {
-        tdpTotal += itemAmount;
+        // Tất cả quỹ Phường (UBND) tính vào wardTotal
+        wardTotal += itemAmount;
       }
     });
 
-    // Bước 5: Tổng cộng thực thu = Tổng TDP + Tổng UBND Phường
+    // Bước 5: Tổng cộng thực thu
     const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {

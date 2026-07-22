@@ -1169,24 +1169,28 @@ const Finance = () => {
           const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
           return sum + val;
         }, 0);
-        const actualPaid = (actualPaidSum > 0) ? actualPaidSum : expectedTotalForHH;
+
+        // Số tiền hiển thị: nếu đã có dữ liệu thực → dùng thực; nếu chưa → dùng định mức
+        const displayAmount = actualPaidSum > 0 ? actualPaidSum : expectedTotalForHH;
 
         let noteText = '';
-        if (expectedTotalForHH === 0) {
-          noteText = actualPaid > 0 ? `Được miễn (tự nguyện đóng ${actualPaid.toLocaleString('vi-VN')} đ)` : 'Được miễn';
+        if (isPolicyHousehold) {
+          noteText = actualPaidSum > 0 ? `Tự nguyện đóng ${actualPaidSum.toLocaleString('vi-VN')} đ` : 'Nhà chính sách - được miễn';
+        } else if (expectedTotalForHH === 0) {
+          noteText = 'Nhà chính sách - được miễn';
+        } else if (actualPaidSum === 0) {
+          noteText = 'Theo định mức';
+        } else if (actualPaidSum >= expectedTotalForHH) {
+          noteText = 'Đã thu đủ';
         } else {
-          if (actualPaidSum >= expectedTotalForHH || actualPaidSum === 0) {
-            noteText = 'Thu đủ';
-          } else if (actualPaidSum > 0) {
-            noteText = `Đã nộp ${actualPaidSum.toLocaleString('vi-VN')} đ`;
-          }
+          noteText = `Đã nộp ${actualPaidSum.toLocaleString('vi-VN')} đ`;
         }
 
         receiptRows.push({
           name: '[UBND Phường] ' + wf.name,
           type: isHousehold ? 'Hộ gia đình' : 'Nhân khẩu LĐ',
           rate: wfTargetVal.toLocaleString('vi-VN') + (isHousehold ? ' đ/hộ' : ' đ/khẩu'),
-          amount: Number(actualPaid) || 0,
+          amount: Number(displayAmount) || 0,
           note: noteText
         });
       });
