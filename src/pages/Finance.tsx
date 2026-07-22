@@ -1928,20 +1928,6 @@ const Finance = () => {
                   effectiveTotal = wardTotal;
                 }
 
-                if (effectiveTotal === 0 && totalRow) {
-                  const existingTd = totalRow.querySelectorAll('td')[1];
-                  const existingTxt = existingTd ? (existingTd.textContent || existingTd.innerText || '') : '';
-                  const existingNum = parseInt(existingTxt.replace(/[^\d]/g, ''), 10) || 0;
-                  if (existingNum > 0) {
-                    const hasCellData = rows.some(r => {
-                      if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
-                      const c = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
-                      return c && (c.textContent || '').replace(/[^\d]/g, '').length > 0;
-                    });
-                    if (hasCellData) return;
-                  }
-                }
-
                 if (totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
@@ -2002,15 +1988,9 @@ const Finance = () => {
             });
           });
 
-          ['input', 'keyup', 'change', 'blur', 'paste', 'DOMSubtreeModified'].forEach(function(evtType) {
+          ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
             document.addEventListener(evtType, recalculateReceiptTotals, true);
-            window.addEventListener(evtType, recalculateReceiptTotals, true);
-            if (editor) {
-              editor.addEventListener(evtType, recalculateReceiptTotals, true);
-            }
           });
-
-          setInterval(recalculateReceiptTotals, 300);
 
           try {
             recalculateReceiptTotals();
