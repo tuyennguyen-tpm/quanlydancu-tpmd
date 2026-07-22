@@ -1297,7 +1297,28 @@ const Finance = () => {
       `;
     }).join('');
 
-    const generateSingleReceipt = (lienName: string) => `
+    const generateSingleReceipt = (lienName: string) => {
+      // Tính tổng TRỰC TIẾP từ receiptRows mỗi lần gọi — đảm bảo chính xác 100%
+      let _tdpTotal = 0;
+      let _wardTotal = 0;
+      for (const r of receiptRows) {
+        const amt = typeof r.amount === 'number' ? r.amount : (parseInt(String(r.amount || '0').replace(/[^\d]/g, ''), 10) || 0);
+        if (r.name.startsWith('[TDP]') || r.name.toLowerCase().includes('tdp') || r.name.toLowerCase().includes('tổ dân phố')) {
+          _tdpTotal += amt;
+        } else {
+          _wardTotal += amt;
+        }
+      }
+      const _grandTotal = _tdpTotal + _wardTotal;
+      const _textAmountWords = docSoTien(_grandTotal);
+
+      const _totalLabelText = (printMode as string) === 'ward_only' 
+        ? `(UBND: ${_wardTotal.toLocaleString('vi-VN')} đ)` 
+        : ((printMode as string) === 'tdp_only' 
+          ? `(TDP: ${_tdpTotal.toLocaleString('vi-VN')} đ)` 
+          : `(TDP: ${_tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${_wardTotal.toLocaleString('vi-VN')} đ)`);
+
+      return `
       <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #777;">
         <table class="receipt-header-table">
           <tr>
@@ -1329,7 +1350,7 @@ const Finance = () => {
         </table>
 
         <div class="receipt-title-container">
-          <h1 class="receipt-title">${printMode === 'tdp_only' ? 'PHIẾU THU QUỸ TỔ DÂN PHỐ' : 'PHIẾU THU TỔNG HỢP'}</h1>
+          <h1 class="receipt-title">${(printMode as string) === 'ward_only' ? 'PHIẾU THU QUỸ UBND PHƯỜNG' : ((printMode as string) === 'tdp_only' ? 'PHIẾU THU QUỸ TỔ DÂN PHỐ' : 'PHIẾU THU TỔNG HỢP')}</h1>
           <p class="receipt-subtitle" style="margin-top: 2px; font-weight: bold; color: #1e3a8a;">${lienName}</p>
           <p class="receipt-subtitle">${dateText}</p>
         </div>
@@ -1369,21 +1390,17 @@ const Finance = () => {
           <tbody>
             ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666; border: 1px solid #000; padding: 4px 6px;">Chưa nộp khoản đóng góp nào.</td></tr>'}
              <tr class="receipt-total-row" style="font-weight: bold;">
-               <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px;">
-                 TỔNG CỘNG THỰC THU ${(printMode as string) === 'ward_only' 
-                   ? `(UBND: ${wardTotal.toLocaleString('vi-VN')} đ)` 
-                   : ((printMode as string) === 'tdp_only' 
-                     ? `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ)` 
-                     : `(TDP: ${tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${wardTotal.toLocaleString('vi-VN')} đ)`)}
+               <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f9fbe7;">
+                 TỔNG CỘNG THỰC THU ${_totalLabelText}
                </td>
-               <td style="text-align: right; color: #15803d; border: 1px solid #000; padding: 4px 6px;">${grandTotal.toLocaleString('vi-VN')} đ</td>
-               <td style="border: 1px solid #000; padding: 4px 6px;"></td>
+               <td style="text-align: right; color: #15803d; font-size: 11pt; border: 1px solid #000; padding: 4px 6px; background-color: #f9fbe7;">${_grandTotal.toLocaleString('vi-VN')} đ</td>
+               <td style="border: 1px solid #000; padding: 4px 6px; background-color: #f9fbe7;"></td>
              </tr>
           </tbody>
         </table>
 
         <div class="receipt-amount-words" style="font-size: 9.5pt; font-style: italic; margin-bottom: 6px; text-align: left;">
-          Số tiền bằng chữ: <strong>${textAmountWords}</strong>
+          Số tiền bằng chữ: <strong>${_textAmountWords}</strong>
         </div>
 
         <table class="receipt-signatures-table" style="width:100%; border-collapse:collapse;">
@@ -1432,6 +1449,7 @@ const Finance = () => {
         </table>
       </div>
     `;
+    };
 
     return `
       ${generateSingleReceipt('Liên 1: TDP lưu trữ')}
