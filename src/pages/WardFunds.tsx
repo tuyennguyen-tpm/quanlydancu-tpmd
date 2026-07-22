@@ -4490,16 +4490,16 @@ const WardFunds = () => {
       leaderSigUrl,
       printMode
     );
-    const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}`;
+    const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
     const hasSavedVersion = !!savedReceiptHtml;
-    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
+    const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Phiếu thu tổng hợp - Hộ ${headName}</title>
+        <title>Phiếu thu - Hộ ${headName}</title>
         <meta charset="utf-8" />
         <style>
           @media print {
@@ -4632,6 +4632,8 @@ const WardFunds = () => {
           .btn-print:hover { background: #059669; }
           .btn-save { background: #3b82f6; color: white; }
           .btn-save:hover { background: #2563eb; }
+          .btn-load { background: #8b5cf6; color: white; }
+          .btn-load:hover { background: #7c3aed; }
           .btn-reset { background: #f59e0b; color: white; }
           .btn-reset:hover { background: #d97706; }
           .btn-close { background: #ef4444; color: white; }
@@ -4659,6 +4661,7 @@ const WardFunds = () => {
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
+          ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>' : ''}
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
@@ -4676,8 +4679,8 @@ const WardFunds = () => {
           <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
         </div>
 
-        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
-          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây đã được giữ nguyên. (Bấm <strong>🔄 Tải dữ liệu gốc từ hệ thống</strong> nếu muốn hủy bỏ chỉnh sửa).
+        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#92400e;">
+          ⚠️ <strong>Đang hiển thị dữ liệu mới nhất từ hệ thống.</strong> ${hasSavedVersion ? 'Có 1 bản đã lưu trước đó của phiếu này. Nhấn <strong>📂 Mở bản đã lưu</strong> để xem lại bản cũ.' : ''}
         </div>
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
@@ -4685,10 +4688,12 @@ const WardFunds = () => {
         </div>
         
         <script>
-          const SAVE_KEY = 'receipt_html_${householdId}_${selectedYear}';
+          const SAVE_KEY = 'receipt_html_${householdId}_${selectedYear}_${printMode}';
+          const currentPrintMode = '${printMode}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
           const btnSave = document.getElementById('btn-save');
           const btnReset = document.getElementById('btn-reset');
+          const btnLoad = document.getElementById('btn-load');
           const editor = document.querySelector('.editor-area');
           const fontSizeSelect = document.getElementById('font-size-select');
 
@@ -4808,16 +4813,18 @@ const WardFunds = () => {
                 if (is6ColTable && totalTds.length >= 2) {
                   const labelTd = totalTds[0];
                   let printModeText = '';
-                  if (tdpTotal > 0 && wardTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' + UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
-                  } else if (wardTotal > 0) {
+                  if (currentPrintMode === 'ward_only') {
                     printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
-                  } else if (tdpTotal > 0) {
-                    printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ')';
                   } else {
-                    printModeText = '';
+                    if (tdpTotal > 0 && wardTotal > 0) {
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' + UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
+                    } else if (wardTotal > 0) {
+                      printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ')';
+                    } else if (tdpTotal > 0) {
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ')';
+                    }
                   }
-                  labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+                  labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + (printModeText ? printModeText : '');
 
                   const amountTd = totalTds[1];
                   amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
@@ -4858,18 +4865,38 @@ const WardFunds = () => {
               notice.style.background = '#dcfce7';
               notice.style.border = '1.5px solid #16a34a';
               notice.style.color = '#14532d';
-              notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của hộ này đã được lưu lại cho các lần mở tiếp theo.';
+              notice.innerHTML = '✅ <strong>Đã lưu bản chỉnh sửa thành công!</strong> Lần sau bạn có thể bấm <strong>📂 Mở bản đã lưu</strong> để xem lại.';
             }
-            alert('Đã lưu bản chỉnh sửa phiếu thu thành công! Lần sau mở phiếu thu của hộ này ra, hệ thống sẽ tự động hiển thị nội dung bạn vừa lưu.');
+            if (btnLoad) btnLoad.style.display = 'inline-flex';
+            alert('Đã lưu bản chỉnh sửa phiếu thu thành công!');
           });
 
+          if (btnLoad) {
+            btnLoad.addEventListener('click', function() {
+              const saved = localStorage.getItem(SAVE_KEY);
+              if (saved) {
+                editor.innerHTML = saved;
+                recalculateReceiptTotals();
+                const notice = document.getElementById('saved-notice');
+                if (notice) {
+                  notice.style.display = 'flex';
+                  notice.style.background = '#dcfce7';
+                  notice.style.border = '1.5px solid #16a34a';
+                  notice.style.color = '#14532d';
+                  notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó</strong>.';
+                }
+              }
+            });
+          }
+
           btnReset.addEventListener('click', function() {
-            if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
+            if (confirm('Bạn có chắc chắn muốn xóa bản đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
               localStorage.removeItem(SAVE_KEY);
               editor.innerHTML = freshHtml;
               recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
               if (notice) notice.style.display = 'none';
+              if (btnLoad) btnLoad.style.display = 'none';
               alert('Đã khôi phục về dữ liệu gốc từ hệ thống!');
             }
           });
