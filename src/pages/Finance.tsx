@@ -1201,8 +1201,22 @@ const Finance = () => {
       const n = name.toLowerCase();
       return n.includes('ubnd') || n.includes('phường') || n.includes('thiên tai') || n.includes('đền ơn') || n.includes('cao tuổi');
     };
-    const tdpTotal = receiptRows.filter(r => !isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
-    const wardTotal = receiptRows.filter(r => isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
+    let tdpTotal = receiptRows.filter(r => !isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
+    let wardTotal = receiptRows.filter(r => isWardFund(r.name)).reduce((sum, r) => sum + parseNumVal(r.amount), 0);
+
+    if (tdpTotal === 0 && (printMode as string) !== 'ward_only') {
+      const defaultTdpList = (db as any).getFundList() || [];
+      tdpTotal = defaultTdpList.reduce((sum: number, f: any) => sum + parseNumVal(f.target || 50000), 0);
+    }
+
+    if (wardTotal === 0 && (printMode as string) !== 'tdp_only') {
+      const defaultWardList = (db as any).getWardFundList() || [];
+      wardTotal = defaultWardList.reduce((sum: number, wf: any) => {
+        const tgt = parseNumVal(wf.target || 20000);
+        return sum + (wf.scope === 'person' ? tgt * (laborCount || 1) : tgt);
+      }, 0);
+    }
+
     const grandTotal = tdpTotal + wardTotal;
 
     const docSoTien = (number: number): string => {
