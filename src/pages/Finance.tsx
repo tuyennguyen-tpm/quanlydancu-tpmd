@@ -1080,7 +1080,7 @@ const Finance = () => {
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
     const getResidentAge = (dobStr: string) => {
-      return calculateExactAge(dobStr, selectedYear);
+      return calculateExactAge(dobStr, fundYear);
     };
 
     const activeFundsList = (db as any).getWardFundList() || [];
