@@ -1888,36 +1888,27 @@ const Finance = () => {
                 let wardTotal = 0;
 
                 rows.forEach(row => {
-                  if (row === totalRow || row.classList.contains('receipt-total-row')) return;
                   const rText = (row.textContent || row.innerText || '').toUpperCase();
-                  if (rText.includes('TỔNG CỘNG')) return;
+                  if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
+                    return;
+                  }
 
                   const tds = Array.from(row.querySelectorAll('td'));
-                  if (tds.length === 0) return;
+                  if (tds.length < 2) return;
 
-                  let num = 0;
-                  
-                  const amountCell = row.querySelector('.receipt-amount-cell');
-                  if (amountCell) {
-                    const txt = amountCell.textContent || amountCell.innerText || '';
-                    const digits = txt.replace(/[^\d]/g, '');
-                    if (digits) num = parseInt(digits, 10);
+                  let amountTd = row.querySelector('.receipt-amount-cell');
+                  if (!amountTd) {
+                    if (tds.length >= 6) amountTd = tds[4];
+                    else if (tds.length >= 4) amountTd = tds[2];
+                    else amountTd = tds[tds.length - 2];
                   }
 
-                  if (num === 0) {
-                    for (let i = tds.length - 1; i >= 0; i--) {
-                      if (i === 0 && tds.length > 2) continue;
-                      const txt = tds[i].textContent || tds[i].innerText || '';
-                      const digits = txt.replace(/[^\d]/g, '');
-                      if (digits && digits.length >= 2) {
-                        num = parseInt(digits, 10);
-                        break;
-                      }
-                    }
-                  }
+                  const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
+                  const digits = cellText.replace(/[^\d]/g, '');
+                  const num = digits ? parseInt(digits, 10) : 0;
 
                   const fundTypeAttr = row.getAttribute('data-fund-type');
-                  const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : row.textContent || '').toLowerCase();
+                  const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
                   const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
 
                   if (isWard) {
@@ -1955,30 +1946,19 @@ const Finance = () => {
                       } else {
                         printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       }
-                      const newLabelText = 'TỔNG CỘNG THỰC THU ' + printModeText;
-                      if (labelTd.innerHTML !== newLabelText) {
-                        labelTd.innerHTML = newLabelText;
-                      }
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
 
                       const amountTd = totalTds[1];
-                      const newAmountText = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-                      if (amountTd.innerHTML !== newAmountText) {
-                        amountTd.innerHTML = newAmountText;
-                      }
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
 
-                      if (totalTds.length >= 3 && totalTds[2].innerHTML !== '') {
+                      if (totalTds.length >= 3) {
                         totalTds[2].innerHTML = '';
                       }
                     } else {
                       const labelTd = totalTds[0];
-                      if (labelTd.innerHTML !== 'TỔNG CỘNG CÁC KHOẢN') {
-                        labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
-                      }
+                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
                       const amountTd = totalTds[1];
-                      const newAmountText = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-                      if (amountTd.innerHTML !== newAmountText) {
-                        amountTd.innerHTML = newAmountText;
-                      }
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                     }
                   }
                 }
@@ -1988,16 +1968,10 @@ const Finance = () => {
                 
                 if (wordsContainer) {
                   const strongEl = wordsContainer.querySelector('strong');
-                  const wordsText = docSoTien(effectiveTotal);
                   if (strongEl) {
-                    if (strongEl.innerText !== wordsText) {
-                      strongEl.innerText = wordsText;
-                    }
+                    strongEl.innerText = docSoTien(effectiveTotal);
                   } else {
-                    const newWordsHtml = 'Số tiền bằng chữ: <strong>' + wordsText + '</strong>';
-                    if (wordsContainer.innerHTML !== newWordsHtml) {
-                      wordsContainer.innerHTML = newWordsHtml;
-                    }
+                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
                   }
                 }
               });
