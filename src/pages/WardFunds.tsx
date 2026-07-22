@@ -1210,18 +1210,18 @@ const WardFunds = () => {
     }
   };
 
-  // Auto-initialize Ward Funds from Resident List based on age & policy exemptions
+  // Auto-initialize Ward Funds based on 100% Households + working-age residents (Female 18-58, Male 18-61)
   const handleAutoInitFromResidents = async () => {
     if (isGuest) {
       showToast('Bạn không có quyền khởi tạo dữ liệu đóng quỹ!', 'warning');
       return;
     }
 
-    if (window.confirm(`Bạn có chắc chắn muốn TỰ ĐỘNG KHỞI TẠO danh sách thu quỹ Phường năm ${selectedYear} từ dữ liệu Nhân khẩu & Hộ gia đình không?\n\n` +
+    if (window.confirm(`Bạn có chắc chắn muốn TỰ ĐỘNG KHỞI TẠO danh sách thu quỹ năm ${selectedYear} cho 100% Hộ gia đình & Nhân khẩu không?\n\n` +
       `Chi tiết quy tắc khởi tạo:\n` +
-      `1. Đảm bảo 100% giữ lại Chủ hộ để phục vụ quản lý, tìm kiếm và gom nhóm theo Hộ gia đình.\n` +
-      `2. Lọc nhân khẩu theo độ tuổi lao động: Nữ từ 18-58 tuổi, Nam từ 18-61 tuổi.\n` +
-      `3. Tự động áp dụng chính sách miễn thu đối với hộ nghèo, cận nghèo, gia đình chính sách và người hưởng lương hưu theo quy định.`)) {
+      `1. Đảm bảo 100% tất cả các Hộ gia đình trong CSDL đều được tạo bản ghi (đại diện tên Chủ hộ) để sẵn sàng cho việc thu Quỹ Tổ dân phố.\n` +
+      `2. Tự động tính Quỹ Phường cho nhân khẩu trong độ tuổi lao động: Nữ từ 18-58 tuổi, Nam từ 18-61 tuổi.\n` +
+      `3. Các hộ/cá nhân thuộc diện miễn đóng Quỹ Phường vẫn sẽ có tên đại diện trong danh sách (mức thu Quỹ Phường = 0 VNĐ).`)) {
       
       setIsLoading(true);
       try {
@@ -1231,28 +1231,18 @@ const WardFunds = () => {
 
         // 2. Lấy danh sách chỉ tiêu quỹ hiện tại
         const activeFundsList = (db as any).getWardFundList();
-        if (activeFundsList.length === 0) {
-          showToast('Vui lòng cấu hình danh mục Quỹ Phường trước khi khởi tạo!', 'warning');
-          setIsLoading(false);
-          return;
-        }
 
         const batchFunds: WardFund[] = [];
+        const addedResidentIds = new Set<string>();
         let successCount = 0;
 
         // Định nghĩa các từ khóa nghề nghiệp/ghi chú của người về hưu hoặc hưởng lương hưu
         const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu'];
 
-        resList.forEach(r => {
-          // A. Bỏ qua nếu nhân khẩu đã mất
-          if (r.status === 'deceased') return;
-
-          // B. Lấy thông tin hộ khẩu & xác định vai trò Chủ hộ
-          const hh = hhList.find(h => h.id === r.household_id);
-          const isHead = !!(r.is_head || (hh && hh.head_of_household_id === r.id) || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ'));
+        // Helper tính đóng góp cho 1 cá nhân
+        const calculateContributions = (r: Resident, hh?: Household, isHead: boolean = false) => {
           const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
 
-          // C. Tính tuổi của nhân khẩu trong năm selectedYear
           let age = 30; // Mặc định trong độ tuổi lao động nếu r.dob thiếu
           let parsedYear = 0;
           if (r.dob) {
@@ -1262,44 +1252,36 @@ const WardFunds = () => {
             }
           }
 
-          // D. Kiểm tra giới tính linh hoạt (hỗ trợ viết tắt, không dấu và tự động nhận diện đệm "Thị" của Nữ)
           const gStr = (r.gender || '').toString().toLowerCase().trim();
           const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị');
           const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
           const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
 
-          // E. Kiểm tra độ tuổi lao động đóng quỹ: Nữ 18-58 tuổi, Nam 18-61 tuổi
           const isFemaleInAge = isFemale ? (age >= 18 && age <= 58) : false;
           const isMaleInAge = isMale ? (age >= 18 && age <= 61) : false;
           const isGeneralInAge = (!isFemale && !isMale) ? (age >= 18 && age <= 60) : false;
           const isInAgeRange = isFemaleInAge || isMaleInAge || isGeneralInAge;
 
-          // F. Kiểm tra nghề nghiệp/ghi chú về hưu
           const occLower = (r.occupation || '').toLowerCase();
           const notesLower = (r.notes || '').toLowerCase();
           const isPensioner = pensionKeywords.some(key => occLower.includes(key) || notesLower.includes(key));
 
-          // G. Tính toán mức đóng góp của từng quỹ
           const contributions: Record<string, any> = {};
 
           activeFundsList.forEach((fund: any) => {
             let expected = 0;
 
             if (isPolicyHousehold) {
-              // Hộ nghèo, cận nghèo, gia đình chính sách -> Miễn đóng
               expected = 0;
             } else if (isPensioner) {
-              // Người hưởng lương hưu -> Miễn đóng quỹ đầu người
               expected = 0;
             } else {
               const isHouseholdScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ');
               if (isHouseholdScope) {
-                // Quỹ thu theo Hộ: Chỉ tính tiền cho Chủ hộ (nếu Chủ hộ >= 18 tuổi)
                 if (isHead && age >= 18) {
                   expected = fund.target;
                 }
               } else {
-                // Quỹ thu theo Đầu người: Chỉ tính tiền nếu thuộc độ tuổi lao động (Nam 18-61, Nữ 18-58)
                 if (isInAgeRange) {
                   expected = fund.target;
                 }
@@ -1312,20 +1294,74 @@ const WardFunds = () => {
             };
           });
 
-          // H. Tiêu chí thêm bản ghi:
-          // 1. Luôn giữ Chủ hộ (isHead = true) để bao phủ đủ 100% số hộ gia đình cho việc tra cứu/gom hộ
-          // 2. Với thành viên khác (!isHead): Phải nằm trong độ tuổi lao động VÀ có nghĩa vụ đóng > 0
-          const hasExpectedValue = Object.values(contributions).some((c: any) => c.expected > 0);
-          const shouldAdd = isHead || (isInAgeRange && hasExpectedValue);
+          return { contributions, isInAgeRange };
+        };
 
-          if (shouldAdd) {
+        // PASS 1: Quét 100% các Hộ gia đình trong CSDL để đảm bảo tất cả các hộ đều có mặt làm căn cứ thu Quỹ Tổ
+        hhList.forEach(hh => {
+          const members = resList.filter(r => r.household_id === hh.id && r.status !== 'deceased');
+          
+          if (members.length > 0) {
+            // Tìm chủ hộ
+            const head = members.find(m => m.is_head) || 
+                         members.find(m => hh.head_of_household_id === m.id) || 
+                         members.find(m => m.relationship_with_head && m.relationship_with_head.toLowerCase().trim() === 'chủ hộ') || 
+                         members[0];
+
+            if (head) {
+              addedResidentIds.add(head.id);
+              const { contributions } = calculateContributions(head, hh, true);
+
+              batchFunds.push({
+                id: generateUUID(),
+                year: selectedYear,
+                full_name: head.full_name.trim(),
+                dob: head.dob ? formatDateVN(head.dob.trim()) : undefined,
+                address: hh.address,
+                user_id: head.user_id || hh.user_id,
+                note: 'Chủ hộ (Bản ghi Hộ gia đình)',
+                contributions
+              });
+              successCount++;
+            }
+          } else {
+            // Trường hợp Hộ gia đình trống thành viên trong CSDL -> Vẫn tạo bản ghi Hộ để thu Quỹ Tổ
+            const placeholderName = hh.household_number ? `Hộ ${hh.household_number}` : `Hộ tại ${hh.address}`;
+            const emptyContributions: Record<string, any> = {};
+            activeFundsList.forEach((fund: any) => {
+              emptyContributions[fund.name] = { expected: 0, actual: 0 };
+            });
+
+            batchFunds.push({
+              id: generateUUID(),
+              year: selectedYear,
+              full_name: placeholderName,
+              address: hh.address,
+              user_id: hh.user_id,
+              note: 'Hộ chưa có nhân khẩu trong CSDL',
+              contributions: emptyContributions
+            });
+            successCount++;
+          }
+        });
+
+        // PASS 2: Bổ sung các thành viên khác trong hộ nằm trong độ tuổi lao động (Nữ 18-58, Nam 18-61)
+        resList.forEach(r => {
+          if (r.status === 'deceased') return;
+          if (addedResidentIds.has(r.id)) return; // Đã thêm ở Pass 1 làm chủ hộ
+
+          const hh = hhList.find(h => h.id === r.household_id);
+          const { contributions, isInAgeRange } = calculateContributions(r, hh, false);
+
+          const hasExpectedValue = Object.values(contributions).some((c: any) => c.expected > 0);
+          if (isInAgeRange && hasExpectedValue) {
             batchFunds.push({
               id: generateUUID(),
               year: selectedYear,
               full_name: r.full_name.trim(),
               dob: r.dob ? formatDateVN(r.dob.trim()) : undefined,
               address: hh ? hh.address : undefined,
-              user_id: r.user_id, // Gán trực tiếp cho TDP quản lý nhân khẩu này
+              user_id: r.user_id,
               contributions
             });
             successCount++;
@@ -1333,11 +1369,11 @@ const WardFunds = () => {
         });
 
         if (batchFunds.length === 0) {
-          showToast('Không có nhân khẩu nào đủ điều kiện đóng quỹ Phường theo quy định!', 'info');
+          showToast('Không tìm thấy dữ liệu Hộ gia đình hoặc Nhân khẩu để khởi tạo!', 'info');
         } else {
           // Lưu hàng loạt vào bảng ward_funds
           await db.saveWardFundsBatch(batchFunds);
-          showToast(`Khởi tạo thành công! Đã tạo danh sách ${successCount} nhân khẩu & chủ hộ đóng quỹ năm ${selectedYear}.`, 'success');
+          showToast(`Khởi tạo thành công! Đã tạo danh sách ${successCount} bản ghi Hộ gia đình & Nhân khẩu đóng quỹ năm ${selectedYear}.`, 'success');
           loadData();
           window.dispatchEvent(new CustomEvent('db-changed'));
         }
