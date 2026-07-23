@@ -4881,15 +4881,15 @@ const WardFunds = () => {
                       const rowIndex = sourceRows.indexOf(activeRow);
                       if (rowIndex >= 0) {
                         const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                        const newValue = activeTd.textContent || activeTd.innerText || '';
+                        const newValue = activeTd.innerHTML || activeTd.textContent || '';
                         if (cellIndex >= 0 && newValue !== undefined) {
                           containers.forEach((cnt, idx) => {
                             if (idx !== sourceContainerIndex) {
                               const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
                               if (targetRows[rowIndex]) {
                                 const targetTd = targetRows[rowIndex].children[cellIndex];
-                                if (targetTd && targetTd !== activeTd && (targetTd.textContent || targetTd.innerText || '') !== newValue) {
-                                  targetTd.textContent = newValue;
+                                if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
+                                  targetTd.innerHTML = newValue;
                                 }
                               }
                             }
