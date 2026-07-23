@@ -4325,17 +4325,28 @@ const WardFunds = () => {
       } else if (isHousehold) {
         expectedTotalForHH = wfTargetVal;
       } else {
-        expectedTotalForHH = wfTargetVal * laborCount;
+        expectedTotalForHH = members.reduce((sum, m) => {
+          const mRecord = memberWardRecords.find(r => (r.user_id && r.user_id === m.id) || (r.full_name && r.full_name.trim().toLowerCase() === m.full_name.trim().toLowerCase()));
+          const recordId = mRecord?.id || m.id;
+          const compExp = computedExpectedMap.get(recordId)?.[wf.name];
+          if (compExp !== undefined) return sum + compExp;
+
+          const age = getResidentAge(m.dob);
+          const gStr = (m.gender || '').toString().toLowerCase().trim();
+          const hasThi = m.full_name.toLowerCase().includes(' thị ') || m.full_name.toLowerCase().includes(' thị') || m.full_name.toLowerCase().startsWith('thị ');
+          const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
+          const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
+          let inLaborAge = false;
+          if (isMale) inLaborAge = age >= ageLimits.maleMin && age <= ageLimits.maleMax;
+          else inLaborAge = age >= ageLimits.femaleMin && age <= ageLimits.femaleMax;
+
+          const stored = mRecord?.contributions?.[wf.name]?.expected;
+          if (typeof stored === 'number' && stored > 0) return sum + stored;
+          return sum + (inLaborAge ? wfTargetVal : 0);
+        }, 0);
       }
 
-      const laborResidentIds = new Set(laborResidents.map(r => r.id));
-      const laborResidentNames = new Set(laborResidents.map(r => r.full_name.trim().toLowerCase()));
-
       const actualPaidSum = memberWardRecords.reduce((sum, r) => {
-        if (!isHousehold) {
-          const isLabor = (r.user_id && laborResidentIds.has(r.user_id)) || laborResidentNames.has((r.full_name || '').trim().toLowerCase());
-          if (!isLabor) return sum;
-        }
         const raw = r.contributions?.[wf.name]?.actual ?? 0;
         const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
         return sum + val;
