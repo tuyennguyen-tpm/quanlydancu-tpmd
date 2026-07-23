@@ -7267,8 +7267,10 @@ const WardFunds = () => {
                           
                           {displayedActiveFunds.map(fund => {
                             const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-                            const paid = contrib.actual >= contrib.expected && contrib.expected > 0;
-                            const hasPartial = contrib.actual > 0 && contrib.actual < contrib.expected;
+                            const computedExp = computedExpectedMap.get(item.id) || {};
+                            const dynExpected = computedExp[fund.name] !== undefined ? computedExp[fund.name] : contrib.expected;
+                            const paid = contrib.actual >= dynExpected && dynExpected > 0;
+                            const hasPartial = contrib.actual > 0 && contrib.actual < dynExpected;
                             
                             return (
                               <td 
@@ -7281,8 +7283,8 @@ const WardFunds = () => {
                                   display: 'inline-block',
                                   padding: '6px 12px',
                                   borderRadius: '8px',
-                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (contrib.expected === 0 ? '#f1f5f9' : '#fee2e2')),
-                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (contrib.expected === 0 ? '#64748b' : '#991b1b')),
+                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (dynExpected === 0 ? '#f1f5f9' : '#fee2e2')),
+                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (dynExpected === 0 ? '#64748b' : '#991b1b')),
                                   fontWeight: '600',
                                   fontSize: '0.85rem',
                                   transition: 'transform 0.1s',
@@ -7290,13 +7292,13 @@ const WardFunds = () => {
                                 onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
                                 onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                                 >
-                                  {contrib.expected === 0 ? (
+                                  {dynExpected === 0 ? (
                                     <span style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>Miễn / 0đ</span>
                                   ) : (
                                     <>
                                       {formatCurrency(contrib.actual)}
                                       <div style={{ fontSize: '0.72rem', opacity: 0.8, marginTop: '2px' }}>
-                                        / {formatCurrency(contrib.expected)}
+                                        / {formatCurrency(dynExpected)}
                                       </div>
                                     </>
                                   )}
