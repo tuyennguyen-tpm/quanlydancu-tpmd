@@ -4933,7 +4933,10 @@ const WardFunds = () => {
 
                 let totalRow = table.querySelector('tr.receipt-total-row');
                 if (!totalRow) {
-                  totalRow = rows.find(r => (r.textContent || r.innerText || '').toUpperCase().includes('TỔNG CỘNG'));
+                  totalRow = rows.find(r => {
+                    const txt = (r.textContent || r.innerText || '').toUpperCase();
+                    return txt.includes('TỔNG CỘNG') || txt.includes('CỘNG THỰC THU') || txt.includes('CỘNG CÁC KHOẢN') || txt.includes('TỔNG CHÍNH');
+                  });
                   if (totalRow) totalRow.classList.add('receipt-total-row');
                 }
 
@@ -4943,7 +4946,7 @@ const WardFunds = () => {
 
                 rows.forEach(row => {
                   const rText = (row.textContent || row.innerText || '').toUpperCase();
-                  if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
+                  if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG') || rText.includes('CỘNG THỰC THU') || rText.includes('CỘNG CÁC KHOẢN') || rText.includes('TỔNG CHÍNH')) {
                     return;
                   }
 
