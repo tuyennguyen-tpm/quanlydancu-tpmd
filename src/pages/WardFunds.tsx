@@ -5068,14 +5068,14 @@ const WardFunds = () => {
           if (editor) {
             ['input', 'keyup', 'focusout', 'blur', 'change'].forEach(function(evtType) {
               editor.addEventListener(evtType, function() {
-                recalculateReceiptTotals(true);
+                recalculateReceiptTotals(false);
               }, true);
             });
           }
 
           ['input', 'keyup', 'focusout', 'change', 'blur'].forEach(function(evtType) {
             document.addEventListener(evtType, function() {
-              recalculateReceiptTotals(true);
+              recalculateReceiptTotals(false);
             }, true);
           });
 
