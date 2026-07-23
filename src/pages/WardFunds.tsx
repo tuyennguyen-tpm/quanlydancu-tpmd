@@ -4121,8 +4121,31 @@ const WardFunds = () => {
     leaderSigUrl: string,
     printMode: 'ward_only' | 'combined' = 'combined'
   ) => {
-    const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
-    const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
+    const findHeadResident = (resList: Resident[], hh?: Household): Resident | undefined => {
+      if (!resList || resList.length === 0) return undefined;
+      if (hh && hh.head_of_household_id) {
+        const matched = resList.find(r => String(r.id) === String(hh.head_of_household_id));
+        if (matched) return matched;
+      }
+      const isHeadTrue = resList.find(r => r.is_head === true || (r as any).is_head === 'true');
+      if (isHeadTrue) return isHeadTrue;
+
+      const relHead = resList.find(r => {
+        const rel = (r.relationship_with_head || '').toString().trim().toLowerCase();
+        return rel === 'chủ hộ' || rel === 'chu ho' || rel === 'chủ hộ gia đình';
+      });
+      if (relHead) return relHead;
+
+      if (hh && hh.martyr_name) {
+        const mName = hh.martyr_name.trim().toLowerCase();
+        const matchedMartyr = resList.find(r => r.full_name.trim().toLowerCase() === mName);
+        if (matchedMartyr) return matchedMartyr;
+      }
+      return resList[0];
+    };
+
+    const headResident = findHeadResident(members, household);
+    const headName = headResident ? headResident.full_name : (household.martyr_name || (members[0] ? members[0].full_name : 'Đại diện hộ'));
 
     const getResidentAge = (dobStr: string) => {
       return calculateExactAge(dobStr, selectedYear);
@@ -4644,8 +4667,8 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const headResident = activeMembers.find(r => r.id === household.head_of_household_id || r.is_head) || activeMembers[0];
-    const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
+    const headResident = activeMembers.find(r => (household && r.id === household.head_of_household_id) || r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) || activeMembers[0];
+    const headName = headResident ? headResident.full_name : (household?.martyr_name || (activeMembers[0] ? activeMembers[0].full_name : 'Đại diện hộ'));
 
     // Luôn dùng dữ liệu mới nhất từ hệ thống
     const freshReceiptHtml = generateHouseholdReceiptHtml(
