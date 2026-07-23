@@ -4513,20 +4513,17 @@ const WardFunds = () => {
 
   const handlePrintHouseholdReceipt = async (
     householdId: string,
-    printMode: 'ward_only' | 'combined' = 'combined'
+    printMode: 'ward_only' | 'combined' = 'combined',
+    targetMembers?: any[]
   ) => {
-    const household = households.find(h => String(h.id) === String(householdId));
-    if (!household) {
-      showToast('Không tìm thấy thông tin hộ gia đình!', 'danger');
-      return;
-    }
-
     let freshDbResidents: Resident[] = [];
     try {
       freshDbResidents = await db.getResidents();
     } catch {
       freshDbResidents = residents;
     }
+
+    let household = households.find(h => String(h.id) === String(householdId));
 
     let freshDbFunds: WardFund[] = [];
     try {
@@ -4535,34 +4532,77 @@ const WardFunds = () => {
       freshDbFunds = funds;
     }
 
-    const isResidentActiveInHousehold = (r: Resident) => {
-      if (String(r.household_id || '') !== String(householdId)) return false;
-      const status = (r.status || 'resident').toString().toLowerCase().trim();
-      if (['deceased', 'qua_doi', 'moved_out', 'chuyen_di', 'inactive', 'deleted', 'tam_vang'].includes(status)) {
-        return false;
-      }
-      return true;
-    };
+    let activeMembers: Resident[] = [];
+    if (targetMembers && targetMembers.length > 0) {
+      activeMembers = targetMembers.map(m => {
+        const dbRes = freshDbResidents.find(r => r.id === m.id || r.full_name.trim().toLowerCase() === (m.full_name || '').trim().toLowerCase());
+        return {
+          id: m.id || dbRes?.id || generateUUID(),
+          user_id: m.user_id || dbRes?.user_id,
+          full_name: m.full_name,
+          dob: m.dob || dbRes?.dob || '',
+          household_id: householdId,
+          gender: dbRes?.gender || (m as any).gender || ''
+        } as Resident;
+      });
+    } else {
+      const isResidentActiveInHousehold = (r: Resident) => {
+        if (String(r.household_id || '') !== String(householdId)) return false;
+        const status = (r.status || 'resident').toString().toLowerCase().trim();
+        if (['deceased', 'qua_doi', 'moved_out', 'chuyen_di', 'inactive', 'deleted', 'tam_vang'].includes(status)) {
+          return false;
+        }
+        return true;
+      };
 
-    const householdResidents = freshDbResidents.filter(isResidentActiveInHousehold);
+      const householdResidents = freshDbResidents.filter(isResidentActiveInHousehold);
+
+      const memberWardRecords = freshDbFunds.filter(f => {
+        if (f.year !== selectedYear) return false;
+        if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
+        if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
+        return false;
+      });
+
+      const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
+      const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
+
+      activeMembers = memberWardRecords.length > 0
+        ? householdResidents.filter(r => {
+            if (r.id && activeMemberIds.has(r.id)) return true;
+            if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
+            return false;
+          })
+        : householdResidents;
+    }
+
+    const memberIds = new Set(activeMembers.map(m => m.id));
+    const memberNames = new Set(activeMembers.map(m => m.full_name.trim().toLowerCase()));
 
     const memberWardRecords = freshDbFunds.filter(f => {
       if (f.year !== selectedYear) return false;
-      if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
-      if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
+      if (f.user_id && memberIds.has(f.user_id)) return true;
+      if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
       return false;
     });
 
-    const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
-    const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
+    if (!household && activeMembers.length > 0) {
+      household = {
+        id: householdId,
+        user_id: activeMembers[0].user_id || '',
+        head_of_household_id: activeMembers[0].id,
+        address: (activeMembers[0] as any).address || (activeMembers[0] as any).permanent_address || '',
+        household_number: householdId.replace(/\D/g, '') || '—',
+        policy_type: 'none',
+        group_id: (db as any).getGroupId ? (db as any).getGroupId() : '',
+        created_at: new Date().toISOString()
+      };
+    }
 
-    const activeMembers = memberWardRecords.length > 0
-      ? householdResidents.filter(r => {
-          if (r.id && activeMemberIds.has(r.id)) return true;
-          if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
-          return false;
-        })
-      : householdResidents;
+    if (!household) {
+      showToast('Không tìm thấy thông tin hộ gia đình!', 'danger');
+      return;
+    }
 
     if (activeMembers.length === 0) {
       showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
@@ -6983,7 +7023,7 @@ const WardFunds = () => {
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               type="button"
-                              onClick={() => handlePrintHouseholdReceipt(group.householdId, 'ward_only')}
+                              onClick={() => handlePrintHouseholdReceipt(group.householdId, 'ward_only', group.members)}
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '8px',
@@ -7006,7 +7046,7 @@ const WardFunds = () => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handlePrintHouseholdReceipt(group.householdId, 'combined')}
+                              onClick={() => handlePrintHouseholdReceipt(group.householdId, 'combined', group.members)}
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '8px',
