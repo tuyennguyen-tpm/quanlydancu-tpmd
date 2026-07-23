@@ -5000,7 +5000,7 @@ const WardFunds = () => {
                     if (effectiveTotal === 0 && existingNum > 0) {
                       const hasAnyNonEmptyRow = rows.some(r => {
                         if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
-                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
+                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4];
                         const cellDigits = cell ? (cell.textContent || '').replace(/[^\d]/g, '') : '';
                         return cellDigits.length > 0;
                       });
