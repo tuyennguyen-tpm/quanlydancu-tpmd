@@ -4515,22 +4515,45 @@ const WardFunds = () => {
     householdId: string,
     printMode: 'ward_only' | 'combined' = 'combined'
   ) => {
-    const household = households.find(h => h.id === householdId);
+    const household = households.find(h => String(h.id) === String(householdId));
     if (!household) {
       showToast('Không tìm thấy thông tin hộ gia đình!', 'danger');
       return;
     }
 
-    const members = residents.filter(r => r.household_id === householdId && (r.status || 'resident') !== 'deceased');
-    if (members.length === 0) {
+    let freshDbResidents: Resident[] = [];
+    try {
+      freshDbResidents = await db.getResidents();
+    } catch {
+      freshDbResidents = residents;
+    }
+
+    let freshDbFunds: WardFund[] = [];
+    try {
+      freshDbFunds = await db.getWardFunds(selectedYear);
+    } catch {
+      freshDbFunds = funds;
+    }
+
+    const isResidentActiveInHousehold = (r: Resident) => {
+      if (String(r.household_id || '') !== String(householdId)) return false;
+      const status = (r.status || 'resident').toString().toLowerCase().trim();
+      if (['deceased', 'qua_doi', 'moved_out', 'chuyen_di', 'inactive', 'deleted', 'tam_vang'].includes(status)) {
+        return false;
+      }
+      return true;
+    };
+
+    const activeMembers = freshDbResidents.filter(isResidentActiveInHousehold);
+    if (activeMembers.length === 0) {
       showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
       return;
     }
 
-    const memberIds = new Set(members.map(m => m.id));
-    const memberNames = new Set(members.map(m => m.full_name.trim().toLowerCase()));
+    const memberIds = new Set(activeMembers.map(m => m.id));
+    const memberNames = new Set(activeMembers.map(m => m.full_name.trim().toLowerCase()));
 
-    const memberWardRecords = funds.filter(f => {
+    const memberWardRecords = freshDbFunds.filter(f => {
       if (f.year !== selectedYear) return false;
       if (f.user_id && memberIds.has(f.user_id)) return true;
       if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
@@ -4541,7 +4564,7 @@ const WardFunds = () => {
     try {
       householdPaidFunds = await db.getHouseholdFunds();
     } catch { /* ignore */ }
-    const filteredHhFunds = householdPaidFunds.filter(hf => hf.household_id === householdId && hf.year === selectedYear);
+    const filteredHhFunds = householdPaidFunds.filter(hf => String(hf.household_id) === String(householdId) && hf.year === selectedYear);
 
     const totalTdp = filteredHhFunds.reduce((sum, hf) => sum + hf.amount, 0);
     const totalWard = memberWardRecords.reduce((sum, r) => {
@@ -4572,19 +4595,8 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
+    const headResident = activeMembers.find(r => r.id === household.head_of_household_id || r.is_head) || activeMembers[0];
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
-
-    const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
-    const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
-
-    const activeMembers = memberWardRecords.length > 0
-      ? members.filter(r => {
-          if (r.id && activeMemberIds.has(r.id)) return true;
-          if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
-          return false;
-        })
-      : members;
 
     // Luôn dùng dữ liệu mới nhất từ hệ thống
     const freshReceiptHtml = generateHouseholdReceiptHtml(
@@ -5091,6 +5103,29 @@ const WardFunds = () => {
       householdFundsList = await db.getHouseholdFunds();
     } catch { /* ignore */ }
 
+    let freshDbResidents: Resident[] = [];
+    try {
+      freshDbResidents = await db.getResidents();
+    } catch {
+      freshDbResidents = residents;
+    }
+
+    let freshDbFunds: WardFund[] = [];
+    try {
+      freshDbFunds = await db.getWardFunds(selectedYear);
+    } catch {
+      freshDbFunds = funds;
+    }
+
+    const isResidentActiveInHousehold = (r: Resident, hhId: string) => {
+      if (String(r.household_id || '') !== String(hhId)) return false;
+      const status = (r.status || 'resident').toString().toLowerCase().trim();
+      if (['deceased', 'qua_doi', 'moved_out', 'chuyen_di', 'inactive', 'deleted', 'tam_vang'].includes(status)) {
+        return false;
+      }
+      return true;
+    };
+
     const listToPrint: Array<{
       household: Household;
       members: Resident[];
@@ -5099,18 +5134,24 @@ const WardFunds = () => {
     }> = [];
 
     for (const group of householdGroupedFunds) {
-      const hh = households.find(h => h.id === group.householdId);
+      const hh = households.find(h => String(h.id) === String(group.householdId));
       if (!hh) continue;
 
-      const hhFunds = householdFundsList.filter(hf => hf.household_id === group.householdId && hf.year === selectedYear);
-      const totalTdp = hhFunds.reduce((sum, hf) => sum + hf.amount, 0);
+      const activeMembers = freshDbResidents.filter(r => isResidentActiveInHousehold(r, group.householdId));
+      if (activeMembers.length === 0) continue;
 
-      const memberNames = group.members.map(m => m.full_name.trim().toLowerCase());
-      const memberWardRecords = funds.filter(f => {
+      const memberIds = new Set(activeMembers.map(m => m.id));
+      const memberNames = new Set(activeMembers.map(m => m.full_name.trim().toLowerCase()));
+
+      const memberWardRecords = freshDbFunds.filter(f => {
         if (f.year !== selectedYear) return false;
-        const nameKey = f.full_name.trim().toLowerCase();
-        return memberNames.includes(nameKey);
+        if (f.user_id && memberIds.has(f.user_id)) return true;
+        if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
+        return false;
       });
+
+      const hhFunds = householdFundsList.filter(hf => String(hf.household_id) === String(group.householdId) && hf.year === selectedYear);
+      const totalTdp = hhFunds.reduce((sum, hf) => sum + hf.amount, 0);
 
       const totalWard = memberWardRecords.reduce((sum, r) => {
         let rSum = 0;
@@ -5121,18 +5162,6 @@ const WardFunds = () => {
       }, 0);
 
       if (totalTdp + totalWard > 0) {
-        const allHhMembers = residents.filter(r => r.household_id === group.householdId && (r.status || 'resident') !== 'deceased');
-        const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
-        const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
-
-        const activeMembers = memberWardRecords.length > 0
-          ? allHhMembers.filter(r => {
-              if (r.id && activeMemberIds.has(r.id)) return true;
-              if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
-              return false;
-            })
-          : allHhMembers;
-
         listToPrint.push({
           household: hh,
           members: activeMembers,
