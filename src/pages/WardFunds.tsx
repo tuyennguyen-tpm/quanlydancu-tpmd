@@ -4572,10 +4572,16 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
-    const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
+    const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
+    const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
 
-    const activeMembers = members;
+    const activeMembers = memberWardRecords.length > 0
+      ? members.filter(r => {
+          if (r.id && activeMemberIds.has(r.id)) return true;
+          if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
+          return false;
+        })
+      : members;
 
     // Luôn dùng dữ liệu mới nhất từ hệ thống
     const freshReceiptHtml = generateHouseholdReceiptHtml(
@@ -5113,7 +5119,16 @@ const WardFunds = () => {
 
       if (totalTdp + totalWard > 0) {
         const allHhMembers = residents.filter(r => r.household_id === group.householdId && (r.status || 'resident') !== 'deceased');
-        const activeMembers = allHhMembers;
+        const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
+        const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
+
+        const activeMembers = memberWardRecords.length > 0
+          ? allHhMembers.filter(r => {
+              if (r.id && activeMemberIds.has(r.id)) return true;
+              if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
+              return false;
+            })
+          : allHhMembers;
 
         listToPrint.push({
           household: hh,
