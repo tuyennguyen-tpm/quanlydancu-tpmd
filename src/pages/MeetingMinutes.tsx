@@ -661,6 +661,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
   const handleDeleteMinutes = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const isAdmin = currentRole === 'admin' || 
+                    currentRole === 'to_truong' ||
                     localStorage.getItem('user_role') === 'super_admin' || 
                     localStorage.getItem('user_role') === 'ward_admin';
     if (!isAdmin) {
@@ -1285,7 +1286,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     <Calendar size={10} /> {new Date(m.date).toLocaleDateString('vi-VN')}
                   </div>
                 </div>
-                {(currentRole === 'admin' || localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
+                {(currentRole === 'admin' || currentRole === 'to_truong' || localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
                   <button 
                     onClick={(e) => handleDeleteMinutes(m.id, e)}
                     style={{

@@ -70,7 +70,7 @@ const FarmersAssociation = () => {
 
   const currentRole = localStorage.getItem('current_role') || 'demo';
   const isGuest = localStorage.getItem('guest_mode') === 'true';
-  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
   const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
 
   const handleAddMember = async (resident: Resident) => {

@@ -2634,7 +2634,7 @@ ${strippedContent}
         </button>
 
         {/* Nút Cài đặt mẫu dành riêng cho Admin */}
-        {currentRole === 'admin' && (
+        {(currentRole === 'admin' || currentRole === 'to_truong') && (
           <button 
             onClick={() => setIsManagerOpen(true)}
             style={{

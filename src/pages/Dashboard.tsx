@@ -141,6 +141,7 @@ const Dashboard = () => {
   }, []);
 
   const isAdmin = currentRole === 'admin' || 
+                  currentRole === 'to_truong' ||
                   localStorage.getItem('user_role') === 'super_admin' || 
                   localStorage.getItem('user_role') === 'ward_admin';
 
