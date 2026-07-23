@@ -3015,6 +3015,22 @@ const Finance = () => {
       wardFundsList = await db.getWardFunds(fundYear);
     } catch { /* ignore */ }
 
+    let freshDbResidents: Resident[] = [];
+    try {
+      freshDbResidents = await db.getResidents();
+    } catch {
+      freshDbResidents = residents;
+    }
+
+    const isResidentActiveInHousehold = (r: Resident, hhId: string) => {
+      if (String(r.household_id || '') !== String(hhId)) return false;
+      const status = (r.status || 'resident').toString().toLowerCase().trim();
+      if (['deceased', 'qua_doi', 'moved_out', 'chuyen_di', 'inactive', 'deleted', 'tam_vang'].includes(status)) {
+        return false;
+      }
+      return true;
+    };
+
     const listToPrint: Array<{
       household: Household;
       members: Resident[];
@@ -3023,15 +3039,30 @@ const Finance = () => {
     }> = [];
 
     for (const hh of filteredHouseholdsForFunds) {
-      const hhFunds = householdFunds.filter(hf => hf.household_id === hh.id && hf.year === fundYear);
+      const hhFunds = householdFunds.filter(hf => String(hf.household_id) === String(hh.id) && hf.year === fundYear);
       const totalTdp = hhFunds.reduce((sum, hf) => sum + hf.amount, 0);
 
-      const members = residents.filter(r => r.household_id === hh.id);
-      const memberNames = members.map(m => m.full_name.trim().toLowerCase());
+      const householdResidents = freshDbResidents.filter(r => isResidentActiveInHousehold(r, hh.id));
+
       const memberWardRecords = wardFundsList.filter(f => {
-        const nameKey = f.full_name.trim().toLowerCase();
-        return memberNames.includes(nameKey);
+        if (f.year !== fundYear) return false;
+        if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
+        if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
+        return false;
       });
+
+      const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
+      const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
+
+      const activeMembers = memberWardRecords.length > 0
+        ? householdResidents.filter(r => {
+            if (r.id && activeMemberIds.has(r.id)) return true;
+            if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
+            return false;
+          })
+        : householdResidents;
+
+      if (activeMembers.length === 0) continue;
 
       const totalWard = memberWardRecords.reduce((sum, r) => {
         let rSum = 0;
@@ -3045,7 +3076,7 @@ const Finance = () => {
       if (totalTdp + totalWard > 0) {
         listToPrint.push({
           household: hh,
-          members,
+          members: activeMembers,
           memberWardRecords,
           filteredHhFunds: hhFunds
         });
