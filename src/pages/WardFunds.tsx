@@ -4539,6 +4539,24 @@ const WardFunds = () => {
     printMode: 'ward_only' | 'combined' = 'combined',
     targetMembers?: any[]
   ) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+    try {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Đang tạo phiếu thu...</title><meta charset="utf-8"/></head>
+        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:90vh;font-family:'Times New Roman',serif;color:#1e293b;background:#f8fafc;">
+          <div style="font-size:18pt;font-weight:bold;margin-bottom:10px;color:#1e40af;">⏳ Đang tạo phiếu thu...</div>
+          <div style="font-size:12pt;color:#64748b;">Vui lòng chờ trong giây lát hệ thống đang kết nối CSDL và tạo biểu mẫu.</div>
+        </body>
+        </html>
+      `);
+    } catch { /* ignore */ }
+
     let freshDbResidents: Resident[] = [];
     try {
       freshDbResidents = await db.getResidents();
@@ -4624,11 +4642,13 @@ const WardFunds = () => {
 
     if (!household) {
       showToast('Không tìm thấy thông tin hộ gia đình!', 'danger');
+      printWindow.close();
       return;
     }
 
     if (activeMembers.length === 0) {
       showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
+      printWindow.close();
       return;
     }
 
@@ -4646,12 +4666,6 @@ const WardFunds = () => {
       });
       return sum + rSum;
     }, 0);
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
-      return;
-    }
 
     const tdpNameVal = localStorage.getItem('tdp_name') || 'Tổ dân phố';
     const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
@@ -5177,6 +5191,7 @@ const WardFunds = () => {
       </html>
     `;
 
+    printWindow.document.open();
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
@@ -5186,6 +5201,24 @@ const WardFunds = () => {
       showToast('Không có dữ liệu hộ gia đình nào để in!', 'warning');
       return;
     }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
+    try {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Đang tạo phiếu thu hàng loạt...</title><meta charset="utf-8"/></head>
+        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:90vh;font-family:'Times New Roman',serif;color:#1e293b;background:#f8fafc;">
+          <div style="font-size:18pt;font-weight:bold;margin-bottom:10px;color:#1e40af;">⏳ Đang tạo loạt phiếu thu A5...</div>
+          <div style="font-size:12pt;color:#64748b;">Vui lòng chờ trong giây lát hệ thống đang tổng hợp dữ liệu các hộ gia đình.</div>
+        </body>
+        </html>
+      `);
+    } catch { /* ignore */ }
 
     let householdFundsList: HouseholdFund[] = [];
     try {
@@ -5270,13 +5303,8 @@ const WardFunds = () => {
     }
 
     if (listToPrint.length === 0) {
-      showToast('Không có hộ gia đình nào đã nộp tiền để in phiếu thu!', 'warning');
-      return;
-    }
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      showToast('Không có hộ gia đình nào để in phiếu thu!', 'warning');
+      printWindow.close();
       return;
     }
 
@@ -5567,6 +5595,7 @@ const WardFunds = () => {
       </html>
     `;
 
+    printWindow.document.open();
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
