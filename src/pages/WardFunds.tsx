@@ -1080,6 +1080,34 @@ const WardFunds = () => {
     }
   };
 
+  // Khôi phục diện Phải đóng theo độ tuổi chuẩn cho cả hộ
+  const handleResetHouseholdExemptStatus = async (members: WardFund[]) => {
+    if (isGuest) {
+      showToast('Khách không có quyền sửa đổi dữ liệu đóng quỹ!', 'warning');
+      return;
+    }
+    try {
+      await Promise.all(members.map(async (m) => {
+        const updatedContribs: Record<string, any> = { ...m.contributions };
+        activeFunds.forEach(fund => {
+          if (updatedContribs[fund.name]) {
+            delete updatedContribs[fund.name].is_manual_exempt;
+            delete updatedContribs[fund.name].is_manual_target;
+            if (updatedContribs[fund.name].expected === 0) {
+              updatedContribs[fund.name].expected = fund.target;
+            }
+          }
+        });
+        await db.saveWardFund({ ...m, contributions: updatedContribs });
+      }));
+      showToast('⚡ Đã khôi phục mức đóng quy định cho tất cả thành viên trong hộ!', 'success');
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch {
+      showToast('Thao tác thất bại!', 'danger');
+    }
+  };
+
   // Quick Pay (Mark fully paid for all funds / or toggle back to unpaid)
   const handleQuickPay = async (record: WardFund) => {
     if (isGuest) {
@@ -7169,6 +7197,29 @@ const WardFunds = () => {
                               title="Thêm thành viên mới vào danh sách đóng quỹ của hộ này"
                             >
                               <UserPlus size={13} /> Thêm nhân khẩu
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResetHouseholdExemptStatus(group.members)}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                border: '1.5px solid #f59e0b',
+                                background: '#fffbeb',
+                                color: '#b45309',
+                                fontWeight: '700',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#fef3c7'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#fffbeb'; }}
+                              title="Đặt lại tất cả thành viên trong hộ theo đúng tuổi quy định (bỏ các đánh dấu miễn nhầm)"
+                            >
+                              ⚡ Quy định
                             </button>
                             <button type="button" onClick={() => handleQuickPayHousehold(group.members, allPaid, group.householdId)} style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: allPaid ? '#e2e8f0' : '#10b981', color: allPaid ? '#64748b' : 'white', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', boxShadow: allPaid ? 'none' : '0 2px 4px rgba(16,185,129,0.3)' }}>
                               {allPaid ? '↩ Hủy' : '✓ Thu đủ cả nhà'}
