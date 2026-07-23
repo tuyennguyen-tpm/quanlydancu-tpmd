@@ -4938,6 +4938,9 @@ const WardFunds = () => {
                     const txt = (r.textContent || r.innerText || '').toUpperCase();
                     return txt.includes('TỔNG CỘNG') || txt.includes('CỘNG THỰC THU') || txt.includes('CỘNG CÁC KHOẢN') || txt.includes('TỔNG CHÍNH');
                   });
+                  if (!totalRow && rows.length > 1) {
+                    totalRow = rows[rows.length - 1];
+                  }
                   if (totalRow) totalRow.classList.add('receipt-total-row');
                 }
 
