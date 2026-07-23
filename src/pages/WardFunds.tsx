@@ -4955,7 +4955,7 @@ const WardFunds = () => {
                   }
                 });
 
-                if (totalRow) {
+                if (grandTotal > 0 && totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
                     const firstBodyRow = dataRows[0];
@@ -4982,15 +4982,17 @@ const WardFunds = () => {
                   }
                 }
 
-                const wordsContainer = container.querySelector('.receipt-amount-words') 
-                  || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
-                
-                if (wordsContainer) {
-                  const strongEl = wordsContainer.querySelector('strong');
-                  if (strongEl) {
-                    strongEl.innerText = docSoTien(grandTotal);
-                  } else {
-                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(grandTotal) + '</strong>';
+                if (grandTotal > 0) {
+                  const wordsContainer = container.querySelector('.receipt-amount-words') 
+                    || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                  
+                  if (wordsContainer) {
+                    const strongEl = wordsContainer.querySelector('strong');
+                    if (strongEl) {
+                      strongEl.innerText = docSoTien(grandTotal);
+                    } else {
+                      wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(grandTotal) + '</strong>';
+                    }
                   }
                 }
               });
