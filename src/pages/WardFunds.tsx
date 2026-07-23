@@ -4534,49 +4534,17 @@ const WardFunds = () => {
     `;
   };
 
-  const handlePrintHouseholdReceipt = async (
+  const handlePrintHouseholdReceipt = (
     householdId: string,
     printMode: 'ward_only' | 'combined' = 'combined',
     targetMembers?: any[]
   ) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
-      return;
-    }
-    try {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head><title>Đang tạo phiếu thu...</title><meta charset="utf-8"/></head>
-        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:90vh;font-family:'Times New Roman',serif;color:#1e293b;background:#f8fafc;">
-          <div style="font-size:18pt;font-weight:bold;margin-bottom:10px;color:#1e40af;">⏳ Đang tạo phiếu thu...</div>
-          <div style="font-size:12pt;color:#64748b;">Vui lòng chờ trong giây lát hệ thống đang kết nối CSDL và tạo biểu mẫu.</div>
-        </body>
-        </html>
-      `);
-    } catch { /* ignore */ }
-
-    let freshDbResidents: Resident[] = [];
-    try {
-      freshDbResidents = await db.getResidents();
-    } catch {
-      freshDbResidents = residents;
-    }
-
     let household = households.find(h => String(h.id) === String(householdId));
-
-    let freshDbFunds: WardFund[] = [];
-    try {
-      freshDbFunds = await db.getWardFunds(selectedYear);
-    } catch {
-      freshDbFunds = funds;
-    }
 
     let activeMembers: Resident[] = [];
     if (targetMembers && targetMembers.length > 0) {
       activeMembers = targetMembers.map(m => {
-        const dbRes = freshDbResidents.find(r => r.id === m.id || r.full_name.trim().toLowerCase() === (m.full_name || '').trim().toLowerCase());
+        const dbRes = residents.find(r => r.id === m.id || r.full_name.trim().toLowerCase() === (m.full_name || '').trim().toLowerCase());
         return {
           id: m.id || dbRes?.id || generateUUID(),
           user_id: m.user_id || dbRes?.user_id,
@@ -4596,9 +4564,9 @@ const WardFunds = () => {
         return true;
       };
 
-      const householdResidents = freshDbResidents.filter(isResidentActiveInHousehold);
+      const householdResidents = residents.filter(isResidentActiveInHousehold);
 
-      const memberWardRecords = freshDbFunds.filter(f => {
+      const memberWardRecords = funds.filter(f => {
         if (f.year !== selectedYear) return false;
         if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
         if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
@@ -4620,7 +4588,7 @@ const WardFunds = () => {
     const memberIds = new Set(activeMembers.map(m => m.id));
     const memberNames = new Set(activeMembers.map(m => m.full_name.trim().toLowerCase()));
 
-    const memberWardRecords = freshDbFunds.filter(f => {
+    const memberWardRecords = funds.filter(f => {
       if (f.year !== selectedYear) return false;
       if (f.user_id && memberIds.has(f.user_id)) return true;
       if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
@@ -4642,30 +4610,15 @@ const WardFunds = () => {
 
     if (!household) {
       showToast('Không tìm thấy thông tin hộ gia đình!', 'danger');
-      printWindow.close();
       return;
     }
 
     if (activeMembers.length === 0) {
       showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
-      printWindow.close();
       return;
     }
 
-    let householdPaidFunds: HouseholdFund[] = [];
-    try {
-      householdPaidFunds = await db.getHouseholdFunds();
-    } catch { /* ignore */ }
-    const filteredHhFunds = householdPaidFunds.filter(hf => String(hf.household_id) === String(householdId) && hf.year === selectedYear);
-
-    const totalTdp = filteredHhFunds.reduce((sum, hf) => sum + hf.amount, 0);
-    const totalWard = memberWardRecords.reduce((sum, r) => {
-      let rSum = 0;
-      activeFunds.forEach(fund => {
-        rSum += r.contributions?.[fund.name]?.actual || 0;
-      });
-      return sum + rSum;
-    }, 0);
+    const filteredHhFunds = householdFunds.filter(hf => String(hf.household_id) === String(householdId) && hf.year === selectedYear);
 
     const tdpNameVal = localStorage.getItem('tdp_name') || 'Tổ dân phố';
     const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
@@ -5191,53 +5144,24 @@ const WardFunds = () => {
       </html>
     `;
 
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-  };
-
-  const handlePrintBulkReceiptsA5_Household = async () => {
-    if (householdGroupedFunds.length === 0) {
-      showToast('Không có dữ liệu hộ gia đình nào để in!', 'warning');
-      return;
-    }
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
       return;
     }
-    try {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head><title>Đang tạo phiếu thu hàng loạt...</title><meta charset="utf-8"/></head>
-        <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:90vh;font-family:'Times New Roman',serif;color:#1e293b;background:#f8fafc;">
-          <div style="font-size:18pt;font-weight:bold;margin-bottom:10px;color:#1e40af;">⏳ Đang tạo loạt phiếu thu A5...</div>
-          <div style="font-size:12pt;color:#64748b;">Vui lòng chờ trong giây lát hệ thống đang tổng hợp dữ liệu các hộ gia đình.</div>
-        </body>
-        </html>
-      `);
-    } catch { /* ignore */ }
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
 
-    let householdFundsList: HouseholdFund[] = [];
-    try {
-      householdFundsList = await db.getHouseholdFunds();
-    } catch { /* ignore */ }
-
-    let freshDbResidents: Resident[] = [];
-    try {
-      freshDbResidents = await db.getResidents();
-    } catch {
-      freshDbResidents = residents;
+  const handlePrintBulkReceiptsA5_Household = () => {
+    if (householdGroupedFunds.length === 0) {
+      showToast('Không có dữ liệu hộ gia đình nào để in!', 'warning');
+      return;
     }
 
-    let freshDbFunds: WardFund[] = [];
-    try {
-      freshDbFunds = await db.getWardFunds(selectedYear);
-    } catch {
-      freshDbFunds = funds;
-    }
+    const householdFundsList = householdFunds;
+    const freshDbResidents = residents;
+    const freshDbFunds = funds;
 
     const isResidentActiveInHousehold = (r: Resident, hhId: string) => {
       if (String(r.household_id || '') !== String(hhId)) return false;
@@ -5304,7 +5228,6 @@ const WardFunds = () => {
 
     if (listToPrint.length === 0) {
       showToast('Không có hộ gia đình nào để in phiếu thu!', 'warning');
-      printWindow.close();
       return;
     }
 
@@ -5595,7 +5518,11 @@ const WardFunds = () => {
       </html>
     `;
 
-    printWindow.document.open();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
+      return;
+    }
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
