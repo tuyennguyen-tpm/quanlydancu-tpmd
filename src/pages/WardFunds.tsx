@@ -4769,7 +4769,6 @@ const WardFunds = () => {
       <body>
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
-          <button class="toolbar-btn btn-recalc" id="btn-recalc" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border-color: #0284c7;">⚡ Tính lại tổng tiền</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
           ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>' : ''}
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
@@ -5011,14 +5010,6 @@ const WardFunds = () => {
             }
           }
 
-          const btnRecalc = document.getElementById('btn-recalc');
-          if (btnRecalc) {
-            btnRecalc.addEventListener('click', function() {
-              recalculateReceiptTotals();
-              alert('⚡ Đã tự động tính toán lại Tổng tiền thực thu và Số tiền bằng chữ trên cả 2 Liên!');
-            });
-          }
-
           fontSizeSelect.addEventListener('change', function() {
             document.querySelectorAll('.receipt-container').forEach(function(el) {
               el.style.fontSize = fontSizeSelect.value;
@@ -5028,14 +5019,6 @@ const WardFunds = () => {
           ['input', 'keyup'].forEach(function(evtType) {
             document.addEventListener(evtType, function() {
               syncReceiptFields();
-            }, true);
-          });
-
-          ['blur', 'change', 'focusout'].forEach(function(evtType) {
-            document.addEventListener(evtType, function(e) {
-              if (e.target && e.target.closest && e.target.closest('.receipt-details-table')) {
-                recalculateReceiptTotals();
-              }
             }, true);
           });
 
