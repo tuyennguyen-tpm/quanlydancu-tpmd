@@ -4853,18 +4853,27 @@ const WardFunds = () => {
               if (containers.length === 0) return;
 
               if (containers.length > 1) {
-                let activeEl = document.activeElement;
-                if (activeEl && activeEl.nodeType === 3) {
-                  activeEl = activeEl.parentElement;
+                let activeEl = null;
+                const sel = window.getSelection();
+                if (sel && sel.anchorNode) {
+                  activeEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
                 }
+                if (!activeEl || !editor.contains(activeEl)) {
+                  activeEl = document.activeElement;
+                  if (activeEl && activeEl.nodeType === 3) {
+                    activeEl = activeEl.parentElement;
+                  }
+                }
+
                 if (activeEl && typeof activeEl.closest === 'function' && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
                   const activeContainer = activeEl.closest('.receipt-container');
                   const activeRow = activeEl.closest('tr');
                   const activeTd = activeEl.closest('td');
+
                   if (activeContainer && activeRow && activeTd && !activeRow.classList.contains('receipt-total-row') && !(activeRow.textContent || activeRow.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
                     const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
                     
-                    // 1. Đồng bộ bảng chi tiết quỹ đóng góp
+                    // 1. Đồng bộ bảng chi tiết quỹ đóng góp (receipt-details-table)
                     const activeDetailsTable = activeEl.closest('.receipt-details-table');
                     if (activeDetailsTable) {
                       const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
@@ -4888,22 +4897,22 @@ const WardFunds = () => {
                       }
                     }
 
-                    // 2. Đồng bộ thông tin người nộp, địa chỉ, lý do nộp
+                    // 2. Đồng bộ thông tin người nộp, địa chỉ, lý do nộp (receipt-info-table)
                     const activeInfoTable = activeEl.closest('.receipt-info-table');
                     if (activeInfoTable) {
                       const sourceRows = Array.from(activeInfoTable.querySelectorAll('tr'));
                       const rowIndex = sourceRows.indexOf(activeRow);
                       if (rowIndex >= 0) {
                         const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                        const newValue = activeTd.textContent || activeTd.innerText || '';
+                        const newValue = activeTd.innerHTML || activeTd.textContent || '';
                         if (cellIndex >= 0 && newValue !== undefined) {
                           containers.forEach((cnt, idx) => {
                             if (idx !== sourceContainerIndex) {
                               const targetRows = cnt.querySelectorAll('.receipt-info-table tr');
                               if (targetRows[rowIndex]) {
                                 const targetTd = targetRows[rowIndex].children[cellIndex];
-                                if (targetTd && targetTd !== activeTd && (targetTd.textContent || targetTd.innerText || '') !== newValue) {
-                                  targetTd.textContent = newValue;
+                                if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
+                                  targetTd.innerHTML = newValue;
                                 }
                               }
                             }
