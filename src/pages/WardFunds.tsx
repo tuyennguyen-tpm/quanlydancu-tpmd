@@ -4846,7 +4846,7 @@ const WardFunds = () => {
           }
 
           let isRecalculating = false;
-          function recalculateReceiptTotals() {
+          function recalculateReceiptTotals(forceRecalc) {
             if (isRecalculating) return;
             isRecalculating = true;
             try {
