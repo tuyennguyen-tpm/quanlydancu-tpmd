@@ -4132,7 +4132,7 @@ const WardFunds = () => {
     const personFund = activeFundsList.find((af: any) => af.scope === 'person' || af.name.toLowerCase().includes('thiên tai') || af.name.toLowerCase().includes('đáp nghĩa'));
 
     const parseAgeRange = (ageRangeStr: string | undefined) => {
-      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 61 };
       if (!ageRangeStr) return result;
       const cleanStr = ageRangeStr.toLowerCase();
       const maleMatch = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
