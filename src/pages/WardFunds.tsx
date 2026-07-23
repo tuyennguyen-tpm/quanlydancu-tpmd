@@ -4974,12 +4974,11 @@ const WardFunds = () => {
                   grandTotal += num;
                 });
 
-                if (grandTotal === 0) {
-                  let activeEl = document.activeElement;
-                  const isEditingTable = activeEl && table.contains(activeEl);
-                  if (!isEditingTable) {
-                    return;
-                  }
+                // Chỉ tính toán lại tổng tiền khi người dùng gõ/chỉnh sửa trực tiếp
+                let activeEl = document.activeElement;
+                const isUserEditing = activeEl && typeof editor !== 'undefined' && editor && editor.contains(activeEl);
+                if (!isUserEditing && grandTotal === 0) {
+                  return;
                 }
 
                 const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
@@ -4990,25 +4989,9 @@ const WardFunds = () => {
                   effectiveTotal = wardTotal;
                 }
 
-                if (totalRow) {
+                if (totalRow && (isUserEditing || effectiveTotal > 0)) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
-                    const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
-                    const existingDigits = existingText.replace(/[^\d]/g, '');
-                    const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
-
-                    if (effectiveTotal === 0 && existingNum > 0) {
-                      const hasAnyNonEmptyRow = rows.some(r => {
-                        if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
-                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
-                        const cellDigits = cell ? (cell.textContent || '').replace(/[^\d]/g, '') : '';
-                        return cellDigits.length > 0;
-                      });
-                      if (hasAnyNonEmptyRow) {
-                        effectiveTotal = existingNum;
-                      }
-                    }
-
                     const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
                     const ths = Array.from(table.querySelectorAll('thead th'));
                     const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
@@ -5041,15 +5024,17 @@ const WardFunds = () => {
                   }
                 }
 
-                const wordsContainer = container.querySelector('.receipt-amount-words') 
-                  || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
-                
-                if (wordsContainer) {
-                  const strongEl = wordsContainer.querySelector('strong');
-                  if (strongEl) {
-                    strongEl.innerText = docSoTien(effectiveTotal);
-                  } else {
-                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
+                if (isUserEditing || effectiveTotal > 0) {
+                  const wordsContainer = container.querySelector('.receipt-amount-words') 
+                    || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                  
+                  if (wordsContainer) {
+                    const strongEl = wordsContainer.querySelector('strong');
+                    if (strongEl) {
+                      strongEl.innerText = docSoTien(effectiveTotal);
+                    } else {
+                      wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
+                    }
                   }
                 }
               });
@@ -5069,10 +5054,6 @@ const WardFunds = () => {
           ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
             document.addEventListener(evtType, recalculateReceiptTotals, true);
           });
-
-          try {
-            recalculateReceiptTotals();
-          } catch (e) {}
 
 
 
