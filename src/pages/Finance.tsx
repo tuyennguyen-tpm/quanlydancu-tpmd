@@ -343,14 +343,7 @@ const Finance = () => {
   };
 
   const formatToDisplayDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    if (dateStr.includes('-')) {
-      const parts = dateStr.split('-');
-      if (parts.length === 3) {
-        return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
-      }
-    }
-    return dateStr;
+    return formatDateVN(dateStr);
   };
 
   const handleExportExcel = async () => {

@@ -873,11 +873,13 @@ const WardFunds = () => {
           }
         }
 
-        if (!inAgeRange) {
+        const stored = f.contributions?.[fund.name]?.expected;
+        if (typeof stored === 'number') {
+          expected[fund.name] = stored;
+        } else if (!inAgeRange) {
           expected[fund.name] = 0;
         } else {
-          const stored = f.contributions?.[fund.name]?.expected;
-          expected[fund.name] = (typeof stored === 'number' && stored > 0) ? stored : fund.target;
+          expected[fund.name] = fund.target;
         }
       });
 
@@ -1021,6 +1023,53 @@ const WardFunds = () => {
       };
     });
     setContribInputs(inputs);
+  };
+
+  // Bật/Tắt trạng thái Miễn đóng cho 1 quỹ của cá nhân
+  const handleToggleExemptFund = async (record: WardFund, fundName: string) => {
+    if (isGuest) {
+      showToast('Khách không có quyền sửa đổi dữ liệu đóng quỹ!', 'warning');
+      return;
+    }
+
+    const fundObj = activeFunds.find(f => f.name === fundName);
+    const targetAmount = fundObj ? fundObj.target : 10000;
+
+    const currentContrib = record.contributions?.[fundName] || { expected: targetAmount, actual: 0 };
+    const computedExp = computedExpectedMap.get(record.id)?.[fundName];
+    
+    const isExemptNow = (currentContrib.expected === 0) || (computedExp === 0 && currentContrib.expected === undefined);
+
+    const newExpected = isExemptNow ? targetAmount : 0;
+    const newActual = isExemptNow ? currentContrib.actual : 0;
+
+    const newContributions = {
+      ...record.contributions,
+      [fundName]: {
+        ...currentContrib,
+        expected: newExpected,
+        actual: newActual
+      }
+    };
+
+    const updatedRecord: WardFund = {
+      ...record,
+      contributions: newContributions
+    };
+
+    try {
+      await db.saveWardFund(updatedRecord);
+      showToast(
+        isExemptNow
+          ? `Đã chuyển "${record.full_name}" sang diện PHẢI ĐÓNG ${fundName} (${targetAmount.toLocaleString('vi-VN')}đ)`
+          : `Đã chuyển "${record.full_name}" sang diện MIỄN ${fundName}`,
+        'success'
+      );
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Thao tác thất bại!', 'danger');
+    }
   };
 
   // Quick Pay (Mark fully paid for all funds / or toggle back to unpaid)
@@ -7132,12 +7181,26 @@ const WardFunds = () => {
                           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flex: '2' }}>
                             {activeFunds.filter((f: any) => !f.scope || f.scope !== 'household').map(fund => {
                               const storedActual = member.contributions?.[fund.name]?.actual || 0;
-                              // Dùng expected tính động theo tuổi/giới tính thực tế
                               const dynExpected = computedExp[fund.name] ?? (member.contributions?.[fund.name]?.expected || 0);
                               const paid = storedActual >= dynExpected && dynExpected > 0;
                               return (
-                                <span key={fund.name} style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', background: dynExpected === 0 ? '#f1f5f9' : paid ? '#dcfce7' : '#fee2e2', color: dynExpected === 0 ? '#94a3b8' : paid ? '#166534' : '#991b1b', whiteSpace: 'nowrap' }}>
-                                  {fund.name.split(' ').slice(-2).join(' ')}: {dynExpected === 0 ? 'Miễn' : `${storedActual.toLocaleString('vi-VN')}/${dynExpected.toLocaleString('vi-VN')}đ`}
+                                <span 
+                                  key={fund.name} 
+                                  onClick={() => handleToggleExemptFund(member, fund.name)}
+                                  title="Bấm để Bật/Tắt Miễn cho khoản quỹ này"
+                                  style={{ 
+                                    padding: '3px 10px', 
+                                    borderRadius: '6px', 
+                                    fontSize: '0.78rem', 
+                                    fontWeight: '600', 
+                                    background: dynExpected === 0 ? '#f1f5f9' : paid ? '#dcfce7' : '#fee2e2', 
+                                    color: dynExpected === 0 ? '#64748b' : paid ? '#166534' : '#991b1b', 
+                                    whiteSpace: 'nowrap',
+                                    cursor: 'pointer',
+                                    border: dynExpected === 0 ? '1px dashed #cbd5e1' : 'none'
+                                  }}
+                                >
+                                  {fund.name.split(' ').slice(-2).join(' ')}: {dynExpected === 0 ? '🚫 Miễn (Click đổi)' : `${storedActual.toLocaleString('vi-VN')}/${dynExpected.toLocaleString('vi-VN')}đ`}
                                 </span>
                               );
                             })}
@@ -7275,32 +7338,61 @@ const WardFunds = () => {
                             return (
                               <td 
                                 key={fund.name} 
-                                style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', cursor: 'pointer' }}
-                                onClick={() => handleOpenPay(item)}
-                                title={`Bấm để cập nhật nộp quỹ: ${fund.name}`}
+                                style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle' }}
                               >
-                                <div style={{ 
-                                  display: 'inline-block',
-                                  padding: '6px 12px',
-                                  borderRadius: '8px',
-                                  backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (dynExpected === 0 ? '#f1f5f9' : '#fee2e2')),
-                                  color: paid ? '#166534' : (hasPartial ? '#92400e' : (dynExpected === 0 ? '#64748b' : '#991b1b')),
-                                  fontWeight: '600',
-                                  fontSize: '0.85rem',
-                                  transition: 'transform 0.1s',
-                                }}
-                                onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
-                                onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-                                >
-                                  {dynExpected === 0 ? (
-                                    <span style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>Miễn / 0đ</span>
-                                  ) : (
-                                    <>
-                                      {formatCurrency(contrib.actual)}
-                                      <div style={{ fontSize: '0.72rem', opacity: 0.8, marginTop: '2px' }}>
-                                        / {formatCurrency(dynExpected)}
-                                      </div>
-                                    </>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                                  <div 
+                                    style={{ 
+                                      display: 'inline-block',
+                                      padding: '5px 10px',
+                                      borderRadius: '8px',
+                                      backgroundColor: paid ? '#dcfce7' : (hasPartial ? '#fef3c7' : (dynExpected === 0 ? '#f1f5f9' : '#fee2e2')),
+                                      color: paid ? '#166534' : (hasPartial ? '#92400e' : (dynExpected === 0 ? '#64748b' : '#991b1b')),
+                                      fontWeight: '600',
+                                      fontSize: '0.85rem',
+                                      cursor: 'pointer',
+                                      border: dynExpected === 0 ? '1px dashed #cbd5e1' : 'none',
+                                      transition: 'transform 0.1s',
+                                    }}
+                                    onClick={() => handleOpenPay(item)}
+                                    title={`Bấm để cập nhật nộp quỹ: ${fund.name}`}
+                                    onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                                  >
+                                    {dynExpected === 0 ? (
+                                      <span style={{ fontSize: '0.78rem', fontStyle: 'italic' }}>Miễn / 0đ</span>
+                                    ) : (
+                                      <>
+                                        {formatCurrency(contrib.actual)}
+                                        <div style={{ fontSize: '0.72rem', opacity: 0.8, marginTop: '2px' }}>
+                                          / {formatCurrency(dynExpected)}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {!isGuest && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleExemptFund(item, fund.name);
+                                      }}
+                                      title={dynExpected === 0 ? "Bấm 1-Click để Đổi sang Đóng theo quy định" : "Bấm 1-Click để Đổi sang Miễn cho khoản này"}
+                                      style={{
+                                        padding: '2px 7px',
+                                        borderRadius: '5px',
+                                        border: '1px solid #cbd5e1',
+                                        backgroundColor: dynExpected === 0 ? '#eff6ff' : '#f8fafc',
+                                        color: dynExpected === 0 ? '#2563eb' : '#64748b',
+                                        fontSize: '0.68rem',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      {dynExpected === 0 ? '⚡ Bỏ Miễn' : '🚫 Miễn'}
+                                    </button>
                                   )}
                                 </div>
                               </td>
@@ -7583,9 +7675,64 @@ const WardFunds = () => {
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>
-                          Mức phải đóng (đ)
-                        </label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                          <label style={{ fontSize: '0.75rem', fontWeight: '600', color: '#334155' }}>
+                            Mức phải đóng (đ)
+                          </label>
+                          <div style={{ display: 'flex', gap: '3px' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setContribInputs({
+                                  ...contribInputs,
+                                  [fund.name]: {
+                                    ...input,
+                                    expected: '0',
+                                    actual: '0'
+                                  }
+                                });
+                              }}
+                              title="Đặt chỉ tiêu = 0đ (Miễn)"
+                              style={{
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                border: '1px solid #cbd5e1',
+                                backgroundColor: input.expected === '0' || input.expected === '' ? '#e2e8f0' : '#ffffff',
+                                color: '#475569',
+                                fontSize: '0.68rem',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              🚫 Miễn
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setContribInputs({
+                                  ...contribInputs,
+                                  [fund.name]: {
+                                    ...input,
+                                    expected: fund.target.toLocaleString('vi-VN')
+                                  }
+                                });
+                              }}
+                              title={`Đặt chỉ tiêu = ${fund.target.toLocaleString('vi-VN')}đ`}
+                              style={{
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                border: '1px solid #bfdbfe',
+                                backgroundColor: '#eff6ff',
+                                color: '#1d4ed8',
+                                fontSize: '0.68rem',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ⚡ Quy định
+                            </button>
+                          </div>
+                        </div>
                         <input 
                           type="text"
                           value={input.expected}

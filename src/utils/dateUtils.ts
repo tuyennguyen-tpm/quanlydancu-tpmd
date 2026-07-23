@@ -49,19 +49,31 @@ export function calculateExactAge(dobStr?: string | null, targetYearOrDate: numb
 }
 
 /**
- * Formats any date string (YYYY-MM-DD, MM/DD/YYYY, etc.) to DD/MM/YYYY format.
+ * Formats any date string (YYYY-MM-DD, ISO timestamps, DD-MM-YYYY, MM/DD/YYYY, etc.) to DD/MM/YYYY format.
  */
 export function formatDateVN(dateStr?: string | null): string {
   if (!dateStr) return '';
-  const str = dateStr.toString().trim();
+  let str = dateStr.toString().trim();
   if (!str) return '';
 
-  // Already DD/MM/YYYY
+  // 1. Handle ISO timestamp format (e.g. 1990-02-05T00:00:00.000Z or 1990-02-05 08:00:00)
+  if (str.includes('T')) {
+    str = str.split('T')[0].trim();
+  } else if (str.includes(' ') && /^\d{4}-\d{2}-\d{2}/.test(str)) {
+    str = str.split(' ')[0].trim();
+  }
+
+  // 2. Single 4-digit year e.g. "1990"
+  if (/^\d{4}$/.test(str)) {
+    return str;
+  }
+
+  // 3. Already DD/MM/YYYY with 2-digit day and month
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
     return str;
   }
 
-  // YYYY-MM-DD or YYYY/MM/DD
+  // 4. Case A: YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
   if (/^\d{4}[-\/. ]\d{1,2}[-\/. ]\d{1,2}$/.test(str)) {
     const parts = str.split(/[-\/. ]/);
     const y = parts[0];
@@ -70,19 +82,19 @@ export function formatDateVN(dateStr?: string | null): string {
     return `${d}/${m}/${y}`;
   }
 
-  // MM/DD/YYYY or DD-MM-YYYY or D/M/YYYY
+  // 5. Case B: DD-MM-YYYY or DD/MM/YYYY or D/M/YYYY or D-M-YYYY or D.M.YYYY
   if (/^\d{1,2}[-\/. ]\d{1,2}[-\/. ]\d{4}$/.test(str)) {
     const parts = str.split(/[-\/. ]/);
     const p1 = parseInt(parts[0], 10);
     const p2 = parseInt(parts[1], 10);
     const y = parts[2];
     if (p1 <= 12 && p2 > 12) {
-      // MM/DD/YYYY
+      // MM/DD/YYYY format
       const m = String(p1).padStart(2, '0');
       const d = String(p2).padStart(2, '0');
       return `${d}/${m}/${y}`;
     } else {
-      // DD/MM/YYYY or DD-MM-YYYY
+      // DD/MM/YYYY or DD-MM-YYYY or D/M/YYYY format
       const d = String(p1).padStart(2, '0');
       const m = String(p2).padStart(2, '0');
       return `${d}/${m}/${y}`;

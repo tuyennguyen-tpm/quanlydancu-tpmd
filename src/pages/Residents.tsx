@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, mapToUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge } from '../utils/dateUtils';
+import { calculateExactAge, formatDateVN } from '../utils/dateUtils';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -92,14 +92,7 @@ const parseCSV = (text: string) => {
 };
 
 const formatToDisplayDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
-    }
-  }
-  return dateStr;
+  return formatDateVN(dateStr);
 };
 
 const formatToDbDate = (dateStr: string) => {

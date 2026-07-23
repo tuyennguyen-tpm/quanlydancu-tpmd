@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db, partyDb } from '../services/db';
 import ExcelJS from 'exceljs';
 import { showToast } from '../utils/toast';
+import { formatDateVN } from '../utils/dateUtils';
 
 const Dashboard = () => {
   const isGuest = localStorage.getItem('guest_mode') === 'true';
@@ -622,14 +623,7 @@ const Dashboard = () => {
 
       // Helper date formatter
       const formatToDisplayDate = (dStr: string) => {
-        if (!dStr) return '';
-        try {
-          const d = new Date(dStr);
-          if (isNaN(d.getTime())) return dStr;
-          return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-        } catch {
-          return dStr;
-        }
+        return formatDateVN(dStr);
       };
 
       // Add resident rows

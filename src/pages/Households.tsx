@@ -19,18 +19,12 @@ import {
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
+import { formatDateVN } from '../utils/dateUtils';
 import type { Household, Resident } from '../types';
 import ExcelJS from 'exceljs';
 
 const formatToDisplayDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-  }
-  return dateStr;
+  return formatDateVN(dateStr);
 };
 
 const formatNumber = (num: number) => {
