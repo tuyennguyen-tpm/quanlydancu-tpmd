@@ -4678,32 +4678,14 @@ const WardFunds = () => {
         return true;
       };
 
-      const householdResidents = residents.filter(isResidentActiveInHousehold);
-
-      const memberWardRecords = funds.filter(f => {
-        if (f.year !== selectedYear) return false;
-        if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
-        if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
-        return false;
-      });
-
-      const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
-      const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
-
-      activeMembers = memberWardRecords.length > 0
-        ? householdResidents.filter(r => {
-            if (r.id && activeMemberIds.has(r.id)) return true;
-            if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
-            return false;
-          })
-        : householdResidents;
+      activeMembers = residents.filter(isResidentActiveInHousehold);
     }
 
     const memberIds = new Set(activeMembers.map(m => m.id));
     const memberNames = new Set(activeMembers.map(m => m.full_name.trim().toLowerCase()));
 
     const memberWardRecords = funds.filter(f => {
-      if (f.year !== selectedYear) return false;
+      if (String(f.year) !== String(selectedYear)) return false;
       if (f.user_id && memberIds.has(f.user_id)) return true;
       if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
       return false;
@@ -4732,7 +4714,7 @@ const WardFunds = () => {
       return;
     }
 
-    const filteredHhFunds = householdFunds.filter(hf => String(hf.household_id) === String(householdId) && hf.year === selectedYear);
+    const filteredHhFunds = householdFunds.filter(hf => String(hf.household_id) === String(householdId) && String(hf.year) === String(selectedYear));
 
     const tdpNameVal = localStorage.getItem('tdp_name') || 'Tổ dân phố';
     const wardNameVal = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
@@ -4751,7 +4733,6 @@ const WardFunds = () => {
     const headResident = activeMembers.find(r => (household && r.id === household.head_of_household_id) || r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) || activeMembers[0];
     const headName = headResident ? headResident.full_name : (household?.martyr_name || (activeMembers[0] ? activeMembers[0].full_name : 'Đại diện hộ'));
 
-    // Luôn dùng dữ liệu mới nhất từ hệ thống
     const freshReceiptHtml = generateHouseholdReceiptHtml(
       household,
       activeMembers,
@@ -4765,8 +4746,9 @@ const WardFunds = () => {
       printMode
     );
     const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
-    const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-    const hasSavedVersion = !!savedReceiptHtml;
+    // Clear any stale cached receipt HTML to guarantee fresh rendering from live DB data
+    localStorage.removeItem(SAVE_KEY);
+    const hasSavedVersion = false;
     const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
