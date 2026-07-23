@@ -4845,86 +4845,89 @@ const WardFunds = () => {
             return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
           }
 
-          let isRecalculating = false;
-          function recalculateReceiptTotals(forceRecalc) {
-            if (isRecalculating) return;
-            isRecalculating = true;
+          function syncReceiptFields() {
             try {
               const containers = document.querySelectorAll('.receipt-container');
-              if (containers.length === 0) return;
+              if (containers.length <= 1) return;
 
-              if (containers.length > 1) {
-                let activeEl = null;
-                const sel = window.getSelection();
-                if (sel && sel.anchorNode) {
-                  activeEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+              let activeEl = null;
+              const sel = window.getSelection();
+              if (sel && sel.anchorNode) {
+                activeEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+              }
+              if (!activeEl || !editor.contains(activeEl)) {
+                activeEl = document.activeElement;
+                if (activeEl && activeEl.nodeType === 3) {
+                  activeEl = activeEl.parentElement;
                 }
-                if (!activeEl || !editor.contains(activeEl)) {
-                  activeEl = document.activeElement;
-                  if (activeEl && activeEl.nodeType === 3) {
-                    activeEl = activeEl.parentElement;
-                  }
-                }
+              }
 
-                if (activeEl && typeof activeEl.closest === 'function' && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
-                  const activeContainer = activeEl.closest('.receipt-container');
-                  const activeRow = activeEl.closest('tr');
-                  const activeTd = activeEl.closest('td');
+              if (activeEl && typeof activeEl.closest === 'function' && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
+                const activeContainer = activeEl.closest('.receipt-container');
+                const activeRow = activeEl.closest('tr');
+                const activeTd = activeEl.closest('td');
 
-                  if (activeContainer && activeRow && activeTd && !activeRow.classList.contains('receipt-total-row') && !(activeRow.textContent || activeRow.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
-                    const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
-                    
-                    // 1. Đồng bộ bảng chi tiết quỹ đóng góp (receipt-details-table)
-                    const activeDetailsTable = activeEl.closest('.receipt-details-table');
-                    if (activeDetailsTable) {
-                      const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
-                      const rowIndex = sourceRows.indexOf(activeRow);
-                      if (rowIndex >= 0) {
-                        const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                        const newValue = activeTd.innerHTML || activeTd.textContent || '';
-                        if (cellIndex >= 0 && newValue !== undefined) {
-                          containers.forEach((cnt, idx) => {
-                            if (idx !== sourceContainerIndex) {
-                              const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
-                              if (targetRows[rowIndex]) {
-                                const targetTd = targetRows[rowIndex].children[cellIndex];
-                                if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
-                                  targetTd.innerHTML = newValue;
-                                }
+                if (activeContainer && activeRow && activeTd && !activeRow.classList.contains('receipt-total-row')) {
+                  const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
+                  
+                  const activeDetailsTable = activeEl.closest('.receipt-details-table');
+                  if (activeDetailsTable) {
+                    const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
+                    const rowIndex = sourceRows.indexOf(activeRow);
+                    if (rowIndex >= 0) {
+                      const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
+                      const newValue = activeTd.innerHTML || activeTd.textContent || '';
+                      if (cellIndex >= 0 && newValue !== undefined) {
+                        containers.forEach((cnt, idx) => {
+                          if (idx !== sourceContainerIndex) {
+                            const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
+                            if (targetRows[rowIndex]) {
+                              const targetTd = targetRows[rowIndex].children[cellIndex];
+                              if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
+                                targetTd.innerHTML = newValue;
                               }
                             }
-                          });
-                        }
+                          }
+                        });
                       }
                     }
+                  }
 
-                    // 2. Đồng bộ thông tin người nộp, địa chỉ, lý do nộp (receipt-info-table)
-                    const activeInfoTable = activeEl.closest('.receipt-info-table');
-                    if (activeInfoTable) {
-                      const sourceRows = Array.from(activeInfoTable.querySelectorAll('tr'));
-                      const rowIndex = sourceRows.indexOf(activeRow);
-                      if (rowIndex >= 0) {
-                        const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                        const newValue = activeTd.innerHTML || activeTd.textContent || '';
-                        if (cellIndex >= 0 && newValue !== undefined) {
-                          containers.forEach((cnt, idx) => {
-                            if (idx !== sourceContainerIndex) {
-                              const targetRows = cnt.querySelectorAll('.receipt-info-table tr');
-                              if (targetRows[rowIndex]) {
-                                const targetTd = targetRows[rowIndex].children[cellIndex];
-                                if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
-                                  targetTd.innerHTML = newValue;
-                                }
+                  const activeInfoTable = activeEl.closest('.receipt-info-table');
+                  if (activeInfoTable) {
+                    const sourceRows = Array.from(activeInfoTable.querySelectorAll('tr'));
+                    const rowIndex = sourceRows.indexOf(activeRow);
+                    if (rowIndex >= 0) {
+                      const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
+                      const newValue = activeTd.innerHTML || activeTd.textContent || '';
+                      if (cellIndex >= 0 && newValue !== undefined) {
+                        containers.forEach((cnt, idx) => {
+                          if (idx !== sourceContainerIndex) {
+                            const targetRows = cnt.querySelectorAll('.receipt-info-table tr');
+                            if (targetRows[rowIndex]) {
+                              const targetTd = targetRows[rowIndex].children[cellIndex];
+                              if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
+                                targetTd.innerHTML = newValue;
                               }
                             }
-                          });
-                        }
+                          }
+                        });
                       }
                     }
                   }
                 }
               }
+            } catch (e) { /* ignore */ }
+          }
 
+          let isRecalculating = false;
+          function recalculateReceiptTotals() {
+            if (isRecalculating) return;
+            isRecalculating = true;
+            try {
+              syncReceiptFields();
+
+              const containers = document.querySelectorAll('.receipt-container');
               containers.forEach(container => {
                 const table = container.querySelector('.receipt-details-table');
                 if (!table) return;
@@ -4936,7 +4939,6 @@ const WardFunds = () => {
                 const dataRows = rows.slice(0, rows.length - 1);
 
                 let grandTotal = 0;
-                let validCount = 0;
 
                 dataRows.forEach(row => {
                   const tds = Array.from(row.querySelectorAll('td'));
@@ -4956,52 +4958,47 @@ const WardFunds = () => {
                       const num = parseInt(digits, 10);
                       if (!isNaN(num)) {
                         grandTotal += num;
-                        validCount++;
                       }
                     }
                   }
                 });
 
-                if (forceRecalc || validCount > 0) {
-                  const effectiveTotal = grandTotal;
+                if (totalRow) {
+                  const totalTds = totalRow.querySelectorAll('td');
+                  if (totalTds.length >= 2) {
+                    const firstBodyRow = dataRows[0];
+                    const ths = Array.from(table.querySelectorAll('thead th'));
+                    const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
+                    
+                    if (is6Col && totalTds.length >= 2) {
+                      const labelTd = totalTds[0];
+                      labelTd.setAttribute('colspan', '4');
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU';
 
-                  if (totalRow) {
-                    const totalTds = totalRow.querySelectorAll('td');
-                    if (totalTds.length >= 2) {
-                      const firstBodyRow = dataRows[0];
-                      const ths = Array.from(table.querySelectorAll('thead th'));
-                      const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
-                      
-                      if (is6Col && totalTds.length >= 2) {
-                        const labelTd = totalTds[0];
-                        labelTd.setAttribute('colspan', '4');
-                        labelTd.innerHTML = 'TỔNG CỘNG THỰC THU';
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
 
-                        const amountTd = totalTds[1];
-                        amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-
-                        if (totalTds.length >= 3) {
-                          totalTds[2].innerHTML = '';
-                        }
-                      } else {
-                        const labelTd = totalTds[0];
-                        labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
-                        const amountTd = totalTds[1];
-                        amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                      if (totalTds.length >= 3) {
+                        totalTds[2].innerHTML = '';
                       }
+                    } else {
+                      const labelTd = totalTds[0];
+                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
+                      const amountTd = totalTds[1];
+                      amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
                     }
                   }
+                }
 
-                  const wordsContainer = container.querySelector('.receipt-amount-words') 
-                    || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
-                  
-                  if (wordsContainer) {
-                    const strongEl = wordsContainer.querySelector('strong');
-                    if (strongEl) {
-                      strongEl.innerText = docSoTien(effectiveTotal);
-                    } else {
-                      wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
-                    }
+                const wordsContainer = container.querySelector('.receipt-amount-words') 
+                  || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                
+                if (wordsContainer) {
+                  const strongEl = wordsContainer.querySelector('strong');
+                  if (strongEl) {
+                    strongEl.innerText = docSoTien(grandTotal);
+                  } else {
+                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(grandTotal) + '</strong>';
                   }
                 }
               });
@@ -5015,7 +5012,7 @@ const WardFunds = () => {
           const btnRecalc = document.getElementById('btn-recalc');
           if (btnRecalc) {
             btnRecalc.addEventListener('click', function() {
-              recalculateReceiptTotals(true);
+              recalculateReceiptTotals();
               alert('⚡ Đã tự động tính toán lại Tổng tiền thực thu và Số tiền bằng chữ trên cả 2 Liên!');
             });
           }
@@ -5026,17 +5023,17 @@ const WardFunds = () => {
             });
           });
 
-          if (editor) {
-            ['input', 'keyup', 'focusout', 'blur', 'change'].forEach(function(evtType) {
-              editor.addEventListener(evtType, function() {
-                recalculateReceiptTotals(true);
-              }, true);
-            });
-          }
-
-          ['input', 'keyup', 'focusout', 'change', 'blur'].forEach(function(evtType) {
+          ['input', 'keyup'].forEach(function(evtType) {
             document.addEventListener(evtType, function() {
-              recalculateReceiptTotals(true);
+              syncReceiptFields();
+            }, true);
+          });
+
+          ['blur', 'change', 'focusout'].forEach(function(evtType) {
+            document.addEventListener(evtType, function(e) {
+              if (e.target && e.target.closest && e.target.closest('.receipt-details-table')) {
+                recalculateReceiptTotals();
+              }
             }, true);
           });
 
