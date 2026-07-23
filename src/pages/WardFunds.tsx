@@ -4602,7 +4602,7 @@ const WardFunds = () => {
     const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
     const hasSavedVersion = !!savedReceiptHtml;
-    const receiptHtml = freshReceiptHtml;
+    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -4788,8 +4788,8 @@ const WardFunds = () => {
           <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
         </div>
 
-        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#92400e;">
-          ⚠️ <strong>Đang hiển thị dữ liệu mới nhất từ hệ thống.</strong> ${hasSavedVersion ? 'Có 1 bản đã lưu trước đó của phiếu này. Nhấn <strong>📂 Mở bản đã lưu</strong> để xem lại bản cũ.' : ''}
+        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
+          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây của bạn đã được giữ nguyên. (Bấm <strong>🔄 Tải dữ liệu gốc từ hệ thống</strong> nếu muốn hủy bỏ chỉnh sửa và khôi phục dữ liệu ban đầu).
         </div>
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
