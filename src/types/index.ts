@@ -152,6 +152,8 @@ export interface WardFundContribution {
   expected: number;
   actual: number;
   date?: string;
+  is_manual_exempt?: boolean;
+  is_manual_target?: boolean;
 }
 
 export interface WardFund {

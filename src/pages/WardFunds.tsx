@@ -873,13 +873,19 @@ const WardFunds = () => {
           }
         }
 
-        const stored = f.contributions?.[fund.name]?.expected;
-        if (typeof stored === 'number') {
-          expected[fund.name] = stored;
+        const storedContrib = f.contributions?.[fund.name];
+        const storedExpected = storedContrib?.expected;
+        const isManualExempt = storedContrib?.is_manual_exempt === true;
+        const isManualTarget = storedContrib?.is_manual_target === true;
+
+        if (isManualExempt) {
+          expected[fund.name] = 0;
+        } else if (isManualTarget && typeof storedExpected === 'number') {
+          expected[fund.name] = storedExpected;
         } else if (!inAgeRange) {
           expected[fund.name] = 0;
         } else {
-          expected[fund.name] = fund.target;
+          expected[fund.name] = (typeof storedExpected === 'number' && storedExpected > 0) ? storedExpected : fund.target;
         }
       });
 
@@ -1048,7 +1054,9 @@ const WardFunds = () => {
       [fundName]: {
         ...currentContrib,
         expected: newExpected,
-        actual: newActual
+        actual: newActual,
+        is_manual_exempt: !isExemptNow,
+        is_manual_target: isExemptNow
       }
     };
 
@@ -1309,7 +1317,9 @@ const WardFunds = () => {
       newContributions[fundName] = {
         expected: exp,
         actual: act,
-        date: act > 0 ? input.date : undefined
+        date: act > 0 ? input.date : undefined,
+        is_manual_exempt: exp === 0,
+        is_manual_target: exp > 0
       };
     }
 
