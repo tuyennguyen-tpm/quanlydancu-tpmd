@@ -4325,24 +4325,34 @@ const WardFunds = () => {
       } else if (isHousehold) {
         expectedTotalForHH = wfTargetVal;
       } else {
+        const wfAgeLimits = parseAgeRange(wf.age_range);
+
         expectedTotalForHH = members.reduce((sum, m) => {
           const mRecord = memberWardRecords.find(r => (r.user_id && r.user_id === m.id) || (r.full_name && r.full_name.trim().toLowerCase() === m.full_name.trim().toLowerCase()));
-          const recordId = mRecord?.id || m.id;
-          const compExp = computedExpectedMap.get(recordId)?.[wf.name];
-          if (compExp !== undefined) return sum + compExp;
+          
+          if (mRecord) {
+            const compExp = computedExpectedMap.get(mRecord.id)?.[wf.name];
+            if (compExp !== undefined) return sum + compExp;
+          }
 
-          const age = getResidentAge(m.dob);
+          const age = getResidentAge(m.dob || '');
           const gStr = (m.gender || '').toString().toLowerCase().trim();
           const hasThi = m.full_name.toLowerCase().includes(' thị ') || m.full_name.toLowerCase().includes(' thị') || m.full_name.toLowerCase().startsWith('thị ');
           const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
           const isMale = !isFemale && (gStr === 'male' || gStr === 'nam' || gStr.startsWith('m'));
+          
           let inLaborAge = false;
-          if (isMale) inLaborAge = age >= ageLimits.maleMin && age <= ageLimits.maleMax;
-          else inLaborAge = age >= ageLimits.femaleMin && age <= ageLimits.femaleMax;
+          if (isMale) inLaborAge = age >= wfAgeLimits.maleMin && age <= wfAgeLimits.maleMax;
+          else inLaborAge = age >= wfAgeLimits.femaleMin && age <= wfAgeLimits.femaleMax;
 
           const stored = mRecord?.contributions?.[wf.name]?.expected;
-          if (typeof stored === 'number' && stored > 0) return sum + stored;
-          return sum + (inLaborAge ? wfTargetVal : 0);
+          const isManualExempt = mRecord?.contributions?.[wf.name]?.is_manual_exempt === true;
+          const isManualTarget = mRecord?.contributions?.[wf.name]?.is_manual_target === true;
+
+          if (isManualExempt) return sum + 0;
+          if (isManualTarget && typeof stored === 'number') return sum + stored;
+          if (!inLaborAge) return sum + 0;
+          return sum + ((typeof stored === 'number' && stored > 0) ? stored : wfTargetVal);
         }, 0);
       }
 
