@@ -1081,7 +1081,7 @@ const Finance = () => {
     const personFund = activeFundsList.find((af: any) => af.scope === 'person' || af.name.toLowerCase().includes('thiên tai') || af.name.toLowerCase().includes('đáp nghĩa'));
 
     const parseAgeRange = (ageRangeStr: string | undefined) => {
-      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+      const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55, generalMin: 18, generalMax: 60 };
       if (!ageRangeStr) return result;
       const cleanStr = ageRangeStr.toLowerCase();
       const maleMatch = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -1104,9 +1104,16 @@ const Finance = () => {
 
     const ageLimits = parseAgeRange(personFund?.age_range);
 
+    const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu', 'bệnh binh', 'thương binh'];
+
     const laborResidents = members.filter(r => {
-      const statusClean = r.status || 'resident';
-      if (statusClean === 'deceased') return false;
+      const statusClean = (r.status || 'resident').toString().toLowerCase().trim();
+      if (['deceased', 'qua_doi', 'moved_out', 'chuyen_di', 'inactive', 'deleted', 'tam_vang'].includes(statusClean)) return false;
+
+      const occLower = ((r as any).occupation || '').toString().toLowerCase();
+      const notesLower = ((r as any).notes || (r as any).note || '').toString().toLowerCase();
+      if (pensionKeywords.some(k => occLower.includes(k) || notesLower.includes(k))) return false;
+
       const age = getResidentAge(r.dob);
       const gStr = (r.gender || '').toString().toLowerCase().trim();
       const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị') || r.full_name.toLowerCase().startsWith('thị ');

@@ -777,7 +777,7 @@ const WardFunds = () => {
     const currentYear = new Date().getFullYear(); // Luôn dùng năm hiện tại để tính tuổi
 
     const parseAgeRange = (ageRangeStr: string | undefined) => {
-      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58 };
+      const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55 };
       if (!ageRangeStr) return result;
       const s = ageRangeStr.toLowerCase();
       const mM = s.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -843,7 +843,7 @@ const WardFunds = () => {
         const age = calculateExactAge(dobStr, selectedYear);
 
         const parseAgeLimits = (ageRangeStr: string | undefined) => {
-          const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58 };
+          const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55 };
           if (!ageRangeStr || !ageRangeStr.trim()) return result;
           const cleanStr = ageRangeStr.toLowerCase().trim();
           const mM = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -1898,7 +1898,7 @@ const WardFunds = () => {
               } else {
                 if (fund.scope === 'person' || isPCTT || isDOdn) {
                   const parseAgeRange = (ageRangeStr: string | undefined) => {
-                    const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+                    const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55, generalMin: 18, generalMax: 60 };
                     if (!ageRangeStr) return result;
                     const cleanStr = ageRangeStr.toLowerCase();
                     const maleMatch = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -1988,7 +1988,7 @@ const WardFunds = () => {
         // dựa trên dob + giới tính từ tên (chữ đệm Thị)
         const activeFundsList2 = (db as any).getWardFundList() || [];
         const parseAgeRange2 = (ageRangeStr: string | undefined) => {
-          const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 60 };
+          const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55, generalMin: 18, generalMax: 60 };
           if (!ageRangeStr) return result;
           const cleanStr = ageRangeStr.toLowerCase();
           const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
@@ -4276,7 +4276,7 @@ const WardFunds = () => {
     const personFund = activeFundsList.find((af: any) => af.scope === 'person' || af.name.toLowerCase().includes('thiên tai') || af.name.toLowerCase().includes('đáp nghĩa'));
 
     const parseAgeRange = (ageRangeStr: string | undefined) => {
-      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 61 };
+      const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55, generalMin: 18, generalMax: 60 };
       if (!ageRangeStr) return result;
       const cleanStr = ageRangeStr.toLowerCase();
       const maleMatch = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -4299,9 +4299,16 @@ const WardFunds = () => {
 
     const ageLimits = parseAgeRange(personFund?.age_range);
 
+    const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu', 'bệnh binh', 'thương binh'];
+
     const laborResidents = members.filter(r => {
-      const statusClean = r.status || 'resident';
-      if (statusClean === 'deceased') return false;
+      const statusClean = (r.status || 'resident').toString().toLowerCase().trim();
+      if (['deceased', 'qua_doi', 'moved_out', 'chuyen_di', 'inactive', 'deleted', 'tam_vang'].includes(statusClean)) return false;
+
+      const occLower = ((r as any).occupation || '').toString().toLowerCase();
+      const notesLower = ((r as any).notes || (r as any).note || '').toString().toLowerCase();
+      if (pensionKeywords.some(k => occLower.includes(k) || notesLower.includes(k))) return false;
+
       const age = getResidentAge(r.dob);
       const gStr = (r.gender || '').toString().toLowerCase().trim();
       const hasThi = r.full_name.toLowerCase().includes(' thị ') || r.full_name.toLowerCase().includes(' thị') || r.full_name.toLowerCase().startsWith('thị ');
