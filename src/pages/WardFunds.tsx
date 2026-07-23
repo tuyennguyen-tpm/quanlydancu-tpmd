@@ -4601,13 +4601,8 @@ const WardFunds = () => {
     );
     const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-    const isSavedCorrupted = savedReceiptHtml && (savedReceiptHtml.includes('>0 đ<') || savedReceiptHtml.includes('>0đ<') || savedReceiptHtml.includes('Không đồng'));
-    if (isSavedCorrupted) {
-      localStorage.removeItem(SAVE_KEY);
-    }
-    const validSavedHtml = (!isSavedCorrupted && savedReceiptHtml) ? savedReceiptHtml : null;
-    const hasSavedVersion = !!validSavedHtml;
-    const receiptHtml = validSavedHtml ? validSavedHtml : freshReceiptHtml;
+    const hasSavedVersion = !!savedReceiptHtml;
+    const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
