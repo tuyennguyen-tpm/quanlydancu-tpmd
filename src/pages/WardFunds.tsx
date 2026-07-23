@@ -4863,25 +4863,52 @@ const WardFunds = () => {
                   const activeTd = activeEl.closest('td');
                   if (activeContainer && activeRow && activeTd && !activeRow.classList.contains('receipt-total-row') && !(activeRow.textContent || activeRow.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
                     const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
-                    const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
-                    const rowIndex = sourceRows.indexOf(activeRow);
                     
-                    if (rowIndex >= 0) {
-                      const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                      const newValue = activeTd.textContent || activeTd.innerText || '';
-                      
-                      if (cellIndex >= 0 && newValue !== undefined) {
-                        containers.forEach((cnt, idx) => {
-                          if (idx !== sourceContainerIndex) {
-                            const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
-                            if (targetRows[rowIndex]) {
-                              const targetTd = targetRows[rowIndex].children[cellIndex];
-                              if (targetTd && targetTd !== activeTd && (targetTd.textContent || targetTd.innerText || '') !== newValue) {
-                                targetTd.textContent = newValue;
+                    // 1. Đồng bộ bảng chi tiết quỹ đóng góp
+                    const activeDetailsTable = activeEl.closest('.receipt-details-table');
+                    if (activeDetailsTable) {
+                      const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
+                      const rowIndex = sourceRows.indexOf(activeRow);
+                      if (rowIndex >= 0) {
+                        const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
+                        const newValue = activeTd.textContent || activeTd.innerText || '';
+                        if (cellIndex >= 0 && newValue !== undefined) {
+                          containers.forEach((cnt, idx) => {
+                            if (idx !== sourceContainerIndex) {
+                              const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
+                              if (targetRows[rowIndex]) {
+                                const targetTd = targetRows[rowIndex].children[cellIndex];
+                                if (targetTd && targetTd !== activeTd && (targetTd.textContent || targetTd.innerText || '') !== newValue) {
+                                  targetTd.textContent = newValue;
+                                }
                               }
                             }
-                          }
-                        });
+                          });
+                        }
+                      }
+                    }
+
+                    // 2. Đồng bộ thông tin người nộp, địa chỉ, lý do nộp
+                    const activeInfoTable = activeEl.closest('.receipt-info-table');
+                    if (activeInfoTable) {
+                      const sourceRows = Array.from(activeInfoTable.querySelectorAll('tr'));
+                      const rowIndex = sourceRows.indexOf(activeRow);
+                      if (rowIndex >= 0) {
+                        const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
+                        const newValue = activeTd.textContent || activeTd.innerText || '';
+                        if (cellIndex >= 0 && newValue !== undefined) {
+                          containers.forEach((cnt, idx) => {
+                            if (idx !== sourceContainerIndex) {
+                              const targetRows = cnt.querySelectorAll('.receipt-info-table tr');
+                              if (targetRows[rowIndex]) {
+                                const targetTd = targetRows[rowIndex].children[cellIndex];
+                                if (targetTd && targetTd !== activeTd && (targetTd.textContent || targetTd.innerText || '') !== newValue) {
+                                  targetTd.textContent = newValue;
+                                }
+                              }
+                            }
+                          });
+                        }
                       }
                     }
                   }
