@@ -381,12 +381,29 @@ const WardFunds = () => {
     return nameMap;
   }, [residents, households]);
 
+  // Pre-calculated O(1) Maps for zero-latency page renders
+  const residentByIdMap = useMemo(() => {
+    const map = new Map<string, Resident>();
+    residents.forEach(r => map.set(r.id, r));
+    return map;
+  }, [residents]);
+
+  const residentsByHouseholdIdMap = useMemo(() => {
+    const map = new Map<string, Resident[]>();
+    residents.forEach(r => {
+      if (!r.household_id) return;
+      if (!map.has(r.household_id)) map.set(r.household_id, []);
+      map.get(r.household_id)!.push(r);
+    });
+    return map;
+  }, [residents]);
+
   // Tập hợp tên các CHỦ HỘ từ CSDL hộ khẩu để đối chiếu nhanh và chính xác cho Tab 2
   const headNamesSet = useMemo(() => {
     const headNames = new Set<string>();
     households.forEach(h => {
       if (h.head_of_household_id) {
-        const headRes = residents.find(r => r.id === h.head_of_household_id);
+        const headRes = residentByIdMap.get(h.head_of_household_id);
         if (headRes) headNames.add(headRes.full_name.trim().toLowerCase());
       }
     });
@@ -401,7 +418,7 @@ const WardFunds = () => {
       }
     });
     return headNames;
-  }, [households, residents, funds]);
+  }, [households, residents, funds, residentByIdMap]);
 
   // Pre-calculated O(1) Maps for zero-latency page renders
   const householdMap = useMemo(() => {
@@ -634,32 +651,48 @@ const WardFunds = () => {
       .trim();
   };
 
-  // Filtered List với Tìm kiếm siêu thông minh (Hỗ trợ Không dấu + Tìm theo tên mọi thành viên trong hộ + Địa chỉ + Ghi chú + Tổ)
-  const filteredFunds = useMemo(() => {
-    const rawTerm = searchTerm.trim().toLowerCase();
-    const termNoAccent = removeAccents(rawTerm);
+  // Map thông tin tìm kiếm được tính sẵn O(1) để tìm kiếm phản hồi tức thì 60fps không bị lác
+  const searchMetaMap = useMemo(() => {
+    const map = new Map<string, { searchableText: string; searchableNoAccent: string }>();
 
-    const list = funds.filter(f => {
+    const hhMembersNameMap = new Map<string, string>();
+    residentsByHouseholdIdMap.forEach((members, hhId) => {
+      hhMembersNameMap.set(hhId, members.map(m => m.full_name).join(' '));
+    });
+
+    funds.forEach(f => {
       const meta = fundMetaMap.get(f.id);
       const headName = meta?.headName || '';
       const groupName = meta?.groupName || '';
       const hhId = meta?.householdId;
 
-      // Gom tất cả tên thành viên trong hộ gia đình này để khi gõ tên bất kỳ thành viên nào cũng tìm thấy Hộ
       let memberNamesStr = '';
       if (hhId && !hhId.startsWith('addr__')) {
-        const hhMembers = residents.filter(r => r.household_id === hhId);
-        memberNamesStr = hhMembers.map(m => m.full_name).join(' ');
+        memberNamesStr = hhMembersNameMap.get(hhId) || '';
       }
 
       const searchableText = `${f.full_name} ${f.address || ''} ${f.note || ''} ${f.dob || ''} ${headName} ${groupName} ${memberNamesStr}`.toLowerCase();
       const searchableNoAccent = removeAccents(searchableText);
 
-      const matchesSearch = !rawTerm || 
-        searchableText.includes(rawTerm) || 
-        searchableNoAccent.includes(termNoAccent);
-      
-      if (!matchesSearch) return false;
+      map.set(f.id, { searchableText, searchableNoAccent });
+    });
+    return map;
+  }, [funds, fundMetaMap, residentsByHouseholdIdMap]);
+
+  // Filtered List với Tìm kiếm siêu thông minh (Hỗ trợ Không dấu + Tìm theo tên mọi thành viên trong hộ + Địa chỉ + Ghi chú + Tổ)
+  const filteredFunds = useMemo(() => {
+    const rawTerm = searchTerm.trim().toLowerCase();
+    const termNoAccent = rawTerm ? removeAccents(rawTerm) : '';
+
+    const list = funds.filter(f => {
+      if (rawTerm) {
+        const sMeta = searchMetaMap.get(f.id);
+        if (sMeta) {
+          const matchesSearch = sMeta.searchableText.includes(rawTerm) || 
+            sMeta.searchableNoAccent.includes(termNoAccent);
+          if (!matchesSearch) return false;
+        }
+      }
 
       let matchesStatus = true;
       if (filterStatus === 'paid_all') {
@@ -677,6 +710,7 @@ const WardFunds = () => {
 
       // Filter group
       if (groupFilter !== 'all') {
+        const meta = fundMetaMap.get(f.id);
         const fundGroup = meta?.groupName || '';
         if (fundGroup !== groupFilter) return false;
       }
@@ -735,7 +769,7 @@ const WardFunds = () => {
 
       return a.full_name.localeCompare(b.full_name, 'vi');
     });
-  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, fundMetaMap, groups, headNamesSet]);
+  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, fundMetaMap, groups, headNamesSet, searchMetaMap]);
 
   // *** Map tính chỉ tiêu kỳ vọng ĐÚNG theo tuổi/giới tính thực tế từ CSDL nhân khẩu ***
   // Override giá trị lưu trong DB để hiển thị đúng ngay lập tức, không cần đồng bộ thủ công
@@ -758,7 +792,7 @@ const WardFunds = () => {
       const expected: Record<string, number> = {};
 
       let matchedRes: Resident | undefined;
-      if (f.user_id) matchedRes = residents.find(r => r.id === f.user_id);
+      if (f.user_id) matchedRes = residentByIdMap.get(f.user_id);
       if (!matchedRes && f.full_name) {
         const cands = residentsByNameMap.get(f.full_name.trim().toLowerCase()) || [];
         if (cands.length === 1) matchedRes = cands[0];
@@ -778,7 +812,7 @@ const WardFunds = () => {
         }
 
         if (matchedRes) {
-          const hh = households.find(h => h.id === matchedRes!.household_id);
+          const hh = householdMap.get(matchedRes.household_id);
           const isPolicyHousehold = hh && (hh.policy_type === 'poor' || hh.policy_type === 'near_poor' || hh.policy_type === 'policy_family');
           if (isPolicyHousehold) {
             expected[fund.name] = 0;
