@@ -4945,6 +4945,8 @@ const WardFunds = () => {
                 }
 
                 let grandTotal = 0;
+                let tdpTotal = 0;
+                let wardTotal = 0;
                 let validCount = 0;
 
                 rows.forEach(row => {
@@ -4969,6 +4971,15 @@ const WardFunds = () => {
                     if (digits.length > 0) {
                       const num = parseInt(digits, 10);
                       if (!isNaN(num)) {
+                        const fundTypeAttr = row.getAttribute('data-fund-type');
+                        const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
+                        const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
+
+                        if (isWard) {
+                          wardTotal += num;
+                        } else {
+                          tdpTotal += num;
+                        }
                         grandTotal += num;
                         validCount++;
                       }
@@ -4977,7 +4988,14 @@ const WardFunds = () => {
                 });
 
                 if (forceRecalc || validCount > 0) {
-                  const effectiveTotal = grandTotal;
+                  const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
+                  let effectiveTotal = grandTotal;
+                  if (activePrintMode === 'tdp_only') {
+                    effectiveTotal = tdpTotal;
+                  } else if (activePrintMode === 'ward_only') {
+                    effectiveTotal = wardTotal;
+                  }
+
                   if (totalRow) {
                     const totalTds = totalRow.querySelectorAll('td');
                     if (totalTds.length >= 2) {
@@ -4988,10 +5006,22 @@ const WardFunds = () => {
                       if (is6Col && totalTds.length >= 2) {
                         const labelTd = totalTds[0];
                         labelTd.setAttribute('colspan', '4');
-                        labelTd.innerHTML = 'TỔNG CỘNG THỰC THU';
+                        let printModeText = '';
+                        if (activePrintMode === 'tdp_only') {
+                          printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                        } else if (activePrintMode === 'ward_only') {
+                          printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                        } else {
+                          printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                        }
+                        labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
                         const amountTd = totalTds[1];
                         amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-                        if (totalTds.length >= 3) totalTds[2].innerHTML = '';
+
+                        if (totalTds.length >= 3) {
+                          totalTds[2].innerHTML = '';
+                        }
                       } else {
                         const labelTd = totalTds[0];
                         labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
