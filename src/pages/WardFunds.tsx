@@ -4930,28 +4930,15 @@ const WardFunds = () => {
                 if (!table) return;
 
                 const rows = Array.from(table.querySelectorAll('tbody tr'));
-                if (rows.length === 0) return;
+                if (rows.length < 2) return;
 
-                let totalRow = table.querySelector('tr.receipt-total-row');
-                if (!totalRow) {
-                  totalRow = rows.find(r => {
-                    const txt = (r.textContent || r.innerText || '').toUpperCase();
-                    return txt.includes('TỔNG CỘNG') || txt.includes('CỘNG THỰC THU') || txt.includes('CỘNG CÁC KHOẢN') || txt.includes('TỔNG CHÍNH');
-                  });
-                  if (!totalRow && rows.length > 1) {
-                    totalRow = rows[rows.length - 1];
-                  }
-                  if (totalRow) totalRow.classList.add('receipt-total-row');
-                }
+                const totalRow = rows[rows.length - 1];
+                const dataRows = rows.slice(0, rows.length - 1);
 
                 let grandTotal = 0;
                 let validCount = 0;
 
-                rows.forEach(row => {
-                  if (row === totalRow || row.classList.contains('receipt-total-row')) {
-                    return;
-                  }
-
+                dataRows.forEach(row => {
                   const tds = Array.from(row.querySelectorAll('td'));
                   if (tds.length < 2) return;
 
@@ -4981,7 +4968,7 @@ const WardFunds = () => {
                   if (totalRow) {
                     const totalTds = totalRow.querySelectorAll('td');
                     if (totalTds.length >= 2) {
-                      const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
+                      const firstBodyRow = dataRows[0];
                       const ths = Array.from(table.querySelectorAll('thead th'));
                       const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
                       
