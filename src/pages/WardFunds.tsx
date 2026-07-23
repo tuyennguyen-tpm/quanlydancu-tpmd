@@ -5032,15 +5032,17 @@ const WardFunds = () => {
             });
           });
 
-          ['input', 'keyup'].forEach(function(evtType) {
-            document.addEventListener(evtType, function() { recalculateReceiptTotals(false); }, true);
-          });
-
-          ['blur', 'change'].forEach(function(evtType) {
-            document.addEventListener(evtType, function(e) {
-              if (e.target && e.target.closest && e.target.closest('.receipt-details-table')) {
+          if (editor) {
+            ['input', 'keyup', 'focusout', 'blur', 'change'].forEach(function(evtType) {
+              editor.addEventListener(evtType, function() {
                 recalculateReceiptTotals(true);
-              }
+              }, true);
+            });
+          }
+
+          ['input', 'keyup', 'focusout', 'change', 'blur'].forEach(function(evtType) {
+            document.addEventListener(evtType, function() {
+              recalculateReceiptTotals(true);
             }, true);
           });
 
