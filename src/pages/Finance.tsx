@@ -1565,9 +1565,20 @@ const Finance = () => {
     const headResident = members.find(r => r.id === household.head_of_household_id || r.is_head);
     const headName = headResident ? headResident.full_name : (household.martyr_name || 'Đại diện hộ');
 
+    const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
+    const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
+
+    const activeMembers = memberWardRecords.length > 0
+      ? members.filter(r => {
+          if (r.id && activeMemberIds.has(r.id)) return true;
+          if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
+          return false;
+        })
+      : members;
+
     const freshReceiptHtml = generateHouseholdReceiptHtml(
       household,
-      members,
+      activeMembers,
       memberWardRecords,
       filteredHhFunds,
       dateText,

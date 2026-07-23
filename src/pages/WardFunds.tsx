@@ -4544,21 +4544,30 @@ const WardFunds = () => {
       return true;
     };
 
-    const activeMembers = freshDbResidents.filter(isResidentActiveInHousehold);
+    const householdResidents = freshDbResidents.filter(isResidentActiveInHousehold);
+
+    const memberWardRecords = freshDbFunds.filter(f => {
+      if (f.year !== selectedYear) return false;
+      if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
+      if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
+      return false;
+    });
+
+    const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
+    const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
+
+    const activeMembers = memberWardRecords.length > 0
+      ? householdResidents.filter(r => {
+          if (r.id && activeMemberIds.has(r.id)) return true;
+          if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
+          return false;
+        })
+      : householdResidents;
+
     if (activeMembers.length === 0) {
       showToast('Hộ gia đình chưa có nhân khẩu nào đăng ký!', 'warning');
       return;
     }
-
-    const memberIds = new Set(activeMembers.map(m => m.id));
-    const memberNames = new Set(activeMembers.map(m => m.full_name.trim().toLowerCase()));
-
-    const memberWardRecords = freshDbFunds.filter(f => {
-      if (f.year !== selectedYear) return false;
-      if (f.user_id && memberIds.has(f.user_id)) return true;
-      if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
-      return false;
-    });
 
     let householdPaidFunds: HouseholdFund[] = [];
     try {
@@ -5137,18 +5146,27 @@ const WardFunds = () => {
       const hh = households.find(h => String(h.id) === String(group.householdId));
       if (!hh) continue;
 
-      const activeMembers = freshDbResidents.filter(r => isResidentActiveInHousehold(r, group.householdId));
-      if (activeMembers.length === 0) continue;
-
-      const memberIds = new Set(activeMembers.map(m => m.id));
-      const memberNames = new Set(activeMembers.map(m => m.full_name.trim().toLowerCase()));
+      const householdResidents = freshDbResidents.filter(r => isResidentActiveInHousehold(r, group.householdId));
 
       const memberWardRecords = freshDbFunds.filter(f => {
         if (f.year !== selectedYear) return false;
-        if (f.user_id && memberIds.has(f.user_id)) return true;
-        if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
+        if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
+        if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
         return false;
       });
+
+      const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));
+      const activeMemberNames = new Set(memberWardRecords.map(f => (f.full_name || '').trim().toLowerCase()));
+
+      const activeMembers = memberWardRecords.length > 0
+        ? householdResidents.filter(r => {
+            if (r.id && activeMemberIds.has(r.id)) return true;
+            if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
+            return false;
+          })
+        : householdResidents;
+
+      if (activeMembers.length === 0) continue;
 
       const hhFunds = householdFundsList.filter(hf => String(hf.household_id) === String(group.householdId) && hf.year === selectedYear);
       const totalTdp = hhFunds.reduce((sum, hf) => sum + hf.amount, 0);
