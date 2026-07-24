@@ -4963,6 +4963,30 @@ const WardFunds = () => {
             } catch (err) {}
           }
 
+          function show2DToast(msg, type = 'success') {
+            let toast = document.getElementById('custom-2d-toast');
+            if (!toast) {
+              toast = document.createElement('div');
+              toast.id = 'custom-2d-toast';
+              toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;padding:12px 20px;border-radius:10px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15),0 8px 10px -6px rgba(0,0,0,0.1);display:flex;align-items:center;gap:10px;transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);transform:translateY(-20px) scale(0.95);opacity:0;';
+              document.body.appendChild(toast);
+            }
+            const isSuccess = type === 'success';
+            toast.style.background = isSuccess ? '#ecfdf5' : '#fffbe8';
+            toast.style.color = isSuccess ? '#065f46' : '#92400e';
+            toast.style.border = isSuccess ? '1.5px solid #10b981' : '1.5px solid #f59e0b';
+            toast.innerHTML = isSuccess ? '<span style="font-size:16px;">✅</span> <span>' + msg + '</span>' : '<span style="font-size:16px;">ℹ️</span> <span>' + msg + '</span>';
+            requestAnimationFrame(() => {
+              toast.style.opacity = '1';
+              toast.style.transform = 'translateY(0) scale(1)';
+            });
+            if (toast.timeoutId) clearTimeout(toast.timeoutId);
+            toast.timeoutId = setTimeout(() => {
+              toast.style.opacity = '0';
+              toast.style.transform = 'translateY(-20px) scale(0.95)';
+            }, 2800);
+          }
+
           btnSave.addEventListener('click', function() {
             const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
             try {
@@ -4979,7 +5003,7 @@ const WardFunds = () => {
               notice.style.color = '#14532d';
               notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
             }
-            alert('✅ Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL ứng dụng thành công!');
+            show2DToast('Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
           });
 
           if (btnLoad) {
@@ -5001,8 +5025,9 @@ const WardFunds = () => {
                   notice.style.color = '#14532d';
                   notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó từ CSDL</strong>.';
                 }
+                show2DToast('Đã mở bản chỉnh sửa đã lưu trước đó!', 'success');
               } else {
-                alert('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này. Bạn có thể tự gõ chỉnh sửa nội dung trực tiếp trên phiếu rồi nhấn 💾 Lưu chỉnh sửa!');
+                show2DToast('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này.', 'info');
               }
             });
           }
@@ -5019,7 +5044,7 @@ const WardFunds = () => {
               recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
               if (notice) notice.style.display = 'none';
-              alert('Đã khôi phục về dữ liệu gốc từ hệ thống!');
+              show2DToast('Đã khôi phục về dữ liệu gốc từ hệ thống!', 'success');
             }
           });
 
