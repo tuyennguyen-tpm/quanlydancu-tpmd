@@ -1977,9 +1977,8 @@ const WardFunds = () => {
                     return result;
                   };
 
-                  const ageLimits = parseAgeRange(fund.age_range);
-                  const isFemaleInAge = isFemale ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
-                  const isMaleInAge = !isFemale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
+                  const isFemaleInAge = isFemale ? (age >= 18 && age <= 58) : false;
+                  const isMaleInAge = !isFemale ? (age >= 18 && age <= 61) : false;
                   
                   if (isMaleInAge || isFemaleInAge) {
                     expected = fund.target;
