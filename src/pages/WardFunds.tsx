@@ -1332,7 +1332,7 @@ const WardFunds = () => {
         }
       });
 
-      // Cập nhật giao diện bộ nhớ tức thì 0ms (Optimistic Update) giúp nút bấm phản hồi siêu tốc
+      // Cập nhật giao diện bộ nhớ tức thì 0ms (Optimistic Update) giúp nút bấm phản hồi siêu tốc và chuyển nút ↩ Hủy ngay lập tức
       setFunds(prevFunds => {
         const memberIdMap = new Map(members.map((m, idx) => [m.id, memberContribMaps[idx]]));
         return prevFunds.map(f => {
@@ -1346,6 +1346,23 @@ const WardFunds = () => {
           return f;
         });
       });
+
+      if (householdId && !householdId.startsWith('addr__')) {
+        setHouseholdFunds(prevHhFunds => {
+          const otherFunds = prevHhFunds.filter(hf => !(hf.household_id === householdId && Number(hf.year) === selectedYear));
+          if (!shouldPay) return otherFunds;
+          const newPaidFunds: HouseholdFund[] = tdpActiveFunds.map((fund: any) => ({
+            id: generateUUID(),
+            household_id: householdId,
+            year: selectedYear,
+            fund_name: fund.name,
+            amount: fund.target,
+            paid_at: today,
+            note: 'Đã thu đủ theo thông báo'
+          }));
+          return [...otherFunds, ...newPaidFunds];
+        });
+      }
 
       showToast(
         shouldPay 
@@ -6827,7 +6844,8 @@ const WardFunds = () => {
                       return paid && paid.amount >= fund.target;
                     });
                     
-                    const allWardPaid = totalActual >= totalExpected && totalExpected > 0;
+                    const isAnyMemberMarkedPaid = group.members.some(m => (m as any).note === 'Đã nộp đủ đợt tập trung');
+                    const allWardPaid = totalExpected > 0 ? (totalActual >= totalExpected) : (totalActual > 0 || isAnyMemberMarkedPaid);
                     const allPaid = allWardPaid && (tdpActiveFunds.length === 0 || allTdpPaid);
                     const hasPartial = (totalActual > 0 || hhTdpFunds.some(f => f.amount > 0)) && !allPaid;
                     const borderColor = allPaid ? '#86efac' : hasPartial ? '#fde68a' : '#e2e8f0';
