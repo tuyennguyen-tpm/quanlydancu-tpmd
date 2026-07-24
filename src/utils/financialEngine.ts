@@ -265,18 +265,28 @@ export function calculateHouseholdFinancialSummary(
   const headResident = findHeadResident(fullResidentList, household);
   const headName = headResident ? headResident.full_name : (household.martyr_name || (members[0] ? members[0].full_name : 'Đại diện hộ'));
 
-  // 2. Tính số lượng Nhân khẩu trong độ tuổi lao động đóng góp
+  // 2. Tính số lượng Nhân khẩu trong độ tuổi lao động đóng góp (loại bỏ tuyệt đối người quá tuổi lao động)
   const laborResidents = members.filter(r => isLaborAge(r, targetYear, ageLimits));
   let laborCount = laborResidents.length;
 
-  // Nếu trong danh sách bản ghi quỹ Phường (wardFundsList) đã có các nhân khẩu được chọn đóng quỹ,
-  // ưu tiên lấy số lượng nhân khẩu duy nhất theo TÊN (f.full_name) để đếm chuẩn 100% khớp với danh sách ngoài card
   if (wardFundsList && wardFundsList.length > 0) {
-    const uniqueWardMemberNames = new Set(
-      wardFundsList.map(f => (f.full_name || '').trim().toLowerCase()).filter(Boolean)
-    );
-    if (uniqueWardMemberNames.size > 0) {
-      laborCount = uniqueWardMemberNames.size;
+    const activeLaborWardMembers = wardFundsList.filter(f => {
+      const dbRes = (allDbResidents && allDbResidents.length > 0 ? allDbResidents : members).find(r =>
+        (f.user_id && r.id === f.user_id) || (f.full_name && r.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())
+      );
+      if (dbRes) {
+        return isLaborAge(dbRes, targetYear, ageLimits);
+      }
+      const age = f.dob ? calculateExactAge(f.dob, targetYear) : -1;
+      if (age < 0) return false;
+      const fullNameCheck = (f.full_name || '').toLowerCase();
+      const hasThi = fullNameCheck.includes(' thị ') || fullNameCheck.includes(' thị') || fullNameCheck.startsWith('thị ') || fullNameCheck.includes('bà ') || fullNameCheck.includes('chị ');
+      return hasThi ? (age >= 18 && age <= 58) : (age >= 18 && age <= 61);
+    });
+
+    const uniqueLaborNames = new Set(activeLaborWardMembers.map(f => (f.full_name || '').trim().toLowerCase()).filter(Boolean));
+    if (uniqueLaborNames.size > 0) {
+      laborCount = uniqueLaborNames.size;
     }
   }
 
