@@ -885,12 +885,12 @@ const WardFunds = () => {
 
         if (isManualExempt) {
           expected[fund.name] = 0;
+        } else if (typeof storedExpected === 'number') {
+          expected[fund.name] = storedExpected;
         } else if (!inAgeRange) {
           expected[fund.name] = 0;
-        } else if (isManualTarget && typeof storedExpected === 'number') {
-          expected[fund.name] = storedExpected;
         } else {
-          expected[fund.name] = (typeof storedExpected === 'number' && storedExpected > 0) ? storedExpected : fund.target;
+          expected[fund.name] = fund.target;
         }
       });
 
