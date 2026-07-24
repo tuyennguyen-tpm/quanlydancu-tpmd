@@ -1332,56 +1332,20 @@ const WardFunds = () => {
         }
       });
 
-      await Promise.all(members.map(async (m, idx) => {
-        await db.saveWardFund({ ...m, contributions: memberContribMaps[idx], note: shouldPay ? 'Đã nộp đủ đợt tập trung' : '' });
-      }));
-
-      // 2. Lưu đóng quỹ TDP và đồng bộ Sổ quỹ chung
-      if (householdId && !householdId.startsWith('addr__')) {
-        const firstMember = members[0];
-        const headResident = residents.find(r => (household && r.id === household.head_of_household_id) || r.is_head);
-        const headName = headResident ? headResident.full_name : (household?.martyr_name || (firstMember ? firstMember.full_name : 'Đại diện hộ'));
-
-        for (const fund of tdpActiveFunds) {
-          const existing = filteredHhFunds.find(hf => hf.fund_name === fund.name);
-          const targetId = existing ? existing.id : generateUUID();
-          const flagText = `[QUY_${targetId}]`;
-          const matchedGeneral = financialRecords.find(r => r.description.includes(flagText));
-
-          if (shouldPay) {
-            const payload: HouseholdFund = {
-              id: targetId,
-              household_id: householdId,
-              year: selectedYear,
-              fund_name: fund.name,
-              amount: fund.target,
-              paid_at: today,
-              note: 'Đã thu đủ theo thông báo'
+      // Cập nhật giao diện bộ nhớ tức thì 0ms (Optimistic Update) giúp nút bấm phản hồi siêu tốc
+      setFunds(prevFunds => {
+        const memberIdMap = new Map(members.map((m, idx) => [m.id, memberContribMaps[idx]]));
+        return prevFunds.map(f => {
+          if (memberIdMap.has(f.id)) {
+            return {
+              ...f,
+              contributions: memberIdMap.get(f.id)!,
+              note: shouldPay ? 'Đã nộp đủ đợt tập trung' : ''
             };
-            await db.saveHouseholdFund(payload);
-
-            const generalRecord: FinancialRecord = {
-              id: matchedGeneral ? matchedGeneral.id : generateUUID(),
-              group_id: db.getGroupId(),
-              type: 'income',
-              amount: fund.target,
-              category: fund.name,
-              description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
-              recorded_by: 'Hệ thống tự động',
-              date: today,
-              created_at: matchedGeneral ? matchedGeneral.created_at : new Date().toISOString()
-            };
-            await db.saveFinancialRecord(generalRecord);
-          } else {
-            if (matchedGeneral) {
-              await db.deleteFinancialRecord(matchedGeneral.id);
-            }
-            if (existing) {
-              await db.deleteHouseholdFund(targetId);
-            }
           }
-        }
-      }
+          return f;
+        });
+      });
 
       showToast(
         shouldPay 
@@ -1389,7 +1353,61 @@ const WardFunds = () => {
           : `↩ Đã hủy ghi nhận thu quỹ của hộ gia đình!`, 
         'success'
       );
-      loadData();
+
+      // Chạy lưu CSDL ngầm không làm đơ/trễ nút bấm
+      (async () => {
+        try {
+          await Promise.all(members.map(async (m, idx) => {
+            await db.saveWardFund({ ...m, contributions: memberContribMaps[idx], note: shouldPay ? 'Đã nộp đủ đợt tập trung' : '' });
+          }));
+
+          if (householdId && !householdId.startsWith('addr__')) {
+            const firstMember = members[0];
+            const headResident = residents.find(r => (household && r.id === household.head_of_household_id) || r.is_head);
+            const headName = headResident ? headResident.full_name : (household?.martyr_name || (firstMember ? firstMember.full_name : 'Đại diện hộ'));
+
+            for (const fund of tdpActiveFunds) {
+              const existing = filteredHhFunds.find(hf => hf.fund_name === fund.name);
+              const targetId = existing ? existing.id : generateUUID();
+              const flagText = `[QUY_${targetId}]`;
+              const matchedGeneral = financialRecords.find(r => r.description.includes(flagText));
+
+              if (shouldPay) {
+                const payload: HouseholdFund = {
+                  id: targetId,
+                  household_id: householdId,
+                  year: selectedYear,
+                  fund_name: fund.name,
+                  amount: fund.target,
+                  paid_at: today,
+                  note: 'Đã thu đủ theo thông báo'
+                };
+                await db.saveHouseholdFund(payload);
+
+                const generalRecord: FinancialRecord = {
+                  id: matchedGeneral ? matchedGeneral.id : generateUUID(),
+                  group_id: db.getGroupId(),
+                  type: 'income',
+                  amount: fund.target,
+                  category: fund.name,
+                  description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
+                  recorded_by: 'Hệ thống tự động',
+                  date: today,
+                  created_at: matchedGeneral ? matchedGeneral.created_at : new Date().toISOString()
+                };
+                await db.saveFinancialRecord(generalRecord);
+              } else {
+                if (matchedGeneral) {
+                  await db.deleteFinancialRecord(matchedGeneral.id);
+                }
+                if (existing) {
+                  await db.deleteHouseholdFund(targetId);
+                }
+              }
+            }
+          }
+        } catch { /* ignore bg errors */ }
+      })();
     } catch { showToast('Có lỗi khi cập nhật!', 'danger'); }
   };
 
