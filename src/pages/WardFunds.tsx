@@ -1716,20 +1716,25 @@ const WardFunds = () => {
           }
 
           if (head) {
-            addedResidentIds.add(head.id);
-            const { contributions } = calculateContributions(head, hh, true);
+            const { contributions, isInAgeRange } = calculateContributions(head, hh, true);
+            const hasOtherLaborMembers = members.some(m => m.id !== head!.id && calculateContributions(m, hh, false).isInAgeRange);
 
-            batchFunds.push({
-              id: generateUUID(),
-              year: selectedYear,
-              full_name: head.full_name.trim(),
-              dob: head.dob ? formatDateVN(head.dob.trim()) : undefined,
-              address: hh ? hh.address : (head.permanent_address || head.temporary_address),
-              user_id: head.user_id || (hh ? hh.user_id : undefined),
-              note: 'Chủ hộ (Bản ghi Hộ gia đình)',
-              contributions
-            });
-            successCount++;
+            // Chỉ tạo bản ghi riêng cho Chủ hộ ở Pass 1 nếu Chủ hộ nằm trong độ tuổi lao động, HOẶC hộ không có ai khác đóng quỹ
+            if (isInAgeRange || !hasOtherLaborMembers) {
+              addedResidentIds.add(head.id);
+
+              batchFunds.push({
+                id: generateUUID(),
+                year: selectedYear,
+                full_name: head.full_name.trim(),
+                dob: head.dob ? formatDateVN(head.dob.trim()) : undefined,
+                address: hh ? hh.address : (head.permanent_address || head.temporary_address),
+                user_id: head.user_id || (hh ? hh.user_id : undefined),
+                note: isInAgeRange ? 'Chủ hộ' : 'Chủ hộ (Đại diện Hộ)',
+                contributions
+              });
+              successCount++;
+            }
           } else if (hh) {
             // Trường hợp Hộ gia đình không có nhân khẩu trong CSDL
             const headTitle = hh.martyr_name ? `Hộ ${hh.martyr_name}` : (hh.household_number ? `Hộ ${hh.household_number}` : `Hộ tại ${hh.address}`);
