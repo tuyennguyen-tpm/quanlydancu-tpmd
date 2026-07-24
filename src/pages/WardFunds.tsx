@@ -131,6 +131,10 @@ const WardFunds = () => {
     (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan');
   const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
   const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
+
+  // Khóa quyền "Khởi tạo từ Hộ gia đình" và "Xóa hết danh sách năm nay" đối với vai trò Tổ trưởng (to_truong)
+  const canInitFromHouseholds = !isGuest && currentRole !== 'to_truong';
+  const canClearYearData = !isGuest && currentRole !== 'to_truong';
   
   // State
   const [funds, setFunds] = useState<WardFund[]>([]);
@@ -1477,8 +1481,8 @@ const WardFunds = () => {
 
   // Clear All Year Data
   const handleClearYearData = async () => {
-    if (isGuest) {
-      showToast('Khách không có quyền xóa dữ liệu đóng quỹ!', 'warning');
+    if (isGuest || currentRole === 'to_truong') {
+      showToast('Tổ trưởng không có quyền xóa dữ liệu đóng quỹ toàn bộ năm!', 'warning');
       return;
     }
     if (window.confirm(`CẢNH BÁO CỰC KỲ QUAN TRỌNG: Bạn có chắc chắn muốn xóa toàn bộ danh sách quỹ Phường của năm ${selectedYear}? Hành động này sẽ xóa vĩnh viễn dữ liệu đã lưu và không thể hoàn tác.`)) {
@@ -1604,8 +1608,8 @@ const WardFunds = () => {
 
   // Auto-initialize Ward Funds covering 100% Households & Residents across all data sources
   const handleAutoInitFromResidents = async () => {
-    if (isGuest) {
-      showToast('Bạn không có quyền khởi tạo dữ liệu đóng quỹ!', 'warning');
+    if (isGuest || currentRole === 'to_truong') {
+      showToast('Tổ trưởng không có quyền khởi tạo dữ liệu đóng quỹ hàng loạt!', 'warning');
       return;
     }
 
@@ -6426,7 +6430,7 @@ const WardFunds = () => {
                   flexDirection: 'column',
                   gap: '4px'
                 }}>
-                  {!isGuest && (
+                  {canInitFromHouseholds && (
                     <button
                       type="button"
                       onClick={() => {
@@ -6727,7 +6731,7 @@ const WardFunds = () => {
             )}
 
             {/* Delete Year Button */}
-            {!isGuest && funds.length > 0 && (
+            {canClearYearData && funds.length > 0 && (
               <button
                 type="button"
                 onClick={handleClearYearData}
