@@ -4650,7 +4650,6 @@ const WardFunds = () => {
       <body>
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
-          <button class="toolbar-btn btn-recalc" id="btn-recalc" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border-color: #0284c7;">⚡ Tính lại tổng tiền</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
           <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
