@@ -928,34 +928,109 @@ const WardFunds = () => {
     });
   }, [filteredFunds, fundMetaMap, groups, headNamesSet]);
 
-  // Calculate Statistics dynamically - luôn dùng chỉ tiêu mới nhất từ cấu hình
-  const fundStats = activeFunds.map(fund => {
-    const isHouseholdScope = (fund as any).scope === 'household'
-      || fund.name.toLowerCase().includes('hộ')
-      || fund.name.toLowerCase().includes('người cao tuổi')
-      || fund.name.toLowerCase().includes('cao tuổi');
+  // Thống kê tổng quan số Hộ gia đình nộp quỹ Phường (tính toán thuần túy trên bộ nhớ từ dữ liệu hiện có)
+  const householdOverallStats = useMemo(() => {
+    const hhMap = new Map<string, WardFund[]>();
+    funds.forEach(f => {
+      const hhId = fundMetaMap.get(f.id)?.householdId || f.id;
+      if (!hhMap.has(hhId)) hhMap.set(hhId, []);
+      hhMap.get(hhId)!.push(f);
+    });
 
-    // Tính tổng số tiền phải thu: chỉ tính từ bản ghi có expected > 0
-    const recordsWithExpected = funds.filter(f => (f.contributions?.[fund.name]?.expected || 0) > 0);
-    const expected = recordsWithExpected.length > 0
-      ? recordsWithExpected.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0)
-      : fund.target * (isHouseholdScope
-          ? new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
-          : funds.length);
+    const totalHouseholds = hhMap.size > 0 ? hhMap.size : households.length;
 
-    const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
-    const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
-    const remaining = Math.max(0, expected - actual);
+    let paidFullHouseholds = 0;
+    let paidAnyHouseholds = 0;
+    let unpaidHouseholds = 0;
+
+    hhMap.forEach((members) => {
+      let totalExp = 0;
+      let totalAct = 0;
+
+      members.forEach(m => {
+        const compExp = computedExpectedMap.get(m.id) || {};
+        activeFunds.forEach(fund => {
+          const exp = compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected || 0);
+          const act = m.contributions?.[fund.name]?.actual || 0;
+          totalExp += exp;
+          totalAct += act;
+        });
+      });
+
+      if (totalExp > 0 && totalAct >= totalExp) {
+        paidFullHouseholds++;
+      }
+      if (totalAct > 0) {
+        paidAnyHouseholds++;
+      } else {
+        unpaidHouseholds++;
+      }
+    });
+
+    const paidFullPercent = totalHouseholds > 0 ? Math.round((paidFullHouseholds / totalHouseholds) * 100) : 0;
+    const paidAnyPercent = totalHouseholds > 0 ? Math.round((paidAnyHouseholds / totalHouseholds) * 100) : 0;
+
     return {
-      name: fund.name,
-      target: fund.target,
-      scope: isHouseholdScope ? 'household' : 'person',
-      expected,
-      actual,
-      percent,
-      remaining
+      totalHouseholds,
+      paidFullHouseholds,
+      paidAnyHouseholds,
+      unpaidHouseholds,
+      paidFullPercent,
+      paidAnyPercent
     };
-  });
+  }, [funds, fundMetaMap, computedExpectedMap, activeFunds, households]);
+
+  // Calculate Statistics dynamically - luôn dùng chỉ tiêu mới nhất từ cấu hình & bổ sung đếm số hộ đã nộp
+  const fundStats = useMemo(() => {
+    const hhMap = new Map<string, WardFund[]>();
+    funds.forEach(f => {
+      const hhId = fundMetaMap.get(f.id)?.householdId || f.id;
+      if (!hhMap.has(hhId)) hhMap.set(hhId, []);
+      hhMap.get(hhId)!.push(f);
+    });
+
+    const totalHhCount = hhMap.size > 0 ? hhMap.size : households.length;
+
+    return activeFunds.map(fund => {
+      const isHouseholdScope = (fund as any).scope === 'household'
+        || fund.name.toLowerCase().includes('hộ')
+        || fund.name.toLowerCase().includes('người cao tuổi')
+        || fund.name.toLowerCase().includes('cao tuổi');
+
+      // Tính tổng số tiền phải thu: chỉ tính từ bản ghi có expected > 0
+      const recordsWithExpected = funds.filter(f => (f.contributions?.[fund.name]?.expected || 0) > 0);
+      const expected = recordsWithExpected.length > 0
+        ? recordsWithExpected.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0)
+        : fund.target * (isHouseholdScope
+            ? new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
+            : funds.length);
+
+      const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
+      const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
+      const remaining = Math.max(0, expected - actual);
+
+      // Đếm số hộ đã đóng tiền cho riêng quỹ này
+      let paidHouseholdsForFund = 0;
+      hhMap.forEach((members) => {
+        const hhFundActual = members.reduce((s, m) => s + (m.contributions?.[fund.name]?.actual || 0), 0);
+        if (hhFundActual > 0) {
+          paidHouseholdsForFund++;
+        }
+      });
+
+      return {
+        name: fund.name,
+        target: fund.target,
+        scope: isHouseholdScope ? 'household' : 'person',
+        expected,
+        actual,
+        percent,
+        remaining,
+        paidHouseholdsCount: paidHouseholdsForFund,
+        totalHouseholdsCount: totalHhCount
+      };
+    });
+  }, [activeFunds, funds, fundMetaMap, households]);
 
   // Add new record manually
   const handleAddNewRecord = () => {
@@ -6063,6 +6138,50 @@ const WardFunds = () => {
           gap: '20px', 
           marginBottom: '10px' 
         }}>
+          {/* Card Thống kê Tổng quan Hộ Gia Đình Nộp Quỹ Phường */}
+          <div 
+            style={{
+              backgroundColor: '#f0fdf4',
+              border: '1.5px solid #bbf7d0',
+              borderRadius: '14px',
+              padding: '14px 18px',
+              boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  🏡 Tiến độ Hộ nộp Quỹ Phường
+                </span>
+                <h3 style={{ margin: '4px 0 0 0', fontSize: '1.45rem', fontWeight: '850', color: '#1e293b' }}>
+                  {householdOverallStats.paidFullHouseholds} / {householdOverallStats.totalHouseholds} hộ nộp đủ
+                </h3>
+              </div>
+              <div style={{
+                backgroundColor: 'rgba(22,163,74,0.12)',
+                color: '#15803d',
+                borderRadius: '10px',
+                padding: '6px 10px',
+                fontSize: '0.8rem',
+                fontWeight: '800'
+              }}>
+                Nộp đủ {householdOverallStats.paidFullPercent}%
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div style={{ width: '100%', height: '6px', backgroundColor: '#dcfce7', borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(householdOverallStats.paidFullPercent, 100)}%`, height: '100%', backgroundColor: '#16a34a', borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#475569', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
+              <span>Đã đóng tiền: <strong style={{ color: '#16a34a' }}>{householdOverallStats.paidAnyHouseholds} hộ</strong></span>
+              <span>Chưa đóng: <strong style={{ color: '#dc2626' }}>{householdOverallStats.unpaidHouseholds} hộ</strong></span>
+            </div>
+          </div>
+
           {fundStats.map((stat, index) => {
             const isPCTT = stat.name.includes('thiên tai');
             const bgColor = isPCTT ? '#f0fdf4' : '#fffdf5';
@@ -6109,8 +6228,8 @@ const WardFunds = () => {
                   <div style={{ width: `${Math.min(stat.percent, 100)}%`, height: '100%', backgroundColor: barColor, borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>
-                  <span>Đã thu: <strong style={{ color: '#16a34a' }}>{formatCurrency(stat.actual)} đ</strong></span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#64748b', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
+                  <span>Đã thu: <strong style={{ color: '#16a34a' }}>{formatCurrency(stat.actual)} đ</strong> ({stat.paidHouseholdsCount}/{stat.totalHouseholdsCount} hộ)</span>
                   <span>Phải thu: {formatCurrency(stat.expected)} đ</span>
                 </div>
               </div>
@@ -6213,6 +6332,11 @@ const WardFunds = () => {
           {/* Left Count */}
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>
             Đang hiển thị {filteredFunds.length} / {funds.length} {subTabMode === 'ward_list' ? 'cá nhân' : 'hộ'} phải nộp
+            {householdOverallStats.totalHouseholds > 0 && (
+              <span style={{ marginLeft: '8px', color: '#16a34a', fontWeight: '700' }}>
+                • Đã nộp đủ: {householdOverallStats.paidFullHouseholds}/{householdOverallStats.totalHouseholds} hộ ({householdOverallStats.paidFullPercent}%)
+              </span>
+            )}
           </div>
 
           {/* Right Actions */}
