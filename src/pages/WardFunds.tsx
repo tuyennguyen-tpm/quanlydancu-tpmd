@@ -4666,7 +4666,7 @@ const WardFunds = () => {
             <option value="11pt">11pt</option>
             <option value="12pt">12pt</option>
           </select>
-          <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
+          <button class="toolbar-btn btn-close" id="btn-close">❌ Đóng</button>
         </div>
 
         <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
@@ -5046,6 +5046,15 @@ const WardFunds = () => {
               show2DToast('Đã khôi phục về dữ liệu gốc từ hệ thống!', 'success');
             }
           });
+
+          const btnClose = document.getElementById('btn-close');
+          if (btnClose) {
+            btnClose.addEventListener('click', function() {
+              try { window.close(); } catch (e) {}
+              try { self.close(); } catch (e) {}
+              try { top.close(); } catch (e) {}
+            });
+          }
 
 
         </script>
