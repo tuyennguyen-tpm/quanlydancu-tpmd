@@ -833,15 +833,14 @@ const WardFunds = () => {
           }
         }
 
-        let isFemale = false;
-        const fullNameCheck = (matchedRes ? matchedRes.full_name : f.full_name || '').toLowerCase();
-        const hasThi = fullNameCheck.includes(' thị ') || fullNameCheck.includes(' thị') || fullNameCheck.startsWith('thị ') || fullNameCheck.includes('bà ') || fullNameCheck.includes('chị ');
-
-        if (matchedRes) {
-          const g = (matchedRes.gender || '').toString().toLowerCase().trim();
-          isFemale = g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f') || hasThi;
-        } else {
-          isFemale = hasThi;
+        let isFemale = hasThi;
+        if (matchedRes && matchedRes.gender) {
+          const g = matchedRes.gender.toString().toLowerCase().trim();
+          if (g === 'female' || g === 'nữ' || g === 'nu' || g.startsWith('f')) {
+            isFemale = true;
+          } else if (g === 'male' || g === 'nam' || g.startsWith('m')) {
+            isFemale = false;
+          }
         }
 
         const dobStr = f.dob || (matchedRes ? matchedRes.dob : '');
@@ -870,12 +869,7 @@ const WardFunds = () => {
         if (isFemale) {
           inAgeRange = age >= lim.femaleMin && age <= lim.femaleMax;
         } else {
-          const isMale = matchedRes && ((matchedRes.gender || '').toString().toLowerCase().trim().startsWith('m') || (matchedRes.gender || '').toString().toLowerCase().trim().includes('nam'));
-          if (isMale) {
-            inAgeRange = age >= lim.maleMin && age <= lim.maleMax;
-          } else {
-            inAgeRange = age >= lim.femaleMin && age <= lim.femaleMax;
-          }
+          inAgeRange = age >= lim.maleMin && age <= lim.maleMax;
         }
 
         const storedContrib = f.contributions?.[fund.name];
@@ -885,7 +879,7 @@ const WardFunds = () => {
 
         if (isManualExempt) {
           expected[fund.name] = 0;
-        } else if (typeof storedExpected === 'number') {
+        } else if (isManualTarget && typeof storedExpected === 'number') {
           expected[fund.name] = storedExpected;
         } else if (!inAgeRange) {
           expected[fund.name] = 0;
