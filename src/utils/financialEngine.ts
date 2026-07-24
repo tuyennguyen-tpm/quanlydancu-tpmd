@@ -265,46 +265,11 @@ export function calculateHouseholdFinancialSummary(
   const headResident = findHeadResident(fullResidentList, household);
   const headName = headResident ? headResident.full_name : (household.martyr_name || (members[0] ? members[0].full_name : 'Đại diện hộ'));
 
-  // 2. Tính số lượng Nhân khẩu trong độ tuổi lao động đóng góp (loại bỏ tuyệt đối người quá tuổi lao động)
+  // 2. Tính số lượng Nhân khẩu trong độ tuổi lao động đóng góp
+  // Chỉ đếm từ danh sách nhân khẩu thực tế của hộ (members) - KHÔNG tăng theo bản ghi quỹ hay tiền PCTT
+  // để tránh bị sai khi dữ liệu quỹ có nhiều bản ghi cũ hoặc nhập nhầm
   const laborResidents = members.filter(r => isLaborAge(r, targetYear, ageLimits));
-  let laborCount = laborResidents.length;
-
-  if (wardFundsList && wardFundsList.length > 0) {
-    const activeLaborWardMembers = wardFundsList.filter(f => {
-      const dbRes = (allDbResidents && allDbResidents.length > 0 ? allDbResidents : members).find(r =>
-        (f.user_id && r.id === f.user_id) || (f.full_name && r.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())
-      );
-      if (dbRes) {
-        return isLaborAge(dbRes, targetYear, ageLimits);
-      }
-      const age = f.dob ? calculateExactAge(f.dob, targetYear) : -1;
-      if (age < 0) return true;
-      const fullNameCheck = (f.full_name || '').toLowerCase();
-      const hasThi = fullNameCheck.includes(' thị ') || fullNameCheck.includes(' thị') || fullNameCheck.startsWith('thị ') || fullNameCheck.includes('bà ') || fullNameCheck.includes('chị ');
-      return hasThi ? (age >= 18 && age <= 58) : (age >= 18 && age <= 61);
-    });
-
-    const uniqueLaborNames = new Set(activeLaborWardMembers.map(f => (f.full_name || '').trim().toLowerCase()).filter(Boolean));
-    if (uniqueLaborNames.size > 0) {
-      laborCount = Math.max(laborCount, uniqueLaborNames.size);
-    }
-  }
-
-  // Tự động suy ra số khẩu lao động từ số tiền thực thu của quỹ cá nhân (PCTT) để tiêu đề phiếu thu khớp 100% với số tiền bên dưới
-  if (personFund && personFund.target > 0) {
-    const personFundName = personFund.name;
-    const actualPaidPersonFund = wardFundsList.reduce((sum, f) => {
-      const raw = f.contributions?.[personFundName]?.actual ?? 0;
-      const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
-      return sum + val;
-    }, 0);
-    if (actualPaidPersonFund > 0) {
-      const impliedCount = Math.round(actualPaidPersonFund / personFund.target);
-      if (impliedCount > laborCount) {
-        laborCount = impliedCount;
-      }
-    }
-  }
+  const laborCount = laborResidents.length;
 
   // 1. Quỹ TDP
   const tdpLineItems: HouseholdFinancialSummary['tdpLineItems'] = [];
