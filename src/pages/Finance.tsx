@@ -1222,9 +1222,16 @@ const Finance = () => {
     );
 
     const SAVE_KEY = `receipt_html_${householdId}_${fundYear}_${printMode}`;
-    const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-    const hasSavedVersion = !!savedReceiptHtml;
-    const receiptHtml = freshReceiptHtml;
+    let savedReceiptHtml: string | null = null;
+    try {
+      savedReceiptHtml = localStorage.getItem(SAVE_KEY);
+      if (!savedReceiptHtml && (db as any).getReceiptCustomization) {
+        savedReceiptHtml = await (db as any).getReceiptCustomization(SAVE_KEY);
+      }
+    } catch { /* ignore */ }
+
+    const hasSavedVersion = Boolean(savedReceiptHtml);
+    const receiptHtml = savedReceiptHtml || freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>

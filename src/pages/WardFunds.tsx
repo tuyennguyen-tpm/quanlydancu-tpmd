@@ -4376,7 +4376,7 @@ const WardFunds = () => {
     );
   };
 
-  const handlePrintHouseholdReceipt = (
+  const handlePrintHouseholdReceipt = async (
     householdId: string,
     printMode: 'ward_only' | 'combined' = 'combined',
     targetMembers?: any[]
@@ -4474,10 +4474,16 @@ const WardFunds = () => {
       printMode
     );
     const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
-    // Clear any stale cached receipt HTML to guarantee fresh rendering from live DB data
-    localStorage.removeItem(SAVE_KEY);
-    const hasSavedVersion = false;
-    const receiptHtml = freshReceiptHtml;
+    let savedReceiptHtml: string | null = null;
+    try {
+      savedReceiptHtml = localStorage.getItem(SAVE_KEY);
+      if (!savedReceiptHtml && (db as any).getReceiptCustomization) {
+        savedReceiptHtml = await (db as any).getReceiptCustomization(SAVE_KEY);
+      }
+    } catch { /* ignore */ }
+
+    const hasSavedVersion = Boolean(savedReceiptHtml);
+    const receiptHtml = savedReceiptHtml || freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
