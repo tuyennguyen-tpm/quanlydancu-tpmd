@@ -6276,10 +6276,10 @@ const WardFunds = () => {
             minWidth: '200px'
           }}>
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: 'var(--text-muted)' }} />
-            <DebouncedInput
+            <input
+              type="text"
               value={searchInput}
-              onChange={setSearchInput}
-              debounce={300}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Tìm theo tên người nộp, tên chủ hộ, địa chỉ..."
               className="premium-input-3d"
               style={{ paddingLeft: '36px' }}
