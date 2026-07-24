@@ -228,14 +228,15 @@ export function calculateHouseholdFinancialSummary(
   householdPaidFunds: HouseholdFund[],
   tdpActiveFunds: FundConfigItem[],
   wardActiveFunds: FundConfigItem[],
-  targetYear: number
+  targetYear: number,
+  allDbResidents?: Resident[]
 ): HouseholdFinancialSummary {
   const isPolicyHH = isPolicyHousehold(household);
   const personFund = wardActiveFunds.find(af => af.scope === 'person' || af.name.toLowerCase().includes('thiên tai') || af.name.toLowerCase().includes('đáp nghĩa'));
   const ageLimits = parseAgeRange(personFund?.age_range);
 
-  const laborResidents = members.filter(r => isLaborAge(r, targetYear, ageLimits));
-  const laborCount = laborResidents.length;
+  // 1. Tìm Chủ hộ chính thức từ CSDL Nhân khẩu đầy đủ (kể cả khi Chủ hộ quá tuổi / miễn đóng)
+  const fullResidentList = (allDbResidents && allDbResidents.length > 0) ? allDbResidents : members;
 
   const findHeadResident = (resList: Resident[], hh?: Household): Resident | undefined => {
     if (!resList || resList.length === 0) return undefined;
@@ -243,10 +244,11 @@ export function calculateHouseholdFinancialSummary(
       const matched = resList.find(r => String(r.id) === String(hh.head_of_household_id));
       if (matched) return matched;
     }
-    const isHeadTrue = resList.find(r => r.is_head === true || (r as any).is_head === 'true');
+    const isHeadTrue = resList.find(r => (hh ? String(r.household_id || '') === String(hh.id) : true) && (r.is_head === true || (r as any).is_head === 'true'));
     if (isHeadTrue) return isHeadTrue;
 
     const relHead = resList.find(r => {
+      if (hh && String(r.household_id || '') !== String(hh.id)) return false;
       const rel = (r.relationship_with_head || '').toString().trim().toLowerCase();
       return rel === 'chủ hộ' || rel === 'chu ho' || rel === 'chủ hộ gia đình';
     });
@@ -257,11 +259,26 @@ export function calculateHouseholdFinancialSummary(
       const matchedMartyr = resList.find(r => r.full_name.trim().toLowerCase() === mName);
       if (matchedMartyr) return matchedMartyr;
     }
-    return resList[0];
+    return resList.find(r => (hh ? String(r.household_id || '') === String(hh.id) : true)) || resList[0];
   };
 
-  const headResident = findHeadResident(members, household);
+  const headResident = findHeadResident(fullResidentList, household);
   const headName = headResident ? headResident.full_name : (household.martyr_name || (members[0] ? members[0].full_name : 'Đại diện hộ'));
+
+  // 2. Tính số lượng Nhân khẩu trong độ tuổi lao động đóng góp
+  const laborResidents = members.filter(r => isLaborAge(r, targetYear, ageLimits));
+  let laborCount = laborResidents.length;
+
+  // Nếu trong danh sách bản ghi quỹ Phường (wardFundsList) đã có các nhân khẩu được chọn đóng quỹ,
+  // ưu tiên lấy số lượng nhân khẩu có tên trong wardFundsList để đếm chuẩn 100% khớp với danh sách ngoài card
+  if (wardFundsList && wardFundsList.length > 0) {
+    const uniqueWardMemberCount = new Set(
+      wardFundsList.map(f => f.user_id || f.full_name.trim().toLowerCase())
+    ).size;
+    if (uniqueWardMemberCount > 0) {
+      laborCount = uniqueWardMemberCount;
+    }
+  }
 
   // 1. Quỹ TDP
   const tdpLineItems: HouseholdFinancialSummary['tdpLineItems'] = [];

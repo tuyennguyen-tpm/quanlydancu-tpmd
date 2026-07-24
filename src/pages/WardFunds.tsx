@@ -4332,7 +4332,8 @@ const WardFunds = () => {
       householdPaidFunds,
       tdpActiveFunds,
       wardActiveFunds,
-      selectedYear
+      selectedYear,
+      residents
     );
 
     return generateUnifiedHouseholdReceiptHtml(
@@ -4377,15 +4378,6 @@ const WardFunds = () => {
       };
 
       activeMembers = residents.filter(isResidentActiveInHousehold);
-    }
-
-    // Đảm bảo Chủ hộ chính thức luôn có mặt trong activeMembers kể cả khi được miễn đóng
-    const headResInDb = residents.find(r => 
-      (household && household.head_of_household_id && String(r.id) === String(household.head_of_household_id)) ||
-      (String(r.household_id || '') === String(householdId) && (r.is_head || (r.relationship_with_head && r.relationship_with_head.trim().toLowerCase() === 'chủ hộ')))
-    );
-    if (headResInDb && !activeMembers.some(m => String(m.id) === String(headResInDb.id))) {
-      activeMembers.unshift(headResInDb);
     }
 
     const memberIds = new Set(activeMembers.map(m => m.id));

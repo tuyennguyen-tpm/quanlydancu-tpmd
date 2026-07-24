@@ -1081,7 +1081,8 @@ const Finance = () => {
       householdPaidFunds,
       tdpActiveFunds,
       wardActiveFunds,
-      fundYear
+      fundYear,
+      residents
     );
 
     return generateUnifiedHouseholdReceiptHtml(
