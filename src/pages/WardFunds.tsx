@@ -849,31 +849,8 @@ const WardFunds = () => {
         const dobStr = f.dob || (matchedRes ? matchedRes.dob : '');
         const age = calculateExactAge(dobStr, selectedYear);
 
-        const parseAgeLimits = (ageRangeStr: string | undefined) => {
-          const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58 };
-          if (!ageRangeStr || !ageRangeStr.trim()) return result;
-          const cleanStr = ageRangeStr.toLowerCase().trim();
-          const mM = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
-          if (mM) { result.maleMin = parseInt(mM[1], 10); result.maleMax = parseInt(mM[2], 10); }
-          const fM = cleanStr.match(/(?:nữ|nu)[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
-          if (fM) { result.femaleMin = parseInt(fM[1], 10); result.femaleMax = parseInt(fM[2], 10); }
-          const gM = cleanStr.match(/(?:từ\s*)?(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
-          if (gM && !mM && !fM) {
-            const min = parseInt(gM[1], 10);
-            const max = parseInt(gM[2], 10);
-            result.maleMin = min; result.maleMax = max;
-            result.femaleMin = min; result.femaleMax = max;
-          }
-          return result;
-        };
-
-        const lim = parseAgeLimits(fund.age_range);
-        let inAgeRange = false;
-        if (isFemale) {
-          inAgeRange = age >= lim.femaleMin && age <= lim.femaleMax;
-        } else {
-          inAgeRange = age >= lim.maleMin && age <= lim.maleMax;
-        }
+        // Chuẩn độ tuổi lao động: Nữ (18-58 tuổi), Nam (18-61 tuổi)
+        const inAgeRange = isFemale ? (age >= 18 && age <= 58) : (age >= 18 && age <= 61);
 
         const storedContrib = f.contributions?.[fund.name];
         const storedExpected = storedContrib?.expected;

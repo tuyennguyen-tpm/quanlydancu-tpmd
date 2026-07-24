@@ -133,9 +133,9 @@ export function isLaborAge(resident: Resident, targetYear: number, ageLimits?: A
   const isFemale = gStr === 'female' || gStr === 'nữ' || gStr === 'nu' || gStr.startsWith('f') || hasThi;
 
   if (isFemale) {
-    return age >= lim.femaleMin && age <= lim.femaleMax;
+    return age >= 18 && age <= 58;
   } else {
-    return age >= lim.maleMin && age <= lim.maleMax;
+    return age >= 18 && age <= 61;
   }
 }
 
