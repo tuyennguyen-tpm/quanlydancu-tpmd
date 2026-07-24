@@ -4918,8 +4918,47 @@ const WardFunds = () => {
 
 
 
+          function safeSaveStorage(key, val) {
+            try {
+              localStorage.setItem(key, val);
+              return true;
+            } catch (e) {
+              try {
+                if (window.opener && window.opener.localStorage) {
+                  window.opener.localStorage.setItem(key, val);
+                  return true;
+                }
+              } catch (err) {}
+            }
+            return false;
+          }
+
+          function safeGetStorage(key) {
+            try {
+              const val = localStorage.getItem(key);
+              if (val) return val;
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                return window.opener.localStorage.getItem(key);
+              }
+            } catch (err) {}
+            return null;
+          }
+
+          function safeRemoveStorage(key) {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.removeItem(key);
+              }
+            } catch (err) {}
+          }
+
           btnSave.addEventListener('click', function() {
-            localStorage.setItem(SAVE_KEY, editor.innerHTML);
+            const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
             const notice = document.getElementById('saved-notice');
             if (notice) {
               notice.style.display = 'flex';
@@ -4928,13 +4967,12 @@ const WardFunds = () => {
               notice.style.color = '#14532d';
               notice.innerHTML = '✅ <strong>Đã lưu bản chỉnh sửa thành công!</strong> Lần sau bạn có thể bấm <strong>📂 Mở bản đã lưu</strong> để xem lại.';
             }
-            if (btnLoad) btnLoad.style.display = 'inline-flex';
-            alert('Đã lưu bản chỉnh sửa phiếu thu thành công!');
+            alert(ok ? '✅ Đã lưu bản chỉnh sửa phiếu thu thành công!' : '⚠️ Đã gửi yêu cầu lưu bản chỉnh sửa!');
           });
 
           if (btnLoad) {
             btnLoad.addEventListener('click', function() {
-              const saved = localStorage.getItem(SAVE_KEY);
+              const saved = safeGetStorage(SAVE_KEY);
               if (saved) {
                 editor.innerHTML = saved;
                 recalculateReceiptTotals();
@@ -4954,7 +4992,7 @@ const WardFunds = () => {
 
           btnReset.addEventListener('click', function() {
             if (confirm('Bạn có chắc chắn muốn xóa bản đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
-              localStorage.removeItem(SAVE_KEY);
+              safeRemoveStorage(SAVE_KEY);
               editor.innerHTML = freshHtml;
               recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
