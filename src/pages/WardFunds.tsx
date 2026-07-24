@@ -4646,7 +4646,7 @@ const WardFunds = () => {
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-recalc" id="btn-recalc" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border-color: #0284c7;">⚡ Tính lại tổng tiền</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
-          ${hasSavedVersion ? '<button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>' : ''}
+          <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
@@ -4946,6 +4946,8 @@ const WardFunds = () => {
                   notice.style.color = '#14532d';
                   notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó</strong>.';
                 }
+              } else {
+                alert('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này. Bạn có thể tự gõ chỉnh sửa nội dung trực tiếp trên phiếu rồi nhấn 💾 Lưu chỉnh sửa!');
               }
             });
           }
@@ -4957,7 +4959,6 @@ const WardFunds = () => {
               recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
               if (notice) notice.style.display = 'none';
-              if (btnLoad) btnLoad.style.display = 'none';
               alert('Đã khôi phục về dữ liệu gốc từ hệ thống!');
             }
           });
