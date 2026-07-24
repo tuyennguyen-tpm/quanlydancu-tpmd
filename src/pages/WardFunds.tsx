@@ -798,11 +798,21 @@ const WardFunds = () => {
 
       let matchedRes: Resident | undefined;
       if (f.user_id) matchedRes = residentByIdMap.get(f.user_id);
+      if (!matchedRes && f.id) matchedRes = residentByIdMap.get(f.id);
+
       if (!matchedRes && f.full_name) {
-        const cands = residentsByNameMap.get(f.full_name.trim().toLowerCase()) || [];
-        if (cands.length === 1) matchedRes = cands[0];
-        else if (cands.length > 1) {
-          matchedRes = f.dob ? cands.find(r => r.dob === f.dob) || cands[0] : cands[0];
+        const cleanName = f.full_name.trim().toLowerCase();
+        const cands = residentsByNameMap.get(cleanName) || [];
+        if (cands.length === 1) {
+          matchedRes = cands[0];
+        } else if (cands.length > 1) {
+          matchedRes = f.dob ? cands.find(r => r.dob && (r.dob === f.dob || r.dob.includes(f.dob!))) || cands[0] : cands[0];
+        } else {
+          const normKey = cleanName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+          matchedRes = residents.find(r => {
+            const rNorm = r.full_name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+            return rNorm === normKey;
+          });
         }
       }
 
@@ -824,7 +834,7 @@ const WardFunds = () => {
             return;
           }
 
-          const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu'];
+          const pensionKeywords = ['hưu', 'hưu trí', 'lương hưu', 'mất sức', 'tàn tật', 'khuyết tật', 'trợ cấp xã hội', 'chế độ hưu', 'bệnh binh', 'thương binh'];
           const occLower = (matchedRes.occupation || '').toLowerCase();
           const notesLower = (matchedRes.notes || '').toLowerCase();
           if (pensionKeywords.some(k => occLower.includes(k) || notesLower.includes(k))) {
@@ -847,10 +857,17 @@ const WardFunds = () => {
         }
 
         const dobStr = f.dob || (matchedRes ? matchedRes.dob : '');
-        const age = calculateExactAge(dobStr, selectedYear);
+        const age = dobStr ? calculateExactAge(dobStr, selectedYear) : -1;
 
         // Chuẩn độ tuổi lao động: Nữ (18-58 tuổi), Nam (18-61 tuổi)
-        const inAgeRange = isFemale ? (age >= 18 && age <= 58) : (age >= 18 && age <= 61);
+        // Nếu không có ngày sinh và tên có chữ "Ông/Bà" -> Coi như hết tuổi lao động (miễn)
+        let inAgeRange = false;
+        if (age === -1) {
+          const isTitleElder = fullNameCheck.startsWith('ông ') || fullNameCheck.startsWith('bà ');
+          inAgeRange = !isTitleElder;
+        } else {
+          inAgeRange = isFemale ? (age >= 18 && age <= 58) : (age >= 18 && age <= 61);
+        }
 
         const storedContrib = f.contributions?.[fund.name];
         const storedExpected = storedContrib?.expected;
