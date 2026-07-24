@@ -848,7 +848,7 @@ const WardFunds = () => {
         const age = calculateExactAge(dobStr, selectedYear);
 
         const parseAgeLimits = (ageRangeStr: string | undefined) => {
-          const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55 };
+          const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58 };
           if (!ageRangeStr || !ageRangeStr.trim()) return result;
           const cleanStr = ageRangeStr.toLowerCase().trim();
           const mM = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -885,10 +885,10 @@ const WardFunds = () => {
 
         if (isManualExempt) {
           expected[fund.name] = 0;
-        } else if (isManualTarget && typeof storedExpected === 'number') {
-          expected[fund.name] = storedExpected;
         } else if (!inAgeRange) {
           expected[fund.name] = 0;
+        } else if (isManualTarget && typeof storedExpected === 'number') {
+          expected[fund.name] = storedExpected;
         } else {
           expected[fund.name] = (typeof storedExpected === 'number' && storedExpected > 0) ? storedExpected : fund.target;
         }

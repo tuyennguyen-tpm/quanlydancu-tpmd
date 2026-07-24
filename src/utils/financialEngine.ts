@@ -51,17 +51,17 @@ export interface HouseholdFinancialSummary {
 }
 
 /**
- * Phân tích chuỗi mốc độ tuổi (vd: "Nam 18-60, Nữ 18-55") thành đối tượng AgeLimits chuẩn.
- * Mặc định pháp luật & địa phương: Nam 18-60 tuổi, Nữ 18-55 tuổi.
+ * Phân tích chuỗi mốc độ tuổi (vd: "Nam 18-61, Nữ 18-58") thành đối tượng AgeLimits chuẩn.
+ * Mặc định địa phương quy định: Nam 18-61 tuổi, Nữ 18-58 tuổi.
  */
 export function parseAgeRange(ageRangeStr?: string | null): AgeLimits {
   const result: AgeLimits = {
     maleMin: 18,
-    maleMax: 60,
+    maleMax: 61,
     femaleMin: 18,
-    femaleMax: 55,
+    femaleMax: 58,
     generalMin: 18,
-    generalMax: 60
+    generalMax: 61
   };
 
   if (!ageRangeStr || !ageRangeStr.trim()) return result;
@@ -117,13 +117,13 @@ export function isExemptResident(resident: Resident): boolean {
 }
 
 /**
- * Kiểm tra cá nhân có nằm trong độ tuổi lao động đóng góp hay không.
+ * Kiểm tra cá nhân có nằm trong độ tuổi lao động đóng góp hay không (Nữ 18-58 tuổi, Nam 18-61 tuổi).
  */
 export function isLaborAge(resident: Resident, targetYear: number, ageLimits?: AgeLimits): boolean {
   if (!resident) return false;
   if (isExemptResident(resident)) return false;
 
-  const lim = ageLimits || { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55, generalMin: 18, generalMax: 60 };
+  const lim = ageLimits || { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 61 };
   const age = calculateExactAge(resident.dob, targetYear);
 
   const gStr = (resident.gender || '').toString().toLowerCase().trim();
