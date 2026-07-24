@@ -1960,7 +1960,6 @@ const WardFunds = () => {
           const mGStr = (matchedRes.gender || '').toString().toLowerCase().trim();
           const hasThi = matchedRes.full_name.toLowerCase().includes(' thị ') || matchedRes.full_name.toLowerCase().includes(' thị');
           const isFemale = mGStr === 'female' || mGStr === 'nữ' || mGStr === 'nu' || mGStr.startsWith('f') || hasThi;
-          const isMale = !isFemale && (mGStr === 'male' || mGStr === 'nam' || mGStr.startsWith('m'));
 
           const activeFundsList = (db as any).getWardFundList() || [];
           activeFundsList.forEach((fund: any) => {
@@ -2002,8 +2001,8 @@ const WardFunds = () => {
                   };
 
                   const ageLimits = parseAgeRange(fund.age_range);
-                  const isMaleInAge = isMale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
-                  const isFemaleInAge = (isFemale || !isMale) ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
+                  const isFemaleInAge = isFemale ? (age >= ageLimits.femaleMin && age <= ageLimits.femaleMax) : false;
+                  const isMaleInAge = !isFemale ? (age >= ageLimits.maleMin && age <= ageLimits.maleMax) : false;
                   
                   if (isMaleInAge || isFemaleInAge) {
                     expected = fund.target;
@@ -2112,9 +2111,8 @@ const WardFunds = () => {
           if (fund2.scope === 'person' || isPCTT2 || isDOdn2) {
             const ageLimits2 = parseAgeRange2(fund2.age_range);
             let shouldPay2 = false;
-            if (fIsMale) shouldPay2 = fAge >= ageLimits2.maleMin && fAge <= ageLimits2.maleMax;
-            else if (fIsFemale || !fIsMale) shouldPay2 = fAge >= ageLimits2.femaleMin && fAge <= ageLimits2.femaleMax;
-            else shouldPay2 = fAge >= ageLimits2.generalMin && fAge <= ageLimits2.generalMax;
+            if (fIsFemale) shouldPay2 = fAge >= ageLimits2.femaleMin && fAge <= ageLimits2.femaleMax;
+            else shouldPay2 = fAge >= ageLimits2.maleMin && fAge <= ageLimits2.maleMax;
             
             const newExpected2 = shouldPay2 ? fund2.target : 0;
             const currentExpected2 = newContributions[fund2.name]?.expected;
