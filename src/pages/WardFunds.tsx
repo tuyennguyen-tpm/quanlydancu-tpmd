@@ -782,7 +782,7 @@ const WardFunds = () => {
     const currentYear = new Date().getFullYear(); // Luôn dùng năm hiện tại để tính tuổi
 
     const parseAgeRange = (ageRangeStr: string | undefined) => {
-      const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55 };
+      const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58 };
       if (!ageRangeStr) return result;
       const s = ageRangeStr.toLowerCase();
       const mM = s.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -1972,7 +1972,7 @@ const WardFunds = () => {
               } else {
                 if (fund.scope === 'person' || isPCTT || isDOdn) {
                   const parseAgeRange = (ageRangeStr: string | undefined) => {
-                    const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55, generalMin: 18, generalMax: 60 };
+                    const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 61 };
                     if (!ageRangeStr) return result;
                     const cleanStr = ageRangeStr.toLowerCase();
                     const maleMatch = cleanStr.match(/nam[^\d]*(\d+)\s*(?:-|đến|tới|\.\.)\s*(\d+)/);
@@ -2062,7 +2062,7 @@ const WardFunds = () => {
         // dựa trên dob + giới tính từ tên (chữ đệm Thị)
         const activeFundsList2 = (db as any).getWardFundList() || [];
         const parseAgeRange2 = (ageRangeStr: string | undefined) => {
-          const result = { maleMin: 18, maleMax: 60, femaleMin: 18, femaleMax: 55, generalMin: 18, generalMax: 60 };
+          const result = { maleMin: 18, maleMax: 61, femaleMin: 18, femaleMax: 58, generalMin: 18, generalMax: 61 };
           if (!ageRangeStr) return result;
           const cleanStr = ageRangeStr.toLowerCase();
           const maleMatch = cleanStr.match(/nam\s*(\d+)\s*-\s*(\d+)/);
