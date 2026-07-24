@@ -277,9 +277,9 @@ const WardFunds = () => {
     setActiveFunds(list);
   };
 
-  // Load Data
-  const loadData = async () => {
-    setIsLoading(true);
+  // Load Data ngầm im lặng không khóa màn hình xoay xoay Đang xử lý dữ liệu
+  const loadData = async (isInitial = false) => {
+    if (isInitial) setIsLoading(true);
     try {
       const data = await db.getWardFunds(selectedYear);
       setFunds(data);
@@ -290,7 +290,7 @@ const WardFunds = () => {
     } catch (e) {
       showToast('Lỗi tải dữ liệu quỹ phường!', 'danger');
     } finally {
-      setIsLoading(false);
+      if (isInitial) setIsLoading(false);
     }
   };
 
@@ -332,9 +332,10 @@ const WardFunds = () => {
   }, []);
 
   useEffect(() => {
-    loadData();
-    window.addEventListener('db-changed', loadData);
-    return () => window.removeEventListener('db-changed', loadData);
+    loadData(true);
+    const handleSilentReload = () => loadData(false);
+    window.addEventListener('db-changed', handleSilentReload);
+    return () => window.removeEventListener('db-changed', handleSilentReload);
   }, [selectedYear]);
 
   // Format number to currency string
@@ -6145,7 +6146,7 @@ const WardFunds = () => {
             ))}
           </select>
           <button
-            onClick={loadData}
+            onClick={() => loadData(true)}
             title="Tải lại dữ liệu"
             style={{
               padding: '8px 12px',
