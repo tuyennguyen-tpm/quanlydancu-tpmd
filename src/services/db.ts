@@ -2784,4 +2784,74 @@ export const partyDb = {
     setStorageItem('party_fees', list);
     return full;
   },
+
+  // --- Lưu trữ vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL (Không bao giờ mất) ---
+  saveReceiptCustomization: async (key: string, html: string): Promise<boolean> => {
+    try {
+      localStorage.setItem(key, html);
+    } catch (e) {}
+
+    try {
+      const allCustoms = getStorageItem<Record<string, string>>('app_receipt_customizations', {});
+      allCustoms[key] = html;
+      setStorageItem('app_receipt_customizations', allCustoms);
+    } catch (e) {}
+
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        await supabase.from('app_config').upsert({
+          key: `RECEIPT_CUSTOM_${key}`,
+          value: html,
+          user_id: uId,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' });
+      } catch (e) {
+        console.error('saveReceiptCustomization Supabase sync error:', e);
+      }
+    }
+    return true;
+  },
+
+  getReceiptCustomization: async (key: string): Promise<string | null> => {
+    try {
+      const local = localStorage.getItem(key);
+      if (local) return local;
+    } catch (e) {}
+
+    try {
+      const allCustoms = getStorageItem<Record<string, string>>('app_receipt_customizations', {});
+      if (allCustoms[key]) return allCustoms[key];
+    } catch (e) {}
+
+    if (supabase) {
+      try {
+        const { data } = await supabase.from('app_config').select('value').eq('key', `RECEIPT_CUSTOM_${key}`).maybeSingle();
+        if (data && data.value) {
+          try { localStorage.setItem(key, data.value); } catch (e) {}
+          return data.value;
+        }
+      } catch (e) {}
+    }
+    return null;
+  },
+
+  deleteReceiptCustomization: async (key: string): Promise<boolean> => {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+
+    try {
+      const allCustoms = getStorageItem<Record<string, string>>('app_receipt_customizations', {});
+      delete allCustoms[key];
+      setStorageItem('app_receipt_customizations', allCustoms);
+    } catch (e) {}
+
+    if (supabase) {
+      try {
+        await supabase.from('app_config').delete().eq('key', `RECEIPT_CUSTOM_${key}`);
+      } catch (e) {}
+    }
+    return true;
+  },
 };

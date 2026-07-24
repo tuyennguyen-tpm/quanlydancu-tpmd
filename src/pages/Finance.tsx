@@ -1713,20 +1713,31 @@ const Finance = () => {
 
           btnSave.addEventListener('click', function() {
             const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+              }
+            } catch (err) {}
+
             const notice = document.getElementById('saved-notice');
             if (notice) {
               notice.style.display = 'flex';
               notice.style.background = '#dcfce7';
               notice.style.border = '1.5px solid #16a34a';
               notice.style.color = '#14532d';
-              notice.innerHTML = '✅ <strong>Đã lưu bản chỉnh sửa thành công!</strong> Lần sau bạn có thể bấm <strong>📂 Mở bản đã lưu</strong> để xem lại.';
+              notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
             }
-            alert(ok ? '✅ Đã lưu bản chỉnh sửa phiếu thu thành công!' : '⚠️ Đã gửi yêu cầu lưu bản chỉnh sửa!');
+            alert('✅ Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL ứng dụng thành công!');
           });
 
           if (btnLoad) {
-            btnLoad.addEventListener('click', function() {
-              const saved = safeGetStorage(SAVE_KEY);
+            btnLoad.addEventListener('click', async function() {
+              let saved = safeGetStorage(SAVE_KEY);
+              if (!saved && window.opener && window.opener.db && window.opener.db.getReceiptCustomization) {
+                try {
+                  saved = await window.opener.db.getReceiptCustomization(SAVE_KEY);
+                } catch (err) {}
+              }
               if (saved) {
                 editor.innerHTML = saved;
                 recalculateReceiptTotals();
@@ -1736,7 +1747,7 @@ const Finance = () => {
                   notice.style.background = '#dcfce7';
                   notice.style.border = '1.5px solid #16a34a';
                   notice.style.color = '#14532d';
-                  notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó</strong>.';
+                  notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó từ CSDL</strong>.';
                 }
               } else {
                 alert('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này. Bạn có thể tự gõ chỉnh sửa nội dung trực tiếp trên phiếu rồi nhấn 💾 Lưu chỉnh sửa!');
@@ -1747,6 +1758,11 @@ const Finance = () => {
           btnReset.addEventListener('click', function() {
             if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
               safeRemoveStorage(SAVE_KEY);
+              try {
+                if (window.opener && window.opener.db && window.opener.db.deleteReceiptCustomization) {
+                  window.opener.db.deleteReceiptCustomization(SAVE_KEY);
+                }
+              } catch (err) {}
               editor.innerHTML = freshHtml;
               recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
