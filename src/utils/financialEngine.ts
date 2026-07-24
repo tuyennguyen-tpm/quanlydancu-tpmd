@@ -270,13 +270,13 @@ export function calculateHouseholdFinancialSummary(
   let laborCount = laborResidents.length;
 
   // Nếu trong danh sách bản ghi quỹ Phường (wardFundsList) đã có các nhân khẩu được chọn đóng quỹ,
-  // ưu tiên lấy số lượng nhân khẩu có tên trong wardFundsList để đếm chuẩn 100% khớp với danh sách ngoài card
+  // ưu tiên lấy số lượng nhân khẩu duy nhất theo TÊN (f.full_name) để đếm chuẩn 100% khớp với danh sách ngoài card
   if (wardFundsList && wardFundsList.length > 0) {
-    const uniqueWardMemberCount = new Set(
-      wardFundsList.map(f => f.user_id || f.full_name.trim().toLowerCase())
-    ).size;
-    if (uniqueWardMemberCount > 0) {
-      laborCount = uniqueWardMemberCount;
+    const uniqueWardMemberNames = new Set(
+      wardFundsList.map(f => (f.full_name || '').trim().toLowerCase()).filter(Boolean)
+    );
+    if (uniqueWardMemberNames.size > 0) {
+      laborCount = uniqueWardMemberNames.size;
     }
   }
 
