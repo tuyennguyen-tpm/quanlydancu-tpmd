@@ -368,20 +368,26 @@ export function calculateHouseholdFinancialSummary(
       return sum + val;
     }, 0);
 
-    const displayAmount = actualPaidSum > expectedTotal ? actualPaidSum : expectedTotal;
+    // Với quỹ hộ (household scope): dù có nhiều bản ghi nhân khẩu cũng chỉ tính tối đa 1 lần/hộ
+    // Tránh tình huống hộ 2 người đều có bản ghi → bị nhân đôi 40.000 thay vì 20.000
+    const cappedPaidSum = isHouseholdScope && expectedTotal > 0
+      ? Math.min(actualPaidSum, expectedTotal)
+      : actualPaidSum;
+
+    const displayAmount = cappedPaidSum > expectedTotal ? cappedPaidSum : expectedTotal;
     wardTotal += displayAmount;
 
     let noteText = '';
     if (isPolicyHH) {
-      noteText = actualPaidSum > 0 ? `Tự nguyện đóng ${actualPaidSum.toLocaleString('vi-VN')} đ` : 'Nhà chính sách - được miễn';
+      noteText = cappedPaidSum > 0 ? `Tự nguyện đóng ${cappedPaidSum.toLocaleString('vi-VN')} đ` : 'Nhà chính sách - được miễn';
     } else if (expectedTotal === 0) {
       noteText = 'Được miễn';
-    } else if (actualPaidSum === 0) {
+    } else if (cappedPaidSum === 0) {
       noteText = 'Theo định mức';
-    } else if (actualPaidSum >= expectedTotal) {
+    } else if (cappedPaidSum >= expectedTotal) {
       noteText = 'Đã thu đủ';
     } else {
-      noteText = `Đã nộp ${actualPaidSum.toLocaleString('vi-VN')} đ`;
+      noteText = `Đã nộp ${cappedPaidSum.toLocaleString('vi-VN')} đ`;
     }
 
     wardLineItems.push({
@@ -389,7 +395,7 @@ export function calculateHouseholdFinancialSummary(
       isHouseholdScope,
       targetVal: wfTargetVal,
       expectedTotal,
-      actualPaid: actualPaidSum,
+      actualPaid: cappedPaidSum,
       displayAmount,
       noteText
     });
