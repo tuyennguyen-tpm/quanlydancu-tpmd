@@ -285,9 +285,7 @@ export function calculateHouseholdFinancialSummary(
     });
 
     const uniqueLaborNames = new Set(activeLaborWardMembers.map(f => (f.full_name || '').trim().toLowerCase()).filter(Boolean));
-    if (uniqueLaborNames.size > 0) {
-      laborCount = uniqueLaborNames.size;
-    }
+    laborCount = uniqueLaborNames.size;
   }
 
   // 1. Quỹ TDP
