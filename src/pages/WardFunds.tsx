@@ -833,6 +833,9 @@ const WardFunds = () => {
           }
         }
 
+        const fullNameCheck = (matchedRes ? matchedRes.full_name : f.full_name || '').toLowerCase();
+        const hasThi = fullNameCheck.includes(' thị ') || fullNameCheck.includes(' thị') || fullNameCheck.startsWith('thị ') || fullNameCheck.includes('bà ') || fullNameCheck.includes('chị ');
+
         let isFemale = hasThi;
         if (matchedRes && matchedRes.gender) {
           const g = matchedRes.gender.toString().toLowerCase().trim();
