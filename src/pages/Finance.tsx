@@ -1200,6 +1200,7 @@ const Finance = () => {
 
     const activeMembers = memberWardRecords.length > 0
       ? members.filter(r => {
+          if (r.id === household.head_of_household_id || r.is_head || (r.relationship_with_head && r.relationship_with_head.trim().toLowerCase() === 'chủ hộ')) return true;
           if (r.id && activeMemberIds.has(r.id)) return true;
           if (r.full_name && activeMemberNames.has(r.full_name.trim().toLowerCase())) return true;
           return false;
