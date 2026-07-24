@@ -278,14 +278,32 @@ export function calculateHouseholdFinancialSummary(
         return isLaborAge(dbRes, targetYear, ageLimits);
       }
       const age = f.dob ? calculateExactAge(f.dob, targetYear) : -1;
-      if (age < 0) return false;
+      if (age < 0) return true;
       const fullNameCheck = (f.full_name || '').toLowerCase();
       const hasThi = fullNameCheck.includes(' thị ') || fullNameCheck.includes(' thị') || fullNameCheck.startsWith('thị ') || fullNameCheck.includes('bà ') || fullNameCheck.includes('chị ');
       return hasThi ? (age >= 18 && age <= 58) : (age >= 18 && age <= 61);
     });
 
     const uniqueLaborNames = new Set(activeLaborWardMembers.map(f => (f.full_name || '').trim().toLowerCase()).filter(Boolean));
-    laborCount = uniqueLaborNames.size;
+    if (uniqueLaborNames.size > 0) {
+      laborCount = Math.max(laborCount, uniqueLaborNames.size);
+    }
+  }
+
+  // Tự động suy ra số khẩu lao động từ số tiền thực thu của quỹ cá nhân (PCTT) để tiêu đề phiếu thu khớp 100% với số tiền bên dưới
+  if (personFund && personFund.target > 0) {
+    const personFundName = personFund.name;
+    const actualPaidPersonFund = wardFundsList.reduce((sum, f) => {
+      const raw = f.contributions?.[personFundName]?.actual ?? 0;
+      const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
+      return sum + val;
+    }, 0);
+    if (actualPaidPersonFund > 0) {
+      const impliedCount = Math.round(actualPaidPersonFund / personFund.target);
+      if (impliedCount > laborCount) {
+        laborCount = impliedCount;
+      }
+    }
   }
 
   // 1. Quỹ TDP
