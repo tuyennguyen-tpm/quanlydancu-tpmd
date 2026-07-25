@@ -1,5 +1,5 @@
 // Tạo tệp âm thanh tiếng Chuông Ting-Ting (PCM WAV 44.1kHz 16-bit) nguyên bản bằng JavaScript
-const createTingChimeDataUrl = (): string => {
+export const getTingChimeDataUrl = (): string => {
   const sampleRate = 44100;
   const duration = 0.5;
   const numSamples = Math.floor(sampleRate * duration);
@@ -33,12 +33,12 @@ const createTingChimeDataUrl = (): string => {
     let sample = 0;
     if (t < 0.4) {
       const envelope1 = Math.exp(-t * 7);
-      sample += Math.sin(2 * Math.PI * 1046.5 * t) * envelope1 * 0.7;
+      sample += Math.sin(2 * Math.PI * 1046.5 * t) * envelope1 * 0.8;
     }
     if (t >= 0.08) {
       const t2 = t - 0.08;
       const envelope2 = Math.exp(-t2 * 7);
-      sample += Math.sin(2 * Math.PI * 1318.5 * t) * envelope2 * 0.7;
+      sample += Math.sin(2 * Math.PI * 1318.5 * t) * envelope2 * 0.8;
     }
 
     const val = Math.max(-1, Math.min(1, sample));
@@ -65,16 +65,24 @@ export const speakVietnamese = (_textToSpeak?: string) => {
     }
   } catch {}
 
-  // 2. Phát tệp âm thanh tiếng Chuông Ting-Ting ngân bổng bằng HTML5 Audio chuẩn
+  // 2. Phát tiếng chuông Ting-Ting bằng trình phát Audio dùng chung đã được ủy quyền
   try {
     if (!cachedChimeUrl) {
-      cachedChimeUrl = createTingChimeDataUrl();
+      cachedChimeUrl = getTingChimeDataUrl();
     }
 
-    const audio = new Audio(cachedChimeUrl);
-    audio.volume = 1.0;
+    let player: HTMLAudioElement = (window as any)._globalChimeAudio;
+    if (!player) {
+      player = new Audio(cachedChimeUrl);
+      (window as any)._globalChimeAudio = player;
+    } else if (!player.src || player.src === '' || player.src.length < 50) {
+      player.src = cachedChimeUrl;
+    }
 
-    const playPromise = audio.play();
+    player.currentTime = 0;
+    player.volume = 1.0;
+
+    const playPromise = player.play();
     if (playPromise !== undefined) {
       playPromise.catch((err) => {
         console.warn('[HTML5 Audio Autoplay Notice]', err);

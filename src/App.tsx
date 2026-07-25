@@ -26,7 +26,7 @@ import FarmersAssociation from './pages/FarmersAssociation';
 import YouthUnion from './pages/YouthUnion';
 import WardDocuments from './pages/WardDocuments';
 import InvitationTemplates from './pages/InvitationTemplates';
-import { speakVietnamese } from './utils/tts';
+import { speakVietnamese, getTingChimeDataUrl } from './utils/tts';
 import { 
   Users, 
   Home, 
@@ -271,11 +271,16 @@ const App = () => {
       } catch {}
 
       try {
-        if (!(window as any)._ttsAudio) {
-          (window as any)._ttsAudio = new Audio();
+        if (!(window as any)._globalChimeAudio) {
+          (window as any)._globalChimeAudio = new Audio();
         }
-        (window as any)._ttsAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-        (window as any)._ttsAudio.play().catch(() => {});
+        const chimePlayer: HTMLAudioElement = (window as any)._globalChimeAudio;
+        chimePlayer.src = getTingChimeDataUrl();
+        chimePlayer.volume = 1.0;
+        chimePlayer.play().then(() => {
+          chimePlayer.pause();
+          chimePlayer.currentTime = 0;
+        }).catch(() => {});
       } catch {}
     };
 
