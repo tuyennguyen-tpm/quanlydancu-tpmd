@@ -275,12 +275,13 @@ const App = () => {
           (window as any)._globalChimeAudio = new Audio();
         }
         const chimePlayer: HTMLAudioElement = (window as any)._globalChimeAudio;
-        chimePlayer.src = getTingChimeDataUrl();
-        chimePlayer.volume = 1.0;
-        chimePlayer.play().then(() => {
-          chimePlayer.pause();
-          chimePlayer.currentTime = 0;
-        }).catch(() => {});
+        // Dùng file im lặng để trình duyệt mở khóa quyền âm thanh mà KHÔNG KÊU TIẾNG KHI BẤM NÚT
+        if (!chimePlayer.src || chimePlayer.src === '' || chimePlayer.src.includes('data:audio/wav;base64,UklGRigAA')) {
+          chimePlayer.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+          chimePlayer.play().then(() => {
+            chimePlayer.pause();
+          }).catch(() => {});
+        }
       } catch {}
     };
 
