@@ -83,6 +83,7 @@ const Finance = () => {
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
+  const [recordedByFilter, setRecordedByFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
 
@@ -388,14 +389,19 @@ const Finance = () => {
       worksheet.addRow([]); // Dòng trống
 
       // 2. TIÊU ĐỀ BÁO CÁO
-      const titleRow = worksheet.addRow(['SỔ THEO DÕI THU - CHI TỔ DÂN PHỐ']);
+      const isFilteredByUser = recordedByFilter !== 'all';
+      const mainReportTitle = isFilteredByUser 
+        ? `SỔ THEO DÕI THU - CHI (NGƯỜI LẬP: ${recordedByFilter.toUpperCase()})` 
+        : 'SỔ THEO DÕI THU - CHI TỔ DÂN PHỐ';
+
+      const titleRow = worksheet.addRow([mainReportTitle]);
       worksheet.mergeCells(`A4:G4`);
       titleRow.height = 32;
       const titleCell = titleRow.getCell(1);
-      titleCell.font = { bold: true, name: 'Segoe UI', size: 16, color: { argb: 'FF0F766E' } };
+      titleCell.font = { bold: true, name: 'Segoe UI', size: 15, color: { argb: 'FF0F766E' } };
       titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-      const subTitleRow = worksheet.addRow([`(Thời điểm xuất báo cáo: ${exportDateStr})`]);
+      const subTitleRow = worksheet.addRow([`(Thời điểm xuất báo cáo: ${exportDateStr}${isFilteredByUser ? ` - Người lập: ${recordedByFilter}` : ''})`]);
       worksheet.mergeCells(`A5:G5`);
       const subTitleCell = subTitleRow.getCell(1);
       subTitleCell.font = { italic: true, name: 'Segoe UI', size: 10, color: { argb: 'FF64748B' } };
@@ -403,12 +409,16 @@ const Finance = () => {
 
       worksheet.addRow([]); // Dòng trống
 
-      // 3. THỐNG KÊ TỔNG QUAN (KPI BOXES) - Sử dụng toàn bộ sổ quỹ để số liệu khớp 100% với 3 thẻ trên màn hình
-      // Tách chứng từ ghi tay thủ công (giữ nguyên 100%) và chứng từ thu quỹ tự động (gôm nhóm theo Ngày + Danh mục)
+      // 3. THỐNG KÊ TỔNG QUAN (KPI BOXES)
+      // Nếu lọc theo người lập -> Lấy danh sách của người lập. Nếu chọn Tất cả -> Lấy toàn bộ như cũ
+      const targetSourceRecords = isFilteredByUser 
+        ? records.filter(r => (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase())
+        : records;
+
       const manualRecords: FinancialRecord[] = [];
       const autoFundRecords: FinancialRecord[] = [];
 
-      records.forEach(r => {
+      targetSourceRecords.forEach(r => {
         if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
           autoFundRecords.push(r);
         } else {
@@ -3700,6 +3710,31 @@ const Finance = () => {
       .reduce((sum, r) => sum + r.amount, 0);
   }, [records]);
 
+  const recordedByOptions = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach(r => {
+      if (r.recorded_by && r.recorded_by.trim() && r.recorded_by !== 'Hệ thống tự động') {
+        set.add(r.recorded_by.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [records]);
+
+  const creatorStats = useMemo(() => {
+    if (recordedByFilter === 'all') return null;
+    const userRecords = records.filter(r => (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase());
+    const income = userRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
+    const expense = userRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
+    const count = userRecords.length;
+    return {
+      name: recordedByFilter,
+      income,
+      expense,
+      balance: income - expense,
+      count
+    };
+  }, [records, recordedByFilter]);
+
   const filteredRecords = useMemo(() => records.filter(r => {
     // Ẩn các bản ghi tự động đồng bộ từ việc đóng quỹ của các hộ dân
     if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
@@ -3709,8 +3744,9 @@ const Finance = () => {
     const matchesSearch = r.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           r.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           r.recorded_by.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesType && matchesSearch;
-  }), [records, activeType, searchTerm]);
+    const matchesRecordedBy = recordedByFilter === 'all' || (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase();
+    return matchesType && matchesSearch && matchesRecordedBy;
+  }), [records, activeType, searchTerm, recordedByFilter]);
 
   const formatCurrency = (amt: number) => {
     if (amt === undefined || amt === null || isNaN(amt)) return '0';
@@ -4030,12 +4066,40 @@ const Finance = () => {
             </div>
           </div>
 
-          <div className="content-filters">
+          <div className="content-filters" style={{ flexWrap: 'wrap', gap: '12px' }}>
             <div className="filter-tabs">
               <button className={`tab ${activeType === 'all' ? 'active' : ''}`} onClick={() => setActiveType('all')}>Tất cả</button>
               <button className={`tab ${activeType === 'income' ? 'active' : ''}`} onClick={() => setActiveType('income')}>Khoản thu</button>
               <button className={`tab ${activeType === 'expense' ? 'active' : ''}`} onClick={() => setActiveType('expense')}>Khoản chi</button>
             </div>
+            
+            {/* Bộ lọc theo người lập phiếu */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-card)', padding: '4px 10px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                👤 Người lập:
+              </span>
+              <select 
+                value={recordedByFilter}
+                onChange={(e) => setRecordedByFilter(e.target.value)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-main)',
+                  color: recordedByFilter !== 'all' ? '#1d4ed8' : 'var(--text-main)',
+                  fontSize: '0.83rem',
+                  fontWeight: recordedByFilter !== 'all' ? '700' : '600',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="all">Tất cả người lập</option>
+                {recordedByOptions.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="search-and-date">
                 <div className="search-mini">
                   <Search size={16} />
@@ -4049,6 +4113,61 @@ const Finance = () => {
                 <button className="date-filter"><Calendar size={16} /> Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</button>
             </div>
           </div>
+
+          {/* Banner Thống kê riêng cho Người Lập Phiếu được chọn */}
+          {creatorStats && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '14px 20px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              border: '1.5px solid #93c5fd',
+              boxShadow: '0 4px 12px rgba(37,99,235,0.08)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <div style={{ fontWeight: '800', fontSize: '0.95rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  👤 THỐNG KÊ GIAO DỊCH CỦA NGƯỜI LẬP: <span style={{ color: '#1d4ed8', textDecoration: 'underline' }}>{creatorStats.name}</span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#3b82f6', marginTop: '3px' }}>
+                  Tổng cộng <strong>{creatorStats.count}</strong> chứng từ đã lập
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: '600' }}>🟢 Tổng Thu: </span>
+                  <strong style={{ fontSize: '0.95rem', color: '#15803d' }}>{formatCurrency(creatorStats.income)} đ</strong>
+                </div>
+                <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '10px', border: '1px solid #fecaca' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#991b1b', fontWeight: '600' }}>🔴 Tổng Chi: </span>
+                  <strong style={{ fontSize: '0.95rem', color: '#b91c1c' }}>{formatCurrency(creatorStats.expense)} đ</strong>
+                </div>
+                <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#1e40af', fontWeight: '600' }}>🔵 Cân Đối: </span>
+                  <strong style={{ fontSize: '0.95rem', color: creatorStats.balance >= 0 ? '#1d4ed8' : '#b91c1c' }}>{formatCurrency(creatorStats.balance)} đ</strong>
+                </div>
+                <button 
+                  onClick={() => setRecordedByFilter('all')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #93c5fd',
+                    background: '#ffffff',
+                    color: '#1d4ed8',
+                    fontWeight: '600',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✖ Bỏ lọc người lập
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="finance-table-wrapper">
              <table className="data-table">
