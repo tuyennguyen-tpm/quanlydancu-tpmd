@@ -396,7 +396,58 @@ const Finance = () => {
       worksheet.addRow([]); // Dòng trống
 
       // 3. THỐNG KÊ TỔNG QUAN (KPI BOXES) - Sử dụng toàn bộ sổ quỹ để số liệu khớp 100% với 3 thẻ trên màn hình
-      const exportRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      // Tách chứng từ ghi tay thủ công (giữ nguyên 100%) và chứng từ thu quỹ tự động (gôm nhóm theo Ngày + Danh mục)
+      const manualRecords: FinancialRecord[] = [];
+      const autoFundRecords: FinancialRecord[] = [];
+
+      records.forEach(r => {
+        if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
+          autoFundRecords.push(r);
+        } else {
+          manualRecords.push(r);
+        }
+      });
+
+      // Gom nhóm chứng từ thu quỹ tự động theo Ngày + Danh mục quỹ
+      const autoFundGroupsMap = new Map<string, { date: string; category: string; amount: number; count: number }>();
+      autoFundRecords.forEach(r => {
+        const cleanCat = r.category || 'Thu quỹ TDP';
+        const key = `${r.date}_${cleanCat}`;
+        const existing = autoFundGroupsMap.get(key);
+        if (existing) {
+          existing.amount += r.amount;
+          existing.count += 1;
+        } else {
+          autoFundGroupsMap.set(key, {
+            date: r.date,
+            category: cleanCat,
+            amount: r.amount,
+            count: 1
+          });
+        }
+      });
+
+      // Chuyển các nhóm thu quỹ tự động thành danh sách dòng tổng hợp theo ngày
+      const groupedAutoRecords: FinancialRecord[] = Array.from(autoFundGroupsMap.values()).map(g => ({
+        id: `auto_${g.date}_${g.category}`,
+        group_id: db.getGroupId(),
+        type: 'income',
+        amount: g.amount,
+        category: g.category,
+        description: `Tổng thu ${g.category} (Tổng ${g.count} hộ nộp trong ngày)`,
+        recorded_by: 'Hệ thống tự động (Tổng hợp ngày)',
+        date: g.date,
+        created_at: new Date().toISOString()
+      }));
+
+      // Kết hợp ghi tay + gôm nhóm tự động và sắp xếp theo ngày tăng dần
+      const exportRecords = [...manualRecords, ...groupedAutoRecords].sort((a, b) => {
+        const timeA = new Date(a.date).getTime();
+        const timeB = new Date(b.date).getTime();
+        if (timeA !== timeB) return timeA - timeB;
+        return a.type.localeCompare(b.type);
+      });
+
       const totalIncome = exportRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
       const totalExpense = exportRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
       const balance = totalIncome - totalExpense;
