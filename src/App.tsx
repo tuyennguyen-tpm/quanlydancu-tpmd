@@ -178,25 +178,37 @@ const App = () => {
 
   useEffect(() => {
     const unlockSpeech = () => {
-      if (speechUnlocked) return;
-      try {
-        const u = new SpeechSynthesisUtterance('');
-        window.speechSynthesis.speak(u);
-        setSpeechUnlocked(true);
-        console.log('[TTS] Mở khóa âm thanh thành công qua tương tác người dùng.');
-      } catch (e) {
-        console.warn('Không thể mở khóa TTS:', e);
+      if (!speechUnlocked) {
+        try {
+          const u = new SpeechSynthesisUtterance('');
+          window.speechSynthesis.speak(u);
+          setSpeechUnlocked(true);
+          console.log('[TTS] Mở khóa âm thanh thành công qua tương tác người dùng.');
+        } catch (e) {
+          console.warn('Không thể mở khóa TTS:', e);
+        }
       }
-      window.removeEventListener('click', unlockSpeech);
-      window.removeEventListener('keydown', unlockSpeech);
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContext) {
+          if (!(window as any)._globalAudioCtx) {
+            (window as any)._globalAudioCtx = new AudioContext();
+          }
+          if ((window as any)._globalAudioCtx.state === 'suspended') {
+            (window as any)._globalAudioCtx.resume();
+          }
+        }
+      } catch {}
     };
 
     window.addEventListener('click', unlockSpeech);
     window.addEventListener('keydown', unlockSpeech);
+    window.addEventListener('touchstart', unlockSpeech);
     
     return () => {
       window.removeEventListener('click', unlockSpeech);
       window.removeEventListener('keydown', unlockSpeech);
+      window.removeEventListener('touchstart', unlockSpeech);
     };
   }, [speechUnlocked]);
 
@@ -220,30 +232,6 @@ const App = () => {
       }
       return null;
     };
-
-    // Unlock AudioContext trên sự kiện click bất kỳ của người dùng
-    useEffect(() => {
-      const unlockAudio = () => {
-        try {
-          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContext) {
-            if (!(window as any)._globalAudioCtx) {
-              (window as any)._globalAudioCtx = new AudioContext();
-            }
-            if ((window as any)._globalAudioCtx.state === 'suspended') {
-              (window as any)._globalAudioCtx.resume();
-            }
-          }
-        } catch {}
-      };
-
-      window.addEventListener('click', unlockAudio, { once: true });
-      window.addEventListener('touchstart', unlockAudio, { once: true });
-      return () => {
-        window.removeEventListener('click', unlockAudio);
-        window.removeEventListener('touchstart', unlockAudio);
-      };
-    }, []);
 
     const playChimeAndSpeak = async (textToSpeak: string) => {
       // 1. Phát nhạc chuông chime chất lượng cao trước để thu hút chú ý
