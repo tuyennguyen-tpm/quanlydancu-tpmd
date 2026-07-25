@@ -3274,10 +3274,7 @@ const WardFunds = () => {
               margin: 0;
               padding: 0;
             }
-            .print-toolbar {
-              display: none !important;
-            }
-            #saved-notice {
+            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"] {
               display: none !important;
             }
             body {
@@ -4529,10 +4526,7 @@ const WardFunds = () => {
               margin: 0;
               padding: 0;
             }
-            .print-toolbar {
-              display: none !important;
-            }
-            #saved-notice {
+            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"] {
               display: none !important;
             }
             body {
@@ -4994,6 +4988,7 @@ const WardFunds = () => {
             if (!toast) {
               toast = document.createElement('div');
               toast.id = 'custom-2d-toast';
+              toast.className = 'no-print';
               toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;padding:12px 20px;border-radius:10px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15),0 8px 10px -6px rgba(0,0,0,0.1);display:flex;align-items:center;gap:10px;transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);transform:translateY(-20px) scale(0.95);opacity:0;';
               document.body.appendChild(toast);
             }
