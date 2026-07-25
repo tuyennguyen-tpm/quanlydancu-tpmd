@@ -173,6 +173,15 @@ const App = () => {
 
   const [docNotification, setDocNotification] = useState<{ title: string, message: string, id: string } | null>(null);
 
+  // Tự động đóng thông báo tự động sau 30 giây nếu người dùng không tác động
+  useEffect(() => {
+    if (!docNotification) return;
+    const timer = setTimeout(() => {
+      setDocNotification(null);
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [docNotification]);
+
   const handleMuteDocNotification = async (notif: { id: string; title: string; message: string } | null) => {
     if (!notif) return;
 

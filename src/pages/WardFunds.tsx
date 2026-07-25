@@ -355,11 +355,11 @@ const WardFunds = () => {
       // chạy sự kiện sau render nên dùng một timeout ngắn
       setPrintReminder({ householdId: hId, headName: hName, members: [] });
 
-      // Tự đóng sau 15 giây
+      // Tự đóng sau 30 giây nếu người dùng không tác động
       if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
       printReminderTimerRef.current = setTimeout(() => {
         setPrintReminder(null);
-      }, 15000);
+      }, 30000);
     };
     window.addEventListener('message', handlePrintMessage);
     return () => {
