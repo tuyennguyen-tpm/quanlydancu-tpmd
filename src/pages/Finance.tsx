@@ -17,7 +17,8 @@ import {
   Filter,
   Check,
   BookOpen,
-  Users
+  Users,
+  HeartHandshake
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -3620,6 +3621,26 @@ const Finance = () => {
 
   const balance = totalIncome - totalExpense;
 
+  const sponsorTotal = useMemo(() => {
+    return records
+      .filter(r => r.type === 'income')
+      .filter(r => {
+        const cat = (r.category || '').toLowerCase();
+        const desc = (r.description || '').toLowerCase();
+        return cat.includes('mạnh thường quân') || 
+               cat.includes('tài trợ') || 
+               cat.includes('ủng hộ') || 
+               cat.includes('mừng') || 
+               cat.includes('quyên góp') ||
+               desc.includes('mạnh thường quân') || 
+               desc.includes('tài trợ') || 
+               desc.includes('ủng hộ') || 
+               desc.includes('mừng') ||
+               desc.includes('quyên góp');
+      })
+      .reduce((sum, r) => sum + r.amount, 0);
+  }, [records]);
+
   const filteredRecords = useMemo(() => records.filter(r => {
     // Ẩn các bản ghi tự động đồng bộ từ việc đóng quỹ của các hộ dân
     if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
@@ -3930,6 +3951,22 @@ const Finance = () => {
                  <h2 className="value text-danger">{formatCurrency(totalExpense)}</h2>
               </div>
             </div>
+            <div className="finance-stat-card sponsor" style={{
+              borderLeft: '4px solid #16a34a',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)'
+            }}>
+              <div className="stat-icon" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
+                <HeartHandshake size={24} />
+              </div>
+              <div className="stat-details">
+                 <span className="label" style={{ fontWeight: '600', color: '#15803d' }}>
+                   🎁 Ủng hộ / Mạnh thường quân
+                 </span>
+                 <h2 className="value" style={{ color: '#15803d', fontWeight: '800' }}>
+                   {formatCurrency(sponsorTotal)}
+                 </h2>
+              </div>
+            </div>
           </div>
 
           <div className="content-filters">
@@ -4134,9 +4171,15 @@ const Finance = () => {
                       type="text" 
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      placeholder="Ví dụ: Phí vệ sinh, Quỹ vận động, Thiết bị"
+                      placeholder="Ví dụ: Mạnh thường quân ủng hộ, Phí vệ sinh, Đơn vị mừng..."
                       required
                     />
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Gợi ý nhanh:</span>
+                      <button type="button" onClick={() => setCategory('Mạnh thường quân ủng hộ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎁 Mạnh thường quân ủng hộ</button>
+                      <button type="button" onClick={() => setCategory('Đơn vị mừng / Tài trợ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>💐 Đơn vị mừng / Tài trợ</button>
+                      <button type="button" onClick={() => setCategory('Ủng hộ / Quyên góp')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fef08a', background: '#fefce8', color: '#a16207', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🤝 Ủng hộ / Quyên góp</button>
+                    </div>
                   </div>
 
                   <div className="form-group">
