@@ -4677,27 +4677,8 @@ const WardFunds = () => {
       </head>
       <body>
         <div class="print-toolbar">
-          <button class="toolbar-btn btn-print" onclick="
-            var doActualPrint = function() {
-              try {
-                if (window.opener && window.opener.postMessage) {
-                  window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: '${householdId}', headName: '${headName.replace(/'/g, "\\'").replace(/"/g, '&quot;')}' }, '*');
-                }
-              } catch(e) {}
-              window.print();
-            };
-            if (window.onafterprint !== undefined) {
-              var _fired = false;
-              var _handler = function() {
-                if (!_fired) { _fired = true; doActualPrint(); }
-                window.removeEventListener('afterprint', _handler);
-              };
-              doActualPrint();
-            } else {
-              doActualPrint();
-            }
-          ">🖨️ In ngay</button>
-          <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
+          <button class="toolbar-btn btn-print" id="btn-save-and-print">&#x1F4BE;&#x1F5A8;&#xFE0F; L&#x01B0;u &amp; In</button>
+          <button class="toolbar-btn btn-save" id="btn-save">&#x1F4BE; L&#x01B0;u ch&#x1EC9;nh s&#x1EED;a</button>
           <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
@@ -5031,6 +5012,34 @@ const WardFunds = () => {
               toast.style.opacity = '0';
               toast.style.transform = 'translateY(-20px) scale(0.95)';
             }, 2800);
+          }
+
+          // === NUT LUU & IN: luu vao CSDL roi in ===
+          var btnSaveAndPrint = document.getElementById('btn-save-and-print');
+          if (btnSaveAndPrint) {
+            btnSaveAndPrint.addEventListener('click', function() {
+              safeSaveStorage(SAVE_KEY, editor.innerHTML);
+              try {
+                if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                  window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+                }
+              } catch (err) {}
+              var saveNotice = document.getElementById('saved-notice');
+              if (saveNotice) {
+                saveNotice.style.display = 'flex';
+                saveNotice.style.background = '#dcfce7';
+                saveNotice.style.border = '1.5px solid #16a34a';
+                saveNotice.style.color = '#14532d';
+                saveNotice.innerHTML = '\u2705 <strong>\u0110\u00e3 l\u01b0u v\u0129nh vi\u1ec5n v\u00e0o CSDL th\u00e0nh c\u00f4ng!</strong> \u0110ang ti\u1ebfn h\u00e0nh in...';
+              }
+              show2DToast('\u2705 \u0110\u00e3 l\u01b0u phi\u1ebfu thu v\u00e0o CSDL. \u0110ang m\u1edf h\u1ed9p tho\u1ea1i in...', 'success');
+              try {
+                if (window.opener && window.opener.postMessage) {
+                  window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: '${householdId}', headName: '${headName.replace(/'/g, "\\'").replace(/"/g, '&quot;')}' }, '*');
+                }
+              } catch(e) {}
+              setTimeout(function() { window.print(); }, 400);
+            });
           }
 
           btnSave.addEventListener('click', function() {
