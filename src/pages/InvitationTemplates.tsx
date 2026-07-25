@@ -677,17 +677,19 @@ const InvitationTemplates: React.FC = () => {
             >🖼️ In ngang</button>
           </div>
           {/* Print button */}
-          <button
-            onClick={handlePrint}
-            style={{
-              background: 'linear-gradient(135deg,#10b981,#059669)',
-              color: 'white', border: 'none',
-              padding: '9px 22px', borderRadius: '8px',
-              fontWeight: 700, fontSize: '14px', cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
-              transition: 'opacity 0.15s'
-            }}
-          >🖨️ {selectedHhList.length > 0 ? `In hàng loạt (${selectedHhList.length} bản)` : 'In giấy mời'} ({orientation === 'portrait' ? 'Dọc' : 'Ngang'})</button>
+          {!(localStorage.getItem('current_role') === 'demo' || localStorage.getItem('current_role') === 'trang_chu') && (
+            <button
+              onClick={handlePrint}
+              style={{
+                background: 'linear-gradient(135deg,#10b981,#059669)',
+                color: 'white', border: 'none',
+                padding: '9px 22px', borderRadius: '8px',
+                fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
+                transition: 'opacity 0.15s'
+              }}
+            >🖨️ {selectedHhList.length > 0 ? `In hàng loạt (${selectedHhList.length} bản)` : 'In giấy mời'} ({orientation === 'portrait' ? 'Dọc' : 'Ngang'})</button>
+          )}
         </div>
       </div>
 

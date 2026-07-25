@@ -2232,14 +2232,16 @@ const Households = () => {
                     <Home size={24} />
                   </div>
                   <div className="household-quick-actions">
-                    <button 
-                      className="quick-action-btn print-btn" 
-                      onClick={() => handlePrintHousehold(h)}
-                      title="In thông tin hộ"
-                    >
-                      <Printer size={14} />
-                      <span>In sổ</span>
-                    </button>
+                    {canPrintExport && (
+                      <button 
+                        className="quick-action-btn print-btn" 
+                        onClick={() => handlePrintHousehold(h)}
+                        title="In thông tin hộ"
+                      >
+                        <Printer size={14} />
+                        <span>In sổ</span>
+                      </button>
+                    )}
                     {!isGuest && (
                       <button 
                         className="quick-action-btn add-member-btn" 

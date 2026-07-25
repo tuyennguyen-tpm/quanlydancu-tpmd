@@ -368,9 +368,11 @@ const Regulations = () => {
               Tài liệu học tập về thẩm quyền, trách nhiệm tự quản cộng đồng theo thông tư hướng dẫn của Bộ Nội vụ.
             </p>
           </div>
-          <button className="btn btn-secondary" onClick={handlePrint} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <Printer size={16} /> In tài liệu (A4)
-          </button>
+          {!(localStorage.getItem('current_role') === 'demo' || localStorage.getItem('current_role') === 'trang_chu') && (
+            <button className="btn btn-secondary" onClick={handlePrint} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Printer size={16} /> In tài liệu (A4)
+            </button>
+          )}
         </div>
       </div>
 

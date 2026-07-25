@@ -526,23 +526,27 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
             </div>
             
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <button 
-                type="button"
-                onClick={handleExportCommitteeExcel} 
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2' }}
-              >
-                <FileDown size={14} />
-                Xuất Excel
-              </button>
+              {!(currentRole === 'demo' || currentRole === 'trang_chu') && (
+                <>
+                  <button 
+                    type="button"
+                    onClick={handleExportCommitteeExcel} 
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#ecfeff', border: '1px solid #c5f2f7', color: '#0891b2' }}
+                  >
+                    <FileDown size={14} />
+                    Xuất Excel
+                  </button>
 
-              <button 
-                type="button"
-                onClick={handlePrintCommittee} 
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6' }}
-              >
-                <Printer size={14} />
-                In danh sách
-              </button>
+                  <button 
+                    type="button"
+                    onClick={handlePrintCommittee} 
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', fontSize: '12.5px', fontWeight: '600', cursor: 'pointer', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#5b21b6' }}
+                  >
+                    <Printer size={14} />
+                    In danh sách
+                  </button>
+                </>
+              )}
 
               {!isGuest && (
                 <button 

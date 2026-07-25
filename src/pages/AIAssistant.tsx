@@ -2798,12 +2798,16 @@ ${strippedContent}
                   <button className="icon-btn-sm" onClick={handleOpenWordEditor} title="Biên tập trực quan A4 (Soạn thảo)">
                     <FileText size={18} />
                   </button>
-                  <button className="icon-btn-sm" onClick={handlePrint} title="In văn bản (A4)">
-                    <Printer size={18} />
-                  </button>
-                  <button className="icon-btn-sm" onClick={handleDownload} title="Tải xuống tệp Word (.docx)">
-                    <Download size={18} />
-                  </button>
+                  {!(currentRole === 'demo' || currentRole === 'trang_chu') && (
+                    <>
+                      <button className="icon-btn-sm" onClick={handlePrint} title="In văn bản (A4)">
+                        <Printer size={18} />
+                      </button>
+                      <button className="icon-btn-sm" onClick={handleDownload} title="Tải xuống tệp Word (.docx)">
+                        <Download size={18} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
               <div style={{fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px'}}>
@@ -2815,23 +2819,25 @@ ${strippedContent}
                 value={result} 
                 onChange={(e) => setResult(e.target.value)}
               />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handlePrint}
-                  style={{
-                    borderRadius: '24px',
-                    padding: '10px 24px',
-                    fontSize: '0.95rem',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <Printer size={18} /> {getPrintButtonText()}
-                </button>
-              </div>
+              {!(currentRole === 'demo' || currentRole === 'trang_chu') && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handlePrint}
+                    style={{
+                      borderRadius: '24px',
+                      padding: '10px 24px',
+                      fontSize: '0.95rem',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Printer size={18} /> {getPrintButtonText()}
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
              <div className="empty-state">
