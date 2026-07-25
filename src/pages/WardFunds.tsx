@@ -4488,12 +4488,7 @@ const WardFunds = () => {
     const headResident = activeMembers.find(r => (household && r.id === household.head_of_household_id) || r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) || activeMembers[0];
     const headName = headResident ? headResident.full_name : (household?.martyr_name || (activeMembers[0] ? activeMembers[0].full_name : 'Đại diện hộ'));
 
-    // Bật ngay banner nhắc nhở "Thu đủ cả nhà" ở góc màn hình chính khi bấm In
-    setPrintReminder({ householdId, headName, members: activeMembers });
-    if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
-    printReminderTimerRef.current = setTimeout(() => {
-      setPrintReminder(null);
-    }, 30000);
+
 
     const freshReceiptHtml = generateHouseholdReceiptHtml(
       household,
