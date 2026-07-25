@@ -126,15 +126,17 @@ const WardFunds = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
 
-  // Cấp quyền sửa cho to_truong, admin, chung
+  // Cấp quyền sửa cho to_truong, admin, chung, ke_toan
+  const userRole = localStorage.getItem('user_role') || '';
+  const isKeToan = currentRole === 'ke_toan' || userRole === 'ke_toan';
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
     (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan');
-  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'ke_toan' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = (isCanBoChung || isKeToan) && localStorage.getItem('guest_mode') !== 'true';
 
-  // Khóa quyền "Khởi tạo từ Hộ gia đình" và "Xóa hết danh sách năm nay" đối với vai trò Tổ trưởng (to_truong)
-  const canInitFromHouseholds = !isGuest && currentRole !== 'to_truong';
-  const canClearYearData = !isGuest && currentRole !== 'to_truong';
+  // Khóa quyền "Khởi tạo từ Hộ gia đình" và "Xóa hết danh sách năm nay" đối với vai trò Tổ trưởng (to_truong) và Kế toán (ke_toan)
+  const canInitFromHouseholds = !isGuest && currentRole !== 'to_truong' && !isKeToan;
+  const canClearYearData = !isGuest && currentRole !== 'to_truong' && !isKeToan;
   
   // State
   const [funds, setFunds] = useState<WardFund[]>([]);
@@ -6687,173 +6689,175 @@ const WardFunds = () => {
               </button>
             )}
             {/* Data Actions Dropdown */}
-            <div style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDataMenu(!showDataMenu);
-                  setShowPrintMenu(false);
-                }}
-                className="btn-3d-data"
-              >
-                <Database size={16} /> Thao tác dữ liệu ▼
-              </button>
-              {showDataMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '6px',
-                  backgroundColor: '#fff',
-                  border: '1.5px solid var(--border)',
-                  borderRadius: '10px',
-                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
-                  padding: '6px',
-                  width: '240px',
-                  zIndex: 1000,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px'
-                }}>
-                  {canInitFromHouseholds && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowDataMenu(false);
-                        handleAutoInitFromResidents();
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        color: '#d97706',
-                        fontWeight: '600',
-                        fontSize: '0.82rem',
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef3c7'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Home size={14} /> Khởi tạo từ Hộ gia đình
-                    </button>
-                  )}
-                  {!isGuest && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowDataMenu(false);
-                        handleAutoSyncWithDB();
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        color: '#0284c7',
-                        fontWeight: '600',
-                        fontSize: '0.82rem',
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e0f2fe'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <RefreshCw size={14} /> Khớp & Đồng bộ với CSDL
-                    </button>
-                  )}
-                  {!isGuest && subTabMode !== 'ward_list' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowDataMenu(false);
-                        handleSupplementMissingHouseholds();
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        color: '#16a34a',
-                        fontWeight: '600',
-                        fontSize: '0.82rem',
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0fdf4'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Home size={14} /> Bổ sung Hộ thiếu từ CSDL
-                    </button>
-                  )}
-                  {!isGuest && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowDataMenu(false);
-                        fileInputRef.current?.click();
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        color: '#2563eb',
-                        fontWeight: '600',
-                        fontSize: '0.82rem',
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Upload size={14} /> Nhập Excel Phường
-                    </button>
-                  )}
-                  {canPrintExport && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowDataMenu(false);
-                        handleExportTemplate();
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        color: 'var(--text-main)',
-                        fontWeight: '600',
-                        fontSize: '0.82rem',
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <Download size={14} /> Tải file mẫu Excel
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+            {!isKeToan && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDataMenu(!showDataMenu);
+                    setShowPrintMenu(false);
+                  }}
+                  className="btn-3d-data"
+                >
+                  <Database size={16} /> Thao tác dữ liệu ▼
+                </button>
+                {showDataMenu && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '6px',
+                    backgroundColor: '#fff',
+                    border: '1.5px solid var(--border)',
+                    borderRadius: '10px',
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+                    padding: '6px',
+                    width: '240px',
+                    zIndex: 1000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    {canInitFromHouseholds && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDataMenu(false);
+                          handleAutoInitFromResidents();
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#d97706',
+                          fontWeight: '600',
+                          fontSize: '0.82rem',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef3c7'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Home size={14} /> Khởi tạo từ Hộ gia đình
+                      </button>
+                    )}
+                    {!isGuest && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDataMenu(false);
+                          handleAutoSyncWithDB();
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#0284c7',
+                          fontWeight: '600',
+                          fontSize: '0.82rem',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e0f2fe'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <RefreshCw size={14} /> Khớp & Đồng bộ với CSDL
+                      </button>
+                    )}
+                    {!isGuest && subTabMode !== 'ward_list' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDataMenu(false);
+                          handleSupplementMissingHouseholds();
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#16a34a',
+                          fontWeight: '600',
+                          fontSize: '0.82rem',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Home size={14} /> Bổ sung Hộ thiếu từ CSDL
+                      </button>
+                    )}
+                    {!isGuest && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDataMenu(false);
+                          fileInputRef.current?.click();
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#2563eb',
+                          fontWeight: '600',
+                          fontSize: '0.82rem',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Upload size={14} /> Nhập Excel Phường
+                      </button>
+                    )}
+                    {canPrintExport && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDataMenu(false);
+                          handleExportTemplate();
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: 'var(--text-main)',
+                          fontWeight: '600',
+                          fontSize: '0.82rem',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <Download size={14} /> Tải file mẫu Excel
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Print/Export Actions Dropdown */}
             {canPrintExport && (
@@ -7017,7 +7021,7 @@ const WardFunds = () => {
             )}
 
             {/* Delete Year Button */}
-            {canClearYearData && funds.length > 0 && (
+            {canClearYearData && !isKeToan && funds.length > 0 && (
               <button
                 type="button"
                 onClick={handleClearYearData}
