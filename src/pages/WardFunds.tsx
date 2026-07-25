@@ -4486,6 +4486,13 @@ const WardFunds = () => {
     const headResident = activeMembers.find(r => (household && r.id === household.head_of_household_id) || r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) || activeMembers[0];
     const headName = headResident ? headResident.full_name : (household?.martyr_name || (activeMembers[0] ? activeMembers[0].full_name : 'Đại diện hộ'));
 
+    // Bật ngay banner nhắc nhở "Thu đủ cả nhà" ở góc màn hình chính khi bấm In
+    setPrintReminder({ householdId, headName, members: activeMembers });
+    if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
+    printReminderTimerRef.current = setTimeout(() => {
+      setPrintReminder(null);
+    }, 30000);
+
     const freshReceiptHtml = generateHouseholdReceiptHtml(
       household,
       activeMembers,
@@ -6105,13 +6112,15 @@ const WardFunds = () => {
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => {
-                // Tìm group có householdId khớp
-                const targetGroup = (document.querySelector(`[data-household-id="${printReminder.householdId}"]`) as any);
-                if (targetGroup) {
-                  targetGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  targetGroup.style.outline = '3px solid #f59e0b';
-                  setTimeout(() => { targetGroup.style.outline = ''; }, 2000);
-                }
+                setViewMode('grouped');
+                setTimeout(() => {
+                  const targetGroup = (document.querySelector(`[data-household-id="${printReminder.householdId}"]`) as any);
+                  if (targetGroup) {
+                    targetGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetGroup.style.outline = '3px solid #f59e0b';
+                    setTimeout(() => { targetGroup.style.outline = ''; }, 3000);
+                  }
+                }, 100);
                 setPrintReminder(null);
                 if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
               }}
@@ -6160,7 +6169,7 @@ const WardFunds = () => {
               background: '#f59e0b',
               borderRadius: '99px',
               width: '100%',
-              animation: 'countdownBar 15s linear forwards'
+              animation: 'countdownBar 30s linear forwards'
             }} />
           </div>
           <style>{`
