@@ -1,62 +1,84 @@
+// Tạo tệp âm thanh tiếng Chuông Ting-Ting (PCM WAV 44.1kHz 16-bit) nguyên bản bằng JavaScript
+const createTingChimeDataUrl = (): string => {
+  const sampleRate = 44100;
+  const duration = 0.5;
+  const numSamples = Math.floor(sampleRate * duration);
+  const buffer = new Uint8Array(44 + numSamples * 2);
+  const view = new DataView(buffer.buffer);
+
+  const writeString = (offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      buffer[offset + i] = string.charCodeAt(i);
+    }
+  };
+
+  // RIFF header
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // Mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+
+  // Nốt 1 (C6 - 1046.5Hz) & Nốt 2 (E6 - 1318.5Hz) ngân bổng to rõ
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    let sample = 0;
+    if (t < 0.4) {
+      const envelope1 = Math.exp(-t * 7);
+      sample += Math.sin(2 * Math.PI * 1046.5 * t) * envelope1 * 0.7;
+    }
+    if (t >= 0.08) {
+      const t2 = t - 0.08;
+      const envelope2 = Math.exp(-t2 * 7);
+      sample += Math.sin(2 * Math.PI * 1318.5 * t) * envelope2 * 0.7;
+    }
+
+    const val = Math.max(-1, Math.min(1, sample));
+    const intVal = val < 0 ? val * 0x8000 : val * 0x7FFF;
+    view.setInt16(44 + i * 2, intVal, true);
+  }
+
+  let binary = '';
+  const bytes = new Uint8Array(buffer.buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return 'data:audio/wav;base64,' + btoa(binary);
+};
+
+let cachedChimeUrl: string | null = null;
+
 export const speakVietnamese = (_textToSpeak?: string) => {
-  // 1. Tắt hoàn toàn tất cả giọng đọc cũ
+  // 1. Tắt 100% các giọng đọc lời thoại
   try {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
   } catch {}
 
-  // 2. Phát âm thanh tiếng Chuông Ting-Ting bổng rõ ràng 100%
+  // 2. Phát tệp âm thanh tiếng Chuông Ting-Ting ngân bổng bằng HTML5 Audio chuẩn
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-
-    let ctx: AudioContext = (window as any)._globalAudioCtx;
-    if (!ctx || ctx.state === 'closed') {
-      ctx = new AudioContext();
-      (window as any)._globalAudioCtx = ctx;
+    if (!cachedChimeUrl) {
+      cachedChimeUrl = createTingChimeDataUrl();
     }
 
-    const runTone = () => {
-      try {
-        const now = ctx.currentTime;
+    const audio = new Audio(cachedChimeUrl);
+    audio.volume = 1.0;
 
-        // Nốt 1: Ting bổng (C6 - 1046.5Hz)
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(1046.50, now);
-        gain1.gain.setValueAtTime(0.5, now);
-        gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.start(now);
-        osc1.stop(now + 0.6);
-
-        // Nốt 2: Ting ngân (E6 - 1318.5Hz)
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(1318.51, now + 0.15);
-        gain2.gain.setValueAtTime(0.5, now + 0.15);
-        gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(now + 0.15);
-        osc2.stop(now + 0.75);
-      } catch (err) {
-        console.warn('[Tone Run Error]', err);
-      }
-    };
-
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(() => {
-        runTone();
-      }).catch(() => {
-        runTone();
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn('[HTML5 Audio Autoplay Notice]', err);
       });
-    } else {
-      runTone();
     }
   } catch (e) {
     console.warn('[Notification Chime Error]', e);
