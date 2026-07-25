@@ -5032,7 +5032,11 @@ const WardFunds = () => {
                   window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: '${householdId}', headName: '${headName.replace(/'/g, "\\'").replace(/"/g, '&quot;')}' }, '*');
                 }
               } catch(e) {}
-              setTimeout(function() { window.print(); }, 400);
+              setTimeout(function() {
+                var t = document.getElementById('custom-2d-toast');
+                if (t) t.style.display = 'none';
+                window.print();
+              }, 400);
             });
           }
 
