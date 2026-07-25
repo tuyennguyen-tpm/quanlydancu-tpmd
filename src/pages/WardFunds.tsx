@@ -181,6 +181,10 @@ const WardFunds = () => {
   const [note, setNote] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list'); // Chế độ xem danh sách hay gom theo hộ
 
+  // Nhắc nhở thu đủ cả nhà sau khi in biên lai gộp
+  const [printReminder, setPrintReminder] = useState<{ householdId: string; headName: string; members: any[] } | null>(null);
+  const printReminderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Lazy rendering state to prevent DOM bloating and typing lag
   const [visibleCount, setVisibleCount] = useState(150);
 
@@ -337,6 +341,30 @@ const WardFunds = () => {
     window.addEventListener('db-changed', handleSilentReload);
     return () => window.removeEventListener('db-changed', handleSilentReload);
   }, [selectedYear]);
+
+  // Lắng nghe tín hiệu từ cửa sổ in → hiện banner nhắc nhở thu đủ cả nhà
+  useEffect(() => {
+    const handlePrintMessage = (event: MessageEvent) => {
+      if (!event.data || event.data.type !== 'WARD_PRINT_DONE') return;
+      const { householdId: hId, headName: hName } = event.data;
+      if (!hId) return;
+
+      // Tìm thành viên của hộ này trong cấu trúc grouped hiện tại
+      // chạy sự kiện sau render nên dùng một timeout ngắn
+      setPrintReminder({ householdId: hId, headName: hName, members: [] });
+
+      // Tự đóng sau 15 giây
+      if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
+      printReminderTimerRef.current = setTimeout(() => {
+        setPrintReminder(null);
+      }, 15000);
+    };
+    window.addEventListener('message', handlePrintMessage);
+    return () => {
+      window.removeEventListener('message', handlePrintMessage);
+      if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
+    };
+  }, []);
 
   // Format number to currency string
   const formatCurrency = (val: number) => {
@@ -4649,7 +4677,26 @@ const WardFunds = () => {
       </head>
       <body>
         <div class="print-toolbar">
-          <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
+          <button class="toolbar-btn btn-print" onclick="
+            var doActualPrint = function() {
+              try {
+                if (window.opener && window.opener.postMessage) {
+                  window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: '${householdId}', headName: '${headName.replace(/'/g, "\\'").replace(/"/g, '&quot;')}' }, '*');
+                }
+              } catch(e) {}
+              window.print();
+            };
+            if (window.onafterprint !== undefined) {
+              var _fired = false;
+              var _handler = function() {
+                if (!_fired) { _fired = true; doActualPrint(); }
+                window.removeEventListener('afterprint', _handler);
+              };
+              doActualPrint();
+            } else {
+              doActualPrint();
+            }
+          ">🖨️ In ngay</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
           <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
@@ -6027,6 +6074,122 @@ const WardFunds = () => {
       flexDirection: 'column',
       gap: '20px'
     }}>
+
+      {/* === BANNER NHẮc NHẮ SAU KHI IN BIÊN LAI GỔP === */}
+      {printReminder && (
+        <div style={{
+          position: 'fixed',
+          bottom: '28px',
+          right: '28px',
+          zIndex: 99999,
+          background: 'linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%)',
+          border: '2px solid #f59e0b',
+          borderRadius: '16px',
+          padding: '18px 22px',
+          boxShadow: '0 20px 40px -8px rgba(245,158,11,0.35), 0 8px 16px -4px rgba(0,0,0,0.12)',
+          maxWidth: '340px',
+          animation: 'slideInRight 0.35s cubic-bezier(0.34,1.56,0.64,1)'
+        }}>
+          <style>{`
+            @keyframes slideInRight {
+              from { transform: translateX(120%); opacity: 0; }
+              to   { transform: translateX(0);    opacity: 1; }
+            }
+            @keyframes bellShake {
+              0%,100% { transform: rotate(0deg); }
+              15%     { transform: rotate(15deg); }
+              30%     { transform: rotate(-12deg); }
+              45%     { transform: rotate(10deg); }
+              60%     { transform: rotate(-8deg); }
+              75%     { transform: rotate(5deg); }
+            }
+          `}</style>
+
+          {/* Tiêu đề */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '1.6rem', animation: 'bellShake 1s ease 0.4s', display: 'inline-block' }}>🔔</span>
+            <div>
+              <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#92400e', lineHeight: 1.3 }}>
+                Đừng quên bước cuối!
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#b45309', marginTop: '3px', lineHeight: 1.4 }}>
+                Đã in biên lai gộp cho hộ <strong style={{ color: '#92400e' }}>{printReminder.headName}</strong>.
+                <br />Hãy bấm <strong>"✓ Thu đủ cả nhà"</strong> để ghi nhận đã nộp!
+              </div>
+            </div>
+          </div>
+
+          {/* Nút tác động */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => {
+                // Tìm group có householdId khớp
+                const targetGroup = (document.querySelector(`[data-household-id="${printReminder.householdId}"]`) as any);
+                if (targetGroup) {
+                  targetGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  targetGroup.style.outline = '3px solid #f59e0b';
+                  setTimeout(() => { targetGroup.style.outline = ''; }, 2000);
+                }
+                setPrintReminder(null);
+                if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
+              }}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#f59e0b',
+                color: 'white',
+                fontWeight: '700',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+            >
+              👉 Đến dòng hộ
+            </button>
+            <button
+              onClick={() => {
+                setPrintReminder(null);
+                if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1.5px solid #d97706',
+                background: 'transparent',
+                color: '#92400e',
+                fontWeight: '600',
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+            >
+              Đã biết
+            </button>
+          </div>
+
+          {/* Thanh đếm ngược */}
+          <div style={{ marginTop: '10px', height: '3px', background: '#fde68a', borderRadius: '99px', overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              background: '#f59e0b',
+              borderRadius: '99px',
+              width: '100%',
+              animation: 'countdownBar 15s linear forwards'
+            }} />
+          </div>
+          <style>{`
+            @keyframes countdownBar {
+              from { width: 100%; }
+              to   { width: 0%; }
+            }
+          `}</style>
+        </div>
+      )}
+
       <style>{`
         .premium-input-3d {
           width: 100%;
@@ -6959,7 +7122,7 @@ const WardFunds = () => {
                       : 'linear-gradient(135deg,#eff6ff,#dbeafe)';
 
                 return (
-                  <div key={group.householdId} style={{ border: `1.5px solid ${borderColor}`, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+                  <div key={group.householdId} data-household-id={group.householdId} style={{ border: `1.5px solid ${borderColor}`, borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
                     {/* Header hộ */}
                     <div style={{ background: headerBg, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
