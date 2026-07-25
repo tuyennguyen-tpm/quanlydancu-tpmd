@@ -4679,7 +4679,6 @@ const WardFunds = () => {
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" id="btn-save-and-print">&#x1F4BE;&#x1F5A8;&#xFE0F; L&#x01B0;u &amp; In</button>
           <button class="toolbar-btn btn-save" id="btn-save">&#x1F4BE; L&#x01B0;u ch&#x1EC9;nh s&#x1EED;a</button>
-          <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
@@ -5061,31 +5060,6 @@ const WardFunds = () => {
             show2DToast('Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
           });
 
-          if (btnLoad) {
-            btnLoad.addEventListener('click', async function() {
-              let saved = safeGetStorage(SAVE_KEY);
-              if (!saved && window.opener && window.opener.db && window.opener.db.getReceiptCustomization) {
-                try {
-                  saved = await window.opener.db.getReceiptCustomization(SAVE_KEY);
-                } catch (err) {}
-              }
-              if (saved) {
-                editor.innerHTML = saved;
-                recalculateReceiptTotals();
-                const notice = document.getElementById('saved-notice');
-                if (notice) {
-                  notice.style.display = 'flex';
-                  notice.style.background = '#dcfce7';
-                  notice.style.border = '1.5px solid #16a34a';
-                  notice.style.color = '#14532d';
-                  notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó từ CSDL</strong>.';
-                }
-                show2DToast('Đã mở bản chỉnh sửa đã lưu trước đó!', 'success');
-              } else {
-                show2DToast('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này.', 'info');
-              }
-            });
-          }
 
           btnReset.addEventListener('click', function() {
             if (confirm('Bạn có chắc chắn muốn xóa bản đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
