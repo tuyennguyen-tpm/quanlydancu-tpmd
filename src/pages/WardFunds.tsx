@@ -7996,7 +7996,7 @@ const WardFunds = () => {
                   required
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
-                  placeholder="Ví dụ: Nguyễn Văn Ánh"
+                  placeholder="Ví dụ: Nguyễn Kim Tuyến"
                   style={{
                     width: '100%',
                     padding: '9px 12px',

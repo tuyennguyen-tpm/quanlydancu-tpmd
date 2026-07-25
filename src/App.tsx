@@ -2516,7 +2516,7 @@ const App = () => {
               </label>
               <input
                 type="text"
-                placeholder="Ví dụ: Nguyễn Văn A"
+                placeholder="Ví dụ: Nguyễn Kim Tuyến"
                 value={activationName}
                 onChange={(e) => setActivationName(e.target.value)}
                 style={{
@@ -3150,7 +3150,7 @@ const App = () => {
                     type="text"
                     value={leaderNameInput}
                     onChange={(e) => setLeaderNameInput(e.target.value)}
-                    placeholder={isWardSettings ? 'Ví dụ: Nguyễn Văn A...' : 'Ví dụ: Nguyễn Kim Tuyến...'}
+                    placeholder="Ví dụ: Nguyễn Kim Tuyến..."
                     maxLength={50}
                   />
                 </div>

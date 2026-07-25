@@ -2483,7 +2483,7 @@ const Households = () => {
                         type="text"
                         value={martyrName}
                         onChange={(e) => setMartyrName(e.target.value)}
-                        placeholder="Ví dụ: Nguyễn Văn B"
+                        placeholder="Ví dụ: Nguyễn Kim Tuyến"
                       />
                     </div>
                     <div className="form-group" style={{ marginBottom: 0 }}>
@@ -2575,7 +2575,7 @@ const Households = () => {
                           type="text" 
                           value={newHeadName} 
                           onChange={(e) => setNewHeadName(e.target.value)} 
-                          placeholder="Ví dụ: Nguyễn Văn A"
+                          placeholder="Ví dụ: Nguyễn Kim Tuyến"
                         />
                       </div>
                       
@@ -3082,7 +3082,7 @@ const Households = () => {
                   type="text" 
                   value={mFullName} 
                   onChange={(e) => setMFullName(e.target.value)} 
-                  placeholder="Ví dụ: Nguyễn Văn A" 
+                  placeholder="Ví dụ: Nguyễn Kim Tuyến" 
                   required
                 />
               </div>

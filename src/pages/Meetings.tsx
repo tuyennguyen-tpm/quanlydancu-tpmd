@@ -789,7 +789,7 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
                   type="text" 
                   value={memberName}
                   onChange={(e) => setMemberName(e.target.value)}
-                  placeholder="Ví dụ: Ngô Văn Quyết..."
+                  placeholder="Ví dụ: Nguyễn Kim Tuyến..."
                   required
                 />
               </div>
