@@ -53,8 +53,9 @@ const WomenAssociation = () => {
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
   const isGuest = localStorage.getItem('guest_mode') === 'true';
-  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
+  const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
+  const isCanBoChung = currentRole === 'chi_hoi_phu_nu' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = isCanBoChung && !isDemoRole && localStorage.getItem('guest_mode') !== 'true';
 
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

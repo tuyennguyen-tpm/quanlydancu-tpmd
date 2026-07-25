@@ -167,8 +167,9 @@ const Households = () => {
   const userRoleVal = localStorage.getItem('user_role') || 'tdp_leader';
   const isWardAdmin = userRoleVal === 'ward_admin' || userRoleVal === 'super_admin';
 
+  const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
   const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
+  const canPrintExport = isCanBoChung && !isDemoRole && localStorage.getItem('guest_mode') !== 'true';
 
   // State for Transfer / Split Household
   const [transferringMember, setTransferringMember] = useState<Resident | null>(null);

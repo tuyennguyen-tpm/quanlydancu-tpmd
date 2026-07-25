@@ -1671,44 +1671,48 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 <FileText size={14} /> {currentMinutesId ? 'Cập nhật biên bản' : 'Lưu biên bản'}
               </button>
             )}
-            <button
-              onClick={handlePrint}
-              className="btn btn-primary"
-              style={{
-                flex: '1 1 120px',
-                padding: '9px',
-                fontSize: '0.82rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
-                boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              <Printer size={14} /> In biên bản (A4)
-            </button>
-            <button
-              onClick={handleExportWord}
-              className="btn btn-secondary"
-              style={{
-                flex: '1 1 120px',
-                padding: '9px',
-                fontSize: '0.82rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25)',
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              <FileText size={14} /> Tải file Word
-            </button>
+            {!isGuest && (
+              <>
+                <button
+                  onClick={handlePrint}
+                  className="btn btn-primary"
+                  style={{
+                    flex: '1 1 120px',
+                    padding: '9px',
+                    fontSize: '0.82rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    background: 'linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%)',
+                    boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  <Printer size={14} /> In biên bản (A4)
+                </button>
+                <button
+                  onClick={handleExportWord}
+                  className="btn btn-secondary"
+                  style={{
+                    flex: '1 1 120px',
+                    padding: '9px',
+                    fontSize: '0.82rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25)',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  <FileText size={14} /> Tải file Word
+                </button>
+              </>
+            )}
           </div>
         </div>
 
