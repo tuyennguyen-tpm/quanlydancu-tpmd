@@ -72,11 +72,13 @@ const Finance = () => {
 
   const userRole = localStorage.getItem('user_role') || '';
   const isWardUser = userRole === 'ward_admin' || userRole === 'super_admin';
+  const isKeToan = currentRole === 'ke_toan' || userRole === 'ke_toan';
+  const isToTruongOrAdmin = currentRole === 'to_truong' || currentRole === 'admin' || userRole === 'to_truong' || userRole === 'admin';
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
-                  (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan') ||
+                  (!isToTruongOrAdmin && !isKeToan && currentRole !== 'chung' && currentRole !== 'all' && currentRole !== 'can_bo_chung') ||
                   isWardUser;
-  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = isToTruongOrAdmin || isKeToan || currentRole === 'chung' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = (isCanBoChung || isKeToan || isToTruongOrAdmin) && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchInput, setSearchInput] = useState('');
@@ -95,6 +97,12 @@ const Finance = () => {
 
   // Phân hệ Quản lý đóng quỹ mới bổ sung
   const [subTab, setSubTab] = useState<'ledger' | 'funds'>('ledger');
+
+  useEffect(() => {
+    if (isKeToan && subTab === 'funds') {
+      setSubTab('ledger');
+    }
+  }, [isKeToan, subTab]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
@@ -3950,32 +3958,34 @@ const Finance = () => {
         >
           <BookOpen size={17} /> 📙 Sổ quỹ thu chi
         </button>
-        <button 
-          className={`finance-tab-btn ${subTab === 'funds' ? 'active' : ''}`}
-          onClick={() => setSubTab('funds')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '11px 24px',
-            borderRadius: '12px',
-            border: subTab === 'funds' ? 'none' : '1.5px solid var(--border)',
-            cursor: 'pointer',
-            fontSize: '0.92rem',
-            fontWeight: '750',
-            background: subTab === 'funds' 
-              ? 'linear-gradient(135deg, #10b981, #059669)' 
-              : 'var(--bg-main)',
-            color: subTab === 'funds' ? '#ffffff' : 'var(--text-main)',
-            boxShadow: subTab === 'funds' 
-              ? '0 6px 16px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -3px 0 rgba(0,0,0,0.2)' 
-              : '0 2px 4px rgba(0,0,0,0.02)',
-            transform: subTab === 'funds' ? 'translateY(-2px)' : 'none',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        >
-          <Users size={17} /> 🏡 Quản lý thu Quỹ theo Hộ dân
-        </button>
+        {!isKeToan && (
+          <button 
+            className={`finance-tab-btn ${subTab === 'funds' ? 'active' : ''}`}
+            onClick={() => setSubTab('funds')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '11px 24px',
+              borderRadius: '12px',
+              border: subTab === 'funds' ? 'none' : '1.5px solid var(--border)',
+              cursor: 'pointer',
+              fontSize: '0.92rem',
+              fontWeight: '750',
+              background: subTab === 'funds' 
+                ? 'linear-gradient(135deg, #10b981, #059669)' 
+                : 'var(--bg-main)',
+              color: subTab === 'funds' ? '#ffffff' : 'var(--text-main)',
+              boxShadow: subTab === 'funds' 
+                ? '0 6px 16px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -3px 0 rgba(0,0,0,0.2)' 
+                : '0 2px 4px rgba(0,0,0,0.02)',
+              transform: subTab === 'funds' ? 'translateY(-2px)' : 'none',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
+            <Users size={17} /> 🏡 Quản lý thu Quỹ theo Hộ dân
+          </button>
+        )}
       </div>
 
       {subTab === 'ledger' ? (
