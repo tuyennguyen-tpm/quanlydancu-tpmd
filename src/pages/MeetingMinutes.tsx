@@ -1631,25 +1631,27 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
             >
               <RotateCcw size={14} /> Reset form
             </button>
-            <button
-              onClick={() => setIsFullscreenEdit(true)}
-              className="btn btn-secondary"
-              style={{
-                flex: '1.2 1 140px',
-                padding: '9px',
-                fontSize: '0.82rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px',
-                background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
-                boxShadow: '0 4px 10px rgba(79, 70, 229, 0.25)',
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              <Maximize2 size={14} /> Phóng to soạn thảo (Word)
-            </button>
+            {!isGuest && (
+              <button
+                onClick={() => setIsFullscreenEdit(true)}
+                className="btn btn-secondary"
+                style={{
+                  flex: '1.2 1 140px',
+                  padding: '9px',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                  boxShadow: '0 4px 10px rgba(79, 70, 229, 0.25)',
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                <Maximize2 size={14} /> Phóng to soạn thảo (Word)
+              </button>
+            )}
             {!isGuest && (
               <button
                 onClick={handleSaveMinutes}
@@ -2000,45 +2002,49 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 </button>
               )}
               
-              <button
-                onClick={handlePrint}
-                style={{
-                  background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '8px 18px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)'
-                }}
-              >
-                <Printer size={14} /> In biên bản (A4)
-              </button>
+              {!isGuest && (
+                <>
+                  <button
+                    onClick={handlePrint}
+                    style={{
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '8px 18px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.88rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)'
+                    }}
+                  >
+                    <Printer size={14} /> In biên bản (A4)
+                  </button>
 
-              <button
-                onClick={handleExportWord}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  border: 'none',
-                  color: 'white',
-                  padding: '8px 18px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
-                }}
-              >
-                <FileText size={14} /> Tải file Word
-              </button>
+                  <button
+                    onClick={handleExportWord}
+                    style={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      border: 'none',
+                      color: 'white',
+                      padding: '8px 18px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.88rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)'
+                    }}
+                  >
+                    <FileText size={14} /> Tải file Word
+                  </button>
+                </>
+              )}
               
               <div style={{ width: '1px', background: 'rgba(255,255,255,0.2)', margin: '0 4px' }}></div>
               
