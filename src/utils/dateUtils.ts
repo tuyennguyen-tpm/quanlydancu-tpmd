@@ -156,3 +156,27 @@ export function formatISOToVN(isoStr?: string | null): string {
   }
   return formatDateVN(str);
 }
+
+/**
+ * Automatically formats user typing in date input field by inserting slashes (/)
+ * Example: "10041983" -> "10/04/1983"
+ * Or 4-digit birth year: "1995" -> "1995"
+ */
+export function autoFormatDateInput(val: string): string {
+  if (!val) return '';
+  const digitsOnly = val.replace(/\D/g, '');
+  if (digitsOnly.length === 0) return '';
+
+  // Handle 4-digit birth year e.g. "1995" or "2001" without slashes typed
+  if (digitsOnly.length === 4 && (digitsOnly.startsWith('19') || digitsOnly.startsWith('20')) && !val.includes('/')) {
+    return digitsOnly;
+  }
+
+  if (digitsOnly.length <= 2) {
+    return digitsOnly;
+  } else if (digitsOnly.length <= 4) {
+    return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`;
+  } else {
+    return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2, 4)}/${digitsOnly.slice(4, 8)}`;
+  }
+}

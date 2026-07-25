@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge, formatDateVN } from '../utils/dateUtils';
+import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
 import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml } from '../utils/financialEngine';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
@@ -4993,8 +4993,9 @@ const Finance = () => {
                     <input 
                       type="text" 
                       placeholder="dd/mm/yyyy"
-                      value={formatDateVN(fundDateInput)}
-                      onChange={(e) => setFundDateInput(e.target.value)}
+                      value={fundDateInput}
+                      onChange={(e) => setFundDateInput(autoFormatDateInput(e.target.value))}
+                      maxLength={10}
                       required
                     />
                   </div>

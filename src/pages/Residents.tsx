@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, mapToUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge, formatDateVN } from '../utils/dateUtils';
+import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -2409,7 +2409,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                   <input 
                     type="text" 
                     value={dob} 
-                    onChange={handleDobChange} 
+                    onChange={(e) => setDob(autoFormatDateInput(e.target.value))} 
                     placeholder="Ví dụ: 02/01/1940"
                     maxLength={10}
                     required
@@ -2592,7 +2592,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     <input 
                       type="text" 
                       value={temporaryResidenceExpiry} 
-                      onChange={handleExpiryChange} 
+                      onChange={(e) => setTemporaryResidenceExpiry(autoFormatDateInput(e.target.value))} 
                       placeholder="Ví dụ: 31/12/2026"
                       maxLength={10}
                     />
@@ -2604,7 +2604,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     <input 
                       type="text" 
                       value={deathDate} 
-                      onChange={handleDeathDateChange} 
+                      onChange={(e) => setDeathDate(autoFormatDateInput(e.target.value))} 
                       placeholder="Ví dụ: 25/06/2026"
                       maxLength={10}
                     />

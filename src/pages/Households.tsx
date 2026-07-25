@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
-import { formatDateVN } from '../utils/dateUtils';
+import { formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
 import type { Household, Resident } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -2593,7 +2593,7 @@ const Households = () => {
                           <input 
                             type="text" 
                             value={newHeadDob} 
-                            onChange={handleNewHeadDobChange} 
+                            onChange={(e) => setNewHeadDob(autoFormatDateInput(e.target.value))} 
                             placeholder="Ví dụ: 02/01/1940"
                             maxLength={10}
                           />
@@ -3101,7 +3101,7 @@ const Households = () => {
                   <input 
                     type="text" 
                     value={mDob} 
-                    onChange={handleMDobChange} 
+                    onChange={(e) => setMDob(autoFormatDateInput(e.target.value))} 
                     placeholder="Ví dụ: 02/01/1940"
                     maxLength={10}
                     required

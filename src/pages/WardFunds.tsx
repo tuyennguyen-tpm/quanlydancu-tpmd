@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge } from '../utils/dateUtils';
+import { calculateExactAge, autoFormatDateInput, formatDateVN } from '../utils/dateUtils';
 import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
@@ -8036,8 +8036,9 @@ const WardFunds = () => {
                   <input
                     type="text"
                     value={newMemberDob}
-                    onChange={(e) => setNewMemberDob(e.target.value)}
+                    onChange={(e) => setNewMemberDob(autoFormatDateInput(e.target.value))}
                     placeholder="DD/MM/YYYY hoặc 1995"
+                    maxLength={10}
                     style={{
                       width: '100%',
                       padding: '9px 12px',
