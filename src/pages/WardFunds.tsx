@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
-import { calculateExactAge, autoFormatDateInput, formatDateVN } from '../utils/dateUtils';
+import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
 import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
