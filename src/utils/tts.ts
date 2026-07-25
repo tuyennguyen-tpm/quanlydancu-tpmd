@@ -1,11 +1,19 @@
 let cachedViVoice: SpeechSynthesisVoice | null = null;
 
-const initVoices = () => {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+const findViVoice = (): SpeechSynthesisVoice | null => {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
   const voices = window.speechSynthesis.getVoices();
-  const vi = voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi') && v.name.toLowerCase().includes('google'))
-    || voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'))
-    || voices.find(v => v.lang.toLowerCase().includes('vi'));
+  return (
+    voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi') && v.name.toLowerCase().includes('google')) ||
+    voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi')) ||
+    voices.find(v => v.lang.toLowerCase().includes('vi')) ||
+    voices.find(v => v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('tiếng việt') || v.name.toLowerCase().includes('hoaimy')) ||
+    null
+  );
+};
+
+const initVoices = () => {
+  const vi = findViVoice();
   if (vi) {
     cachedViVoice = vi;
   }
@@ -23,7 +31,7 @@ export const speakVietnamese = (textToSpeak: string) => {
 
   const cleanText = textToSpeak.slice(0, 250);
 
-  // 1. Dừng mọi âm thanh/giọng nói đang phát trước đó
+  // 1. Dừng mọi âm thanh / giọng nói cũ đang phát
   try {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -34,49 +42,53 @@ export const speakVietnamese = (textToSpeak: string) => {
     }
   } catch {}
 
-  // 2. Kích hoạt Web Speech API giọng Tiếng Việt (Hoạt động 100% không lo bị trình duyệt chặn autoplay Audio)
+  let hasSpokenWeb = false;
+
+  // 2. Thử phát giọng Tiếng Việt qua Web Speech API nếu tìm thấy đúng giọng Tiếng Việt
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       initVoices();
-      const voices = window.speechSynthesis.getVoices();
-      const viVoice = cachedViVoice 
-        || voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi') && v.name.toLowerCase().includes('google'))
-        || voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'))
-        || voices.find(v => v.lang.toLowerCase().includes('vi'));
-
-      const msg = new SpeechSynthesisUtterance(cleanText);
-      msg.lang = 'vi-VN';
-      msg.rate = 0.95;
-      msg.pitch = 1.0;
+      const viVoice = cachedViVoice || findViVoice();
 
       if (viVoice) {
+        const msg = new SpeechSynthesisUtterance(cleanText);
         msg.voice = viVoice;
+        msg.lang = 'vi-VN';
+        msg.rate = 0.95;
+        msg.pitch = 1.0;
+        window.speechSynthesis.speak(msg);
+        hasSpokenWeb = true;
       }
-
-      window.speechSynthesis.speak(msg);
     } catch (err) {
       console.warn('[TTS WebSpeech Error]', err);
     }
   }
 
-  // 3. Đồng thời phát file âm thanh chị Google Tiếng Việt trực tuyến (chất lượng cao)
-  try {
-    const encodedText = encodeURIComponent(cleanText);
-    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=gtx`;
-    const audio = new Audio(audioUrl);
+  // 3. Phát luồng Audio giọng Tiếng Việt trực tuyến (chất lượng cao)
+  const encodedText = encodeURIComponent(cleanText);
+  const audioUrls = [
+    `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=gtx`,
+    `https://api.responsivevoice.org/v1/text:speak?text=${encodedText}&lang=vi&key=free`,
+    `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`
+  ];
+
+  let urlIndex = 0;
+  const playAudioStream = () => {
+    if (urlIndex >= audioUrls.length) return;
+
+    const audio = new Audio(audioUrls[urlIndex]);
     audio.volume = 1.0;
     (window as any)._currentAudioTts = audio;
 
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch((err) => {
-        // Nếu trình duyệt chặn phát Audio tự động, thử với client tw-ob
-        const audio2 = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`);
-        audio2.volume = 1.0;
-        audio2.play().catch(() => {});
+    const promise = audio.play();
+    if (promise !== undefined) {
+      promise.catch((err) => {
+        console.warn(`[TTS Audio URL ${urlIndex} autoplay error, try next]`, err);
+        urlIndex++;
+        playAudioStream();
       });
     }
-  } catch (err) {
-    console.warn('[TTS Audio Error]', err);
-  }
+  };
+
+  playAudioStream();
 };

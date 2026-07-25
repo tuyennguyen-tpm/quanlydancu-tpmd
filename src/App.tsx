@@ -227,6 +227,9 @@ const App = () => {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (AudioContext) {
           const ctx = new AudioContext();
+          if (ctx.state === 'suspended') {
+            await ctx.resume();
+          }
           
           // Nốt thứ nhất (D5)
           const osc1 = ctx.createOscillator();
@@ -235,7 +238,7 @@ const App = () => {
           gain1.connect(ctx.destination);
           osc1.type = 'sine';
           osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
-          gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain1.gain.setValueAtTime(0.25, ctx.currentTime);
           gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
           osc1.start(ctx.currentTime);
           osc1.stop(ctx.currentTime + 0.4);
@@ -247,7 +250,7 @@ const App = () => {
           gain2.connect(ctx.destination);
           osc2.type = 'sine';
           osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-          gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.1);
+          gain2.gain.setValueAtTime(0.25, ctx.currentTime + 0.1);
           gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
           osc2.start(ctx.currentTime + 0.1);
           osc2.stop(ctx.currentTime + 0.5);
@@ -256,9 +259,9 @@ const App = () => {
         console.warn('Không thể phát âm thanh chime:', audioErr);
       }
 
-        // Phát giọng nói tiếng Việt chuẩn (Tự động fallback Google TTS nếu hệ điều hành không có voice tiếng Việt)
-        speakVietnamese(textToSpeak);
-      };
+      // Phát giọng nói tiếng Việt chuẩn
+      speakVietnamese(textToSpeak);
+    };
 
     const checkGlobalUnreadAndSpeak = async () => {
       if (!supabase) return;
