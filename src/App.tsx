@@ -2319,8 +2319,30 @@ const App = () => {
       case 'environment':
         return <Environment />;
       case 'finance':
+        if (userRole === 'demo' || userRole === 'trang_chu') {
+          return (
+            <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔒</div>
+              <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Quyền truy cập bị hạn chế</h3>
+              <p style={{ color: 'var(--text-muted)' }}>
+                Vai trò <strong>Trang chủ</strong> không được phép xem thông tin Quản lý Thu Chi Tài chính TDP. Vui lòng chuyển sang vai trò thao tác phù hợp để xem.
+              </p>
+            </div>
+          );
+        }
         return <Finance />;
       case 'ward-funds':
+        if (userRole === 'demo' || userRole === 'trang_chu') {
+          return (
+            <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔒</div>
+              <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Quyền truy cập bị hạn chế</h3>
+              <p style={{ color: 'var(--text-muted)' }}>
+                Vai trò <strong>Trang chủ</strong> không được phép xem thông tin Quản lý Quỹ Phường. Vui lòng chuyển sang vai trò thao tác phù hợp để xem.
+              </p>
+            </div>
+          );
+        }
         return <WardFunds />;
       case 'party-cell':
         return <PartyCell />;
@@ -2397,6 +2419,11 @@ const App = () => {
   ].filter(item => {
     if (userRole === 'an_ninh') {
       return item.id === 'security';
+    }
+    if (userRole === 'demo' || userRole === 'trang_chu') {
+      if (item.id === 'finance' || item.id === 'ward-funds') {
+        return false;
+      }
     }
     if (isGuestMode) {
       return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'settings'].includes(item.id);
