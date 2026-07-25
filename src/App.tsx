@@ -173,6 +173,76 @@ const App = () => {
 
   const [docNotification, setDocNotification] = useState<{ title: string, message: string, id: string } | null>(null);
 
+  const handleMuteDocNotification = async (notif: { id: string; title: string; message: string } | null) => {
+    if (!notif) return;
+
+    // 1. Tắt âm thanh & giọng đọc ngay lập tức
+    try {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if ((window as any)._ttsAudio) {
+        (window as any)._ttsAudio.pause();
+        (window as any)._ttsAudio.currentTime = 0;
+      }
+    } catch {}
+
+    setDocNotification(null);
+
+    if (!notif.id) return;
+
+    // 2. Đánh dấu đã đọc & tắt âm vĩnh viễn cho ID này để KHÔNG BAO GIỜ thông báo lại nữa
+    const isPhuongMode = localStorage.getItem('is_phuong_mode') === 'true';
+    const userRole = localStorage.getItem('user_role') || '';
+    const isPhuongUser = userRole === 'ward_admin' || userRole === 'super_admin' || (isPhuongMode && userRole !== 'tdp_leader' && userRole !== 'guest');
+
+    if (!isPhuongUser) {
+      // TDP mode: Lưu vĩnh viễn vào read_doc_ids
+      const localReads = localStorage.getItem('read_doc_ids');
+      let myReads: { doc_id: string; read_at: string }[] = localReads ? JSON.parse(localReads) : [];
+      if (!myReads.some(r => r.doc_id === notif.id)) {
+        myReads.push({ doc_id: notif.id, read_at: new Date().toISOString() });
+        localStorage.setItem('read_doc_ids', JSON.stringify(myReads));
+      }
+
+      const currentUserId = localStorage.getItem('supabase_user_id');
+      if (supabase && currentUserId) {
+        try {
+          await supabase.from('app_config').upsert({
+            user_id: currentUserId,
+            key: 'read_doc_ids',
+            value: JSON.stringify(myReads),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,key' });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      window.dispatchEvent(new CustomEvent('ward-docs-synced'));
+    } else {
+      // Phường mode: Lưu vĩnh viễn vào read_report_ids
+      const localReadRep = localStorage.getItem('read_report_ids');
+      let readReportIds: string[] = localReadRep ? JSON.parse(localReadRep) : [];
+      if (!readReportIds.includes(notif.id)) {
+        readReportIds.push(notif.id);
+        localStorage.setItem('read_report_ids', JSON.stringify(readReportIds));
+      }
+
+      const currentUserId = localStorage.getItem('supabase_user_id');
+      if (supabase && currentUserId) {
+        try {
+          await supabase.from('app_config').upsert({
+            user_id: currentUserId,
+            key: 'read_report_ids',
+            value: JSON.stringify(readReportIds),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,key' });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      window.dispatchEvent(new CustomEvent('tdp-reports-synced'));
+    }
+  };
+
   // Speech Synthesis Unlocker (Mở khóa âm thanh trình duyệt khi người dùng click bất cứ đâu)
   const [speechUnlocked, setSpeechUnlocked] = useState(false);
 
@@ -2774,11 +2844,8 @@ const App = () => {
             {docNotification.message}
           </p>
           <button 
-            onClick={() => {
-              setDocNotification(null);
-              window.speechSynthesis.cancel();
-            }}
-            style={{ marginTop: '15px', background: '#f1f5f9', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.85rem', width: '100%' }}
+            onClick={() => handleMuteDocNotification(docNotification)}
+            style={{ marginTop: '15px', background: '#f1f5f9', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', fontSize: '0.85rem', width: '100%', fontWeight: '600' }}
           >
             Đóng & Tắt âm
           </button>
