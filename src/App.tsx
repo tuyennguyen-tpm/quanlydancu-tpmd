@@ -221,45 +221,74 @@ const App = () => {
       return null;
     };
 
+    // Unlock AudioContext trên sự kiện click bất kỳ của người dùng
+    useEffect(() => {
+      const unlockAudio = () => {
+        try {
+          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContext) {
+            if (!(window as any)._globalAudioCtx) {
+              (window as any)._globalAudioCtx = new AudioContext();
+            }
+            if ((window as any)._globalAudioCtx.state === 'suspended') {
+              (window as any)._globalAudioCtx.resume();
+            }
+          }
+        } catch {}
+      };
+
+      window.addEventListener('click', unlockAudio, { once: true });
+      window.addEventListener('touchstart', unlockAudio, { once: true });
+      return () => {
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+      };
+    }, []);
+
     const playChimeAndSpeak = async (textToSpeak: string) => {
-      // 1. Phát nhạc chuông chime chất lượng cao trước để thu hút chú ý và kích hoạt audio context
+      // 1. Phát nhạc chuông chime chất lượng cao trước để thu hút chú ý
       try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContext) {
-          const ctx = new AudioContext();
+        let ctx = (window as any)._globalAudioCtx;
+        if (!ctx && AudioContext) {
+          ctx = new AudioContext();
+          (window as any)._globalAudioCtx = ctx;
+        }
+        if (ctx) {
           if (ctx.state === 'suspended') {
             await ctx.resume();
           }
           
-          // Nốt thứ nhất (D5)
+          const now = ctx.currentTime;
+          // Nốt thứ nhất (D5 - 587.33Hz)
           const osc1 = ctx.createOscillator();
           const gain1 = ctx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(587.33, now);
+          gain1.gain.setValueAtTime(0.3, now);
+          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
           osc1.connect(gain1);
           gain1.connect(ctx.destination);
-          osc1.type = 'sine';
-          osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
-          gain1.gain.setValueAtTime(0.25, ctx.currentTime);
-          gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-          osc1.start(ctx.currentTime);
-          osc1.stop(ctx.currentTime + 0.4);
+          osc1.start(now);
+          osc1.stop(now + 0.4);
           
-          // Nốt thứ hai (A5)
+          // Nốt thứ hai (A5 - 880Hz)
           const osc2 = ctx.createOscillator();
           const gain2 = ctx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(880, now + 0.12);
+          gain2.gain.setValueAtTime(0.3, now + 0.12);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
           osc2.connect(gain2);
           gain2.connect(ctx.destination);
-          osc2.type = 'sine';
-          osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-          gain2.gain.setValueAtTime(0.25, ctx.currentTime + 0.1);
-          gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-          osc2.start(ctx.currentTime + 0.1);
-          osc2.stop(ctx.currentTime + 0.5);
+          osc2.start(now + 0.12);
+          osc2.stop(now + 0.55);
         }
       } catch (audioErr) {
         console.warn('Không thể phát âm thanh chime:', audioErr);
       }
 
-      // Phát giọng nói tiếng Việt chuẩn
+      // 2. Phát giọng nói tiếng Việt chuẩn
       speakVietnamese(textToSpeak);
     };
 
