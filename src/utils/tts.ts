@@ -1,6 +1,5 @@
 let cachedViVoice: SpeechSynthesisVoice | null = null;
 
-// Khởi tạo và lưu giọng đọc Tiếng Việt từ Web Speech API
 const initVoices = () => {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   const voices = window.speechSynthesis.getVoices();
@@ -35,58 +34,49 @@ export const speakVietnamese = (textToSpeak: string) => {
     }
   } catch {}
 
-  const encodedText = encodeURIComponent(cleanText);
+  // 2. Kích hoạt Web Speech API giọng Tiếng Việt (Hoạt động 100% không lo bị trình duyệt chặn autoplay Audio)
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      initVoices();
+      const voices = window.speechSynthesis.getVoices();
+      const viVoice = cachedViVoice 
+        || voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi') && v.name.toLowerCase().includes('google'))
+        || voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'))
+        || voices.find(v => v.lang.toLowerCase().includes('vi'));
 
-  // 2. Thử các nguồn âm thanh giọng chuẩn Tiếng Việt trực tuyến (Google Translate client=gtx, client=tw-ob,...)
-  const tryAudioTts = (urlIndex: number = 0) => {
-    const urls = [
-      `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=gtx`,
-      `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`,
-      `https://dict.youdao.com/dictvoice?audio=${encodedText}&le=vi`
-    ];
+      const msg = new SpeechSynthesisUtterance(cleanText);
+      msg.lang = 'vi-VN';
+      msg.rate = 0.95;
+      msg.pitch = 1.0;
 
-    if (urlIndex >= urls.length) {
-      // Nếu tất cả nguồn âm thanh online bị chặn, dùng Web Speech Synthesis nội bộ với giọng vi-VN
-      speakWebSpeech(cleanText);
-      return;
+      if (viVoice) {
+        msg.voice = viVoice;
+      }
+
+      window.speechSynthesis.speak(msg);
+    } catch (err) {
+      console.warn('[TTS WebSpeech Error]', err);
     }
+  }
 
-    const audio = new Audio(urls[urlIndex]);
+  // 3. Đồng thời phát file âm thanh chị Google Tiếng Việt trực tuyến (chất lượng cao)
+  try {
+    const encodedText = encodeURIComponent(cleanText);
+    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=gtx`;
+    const audio = new Audio(audioUrl);
     audio.volume = 1.0;
     (window as any)._currentAudioTts = audio;
 
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch((err) => {
-        console.warn(`[TTS Audio URL ${urlIndex} failed, try next]`, err);
-        tryAudioTts(urlIndex + 1);
+        // Nếu trình duyệt chặn phát Audio tự động, thử với client tw-ob
+        const audio2 = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`);
+        audio2.volume = 1.0;
+        audio2.play().catch(() => {});
       });
     }
-  };
-
-  // 3. Fallback Web Speech API (Chỉ phát khi tìm thấy đúng giọng Tiếng Việt, không phát giọng Tiếng Anh)
-  const speakWebSpeech = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-
-    initVoices();
-    const voices = window.speechSynthesis.getVoices();
-    const viVoice = cachedViVoice 
-      || voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi') && v.name.toLowerCase().includes('google'))
-      || voices.find(v => v.lang.toLowerCase().replace('_', '-').startsWith('vi'))
-      || voices.find(v => v.lang.toLowerCase().includes('vi'));
-
-    const msg = new SpeechSynthesisUtterance(text);
-    msg.lang = 'vi-VN';
-
-    if (viVoice) {
-      msg.voice = viVoice;
-      msg.rate = 0.95;
-      msg.pitch = 1;
-      window.speechSynthesis.speak(msg);
-    } else {
-      console.warn('[TTS] Không tìm thấy giọng Tiếng Việt trong hệ thống, bỏ qua phát giọng Tiếng Anh mặc định.');
-    }
-  };
-
-  tryAudioTts(0);
+  } catch (err) {
+    console.warn('[TTS Audio Error]', err);
+  }
 };
