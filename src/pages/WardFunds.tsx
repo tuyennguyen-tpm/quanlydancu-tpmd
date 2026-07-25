@@ -6178,7 +6178,7 @@ const WardFunds = () => {
           width: 100%;
           padding: 8px 12px 8px 36px;
           border-radius: 10px;
-          border: 2px solid #2563eb;
+          border: 1.5px solid #2563eb;
           font-size: 0.88rem;
           outline: none;
           background-color: #fff;
@@ -6188,12 +6188,12 @@ const WardFunds = () => {
           transition: border-color 0.2s ease;
         }
         @keyframes wardFundsSearchPulse {
-          0%   { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
-                             0 0 0 0px  rgba(37, 99, 235, 0.35); }
-          50%  { box-shadow: 0 0 0 4px  rgba(37, 99, 235, 0.45),
-                             0 0 0 8px  rgba(37, 99, 235, 0.12); }
-          100% { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
-                             0 0 0 0px  rgba(37, 99, 235, 0.35); }
+          0%   { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.8),
+                             0 0 0 0px  rgba(37, 99, 235, 0.25); }
+          50%  { box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.35),
+                             0 0 0 5px  rgba(37, 99, 235, 0.10); }
+          100% { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.8),
+                             0 0 0 0px  rgba(37, 99, 235, 0.25); }
         }
         .premium-input-3d:focus {
           border-color: #1d4ed8;

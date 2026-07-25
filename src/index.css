@@ -710,12 +710,12 @@ p { font-size: 1.1rem; line-height: 1.6; } /* Larger font for readability */
 
 /* Hiệu ứng nhấp nháy viền xanh dương liên tục */
 @keyframes searchPulse {
-  0%   { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
-                     0 0 0 0px  rgba(37, 99, 235, 0.35); }
-  50%  { box-shadow: 0 0 0 4px  rgba(37, 99, 235, 0.45),
-                     0 0 0 8px  rgba(37, 99, 235, 0.12); }
-  100% { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
-                     0 0 0 0px  rgba(37, 99, 235, 0.35); }
+  0%   { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.8),
+                     0 0 0 0px  rgba(37, 99, 235, 0.25); }
+  50%  { box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.35),
+                     0 0 0 5px  rgba(37, 99, 235, 0.10); }
+  100% { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.8),
+                     0 0 0 0px  rgba(37, 99, 235, 0.25); }
 }
 
 .search-box, 
@@ -726,7 +726,7 @@ p { font-size: 1.1rem; line-height: 1.6; } /* Larger font for readability */
   align-items: center;
   border-radius: 8px;
   background-color: #ffffff;
-  border: 2px solid #2563eb;
+  border: 1.5px solid #2563eb;
   box-sizing: border-box;
   animation: searchPulse 1.4s ease-in-out infinite;
 }
