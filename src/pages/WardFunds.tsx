@@ -6032,18 +6032,26 @@ const WardFunds = () => {
           width: 100%;
           padding: 8px 12px 8px 36px;
           border-radius: 10px;
-          border: 1.5px solid #cbd5e1;
+          border: 2px solid #2563eb;
           font-size: 0.88rem;
           outline: none;
           background-color: #fff;
           color: var(--text-main);
           box-sizing: border-box;
-          box-shadow: inset 0 2px 4px rgba(0,0,0,0.03), 0 2px 4px rgba(0,0,0,0.04);
-          transition: all 0.2s ease;
+          animation: wardFundsSearchPulse 1.4s ease-in-out infinite;
+          transition: border-color 0.2s ease;
+        }
+        @keyframes wardFundsSearchPulse {
+          0%   { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
+                             0 0 0 0px  rgba(37, 99, 235, 0.35); }
+          50%  { box-shadow: 0 0 0 4px  rgba(37, 99, 235, 0.45),
+                             0 0 0 8px  rgba(37, 99, 235, 0.12); }
+          100% { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
+                             0 0 0 0px  rgba(37, 99, 235, 0.35); }
         }
         .premium-input-3d:focus {
-          border-color: #2563eb;
-          box-shadow: 0 0 0 3px rgba(37,99,235,0.15), inset 0 2px 4px rgba(0,0,0,0.02);
+          border-color: #1d4ed8;
+          animation: wardFundsSearchPulse 0.9s ease-in-out infinite;
         }
 
         .premium-select-3d {
