@@ -199,6 +199,14 @@ const App = () => {
           }
         }
       } catch {}
+
+      try {
+        if (!(window as any)._ttsAudio) {
+          (window as any)._ttsAudio = new Audio();
+        }
+        (window as any)._ttsAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        (window as any)._ttsAudio.play().catch(() => {});
+      } catch {}
     };
 
     window.addEventListener('click', unlockSpeech);
