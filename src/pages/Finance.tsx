@@ -394,15 +394,16 @@ const Finance = () => {
 
       worksheet.addRow([]); // Dòng trống
 
-      // 3. THỐNG KÊ TỔNG QUAN (KPI BOXES)
-      const totalIncome = filteredRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
-      const totalExpense = filteredRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
+      // 3. THỐNG KÊ TỔNG QUAN (KPI BOXES) - Sử dụng toàn bộ sổ quỹ để số liệu khớp 100% với 3 thẻ trên màn hình
+      const exportRecords = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const totalIncome = exportRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
+      const totalExpense = exportRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
       const balance = totalIncome - totalExpense;
 
-      const kpiRow1 = worksheet.addRow(['THỐNG KÊ TỔNG QUAN GIAO DỊCH:', '', '', '', '', '', '']);
+      const kpiRow1 = worksheet.addRow(['THỐNG KÊ TỔNG QUAN GIAO DỊCH (SỔ TỔNG TÍCH LŨY):', '', '', '', '', '', '']);
       kpiRow1.getCell(1).font = { bold: true, name: 'Segoe UI', size: 11, color: { argb: 'FF1E293B' } };
 
-      const kpiRow2 = worksheet.addRow(['TỔNG THU:', totalIncome, '', 'TỔNG CHI:', totalExpense, 'CÒN DƯ (TỒN QUỸ):', balance]);
+      const kpiRow2 = worksheet.addRow(['TỔNG THU TÍCH LŨY:', totalIncome, '', 'TỔNG CHI TÍCH LŨY:', totalExpense, 'SỐ DƯ QUỸ HIỆN TẠI:', balance]);
       kpiRow2.height = 24;
       
       // Style KPI Total Income
@@ -441,7 +442,7 @@ const Finance = () => {
       });
 
       // Render từng dòng chứng từ
-      filteredRecords.forEach((r, idx) => {
+      exportRecords.forEach((r, idx) => {
         const rowData = [
           idx + 1,
           formatToDisplayDate(r.date),
