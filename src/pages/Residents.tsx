@@ -2547,8 +2547,30 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                       type="text" 
                       value={relationshipWithHead} 
                       onChange={(e) => setRelationshipWithHead(e.target.value)} 
-                      placeholder="Con, Vợ, Chồng, Cháu..." 
+                      placeholder="Con, Vợ, Chồng, Cháu ngoại, Con dâu, Bố vợ..." 
                     />
+                    <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Chọn nhanh:</span>
+                      {['Vợ', 'Chồng', 'Con', 'Con dâu', 'Con rể', 'Cháu nội', 'Cháu ngoại', 'Bố vợ', 'Mẹ vợ', 'Bố chồng', 'Mẹ chồng', 'Anh chồng', 'Chị dâu', 'Em chồng', 'Em dâu', 'Cô', 'Dì', 'Chú', 'Bác'].map(rel => (
+                        <button
+                          key={rel}
+                          type="button"
+                          onClick={() => setRelationshipWithHead(rel)}
+                          style={{
+                            padding: '2px 7px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border)',
+                            background: relationshipWithHead === rel ? '#dbeafe' : 'var(--bg-main)',
+                            color: relationshipWithHead === rel ? '#1d4ed8' : 'var(--text-main)',
+                            fontSize: '0.73rem',
+                            cursor: 'pointer',
+                            fontWeight: relationshipWithHead === rel ? '700' : 'normal'
+                          }}
+                        >
+                          {rel}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

@@ -964,20 +964,53 @@ const Households = () => {
 
   const RELATIONSHIP_OPTIONS = [
     'Chủ hộ',
-    // Thế hệ 1: Ông bà
-    'Ông', 'Bà', 'Ông ngoại', 'Bà ngoại',
-    // Thế hệ 2: Bố mẹ
-    'Bố', 'Mẹ',
-    // Thế hệ 3: Vợ chồng & Anh chị em
-    'Vợ', 'Chồng',
-    'Anh', 'Chị', 'Em',
-    'Chị dâu', 'Anh rể', 'Em dâu', 'Em rể',
-    // Thế hệ 4: Con cái
-    'Con', 'Con dâu', 'Con rể', 'Con nuôi',
-    // Thế hệ 5: Cháu chắt
-    'Cháu', 'Cháu ngoại', 'Cháu dâu', 'Cháu rể', 'Cháu nuôi',
+    // Vợ / Chồng
+    'Vợ',
+    'Chồng',
+    // Con cái
+    'Con',
+    'Con dâu',
+    'Con rể',
+    'Con nuôi',
+    // Cháu chắt
+    'Cháu',
+    'Cháu nội',
+    'Cháu ngoại',
+    'Cháu dâu',
+    'Cháu rể',
+    // Bố mẹ & Bố mẹ vợ / Bố mẹ chồng
+    'Bố',
+    'Mẹ',
+    'Bố vợ',
+    'Mẹ vợ',
+    'Bố chồng',
+    'Mẹ chồng',
+    // Anh chị em ruột & Anh chị em dâu/rể/chồng
+    'Anh',
+    'Chị',
+    'Em',
+    'Anh chồng',
+    'Chị dâu',
+    'Em chồng',
+    'Em dâu',
+    'Anh rể',
+    'Em rể',
+    // Cô, Dì, Chú, Bác, Cậu, Mợ, Thím
+    'Cô',
+    'Dì',
+    'Chú',
+    'Bác',
+    'Cậu',
+    'Mợ',
+    'Thím',
+    // Ông bà
+    'Ông',
+    'Bà',
+    'Ông ngoại',
+    'Bà ngoại',
     // Khác
-    'Thành viên'
+    'Thành viên',
+    'Khác'
   ];
 
   const handleUpdateRelationship = async (member: Resident, newRelationship: string) => {
@@ -3101,19 +3134,9 @@ const Households = () => {
                 <div className="form-group">
                   <label>Quan hệ với chủ hộ *</label>
                   <select value={mRelationship} onChange={(e) => setMRelationship(e.target.value)} required>
-                    <option value="Chủ hộ">Chủ hộ</option>
-                    <option value="Vợ">Vợ</option>
-                    <option value="Chồng">Chồng</option>
-                    <option value="Con">Con</option>
-                    <option value="Cháu">Cháu</option>
-                    <option value="Bố">Bố</option>
-                    <option value="Mẹ">Mẹ</option>
-                    <option value="Anh">Anh</option>
-                    <option value="Chị">Chị</option>
-                    <option value="Em">Em</option>
-                    <option value="Ông">Ông</option>
-                    <option value="Bà">Bà</option>
-                    <option value="Khác">Quan hệ khác</option>
+                    {RELATIONSHIP_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>{opt === 'Khác' ? 'Quan hệ khác' : opt}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
