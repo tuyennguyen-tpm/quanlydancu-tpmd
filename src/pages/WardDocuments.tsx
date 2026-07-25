@@ -20,6 +20,18 @@ const WardDocuments = () => {
   const [newReport, setNewReport] = useState<Partial<WardDocument>>({ category: 'party' });
   const [uploadingReportFile, setUploadingReportFile] = useState(false);
 
+  const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
+  useEffect(() => {
+    const handleRoleChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setCurrentRole(customEvent.detail || 'demo');
+    };
+    window.addEventListener('role-changed', handleRoleChange);
+    return () => window.removeEventListener('role-changed', handleRoleChange);
+  }, []);
+
+  const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
+
   const getWardAdminUid = async (wardId: string): Promise<string | null> => {
     if (!supabase) return null;
     try {
@@ -680,21 +692,23 @@ const WardDocuments = () => {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2>Công văn & Báo cáo hai chiều</h2>
-        <div>
-          <label style={{ marginRight: '15px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
-            <input type="checkbox" checked={isPhuongMode} onChange={(e) => {
-              setIsPhuongMode(e.target.checked);
-              localStorage.setItem('is_phuong_mode', e.target.checked.toString());
-            }} />
-            Chế độ gửi (Của Phường)
-          </label>
-          {isPhuongMode && subTab === 'received' && (
-            <button className="btn-3d-primary" onClick={() => setShowAddModal(true)}>+ Gửi công văn mới</button>
-          )}
-          {!isPhuongMode && subTab === 'sent' && (
-            <button className="btn-3d-primary" onClick={() => setShowAddReportModal(true)}>+ Gửi báo cáo lên Phường</button>
-          )}
-        </div>
+        {!isDemoRole && (
+          <div>
+            <label style={{ marginRight: '15px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={isPhuongMode} onChange={(e) => {
+                setIsPhuongMode(e.target.checked);
+                localStorage.setItem('is_phuong_mode', e.target.checked.toString());
+              }} />
+              Chế độ gửi (Của Phường)
+            </label>
+            {isPhuongMode && subTab === 'received' && (
+              <button className="btn-3d-primary" onClick={() => setShowAddModal(true)}>+ Gửi công văn mới</button>
+            )}
+            {!isPhuongMode && subTab === 'sent' && (
+              <button className="btn-3d-primary" onClick={() => setShowAddReportModal(true)}>+ Gửi báo cáo lên Phường</button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Sub Tabs: Nhận từ Phường / Gửi lên Phường */}
@@ -897,7 +911,7 @@ const WardDocuments = () => {
                       >
                         👁️ Xem chi tiết
                       </button>
-                      {isPhuongMode && (
+                      {isPhuongMode && !isDemoRole && (
                         <button 
                           className="btn-danger" 
                           style={{ 
@@ -1000,7 +1014,7 @@ const WardDocuments = () => {
                         >
                           👁️ Xem chi tiết
                         </button>
-                        {(!isPhuongMode || localStorage.getItem('user_role') === 'super_admin') && (
+                        {(!isPhuongMode || localStorage.getItem('user_role') === 'super_admin') && !isDemoRole && (
                           <button 
                             className="btn-danger" 
                             style={{ 
