@@ -1,7 +1,7 @@
 export const speakVietnamese = (textToSpeak: string) => {
   if (!textToSpeak) return;
 
-  // 1. Chuẩn hóa từ ngữ viết tắt và loại bỏ emoji để giọng đọc Chị Google Nữ phát âm mượt mà nhất
+  // 1. Chuẩn hóa từ ngữ viết tắt và loại bỏ emoji để giọng đọc Chị Google Nữ phát âm mượt nhất
   let cleanText = textToSpeak
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
     .replace(/TDP/gi, 'Tổ dân phố')
@@ -13,12 +13,12 @@ export const speakVietnamese = (textToSpeak: string) => {
     .trim();
 
   if (cleanText.length > 180) {
-    cleanText = cleanText.slice(0, 180) + '...';
+    cleanText = cleanText.slice(0, 180);
   }
 
   const encodedText = encodeURIComponent(cleanText);
 
-  // 2. Dừng phát âm thanh cũ
+  // 2. Dừng phát âm thanh/giọng nói cũ
   try {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -29,23 +29,63 @@ export const speakVietnamese = (textToSpeak: string) => {
     }
   } catch {}
 
-  // 3. Ưu tiên 100% Giọng đọc Chị Google Nữ chuẩn Tiếng Việt (Google Translate Female Voice MP3)
-  const googleVoiceUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`;
-  const googleGtxUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=gtx`;
+  // 3. Phát âm thanh tiếng Chuông Ting-Ting ngân bổng (Web Audio Oscillator C6 note)
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContext) {
+      const ctx = (window as any)._globalAudioCtx || new AudioContext();
+      (window as any)._globalAudioCtx = ctx;
 
-  const playGoogleVoice = (url: string, fallbackUrl?: string) => {
-    const audio = new Audio(url);
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      const now = ctx.currentTime;
+      // Nốt 1: Ting (C6 - 1046.5Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(1046.50, now);
+      gain1.gain.setValueAtTime(0.35, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.5);
+
+      // Nốt 2: Ting ngân bổng nhẹ (E6 - 1318.5Hz)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1318.51, now + 0.12);
+      gain2.gain.setValueAtTime(0.35, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.65);
+    }
+  } catch (e) {
+    console.warn('[TTS] Lỗi phát tiếng ting:', e);
+  }
+
+  // 4. Phát giọng đọc Chị Google Nữ chuẩn Tiếng Việt sau 400ms khi tiếng Ting ngân xong
+  setTimeout(() => {
+    const googleGtxUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=gtx`;
+    const googleTwUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=vi&client=tw-ob`;
+
+    const audio = new Audio(googleGtxUrl);
     audio.volume = 1.0;
     (window as any)._currentAudioTts = audio;
 
     const promise = audio.play();
     if (promise !== undefined) {
-      promise.catch((err) => {
-        console.warn('[TTS Google Voice Autoplay Playback Error]', err);
-        if (fallbackUrl) {
-          playGoogleVoice(fallbackUrl);
-        } else {
-          // Fallback nếu trình duyệt chặn hoàn toàn luồng MP3
+      promise.catch(() => {
+        const audio2 = new Audio(googleTwUrl);
+        audio2.volume = 1.0;
+        (window as any)._currentAudioTts = audio2;
+        audio2.play().catch(() => {
+          // Fallback giọng Việt trong trình duyệt nếu MP3 bị chặn
           if ('speechSynthesis' in window) {
             const msg = new SpeechSynthesisUtterance(cleanText);
             msg.lang = 'vi-VN';
@@ -57,10 +97,8 @@ export const speakVietnamese = (textToSpeak: string) => {
             if (viVoice) msg.voice = viVoice;
             window.speechSynthesis.speak(msg);
           }
-        }
+        });
       });
     }
-  };
-
-  playGoogleVoice(googleVoiceUrl, googleGtxUrl);
+  }, 400);
 };
