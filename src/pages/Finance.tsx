@@ -73,6 +73,7 @@ const Finance = () => {
   const userRole = localStorage.getItem('user_role') || '';
   const isWardUser = userRole === 'ward_admin' || userRole === 'super_admin';
   const isKeToan = currentRole === 'ke_toan' || userRole === 'ke_toan';
+  const isTrangChuDemo = currentRole === 'demo' || currentRole === 'trang_chu' || userRole === 'demo';
   const isToTruongOrAdmin = currentRole === 'to_truong' || currentRole === 'admin' || userRole === 'to_truong' || userRole === 'admin';
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
                   (!isToTruongOrAdmin && !isKeToan && currentRole !== 'chung' && currentRole !== 'all' && currentRole !== 'can_bo_chung') ||
@@ -100,10 +101,10 @@ const Finance = () => {
   const [subTab, setSubTab] = useState<'ledger' | 'funds'>('ledger');
 
   useEffect(() => {
-    if (isKeToan && subTab === 'funds') {
+    if (isTrangChuDemo && subTab === 'funds') {
       setSubTab('ledger');
     }
-  }, [isKeToan, subTab]);
+  }, [isTrangChuDemo, subTab]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [householdFunds, setHouseholdFunds] = useState<HouseholdFund[]>([]);
@@ -171,8 +172,8 @@ const Finance = () => {
   };
 
   const handleOpenFundPay = (hhId: string, fundName: string) => {
-    if (isGuest) {
-      showToast('Khách không có quyền sửa đổi dữ liệu thu quỹ!', 'warning');
+    if (isGuest || isKeToan) {
+      showToast(isKeToan ? 'Vai trò Kế toán chỉ có quyền xem dữ liệu thu quỹ hộ dân, không được chỉnh sửa!' : 'Khách không có quyền sửa đổi dữ liệu thu quỹ!', 'warning');
       return;
     }
     const existing = householdFunds.find(f => f.household_id === hhId && f.fund_name === fundName && f.year === fundYear);
@@ -185,6 +186,10 @@ const Finance = () => {
   const handleSaveFund = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingFund) return;
+    if (isKeToan) {
+      showToast('Vai trò Kế toán chỉ có quyền xem dữ liệu thu quỹ hộ dân, không được chỉnh sửa!', 'warning');
+      return;
+    }
     const parsedAmount = parseInt(fundAmountInput.replace(/\./g, ''));
     if (isNaN(parsedAmount) || parsedAmount < 0) {
       showToast('Số tiền không hợp lệ!', 'warning');
@@ -3994,7 +3999,7 @@ const Finance = () => {
         >
           <BookOpen size={17} /> 📙 Sổ quỹ thu chi
         </button>
-        {!isKeToan && (
+        {!isTrangChuDemo && (
           <button 
             className={`finance-tab-btn ${subTab === 'funds' ? 'active' : ''}`}
             onClick={() => setSubTab('funds')}
@@ -4405,6 +4410,23 @@ const Finance = () => {
         </>
       ) : (
         <div className="funds-matrix-view" style={{ animation: 'fadeIn 0.3s ease' }}>
+          {isKeToan && (
+            <div style={{
+              padding: '10px 16px',
+              borderRadius: '10px',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              color: '#1e40af',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              ℹ️ <strong>Chế độ Kế toán:</strong> Bạn đang xem danh sách thu quỹ theo hộ dân (Chế độ chỉ xem thông tin, không được phép ghi nhận/chỉnh sửa).
+            </div>
+          )}
           {/* Thống kê Quỹ nổi 3D */}
           {!isWardUser && canPrintExport && (
             <div className="fund-stats-3d-grid" style={{
