@@ -707,6 +707,17 @@ p { font-size: 1.1rem; line-height: 1.6; } /* Larger font for readability */
 /* -------------------------------------------------------------
    GLOBAL PREMIUM SEARCH BOX & INPUT STYLES
    ------------------------------------------------------------- */
+
+/* Hiệu ứng nhấp nháy viền xanh dương liên tục */
+@keyframes searchPulse {
+  0%   { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
+                     0 0 0 0px  rgba(37, 99, 235, 0.35); }
+  50%  { box-shadow: 0 0 0 4px  rgba(37, 99, 235, 0.45),
+                     0 0 0 8px  rgba(37, 99, 235, 0.12); }
+  100% { box-shadow: 0 0 0 0px  rgba(37, 99, 235, 0.9),
+                     0 0 0 0px  rgba(37, 99, 235, 0.35); }
+}
+
 .search-box, 
 .search-bar, 
 .input-with-icon {
@@ -715,10 +726,22 @@ p { font-size: 1.1rem; line-height: 1.6; } /* Larger font for readability */
   align-items: center;
   border-radius: 8px;
   background-color: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  transition: all 0.2s ease-in-out;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 2px solid #2563eb;
   box-sizing: border-box;
+  animation: searchPulse 1.4s ease-in-out infinite;
+}
+
+/* Icon màu xanh dương để phù hợp viền */
+.search-box svg,
+.search-bar svg,
+.input-with-icon svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #2563eb !important;
+  pointer-events: none;
+  transition: all 0.2s ease;
 }
 
 /* Internal inputs */
@@ -736,39 +759,26 @@ p { font-size: 1.1rem; line-height: 1.6; } /* Larger font for readability */
   box-sizing: border-box;
 }
 
-/* Icon positioning */
-.search-box svg,
-.search-bar svg,
-.input-with-icon svg {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #475569 !important;
-  pointer-events: none;
-  transition: all 0.2s ease;
-}
-
-/* Hover effects */
+/* Hover effects – giữ màu xanh, tăng độ sáng nhẹ */
 .search-box:hover,
 .search-bar:hover,
 .input-with-icon:hover {
-  border-color: #94a3b8;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  border-color: #1d4ed8;
+  filter: brightness(1.02);
 }
 
-/* Focus state with glowing shadow */
+/* Focus state – nhấp nháy nhanh hơn khi đang gõ */
 .search-box:focus-within,
 .search-bar:focus-within,
 .input-with-icon:focus-within {
-  border-color: #2563eb !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 4px 10px -2px rgba(0, 0, 0, 0.05) !important;
+  border-color: #1d4ed8 !important;
+  animation: searchPulse 0.9s ease-in-out infinite !important;
 }
 
 .search-box:focus-within svg,
 .search-bar:focus-within svg,
 .input-with-icon:focus-within svg {
-  color: #2563eb !important;
+  color: #1d4ed8 !important;
 }
 
 /* Premium placeholders */
