@@ -291,13 +291,17 @@ const App = () => {
     const checkGlobalUnreadAndSpeak = async () => {
       if (!supabase) return;
 
-      const isPhuong = localStorage.getItem('is_phuong_mode') === 'true';
+      const userRole = localStorage.getItem('user_role') || '';
+      const isPhuongMode = localStorage.getItem('is_phuong_mode') === 'true';
+      // Phân định chính xác: Cán bộ Phường mới nhận báo cáo TDP gửi lên; Cán bộ Tổ dân phố chỉ nhận công văn Phường gửi xuống
+      const isPhuongUser = userRole === 'ward_admin' || userRole === 'super_admin' || (isPhuongMode && userRole !== 'tdp_leader' && userRole !== 'guest');
+
       const myWardId = localStorage.getItem('user_ward_id') || localStorage.getItem('guest_ward_id');
       if (!myWardId) return;
 
       try {
-        if (!isPhuong) {
-          // --- CHẾ ĐỘ TỔ DÂN PHỐ: Nhận công văn của Phường ---
+        if (!isPhuongUser) {
+          // --- CHẾ ĐỘ TỔ DÂN PHỐ: Chỉ nhận công văn của Phường gửi xuống ---
           const wardAdminUid = await getWardAdminId(myWardId);
           if (!wardAdminUid) return;
 
