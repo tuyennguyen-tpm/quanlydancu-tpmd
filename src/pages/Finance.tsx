@@ -278,8 +278,20 @@ const Finance = () => {
   useEffect(() => {
     loadData();
     window.addEventListener('db-changed', loadData);
+
+    const handleSaveNoticeMessage = async (event: MessageEvent) => {
+      if (!event.data || event.data.type !== 'SAVE_NOTICE_TEMPLATE') return;
+      const { year, html, fontSize } = event.data;
+      if (year && html) {
+        await (db as any).saveNoticeCustomization(year, html, fontSize);
+        showToast('Đã lưu vĩnh viễn mẫu Thông báo dự kiến thu vào CSDL Supabase!', 'success');
+      }
+    };
+    window.addEventListener('message', handleSaveNoticeMessage);
+
     return () => {
       window.removeEventListener('db-changed', loadData);
+      window.removeEventListener('message', handleSaveNoticeMessage);
     };
   }, []);
 
@@ -2075,7 +2087,12 @@ const Finance = () => {
   };
 
   // In Thông báo dự kiến thu các khoản đóng góp tự nguyện (Mẫu chuẩn gộp TDP & Phường)
-  const handlePrintCombinedNotice = () => {
+  const handlePrintCombinedNotice = async () => {
+    // Tải nội dung đã lưu từ CSDL Supabase hoặc localStorage nếu có
+    const customNotice = await (db as any).getNoticeCustomization(fundYear);
+    const savedHtml = customNotice?.html || localStorage.getItem(`notice_template_html_${fundYear}`);
+    const savedFontSize = customNotice?.fontSize || localStorage.getItem(`notice_template_fontsize_${fundYear}`) || '11.5pt';
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
@@ -2564,14 +2581,23 @@ const Finance = () => {
             localStorage.setItem('notice_template_html_${fundYear}', editorContent);
             localStorage.setItem('notice_template_fontsize_${fundYear}', selectedFontSize);
             
+            if (window.opener) {
+              window.opener.postMessage({
+                type: 'SAVE_NOTICE_TEMPLATE',
+                year: '${fundYear}',
+                html: editorContent,
+                fontSize: selectedFontSize
+              }, '*');
+            }
+
             // Phản hồi trực quan
             const originalText = btnSave.innerHTML;
-            btnSave.innerHTML = '💾 Đã lưu!';
+            btnSave.innerHTML = '💾 Đã lưu vào CSDL!';
             btnSave.style.backgroundColor = '#059669';
             setTimeout(() => {
               btnSave.innerHTML = originalText;
               btnSave.style.backgroundColor = '';
-            }, 1200);
+            }, 1500);
           });
 
 

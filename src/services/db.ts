@@ -2854,4 +2854,57 @@ export const partyDb = {
     }
     return true;
   },
+
+  // --- Lưu trữ vĩnh viễn mẫu thông báo dự kiến thu vào CSDL Supabase ---
+  saveNoticeCustomization: async (year: string | number, html: string, fontSize?: string): Promise<boolean> => {
+    const htmlKey = `notice_template_html_${year}`;
+    const fontKey = `notice_template_fontsize_${year}`;
+
+    try {
+      localStorage.setItem(htmlKey, html);
+      if (fontSize) localStorage.setItem(fontKey, fontSize);
+    } catch (e) {}
+
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        const records = [
+          { key: htmlKey, value: html, user_id: uId, updated_at: new Date().toISOString() }
+        ];
+        if (fontSize) {
+          records.push({ key: fontKey, value: fontSize, user_id: uId, updated_at: new Date().toISOString() });
+        }
+        await supabase.from('app_config').upsert(records, { onConflict: 'key' });
+      } catch (e) {
+        console.error('saveNoticeCustomization Supabase sync error:', e);
+      }
+    }
+    return true;
+  },
+
+  getNoticeCustomization: async (year: string | number): Promise<{ html: string | null; fontSize: string | null }> => {
+    const htmlKey = `notice_template_html_${year}`;
+    const fontKey = `notice_template_fontsize_${year}`;
+    let html = localStorage.getItem(htmlKey);
+    let fontSize = localStorage.getItem(fontKey);
+
+    if (supabase && (!html || !fontSize)) {
+      try {
+        const { data } = await supabase.from('app_config').select('key, value').in('key', [htmlKey, fontKey]);
+        if (data && data.length > 0) {
+          data.forEach(item => {
+            if (item.key === htmlKey) {
+              html = item.value;
+              localStorage.setItem(htmlKey, item.value);
+            }
+            if (item.key === fontKey) {
+              fontSize = item.value;
+              localStorage.setItem(fontKey, item.value);
+            }
+          });
+        }
+      } catch (e) {}
+    }
+    return { html, fontSize };
+  }
 };

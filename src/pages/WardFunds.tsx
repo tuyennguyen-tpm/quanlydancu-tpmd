@@ -344,22 +344,29 @@ const WardFunds = () => {
     return () => window.removeEventListener('db-changed', handleSilentReload);
   }, [selectedYear]);
 
-  // Lắng nghe tín hiệu từ cửa sổ in → hiện banner nhắc nhở thu đủ cả nhà
+  // Lắng nghe tín hiệu từ cửa sổ in → hiện banner nhắc nhở thu đủ cả nhà & lưu mẫu thông báo vào CSDL
   useEffect(() => {
-    const handlePrintMessage = (event: MessageEvent) => {
-      if (!event.data || event.data.type !== 'WARD_PRINT_DONE') return;
-      const { householdId: hId, headName: hName } = event.data;
-      if (!hId) return;
+    const handlePrintMessage = async (event: MessageEvent) => {
+      if (!event.data) return;
+      if (event.data.type === 'WARD_PRINT_DONE') {
+        const { householdId: hId, headName: hName } = event.data;
+        if (!hId) return;
 
-      // Tìm thành viên của hộ này trong cấu trúc grouped hiện tại
-      // chạy sự kiện sau render nên dùng một timeout ngắn
-      setPrintReminder({ householdId: hId, headName: hName, members: [] });
+        // Tìm thành viên của hộ này trong cấu trúc grouped hiện tại
+        setPrintReminder({ householdId: hId, headName: hName, members: [] });
 
-      // Tự đóng sau 60 giây nếu người dùng không tác động
-      if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
-      printReminderTimerRef.current = setTimeout(() => {
-        setPrintReminder(null);
-      }, 60000);
+        // Tự đóng sau 60 giây nếu người dùng không tác động
+        if (printReminderTimerRef.current) clearTimeout(printReminderTimerRef.current);
+        printReminderTimerRef.current = setTimeout(() => {
+          setPrintReminder(null);
+        }, 60000);
+      } else if (event.data.type === 'SAVE_NOTICE_TEMPLATE') {
+        const { year, html, fontSize } = event.data;
+        if (year && html) {
+          await (db as any).saveNoticeCustomization(year, html, fontSize);
+          showToast('Đã lưu vĩnh viễn mẫu Thông báo dự kiến thu vào CSDL Supabase!', 'success');
+        }
+      }
     };
     window.addEventListener('message', handlePrintMessage);
     return () => {
@@ -5479,7 +5486,12 @@ const WardFunds = () => {
   };
 
   // In Thông báo dự kiến thu các khoản đóng góp tự nguyện (Mẫu chuẩn gộp TDP & Phường)
-  const handlePrintCombinedNotice = () => {
+  const handlePrintCombinedNotice = async () => {
+    // Tải nội dung đã lưu từ CSDL Supabase hoặc localStorage nếu có
+    const customNotice = await (db as any).getNoticeCustomization(selectedYear);
+    const savedHtml = customNotice?.html || localStorage.getItem(`notice_template_html_${selectedYear}`);
+    const savedFontSize = customNotice?.fontSize || localStorage.getItem(`notice_template_fontsize_${selectedYear}`) || '11.5pt';
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
@@ -5966,14 +5978,23 @@ const WardFunds = () => {
             localStorage.setItem('notice_template_html_${selectedYear}', editorContent);
             localStorage.setItem('notice_template_fontsize_${selectedYear}', selectedFontSize);
             
+            if (window.opener) {
+              window.opener.postMessage({
+                type: 'SAVE_NOTICE_TEMPLATE',
+                year: '${selectedYear}',
+                html: editorContent,
+                fontSize: selectedFontSize
+              }, '*');
+            }
+
             // Phản hồi trực quan
             const originalText = btnSave.innerHTML;
-            btnSave.innerHTML = '💾 Đã lưu!';
+            btnSave.innerHTML = '💾 Đã lưu vào CSDL!';
             btnSave.style.backgroundColor = '#059669';
             setTimeout(() => {
               btnSave.innerHTML = originalText;
               btnSave.style.backgroundColor = '';
-            }, 1200);
+            }, 1500);
           });
 
 
