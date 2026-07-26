@@ -283,7 +283,12 @@ const Finance = () => {
       if (!event.data || event.data.type !== 'SAVE_NOTICE_TEMPLATE') return;
       const { year, html, fontSize } = event.data;
       if (year && html) {
-        await (db as any).saveNoticeCustomization(year, html, fontSize);
+        if (typeof (db as any).saveNoticeCustomization === 'function') {
+          await (db as any).saveNoticeCustomization(year, html, fontSize);
+        } else {
+          localStorage.setItem(`notice_template_html_${year}`, html);
+          if (fontSize) localStorage.setItem(`notice_template_fontsize_${year}`, fontSize);
+        }
         showToast('Đã lưu vĩnh viễn mẫu Thông báo dự kiến thu vào CSDL Supabase!', 'success');
       }
     };
@@ -2088,16 +2093,27 @@ const Finance = () => {
 
   // In Thông báo dự kiến thu các khoản đóng góp tự nguyện (Mẫu chuẩn gộp TDP & Phường)
   const handlePrintCombinedNotice = async () => {
-    // Tải nội dung đã lưu từ CSDL Supabase hoặc localStorage nếu có
-    const customNotice = await (db as any).getNoticeCustomization(fundYear);
-    const savedHtml = customNotice?.html || localStorage.getItem(`notice_template_html_${fundYear}`);
-    const savedFontSize = customNotice?.fontSize || localStorage.getItem(`notice_template_fontsize_${fundYear}`) || '11.5pt';
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
       return;
     }
+
+    try {
+      printWindow.document.write('<div style="font-family: system-ui, sans-serif; padding: 40px; text-align: center; color: #1e40af; font-size: 16px;">⏳ Đang tải mẫu thông báo từ CSDL...</div>');
+    } catch (e) {}
+
+    // Tải nội dung đã lưu từ CSDL Supabase hoặc localStorage nếu có
+    let customNotice: { html: string | null; fontSize: string | null } | null = null;
+    try {
+      if (typeof (db as any).getNoticeCustomization === 'function') {
+        customNotice = await (db as any).getNoticeCustomization(fundYear);
+      }
+    } catch (e) {
+      console.warn('Failed to get notice customization:', e);
+    }
+    const savedHtml = customNotice?.html || localStorage.getItem(`notice_template_html_${fundYear}`);
+    const savedFontSize = customNotice?.fontSize || localStorage.getItem(`notice_template_fontsize_${fundYear}`) || '11.5pt';
 
     const tdpNameVal = isWardUser 
       ? (tdpFilter !== 'all' ? (tdpMap[tdpFilter] || 'Tổ dân phố') : 'Tất cả TDP')
@@ -2665,8 +2681,13 @@ const Finance = () => {
       </html>
     `;
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    try {
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    } catch (e) {
+      console.error('Lỗi khi ghi cửa sổ in:', e);
+    }
   };
 
   const generateStateReceiptHtml = (hh: Household, dateText: string, tdpNameVal: string, wardNameVal: string, leaderName: string, leaderSigUrl: string) => {
