@@ -388,7 +388,8 @@ export function calculateHouseholdFinancialSummary(
       const groupsStr = localStorage.getItem('tdp_groups') || localStorage.getItem('self_management_groups');
       if (groupsStr) {
         const groupsList: string[] = JSON.parse(groupsStr);
-        const fullAddr = ((hh.address || '') + ' ' + (mems?.[0]?.address || '')).toLowerCase();
+        const memAddr = (mems?.[0] as any)?.address || (mems?.[0] as any)?.permanent_address || '';
+        const fullAddr = ((hh.address || '') + ' ' + memAddr).toLowerCase();
         for (const g of groupsList) {
           const gClean = g.trim();
           if (!gClean) continue;
@@ -401,7 +402,8 @@ export function calculateHouseholdFinancialSummary(
         }
       }
     } catch {}
-    const addr = ((hh.address || '') + ' ' + (mems?.[0]?.address || '')).trim();
+    const memAddr2 = (mems?.[0] as any)?.address || (mems?.[0] as any)?.permanent_address || '';
+    const addr = ((hh.address || '') + ' ' + memAddr2).trim();
     const match = addr.match(/(Tổ\s+\d+|Cụm\s+\d+|Tổ\s+[\w\s]+)/i);
     if (match) return match[0].trim();
     return '';
