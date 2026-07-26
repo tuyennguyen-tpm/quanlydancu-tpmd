@@ -367,12 +367,52 @@ export function calculateHouseholdFinancialSummary(
     });
   });
 
+  const getGroupOfHousehold = (hh: Household, mems: Resident[]): string => {
+    if ((hh as any).self_management_group && String((hh as any).self_management_group).trim()) {
+      return String((hh as any).self_management_group).trim();
+    }
+    if ((hh as any).group_name && String((hh as any).group_name).trim()) {
+      return String((hh as any).group_name).trim();
+    }
+    if (mems && mems.length > 0) {
+      for (const m of mems) {
+        if ((m as any).self_management_group && String((m as any).self_management_group).trim()) {
+          return String((m as any).self_management_group).trim();
+        }
+        if ((m as any).group_name && String((m as any).group_name).trim()) {
+          return String((m as any).group_name).trim();
+        }
+      }
+    }
+    try {
+      const groupsStr = localStorage.getItem('tdp_groups') || localStorage.getItem('self_management_groups');
+      if (groupsStr) {
+        const groupsList: string[] = JSON.parse(groupsStr);
+        const fullAddr = ((hh.address || '') + ' ' + (mems?.[0]?.address || '')).toLowerCase();
+        for (const g of groupsList) {
+          const gClean = g.trim();
+          if (!gClean) continue;
+          if (fullAddr.includes(gClean.toLowerCase())) return gClean;
+          const numMatch = gClean.match(/\d+/);
+          if (numMatch) {
+            const n = numMatch[0];
+            if (fullAddr.includes(`tổ ${n}`) || fullAddr.includes(`tổ: ${n}`) || fullAddr.includes(`cụm ${n}`)) return gClean;
+          }
+        }
+      }
+    } catch {}
+    const addr = ((hh.address || '') + ' ' + (mems?.[0]?.address || '')).trim();
+    const match = addr.match(/(Tổ\s+\d+|Cụm\s+\d+|Tổ\s+[\w\s]+)/i);
+    if (match) return match[0].trim();
+    return '';
+  };
+
   return {
     householdId: household.id,
     headName,
     address: household.address || '',
     householdNumber: household.household_number || '—',
-    groupName: (household as any).self_management_group || (household as any).group_name || '',
+    groupName: getGroupOfHousehold(household, members),
     laborCount,
     laborResidents,
     tdpLineItems,
