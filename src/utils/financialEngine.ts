@@ -513,7 +513,7 @@ export function generateUnifiedHouseholdReceiptHtml(
           <tr>
             <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
             <td style="text-align: left;">
-              <strong>${summary.headName}</strong> (Đại diện Hộ gia đình)${summary.groupName ? ` - (${summary.groupName.trim().toLowerCase().startsWith('tổ') || summary.groupName.trim().toLowerCase().startsWith('cụm') ? summary.groupName.trim() : `Tổ ${summary.groupName.trim()}`})` : ''}
+              <strong>${summary.headName}</strong> (Đại diện Hộ gia đình)${summary.groupName ? ` ${summary.groupName.trim().toLowerCase().startsWith('tổ') || summary.groupName.trim().toLowerCase().startsWith('cụm') ? summary.groupName.trim() : `Tổ ${summary.groupName.trim()}`}` : ''}
             </td>
           </tr>
           <tr>

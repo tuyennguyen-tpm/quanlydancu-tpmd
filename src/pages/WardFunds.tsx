@@ -3154,8 +3154,8 @@ const WardFunds = () => {
             <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
             <td style="text-align: left;">
               <strong>${item.full_name}</strong>
-              ${headName ? ` - (Hộ ông/bà: ${headName})` : ''}
-              ${groupName ? ` - (${groupName.trim().toLowerCase().startsWith('tổ') || groupName.trim().toLowerCase().startsWith('cụm') ? groupName.trim() : `Tổ ${groupName.trim()}`})` : ''}
+              ${headName && headName !== item.full_name ? ` - (Hộ ông/bà: ${headName})` : ''}
+              ${groupName ? ` ${groupName.trim().toLowerCase().startsWith('tổ') || groupName.trim().toLowerCase().startsWith('cụm') ? groupName.trim() : `Tổ ${groupName.trim()}`}` : ''}
             </td>
           </tr>
           <tr>
