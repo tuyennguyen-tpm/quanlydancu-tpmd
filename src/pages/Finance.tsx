@@ -2800,7 +2800,7 @@ const Finance = () => {
         <table class="receipt-info-table">
           <tr>
             <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
-            <td style="text-align: left;"><strong>${headName}</strong>${hh.self_management_group ? ` - (${hh.self_management_group})` : ''}</td>
+            <td style="text-align: left;"><strong>${headName}</strong> (Đại diện Hộ gia đình)${hh.self_management_group ? ` - (${hh.self_management_group.trim().toLowerCase().startsWith('tổ') || hh.self_management_group.trim().toLowerCase().startsWith('cụm') ? hh.self_management_group.trim() : `Tổ ${hh.self_management_group.trim()}`})` : ''}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>

@@ -3150,7 +3150,7 @@ const WardFunds = () => {
             <td style="text-align: left;">
               <strong>${item.full_name}</strong>
               ${headName ? ` - (Hộ ông/bà: ${headName})` : ''}
-              ${groupName ? ` - (${groupName})` : ''}
+              ${groupName ? ` - (${groupName.trim().toLowerCase().startsWith('tổ') || groupName.trim().toLowerCase().startsWith('cụm') ? groupName.trim() : `Tổ ${groupName.trim()}`})` : ''}
             </td>
           </tr>
           <tr>
