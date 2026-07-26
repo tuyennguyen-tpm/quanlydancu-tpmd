@@ -1551,6 +1551,45 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Lắng nghe thay đổi dữ liệu thời gian thực (Realtime Sync) từ các máy tính khác
+  useEffect(() => {
+    if (!supabase) return;
+
+    let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const realtimeChannel = supabase
+      .channel('global-db-realtime-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload) => {
+          // Tự động phát CustomEvent db-changed để các trang (WardFunds, Residents, Households, Finance,...) tự reload dữ liệu
+          window.dispatchEvent(new CustomEvent('db-changed', { detail: payload }));
+
+          // Throttling thông báo toast để không gây phiền khi nhập liệu liên tục
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => {
+            const actionText = payload.eventType === 'INSERT' ? 'thêm mới' : payload.eventType === 'DELETE' ? 'xóa' : 'cập nhật';
+            window.dispatchEvent(new CustomEvent('show-toast', {
+              detail: { message: `⚡ Dữ liệu vừa được ${actionText} từ máy khác! Đã tự động đồng bộ.`, type: 'info' }
+            }));
+          }, 500);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Đã kết nối kênh đồng bộ dữ liệu thời gian thực thành công!');
+        }
+      });
+
+    return () => {
+      if (toastTimer) clearTimeout(toastTimer);
+      if (supabase) {
+        supabase.removeChannel(realtimeChannel);
+      }
+    };
+  }, []);
+
   // Lắng nghe trạng thái đăng nhập để tự động kích hoạt bộ thiết lập Onboarding
   useEffect(() => {
     if (session && localStorage.getItem('welcome_setup_completed') !== 'true') {
