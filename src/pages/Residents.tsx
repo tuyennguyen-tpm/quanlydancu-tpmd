@@ -309,10 +309,11 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   }, []);
 
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+  const isThuQuy = currentRole === 'thu_quy';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || isThuQuy || (currentRole !== 'to_truong' && currentRole !== 'admin');
   const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
-  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'ke_toan' || currentRole === 'thu_quy' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = isCanBoChung && !isDemoRole && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'ke_toan' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = !isThuQuy && isCanBoChung && !isDemoRole && localStorage.getItem('guest_mode') !== 'true';
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {

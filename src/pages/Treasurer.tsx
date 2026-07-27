@@ -41,7 +41,9 @@ export default function Treasurer() {
   }, []);
 
   const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
-  const isReadOnly = isDemoRole || localStorage.getItem('guest_mode') === 'true';
+  const isThuQuy = currentRole === 'thu_quy';
+  const isReadOnly = isDemoRole || isThuQuy || localStorage.getItem('guest_mode') === 'true';
+  const canPrintExport = !isThuQuy && !isDemoRole && localStorage.getItem('guest_mode') !== 'true';
 
   // State
   const [records, setRecords] = useState<FinancialRecord[]>([]);
@@ -488,7 +490,7 @@ export default function Treasurer() {
         </div>
 
         {/* Action Buttons */}
-        {!isReadOnly && (
+        {!isReadOnly && !isThuQuy && (
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setShowIncomeModal(true)}
@@ -524,6 +526,24 @@ export default function Treasurer() {
             >
               <Plus size={18} /> Lập Phiếu Chi (Xuất tiền)
             </button>
+          </div>
+        )}
+
+        {isThuQuy && (
+          <div style={{
+            background: 'rgba(234, 179, 8, 0.15)',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            color: '#fef08a',
+            padding: '8px 14px',
+            borderRadius: '10px',
+            fontSize: '0.82rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <ShieldAlert size={18} color="#eab308" />
+            <span>Chế độ vai trò <strong>Thủ quỹ</strong>: Chỉ xem dữ liệu Sổ quỹ, không có quyền chỉnh sửa, lập phiếu hay in/xuất báo cáo.</span>
           </div>
         )}
       </div>
@@ -651,13 +671,15 @@ export default function Treasurer() {
             </div>
 
             {/* Excel Download & Export */}
-            <button
-              onClick={handleExportExcel}
-              className="btn btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px' }}
-            >
-              <Download size={16} /> Xuất Sổ Quỹ Excel
-            </button>
+            {canPrintExport && (
+              <button
+                onClick={handleExportExcel}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px' }}
+              >
+                <Download size={16} /> Xuất Sổ Quỹ Excel
+              </button>
+            )}
           </div>
 
           {/* Sub Filters Row */}
@@ -784,22 +806,24 @@ export default function Treasurer() {
                       </td>
                       <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => handlePrintVoucher(r)}
-                            title="In phiếu chứng từ"
-                            style={{
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #cbd5e1',
-                              background: 'white',
-                              color: '#3b82f6',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Printer size={15} />
-                          </button>
-                          {!isReadOnly && (
+                          {canPrintExport && (
+                            <button
+                              type="button"
+                              onClick={() => handlePrintVoucher(r)}
+                              title="In phiếu chứng từ"
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                                background: 'white',
+                                color: '#3b82f6',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Printer size={15} />
+                            </button>
+                          )}
+                          {!isReadOnly && !isThuQuy && (
                             <button
                               type="button"
                               onClick={() => handleDeleteRecord(r.id)}
@@ -816,6 +840,7 @@ export default function Treasurer() {
                               <X size={15} />
                             </button>
                           )}
+                          {isThuQuy && <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>Chỉ xem</span>}
                         </div>
                       </td>
                     </tr>

@@ -161,7 +161,8 @@ const Households = () => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
 
-  const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
+  const isThuQuy = currentRole === 'thu_quy';
+  const isGuest = localStorage.getItem('guest_mode') === 'true' || isThuQuy || (currentRole !== 'to_truong' && currentRole !== 'admin');
 
   // Phân quyền tài khoản (phường vs tổ)
   const userRoleVal = localStorage.getItem('user_role') || 'tdp_leader';
@@ -169,7 +170,7 @@ const Households = () => {
 
   const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
   const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = isCanBoChung && !isDemoRole && localStorage.getItem('guest_mode') !== 'true';
+  const canPrintExport = !isThuQuy && isCanBoChung && !isDemoRole && localStorage.getItem('guest_mode') !== 'true';
 
   // State for Transfer / Split Household
   const [transferringMember, setTransferringMember] = useState<Resident | null>(null);
