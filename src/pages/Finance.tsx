@@ -73,13 +73,14 @@ const Finance = () => {
   const userRole = localStorage.getItem('user_role') || '';
   const isWardUser = userRole === 'ward_admin' || userRole === 'super_admin';
   const isKeToan = currentRole === 'ke_toan' || userRole === 'ke_toan';
+  const isThuQuy = currentRole === 'thu_quy' || userRole === 'thu_quy';
   const isTrangChuDemo = currentRole === 'demo' || currentRole === 'trang_chu' || userRole === 'demo';
   const isToTruongOrAdmin = currentRole === 'to_truong' || currentRole === 'admin' || userRole === 'to_truong' || userRole === 'admin';
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
-                  (!isToTruongOrAdmin && !isKeToan && currentRole !== 'chung' && currentRole !== 'all' && currentRole !== 'can_bo_chung') ||
+                  (!isToTruongOrAdmin && !isKeToan && !isThuQuy && currentRole !== 'chung' && currentRole !== 'all' && currentRole !== 'can_bo_chung') ||
                   isWardUser;
-  const isCanBoChung = isToTruongOrAdmin || isKeToan || currentRole === 'chung' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = (isCanBoChung || isKeToan || isToTruongOrAdmin) && localStorage.getItem('guest_mode') !== 'true';
+  const isCanBoChung = isToTruongOrAdmin || isKeToan || isThuQuy || currentRole === 'chung' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = (isCanBoChung || isKeToan || isThuQuy || isToTruongOrAdmin) && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
   const [searchInput, setSearchInput] = useState('');

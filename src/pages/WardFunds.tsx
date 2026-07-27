@@ -129,10 +129,11 @@ const WardFunds = () => {
   // Cấp quyền sửa cho to_truong, admin, chung, ke_toan
   const userRole = localStorage.getItem('user_role') || '';
   const isKeToan = currentRole === 'ke_toan' || userRole === 'ke_toan';
+  const isThuQuy = currentRole === 'thu_quy' || userRole === 'thu_quy';
   const isGuest = localStorage.getItem('guest_mode') === 'true' || 
-    (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan');
-  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'ke_toan' || currentRole === 'all' || currentRole === 'can_bo_chung';
-  const canPrintExport = (isCanBoChung || isKeToan) && localStorage.getItem('guest_mode') !== 'true';
+    (currentRole !== 'to_truong' && currentRole !== 'admin' && currentRole !== 'ke_toan' && currentRole !== 'thu_quy');
+  const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'ke_toan' || currentRole === 'thu_quy' || currentRole === 'all' || currentRole === 'can_bo_chung';
+  const canPrintExport = (isCanBoChung || isKeToan || isThuQuy) && localStorage.getItem('guest_mode') !== 'true';
 
   // Khóa quyền "Khởi tạo từ Hộ gia đình" và "Xóa hết danh sách năm nay" đối với vai trò Tổ trưởng (to_truong) và Kế toán (ke_toan)
   const canInitFromHouseholds = !isGuest && currentRole !== 'to_truong' && !isKeToan;

@@ -628,6 +628,7 @@ const App = () => {
         const pPhuNu = await (db as any).getRolePin('chi_hoi_phu_nu');
         const pKeToan = await (db as any).getRolePin('ke_toan');
         const pAnNinh = await (db as any).getRolePin('an_ninh');
+        const pThuQuy = await (db as any).getRolePin('thu_quy');
         localStorage.setItem('role_pin_admin', pAdmin);
         localStorage.setItem('role_pin_to_truong', pToTruong);
         localStorage.setItem('role_pin_bi_thu', pBiThu);
@@ -636,6 +637,7 @@ const App = () => {
         localStorage.setItem('role_pin_chi_hoi_phu_nu', pPhuNu);
         localStorage.setItem('role_pin_ke_toan', pKeToan);
         localStorage.setItem('role_pin_an_ninh', pAnNinh);
+        localStorage.setItem('role_pin_thu_quy', pThuQuy);
       } catch (e) {
         console.error('Failed to sync role PINs on mount', e);
       }
@@ -654,6 +656,7 @@ const App = () => {
       mat_tran: 'Trưởng ban Mặt trận',
       chi_hoi_phu_nu: 'Chi hội Phụ nữ',
       ke_toan: 'Kế toán',
+      thu_quy: 'Thủ quỹ',
       chung: 'Cán bộ Chung',
       an_ninh: 'Dân quân / An ninh'
     };
@@ -683,6 +686,7 @@ const App = () => {
       mat_tran: 'Trưởng ban Mặt trận',
       chi_hoi_phu_nu: 'Chi hội Phụ nữ',
       ke_toan: 'Kế toán',
+      thu_quy: 'Thủ quỹ',
       chung: 'Cán bộ Chung',
       an_ninh: 'Dân quân / An ninh'
     };
@@ -703,7 +707,7 @@ const App = () => {
     // Auto redirect if active tab is restricted in new role
     if (role === 'an_ninh') {
       setActiveTab('security');
-    } else if ((role === 'mat_tran' || role === 'demo' || role === 'chung' || role === 'chi_hoi_phu_nu' || role === 'ke_toan') && ['party-cell', 'meetings-party'].includes(activeTab)) {
+    } else if ((role === 'mat_tran' || role === 'demo' || role === 'chung' || role === 'chi_hoi_phu_nu' || role === 'ke_toan' || role === 'thu_quy') && ['party-cell', 'meetings-party'].includes(activeTab)) {
       setActiveTab('Bảng điều khiển');
     }
     
@@ -1074,6 +1078,7 @@ const App = () => {
   const [rolePinPhuNuInput, setRolePinPhuNuInput] = useState('4444');
   const [rolePinKeToanInput, setRolePinKeToanInput] = useState('5555');
   const [rolePinAnNinhInput, setRolePinAnNinhInput] = useState('6666');
+  const [rolePinThuQuyInput, setRolePinThuQuyInput] = useState('7777');
   const [sbKey, setSbKey] = useState(localStorage.getItem('supabase_anon_key') || '');
   const [tdpNameInput, setTdpNameInput] = useState(tdpName);
   const [wardNameInput, setWardNameInput] = useState(wardName);
@@ -1187,7 +1192,7 @@ const App = () => {
     });
     
     // Clear role verification keys
-    ['admin', 'to_truong', 'bi_thu', 'mat_tran', 'chung'].forEach(role => {
+    ['admin', 'to_truong', 'bi_thu', 'mat_tran', 'chung', 'chi_hoi_phu_nu', 'ke_toan', 'an_ninh', 'thu_quy'].forEach(role => {
       localStorage.removeItem(`role_verified_${role}`);
       localStorage.removeItem(`role_pin_${role}`);
     });
@@ -1981,6 +1986,7 @@ const App = () => {
     setRolePinPhuNuInput(localStorage.getItem('role_pin_chi_hoi_phu_nu') || '4444');
     setRolePinKeToanInput(localStorage.getItem('role_pin_ke_toan') || '5555');
     setRolePinAnNinhInput(localStorage.getItem('role_pin_an_ninh') || '6666');
+    setRolePinThuQuyInput(localStorage.getItem('role_pin_thu_quy') || '7777');
     setLatestAppVersionInput(localStorage.getItem('latest_app_version') || APP_VERSION);
     
     // Load groups configuration
@@ -2156,6 +2162,7 @@ const App = () => {
     const pinPhuNuToSave = rolePinPhuNuInput.trim() || '4444';
     const pinKeToanToSave = rolePinKeToanInput.trim() || '5555';
     const pinAnNinhToSave = rolePinAnNinhInput.trim() || '6666';
+    const pinThuQuyToSave = rolePinThuQuyInput.trim() || '7777';
     try {
       await db.saveGuestPin(pinToSave);
       await (db as any).saveRolePin('admin', pinAdminToSave);
@@ -2166,6 +2173,7 @@ const App = () => {
       await (db as any).saveRolePin('chi_hoi_phu_nu', pinPhuNuToSave);
       await (db as any).saveRolePin('ke_toan', pinKeToanToSave);
       await (db as any).saveRolePin('an_ninh', pinAnNinhToSave);
+      await (db as any).saveRolePin('thu_quy', pinThuQuyToSave);
 
       // Mark as verified on this device since we configured it
       localStorage.setItem('role_verified_admin', 'true');
@@ -2176,6 +2184,7 @@ const App = () => {
       localStorage.setItem('role_verified_chi_hoi_phu_nu', 'true');
       localStorage.setItem('role_verified_ke_toan', 'true');
       localStorage.setItem('role_verified_an_ninh', 'true');
+      localStorage.setItem('role_verified_thu_quy', 'true');
 
       window.dispatchEvent(new CustomEvent('show-toast', {
         detail: { message: `✅ Cấu hình và mã PIN phân quyền đã đồng bộ lên Database!`, type: 'success' }
@@ -2991,6 +3000,7 @@ const App = () => {
                 <option value="mat_tran">Trưởng ban Mặt trận</option>
                 <option value="chi_hoi_phu_nu">Chi hội Phụ nữ</option>
                 <option value="ke_toan">Kế toán</option>
+                <option value="thu_quy">Thủ quỹ</option>
                 <option value="chung">Cán bộ Chung</option>
                 <option value="an_ninh">Dân quân / An ninh</option>
               </select>
@@ -3017,7 +3027,7 @@ const App = () => {
                 {session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Tổ trưởng'}
               </span>
               <span className="user-role" title={session?.user?.email || 'Ngoại tuyến'} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
-                {isGuestMode ? 'Xem công khai' : userRole === 'demo' ? '👁️ Trang Chủ' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : userRole === 'mat_tran' ? 'Trưởng ban Mặt trận' : userRole === 'chi_hoi_phu_nu' ? 'Chi hội Phụ nữ' : userRole === 'ke_toan' ? 'Kế toán' : userRole === 'an_ninh' ? 'Dân quân / An ninh' : 'Cán bộ Chung'}
+                {isGuestMode ? 'Xem công khai' : userRole === 'demo' ? '👁️ Trang Chủ' : userRole === 'admin' ? 'Quản trị hệ thống' : userRole === 'to_truong' ? 'Tổ trưởng TDP' : userRole === 'bi_thu' ? 'Bí thư Chi bộ' : userRole === 'mat_tran' ? 'Trưởng ban Mặt trận' : userRole === 'chi_hoi_phu_nu' ? 'Chi hội Phụ nữ' : userRole === 'ke_toan' ? 'Kế toán' : userRole === 'thu_quy' ? 'Thủ quỹ' : userRole === 'an_ninh' ? 'Dân quân / An ninh' : 'Cán bộ Chung'}
               </span>
             </div>
             <button className="logout-btn" onClick={handleLogout} title="Đăng xuất" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -3930,6 +3940,16 @@ const App = () => {
                               maxLength={10}
                             />
                           </div>
+                          <div className="form-group">
+                            <label>PIN Thủ quỹ</label>
+                            <input
+                              type="text"
+                              value={rolePinThuQuyInput}
+                              onChange={(e) => setRolePinThuQuyInput(e.target.value)}
+                              placeholder="Mặc định: 7777"
+                              maxLength={10}
+                            />
+                          </div>
                         </div>
                       )}
                       <div className="form-group">
@@ -4782,7 +4802,8 @@ const App = () => {
               chung: '3333',
               chi_hoi_phu_nu: '4444',
               ke_toan: '5555',
-              an_ninh: '6666'
+              an_ninh: '6666',
+              thu_quy: '7777'
             };
             const correctPin = localStorage.getItem(`role_pin_${pinPrompt.role}`) || defaultPins[pinPrompt.role];
             
@@ -5067,7 +5088,8 @@ const RolePinModal = ({
     chung: '3333',
     chi_hoi_phu_nu: '4444',
     ke_toan: '5555',
-    an_ninh: '6666'
+    an_ninh: '6666',
+    thu_quy: '7777'
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
