@@ -1992,8 +1992,12 @@ const Finance = () => {
 
       const allWardPaid = memberWardRecords.length > 0 && memberWardRecords.every(m =>
         wardActiveFunds.every((fund: any) => {
+          const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
+          if (isHouseholdScope) return true;
           const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          return c.actual >= c.expected && c.expected > 0;
+          const exp = c.expected || 0;
+          if (exp === 0) return true;
+          return c.actual >= exp;
         })
       );
 

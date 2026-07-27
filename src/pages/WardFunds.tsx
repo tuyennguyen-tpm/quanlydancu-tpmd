@@ -1029,13 +1029,14 @@ const WardFunds = () => {
     return activeFunds.map(fund => {
       const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
 
-      // Tính tổng số tiền phải thu: chỉ tính từ bản ghi có expected > 0
-      const recordsWithExpected = funds.filter(f => (f.contributions?.[fund.name]?.expected || 0) > 0);
-      const expected = recordsWithExpected.length > 0
-        ? recordsWithExpected.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.expected || 0), 0)
-        : fund.target * (isHouseholdScope
-            ? new Set(funds.map(f => fundMetaMap.get(f.id)?.householdId).filter(Boolean)).size
-            : funds.length);
+      // Tính tổng số tiền phải thu cho quỹ này từ tất cả nhân khẩu/hộ
+      let sumExp = 0;
+      funds.forEach(f => {
+        const compExp = computedExpectedMap.get(f.id) || {};
+        const exp = compExp[fund.name] ?? (f.contributions?.[fund.name]?.expected || 0);
+        sumExp += exp;
+      });
+      const expected = sumExp > 0 ? sumExp : fund.target * (isHouseholdScope ? totalHhCount : funds.length);
 
       const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
       const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
@@ -1301,12 +1302,17 @@ const WardFunds = () => {
         financialRecords = await db.getFinancialRecords() || [];
       } catch { /* ignore */ }
 
-      const allWardPaid = members.every(m =>
-        activeFunds.every(fund => {
-          const c = m.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-          return c.actual >= c.expected && c.expected > 0;
-        })
-      );
+      const allWardPaid = members.every(m => {
+        const compExp = computedExpectedMap.get(m.id) || {};
+        return activeFunds.every(fund => {
+          const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
+          if (isHouseholdScope) return true;
+          const exp = compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected || 0);
+          const act = m.contributions?.[fund.name]?.actual || 0;
+          if (exp === 0) return true;
+          return act >= exp;
+        });
+      });
 
       const allTdpPaid = tdpActiveFunds.length > 0 && tdpActiveFunds.every((fund: any) => {
         const paidFund = filteredHhFunds.find(hf => hf.fund_name === fund.name);
@@ -6546,7 +6552,7 @@ const WardFunds = () => {
                       {stat.name}
                     </span>
                     <h3 style={{ margin: '4px 0 0 0', fontSize: '1.5rem', fontWeight: '850', color: '#1e293b' }}>
-                      {formatCurrency(stat.target)} đ/{(stat as any).scope === 'household' ? 'hộ' : 'khẩu'}
+                      {stat.target.toLocaleString('vi-VN')} đ/{(stat as any).scope === 'household' ? 'hộ' : 'khẩu'}
                     </h3>
                   </div>
                   <div style={{
@@ -6567,8 +6573,8 @@ const WardFunds = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#64748b', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
-                  <span>Đã thu: <strong style={{ color: '#16a34a' }}>{formatCurrency(stat.actual)} đ</strong> ({stat.paidHouseholdsCount}/{stat.totalHouseholdsCount} hộ)</span>
-                  <span>Phải thu: {formatCurrency(stat.expected)} đ</span>
+                  <span>Đã thu: <strong style={{ color: '#16a34a' }}>{stat.actual.toLocaleString('vi-VN')} đ</strong> ({stat.paidHouseholdsCount}/{stat.totalHouseholdsCount} hộ)</span>
+                  <span>Phải thu: {stat.expected.toLocaleString('vi-VN')} đ</span>
                 </div>
               </div>
             );
