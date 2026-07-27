@@ -815,6 +815,104 @@ export default function Treasurer() {
           </div>
         </div>
 
+        {/* Khung nhập tay thu tiền hàng ngày trực tiếp */}
+        {activeTab === 'income' && !isReadOnly && !isThuQuy && (
+          <div style={{
+            background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+            border: '1.5px solid #a7f3d0',
+            borderRadius: '12px',
+            padding: '16px 18px',
+            marginBottom: '20px',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.08)'
+          }}>
+            <div style={{ fontWeight: '700', fontSize: '0.88rem', color: '#047857', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>📥 NHẬP TAY THU TIỀN HÀNG NGÀY TRỰC TIẾP</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', alignItems: 'flex-end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#047857', marginBottom: '4px' }}>Người nộp / Hộ dân:</label>
+                <input
+                  type="text"
+                  placeholder="Tên người/hộ nộp..."
+                  value={incPayer}
+                  onChange={(e) => setIncPayer(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #6ee7b7', fontSize: '0.85rem', background: 'white' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#047857', marginBottom: '4px' }}>Khoản thu (Hạng mục):</label>
+                <select
+                  value={incCategory}
+                  onChange={(e) => setIncCategory(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #6ee7b7', fontSize: '0.85rem', background: 'white' }}
+                >
+                  <option value="Thu quỹ TDP">Thu quỹ TDP</option>
+                  <option value="Thu quỹ Phường">Thu quỹ Phường</option>
+                  <option value="Đóng góp tự nguyện">Đóng góp tự nguyện</option>
+                  <option value="Ủng hộ lễ hội / Sự kiện">Ủng hộ lễ hội / Sự kiện</option>
+                  <option value="Thu khác">Thu khác</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#047857', marginBottom: '4px' }}>Số tiền (VNĐ):</label>
+                <input
+                  type="number"
+                  placeholder="Ví dụ: 100000"
+                  value={incAmount}
+                  onChange={(e) => setIncAmount(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #6ee7b7', fontSize: '0.88rem', fontWeight: 'bold', color: '#047857', background: 'white' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#047857', marginBottom: '4px' }}>Phương thức:</label>
+                <select
+                  value={incMethod}
+                  onChange={(e) => setIncMethod(e.target.value as any)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #6ee7b7', fontSize: '0.85rem', background: 'white' }}
+                >
+                  <option value="Tiền mặt">💵 Tiền mặt</option>
+                  <option value="Chuyển khoản">💳 Chuyển khoản</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#047857', marginBottom: '4px' }}>Ngày thu:</label>
+                <input
+                  type="date"
+                  value={incDate}
+                  onChange={(e) => setIncDate(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #6ee7b7', fontSize: '0.85rem', background: 'white' }}
+                />
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleSaveIncome}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '9px 14px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: 'none',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)',
+                    height: '38px'
+                  }}
+                >
+                  ➕ Ghi nhận thu
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Transactions Table */}
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
