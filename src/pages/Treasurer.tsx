@@ -103,6 +103,61 @@ export default function Treasurer() {
     loadData();
   }, []);
 
+  // Consolidate auto household fund records by Date + Category so the table isn't filled with hundreds of individual rows
+  const processedRecords = useMemo(() => {
+    const manualRecords: FinancialRecord[] = [];
+    const autoFundRecords: FinancialRecord[] = [];
+
+    records.forEach(r => {
+      if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động' || r.description.includes('[HỘ_')) {
+        autoFundRecords.push(r);
+      } else {
+        manualRecords.push(r);
+      }
+    });
+
+    const autoGroupsMap = new Map<string, { date: string; category: string; amount: number; count: number; created_at: string }>();
+    
+    autoFundRecords.forEach(r => {
+      const cleanCat = r.category || 'Thu quỹ TDP';
+      const rDate = (r.date || r.created_at || '').slice(0, 10);
+      const key = `${rDate}_${cleanCat}`;
+      
+      const existing = autoGroupsMap.get(key);
+      if (existing) {
+        existing.amount += Number(r.amount) || 0;
+        existing.count += 1;
+      } else {
+        autoGroupsMap.set(key, {
+          date: rDate,
+          category: cleanCat,
+          amount: Number(r.amount) || 0,
+          count: 1,
+          created_at: r.created_at || new Date().toISOString()
+        });
+      }
+    });
+
+    const groupedAutoRecords: FinancialRecord[] = Array.from(autoGroupsMap.values()).map(g => ({
+      id: `summary_${g.date}_${g.category.replace(/\s+/g, '_')}`,
+      group_id: 'default',
+      type: 'income',
+      amount: g.amount,
+      category: g.category,
+      description: `Tổng thu ${g.category} trong ngày (Gom nhóm ${g.count} hộ nộp)`,
+      recorded_by: 'Tổng hợp thu ngày',
+      date: g.date,
+      created_at: g.created_at
+    }));
+
+    const combined = [...manualRecords, ...groupedAutoRecords];
+    return combined.sort((a, b) => {
+      const dateA = a.date || a.created_at || '';
+      const dateB = b.date || b.created_at || '';
+      return dateB.localeCompare(dateA);
+    });
+  }, [records]);
+
   // Filtered Records based on date, method, search, tab
   const filteredRecords = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -117,7 +172,7 @@ export default function Treasurer() {
     // Start of month
     const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
-    return records.filter(r => {
+    return processedRecords.filter(r => {
       // Type tab
       if (activeTab === 'income' && r.type !== 'income') return false;
       if (activeTab === 'expense' && r.type !== 'expense') return false;
@@ -144,7 +199,7 @@ export default function Treasurer() {
 
       return true;
     });
-  }, [records, activeTab, dateFilter, methodFilter, searchTerm]);
+  }, [processedRecords, activeTab, dateFilter, methodFilter, searchTerm]);
 
   // Overall Statistics Calculations
   const stats = useMemo(() => {
