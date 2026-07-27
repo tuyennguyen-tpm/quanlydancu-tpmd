@@ -1967,7 +1967,7 @@ const App = () => {
     setWardFundsConfig(currentWardFunds.map((f: any) => ({
       name: f.name,
       target: formatInputNumber(f.target.toString()),
-      scope: f.scope || (f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
+      scope: f.scope || (f.name.toLowerCase().includes('hộ gia đình') || f.name.toLowerCase().includes('chủ hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
       age_range: f.age_range || ''
     })));
     setSbUrl(localStorage.getItem('supabase_url') || '');
@@ -2113,7 +2113,7 @@ const App = () => {
     const mappedWardFunds = wardFundsConfig.map(f => ({
       name: f.name.trim(),
       target: parseInt(f.target.replace(/\./g, '')) || 0,
-      scope: f.scope || (f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
+      scope: f.scope || (f.name.toLowerCase().includes('hộ gia đình') || f.name.toLowerCase().includes('chủ hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
       age_range: f.age_range ? f.age_range.trim() : ''
     }));
     await (db as any).saveWardFundList(mappedWardFunds);
@@ -3503,7 +3503,7 @@ const App = () => {
                         required
                       />
                       <select
-                        value={fund.scope || (fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person')}
+                        value={fund.scope || (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person')}
                         onChange={(e) => handleWardFundConfigChange(idx, 'scope', e.target.value)}
                         style={{ flex: 1, minWidth: '120px', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.85rem', backgroundColor: '#fff', cursor: 'pointer' }}
                       >

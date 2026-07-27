@@ -2189,7 +2189,7 @@ const Finance = () => {
 
     const listToCalc = wardFundsList.length > 0 ? wardFundsList : defaultWardItems;
     listToCalc.forEach((wf: any) => {
-      const isHousehold = wf.scope === 'household' || (wf.name && (wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi')));
+      const isHousehold = wf.scope ? wf.scope === 'household' : (wf.name && (wf.name.toLowerCase().includes('hộ gia đình') || wf.name.toLowerCase().includes('chủ hộ') || wf.name.toLowerCase().includes('người cao tuổi')));
       const targetVal = typeof wf.target === 'number' ? wf.target : parseInt(String(wf.target || '').replace(/\D/g, ''), 10) || 0;
       if (isHousehold) {
         wardHouseholdTotal += targetVal;
@@ -2212,7 +2212,7 @@ const Finance = () => {
 
     if (wardFundsList.length > 0) {
       wardListHtml = wardFundsList.map((wf: any) => {
-        const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi');
+        const isHousehold = wf.scope ? wf.scope === 'household' : (wf.name.toLowerCase().includes('hộ gia đình') || wf.name.toLowerCase().includes('chủ hộ') || wf.name.toLowerCase().includes('người cao tuổi'));
         const targetStr = typeof wf.target === 'number' ? wf.target.toLocaleString('vi-VN') + 'đ' : (wf.target ? wf.target + 'đ' : '....đ');
         const unitStr = isHousehold ? 'hộ' : 'khẩu';
         const noteStr = wf.age_range ? ` (${wf.age_range})` : (isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)');

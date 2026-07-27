@@ -626,6 +626,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const [searchInput, setSearchInput] = useState('');
   const search = useDeferredValue(searchInput);
   const [selectedPartyGroup, setSelectedPartyGroup] = useState<string>('all');
+  const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female'>('all');
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PartyMember | null>(null);
@@ -1374,6 +1375,12 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     return hh.self_management_group.trim();
   }, [residents, households]);
 
+  const getMemberGender = useCallback((m: PartyMember): 'male' | 'female' | 'other' => {
+    if (m.gender) return m.gender;
+    const res = residents.find(r => (m.resident_id && r.id === m.resident_id) || (r.full_name && r.full_name.trim().toLowerCase() === m.full_name.trim().toLowerCase()));
+    return res?.gender || 'male';
+  }, [residents]);
+
   const uniquePartyGroups = useMemo(() => {
     const groups = new Set<string>();
     members.forEach(m => {
@@ -1408,14 +1415,21 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       if (group !== selectedPartyGroup) return false;
     }
 
+    if (selectedGender !== 'all') {
+      const g = getMemberGender(m);
+      if (g !== selectedGender) return false;
+    }
+
     return true;
-  }), [members, search, filterMilestones, selectedPartyGroup, getMemberPartyGroup]);
+  }), [members, search, filterMilestones, selectedPartyGroup, selectedGender, getMemberPartyGroup, getMemberGender]);
 
   const stats = {
     total: members.filter(m => m.status !== 'deceased').length,
     official: members.filter(m => m.status === 'official').length,
     probation: members.filter(m => m.status === 'probation').length,
     party213: members.filter(m => m.status === 'party_213').length,
+    male: members.filter(m => m.status !== 'deceased' && getMemberGender(m) === 'male').length,
+    female: members.filter(m => m.status !== 'deceased' && getMemberGender(m) === 'female').length,
   };
 
   const badgeNominees = members
@@ -1662,6 +1676,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       {/* Stats */}
       <div className="party-stats">
         <div className="party-stat-card"><div className="stat-num">{stats.total}</div><div className="stat-label">Tổng đảng viên</div></div>
+        <div className="party-stat-card"><div className="stat-num" style={{ color: '#0284c7' }}>{stats.male}</div><div className="stat-label">Nam 👨</div></div>
+        <div className="party-stat-card"><div className="stat-num" style={{ color: '#ec4899' }}>{stats.female}</div><div className="stat-label">Nữ 👩</div></div>
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#22c55e' }}>{stats.official}</div><div className="stat-label">Chính thức</div></div>
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#f59e0b' }}>{stats.probation}</div><div className="stat-label">Dự bị</div></div>
         <div className="party-stat-card"><div className="stat-num" style={{ color: '#f43f5e' }}>{stats.party213}</div><div className="stat-label">Đảng viên 213</div></div>
@@ -1723,6 +1739,61 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           <div className="party-search" style={{ minWidth: 260 }}>
             <Search size={15} className="party-search-icon" />
             <input placeholder="Tìm kiếm tên, số thẻ..." value={searchInput} onChange={e => setSearchInput(e.target.value)} />
+          </div>
+
+          {/* Bộ lọc Giới tính */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '38px', background: '#f8fafc', padding: '2px 4px', borderRadius: '8px', border: '1.5px solid #cbd5e1' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedGender('all')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                background: selectedGender === 'all' ? '#334155' : 'transparent',
+                color: selectedGender === 'all' ? '#ffffff' : '#475569',
+                fontWeight: '700',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Tất cả ({stats.total})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedGender('male')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                background: selectedGender === 'male' ? '#0284c7' : 'transparent',
+                color: selectedGender === 'male' ? '#ffffff' : '#475569',
+                fontWeight: '700',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              👨 Nam ({stats.male})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedGender('female')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                background: selectedGender === 'female' ? '#ec4899' : 'transparent',
+                color: selectedGender === 'female' ? '#ffffff' : '#475569',
+                fontWeight: '700',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              👩 Nữ ({stats.female})
+            </button>
           </div>
           
           <button 
@@ -1832,6 +1903,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               <tr>
                 <th>#</th>
                 <th>Họ và tên</th>
+                <th>Giới tính</th>
                 <th>Số thẻ</th>
                 <th>Chức vụ</th>
                 <th>Ngày vào Đảng</th>
@@ -1846,6 +1918,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                 <tr key={m.id}>
                   <td style={{ color: '#94a3b8', fontWeight: 700 }}>{i + 1}</td>
                   <td style={{ fontWeight: 700 }}>{m.full_name}</td>
+                  <td style={{ fontWeight: 600, color: getMemberGender(m) === 'female' ? '#ec4899' : '#0284c7' }}>
+                    {getMemberGender(m) === 'female' ? '👩 Nữ' : '👨 Nam'}
+                  </td>
                   <td>{m.party_code || '—'}</td>
                   <td>
                     <span className="status-badge" style={{ 
@@ -1950,6 +2025,13 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               </div>
 
               <div className="party-form-row">
+                <div className="party-form-group">
+                  <label>Giới tính</label>
+                  <select value={form.gender || getMemberGender(form as PartyMember)} onChange={e => setForm(f => ({ ...f, gender: e.target.value as any }))}>
+                    <option value="male">👨 Nam</option>
+                    <option value="female">👩 Nữ</option>
+                  </select>
+                </div>
                 <div className="party-form-group">
                   <label>Số thẻ Đảng</label>
                   <input value={form.party_code || ''} onChange={e => setForm(f => ({ ...f, party_code: e.target.value }))} placeholder="DV-0001" />

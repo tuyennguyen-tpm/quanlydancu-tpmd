@@ -860,10 +860,7 @@ const WardFunds = () => {
       }
 
       activeFunds.forEach((fund: any) => {
-        const isHH = fund.scope === 'household'
-          || fund.name.toLowerCase().includes('hộ')
-          || fund.name.toLowerCase().includes('người cao tuổi')
-          || fund.name.toLowerCase().includes('cao tuổi');
+        const isHH = fund.scope ? fund.scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
         if (isHH) {
           expected[fund.name] = 0;
           return;
@@ -1030,10 +1027,7 @@ const WardFunds = () => {
     const totalHhCount = hhMap.size > 0 ? hhMap.size : households.length;
 
     return activeFunds.map(fund => {
-      const isHouseholdScope = (fund as any).scope === 'household'
-        || fund.name.toLowerCase().includes('hộ')
-        || fund.name.toLowerCase().includes('người cao tuổi')
-        || fund.name.toLowerCase().includes('cao tuổi');
+      const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
 
       // Tính tổng số tiền phải thu: chỉ tính từ bản ghi có expected > 0
       const recordsWithExpected = funds.filter(f => (f.contributions?.[fund.name]?.expected || 0) > 0);
@@ -1326,7 +1320,7 @@ const WardFunds = () => {
       const memberContribMaps = members.map(m => ({ ...m.contributions }));
 
       activeFunds.forEach(fund => {
-        const isHouseholdFund = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('cao tuổi') || fund.name.toLowerCase().includes('người cao tuổi');
+        const isHouseholdFund = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('cao tuổi') || fund.name.toLowerCase().includes('người cao tuổi'));
         
         if (isHouseholdFund) {
           let primaryIndex = members.findIndex(m => (m.contributions?.[fund.name]?.expected || 0) > 0);
@@ -1733,7 +1727,7 @@ const WardFunds = () => {
             } else if (isPensioner) {
               expected = 0;
             } else {
-              const isHouseholdScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ');
+              const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ'));
               if (isHouseholdScope) {
                 if (isHead && age >= 18) {
                   expected = fund.target;
@@ -1897,7 +1891,7 @@ const WardFunds = () => {
           const contributions: Record<string, any> = {};
 
           activeFundsList.forEach((fund: any) => {
-            const isHouseholdScope = fund.scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
+            const isHouseholdScope = fund.scope ? fund.scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
             contributions[fund.name] = {
               expected: isHouseholdScope ? fund.target : 0,
               actual: 0
@@ -2079,7 +2073,7 @@ const WardFunds = () => {
                     expected = fund.target;
                   }
                 } else {
-                  const isHouseholdScope = fund.scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
+                  const isHouseholdScope = fund.scope ? fund.scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
                   if (isHouseholdScope) {
                     if (matchedRes!.is_head && age >= 18) {
                       expected = fund.target;
@@ -2177,7 +2171,7 @@ const WardFunds = () => {
         activeFundsList2.forEach((fund2: any) => {
           const isPCTT2 = fund2.name.toLowerCase().includes('thiên tai');
           const isDOdn2 = fund2.name.toLowerCase().includes('đền ơn đáp nghĩa') || fund2.name.toLowerCase().includes('đền ơn');
-          const isHouseholdScope2 = fund2.scope === 'household' || fund2.name.toLowerCase().includes('hộ') || fund2.name.toLowerCase().includes('người cao tuổi') || fund2.name.toLowerCase().includes('cao tuổi');
+          const isHouseholdScope2 = fund2.scope ? fund2.scope === 'household' : (fund2.name.toLowerCase().includes('hộ gia đình') || fund2.name.toLowerCase().includes('chủ hộ') || fund2.name.toLowerCase().includes('người cao tuổi') || fund2.name.toLowerCase().includes('cao tuổi'));
 
           if (fund2.scope === 'person' || isPCTT2 || isDOdn2) {
             const ageLimits2 = parseAgeRange2(fund2.age_range);
@@ -5600,7 +5594,7 @@ const WardFunds = () => {
 
     const listToCalc = wardFundsList.length > 0 ? wardFundsList : defaultWardItems;
     listToCalc.forEach((wf: any) => {
-      const isHousehold = wf.scope === 'household' || (wf.name && (wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi')));
+      const isHousehold = wf.scope ? wf.scope === 'household' : (wf.name && (wf.name.toLowerCase().includes('hộ gia đình') || wf.name.toLowerCase().includes('chủ hộ') || wf.name.toLowerCase().includes('người cao tuổi')));
       const targetVal = typeof wf.target === 'number' ? wf.target : parseInt(String(wf.target || '').replace(/\D/g, ''), 10) || 0;
       if (isHousehold) {
         wardHouseholdTotal += targetVal;
@@ -5623,7 +5617,7 @@ const WardFunds = () => {
 
     if (wardFundsList.length > 0) {
       wardListHtml = wardFundsList.map((wf: any) => {
-        const isHousehold = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi');
+        const isHousehold = wf.scope ? wf.scope === 'household' : (wf.name.toLowerCase().includes('hộ gia đình') || wf.name.toLowerCase().includes('chủ hộ') || wf.name.toLowerCase().includes('người cao tuổi'));
         const targetStr = typeof wf.target === 'number' ? wf.target.toLocaleString('vi-VN') + 'đ' : (wf.target ? wf.target + 'đ' : '....đ');
         const unitStr = isHousehold ? 'hộ' : 'khẩu';
         const noteStr = wf.age_range ? ` (${wf.age_range})` : (isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)');
@@ -7357,7 +7351,7 @@ const WardFunds = () => {
           /* ===== STANDARD TABLE VIEW ===== */
           (() => {
             const displayedActiveFunds = activeFunds.filter((f: any) => {
-              const isHouseholdScope = f.scope === 'household' || f.name.toLowerCase().includes('hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi');
+              const isHouseholdScope = f.scope ? f.scope === 'household' : (f.name.toLowerCase().includes('hộ gia đình') || f.name.toLowerCase().includes('chủ hộ') || f.name.toLowerCase().includes('người cao tuổi') || f.name.toLowerCase().includes('cao tuổi'));
               if (subTabMode === 'ward_list') return !isHouseholdScope;
               if (subTabMode === 'household_list') return isHouseholdScope;
               return true;
@@ -7382,7 +7376,7 @@ const WardFunds = () => {
                       
                       {displayedActiveFunds.map(fund => {
                         const isPCTT = fund.name.includes('thiên tai');
-                        const isHousehold = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
+                        const isHousehold = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
                         return (
                           <th key={fund.name} style={{ 
                             width: '180px', 

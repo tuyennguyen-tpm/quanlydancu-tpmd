@@ -1784,7 +1784,7 @@ export const db = {
         const parsed = JSON.parse(stored);
         return parsed.map((item: any) => ({
           ...item,
-          scope: item.scope || (item.name.toLowerCase().includes('hộ') || item.name.toLowerCase().includes('người cao tuổi') || item.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
+          scope: item.scope || (item.name.toLowerCase().includes('hộ gia đình') || item.name.toLowerCase().includes('người cao tuổi') || item.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
           age_range: item.age_range || ''
         }));
       } catch (e) {
@@ -2537,6 +2537,7 @@ export interface PartyMember {
   user_id?: string;
   resident_id?: string | null;
   full_name: string;
+  gender?: 'male' | 'female' | 'other';
   party_code?: string;
   join_date?: string;
   probation_date?: string;

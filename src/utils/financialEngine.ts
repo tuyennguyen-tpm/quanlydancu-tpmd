@@ -312,7 +312,7 @@ export function calculateHouseholdFinancialSummary(
   const laborResidentNames = new Set(laborResidents.map(r => r.full_name.trim().toLowerCase()));
 
   wardActiveFunds.forEach(wf => {
-    const isHouseholdScope = wf.scope === 'household' || wf.name.toLowerCase().includes('hộ') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi');
+    const isHouseholdScope = wf.scope ? wf.scope === 'household' : (wf.name.toLowerCase().includes('hộ gia đình') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi'));
     const wfTargetVal = typeof wf.target === 'number' ? wf.target : (parseInt(String((wf as any).target || '0').replace(/[^\d]/g, ''), 10) || 0);
 
     let expectedTotal = 0;
