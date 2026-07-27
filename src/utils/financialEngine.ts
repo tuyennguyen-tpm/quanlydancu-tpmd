@@ -273,6 +273,9 @@ export function calculateHouseholdFinancialSummary(
   const laborCount = laborResidents.length;
 
   // 1. Quỹ TDP
+  const tdpLineItems: HouseholdFinancialSummary['tdpLineItems'] = [];
+  let tdpTotal = 0;
+
   const hhAddressStr = ((household.address || '') + ' ' + (members?.[0]?.permanent_address || '') + ' ' + ((household as any).self_management_group || '') + ' ' + ((household as any).group_name || '')).toLowerCase();
   const isGroup8 = hhAddressStr.includes('tổ 8') || hhAddressStr.includes('to 8') || hhAddressStr.includes('tổ: 8') || ((household as any).self_management_group || '').trim() === 'Tổ 8' || ((household as any).self_management_group || '').trim() === '8';
 

@@ -1437,7 +1437,7 @@ const WardFunds = () => {
               const matchedGeneral = financialRecords.find(r => r.description.includes(flagText));
 
               const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
-              const hhAddr = ((household?.address || '') + ' ' + ((household as any)?.self_management_group || '') + ' ' + ((household as any)?.group_name || '') + ' ' + (firstMember?.permanent_address || '')).toLowerCase();
+              const hhAddr = ((household?.address || '') + ' ' + ((household as any)?.self_management_group || '') + ' ' + ((household as any)?.group_name || '') + ' ' + ((firstMember as any)?.permanent_address || (firstMember as any)?.address || '')).toLowerCase();
               const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || hhAddr.includes('tổ: 8') || ((household as any)?.self_management_group || '').trim() === 'Tổ 8' || ((household as any)?.self_management_group || '').trim() === '8';
               const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(selectedYear) === 2026;
 
