@@ -522,10 +522,10 @@ export function generateUnifiedHouseholdReceiptHtml(
     const _textAmountWords = docSoTien(_grandTotal);
 
     const _totalLabelText = printMode === 'ward_only'
-      ? `(UBND: ${_wardTotal.toLocaleString('vi-VN')} đ)`
+      ? `(PHƯỜNG: ${_wardTotal.toLocaleString('vi-VN')} đ)`
       : (printMode === 'tdp_only'
         ? `(TDP: ${_tdpTotal.toLocaleString('vi-VN')} đ)`
-        : `(TDP: ${_tdpTotal.toLocaleString('vi-VN')} đ + UBND: ${_wardTotal.toLocaleString('vi-VN')} đ)`);
+        : `(TDP: ${_tdpTotal.toLocaleString('vi-VN')} đ + PHƯỜNG: ${_wardTotal.toLocaleString('vi-VN')} đ)`);
 
     const titleText = printMode === 'ward_only'
       ? 'PHIẾU THU QUỸ UBND PHƯỜNG'

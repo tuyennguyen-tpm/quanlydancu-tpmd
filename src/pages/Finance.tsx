@@ -3257,7 +3257,7 @@ const Finance = () => {
                   if (is6Col && totalTds.length >= 2) {
                     const labelTd = totalTds[0];
                     labelTd.setAttribute('colspan', '4');
-                    labelTd.innerHTML = 'TỔNG CỘNG THỰC THU (TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    labelTd.innerHTML = 'TỔNG CỘNG THỰC THU (TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + PHƯỜNG: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
 
                     const amountTd = totalTds[1];
                     amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
