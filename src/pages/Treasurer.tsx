@@ -293,7 +293,7 @@ export default function Treasurer() {
     worksheet.columns = [
       { header: 'STT', key: 'stt', width: 8 },
       { header: 'Ngày thu', key: 'date', width: 16 },
-      { header: 'Người / Hộ nộp', key: 'payer', width: 25 },
+      { header: 'Người / Hộ nhận', key: 'payer', width: 25 },
       { header: 'Khoản thu / Hạng mục', key: 'category', width: 25 },
       { header: 'Phương thức', key: 'method', width: 16 },
       { header: 'Ghi chú', key: 'note', width: 35 },
@@ -509,10 +509,10 @@ export default function Treasurer() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px', alignItems: 'flex-end' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Người nộp / Hộ dân:</label>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Người nhận / Hộ dân:</label>
                   <input
                     type="text"
-                    placeholder="Tên người hoặc hộ nộp..."
+                    placeholder="Tên người hoặc hộ nhận..."
                     value={incPayer}
                     onChange={(e) => setIncPayer(e.target.value)}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
@@ -626,7 +626,7 @@ export default function Treasurer() {
                     <tr style={{ background: '#ecfdf5', borderBottom: '2px solid #a7f3d0' }}>
                       <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '50px' }}>STT</th>
                       <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '110px' }}>Ngày thu</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '180px' }}>Người / Hộ nộp</th>
+                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '180px' }}>Người / Hộ nhận</th>
                       <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '180px' }}>Khoản thu / Hạng mục</th>
                       <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '120px' }}>Phương thức</th>
                       <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700' }}>Ghi chú</th>
