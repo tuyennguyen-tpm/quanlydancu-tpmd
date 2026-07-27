@@ -1077,6 +1077,7 @@ const App = () => {
   const [sbKey, setSbKey] = useState(localStorage.getItem('supabase_anon_key') || '');
   const [tdpNameInput, setTdpNameInput] = useState(tdpName);
   const [wardNameInput, setWardNameInput] = useState(wardName);
+  const [wardFundPrefixInput, setWardFundPrefixInput] = useState(localStorage.getItem('ward_fund_prefix') ?? '[UBND Phường]');
   const [leaderNameInput, setLeaderNameInput] = useState(leaderName);
   const [leaderPhoneInput, setLeaderPhoneInput] = useState(leaderPhone);
   const [groupIdInput, setGroupIdInput] = useState(groupId);
@@ -1950,6 +1951,7 @@ const App = () => {
   const handleOpenSettings = () => {
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
+    setWardFundPrefixInput(localStorage.getItem('ward_fund_prefix') ?? '[UBND Phường]');
     setLeaderNameInput(leaderName);
     setLeaderPhoneInput(leaderPhone);
     setGroupIdInput(groupId);
@@ -2047,6 +2049,11 @@ const App = () => {
     const newWardName = wardNameInput.trim() || 'Phường Nam Sầm Sơn';
     localStorage.setItem('ward_name', newWardName);
     setWardName(newWardName);
+
+    // Lưu tiền tố hiển thị Quỹ Phường
+    const newWardFundPrefix = wardFundPrefixInput.trim();
+    localStorage.setItem('ward_fund_prefix', newWardFundPrefix);
+    window.dispatchEvent(new CustomEvent('ward-fund-prefix-changed'));
 
     // Lưu tên Tổ trưởng
     const newLeaderName = leaderNameInput.trim() || 'Kim Tuyến';
@@ -3281,6 +3288,19 @@ const App = () => {
                     placeholder={isWardSettings ? 'Ví dụ: Thành phố Sầm Sơn, Huyện Quảng Xương...' : 'Ví dụ: Phường Nam Sầm Sơn...'}
                     maxLength={50}
                   />
+                </div>
+                <div className="form-group">
+                  <label>Tiền tố hiển thị Quỹ Phường (trên phiếu thu)</label>
+                  <input
+                    type="text"
+                    value={wardFundPrefixInput}
+                    onChange={(e) => setWardFundPrefixInput(e.target.value)}
+                    placeholder="Ví dụ: [UBND Phường], [Phường], [UBND Xã]..."
+                    maxLength={50}
+                  />
+                  <small style={{ color: '#64748b', display: 'block', marginTop: '2px', fontSize: '0.75rem' }}>
+                    Tiền tố này sẽ đứng trước tên các khoản Quỹ Phường khi in phiếu (VD: {wardFundPrefixInput ? `${wardFundPrefixInput} ` : ''}Chăm sóc người cao tuổi). Để trống nếu không muốn hiển thị.
+                  </small>
                 </div>
                 <div className="form-group">
                   <label>{isWardSettings ? 'Họ và tên Lãnh đạo / Cán bộ phụ trách' : 'Họ và tên Tổ trưởng'}</label>

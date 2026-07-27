@@ -2992,6 +2992,9 @@ const WardFunds = () => {
 
     // Tính tiền Quỹ Phường thực tế đã nộp (actual)
     let wardTotal = 0;
+    const rawWardFundPrefix = localStorage.getItem('ward_fund_prefix');
+    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '[UBND Phường]';
+    const wardPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
     const wardRows = activeFunds.map((fund, idx) => {
       const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
       const rawPaid = contrib.actual ?? 0;
@@ -3005,7 +3008,7 @@ const WardFunds = () => {
       return `
         <tr data-fund-type="ward">
           <td style="text-align: center;">${idx + 1}</td>
-          <td style="font-weight: bold; text-align: left;">[UBND] ${fund.name} (${selectedYear})</td>
+          <td style="font-weight: bold; text-align: left;">${wardPrefixStr}${fund.name} (${selectedYear})</td>
           <td class="receipt-amount-cell" style="text-align: right; font-weight: bold;">${amountPaid.toLocaleString('vi-VN')} đ</td>
           <td style="text-align: left;">${note}</td>
         </tr>

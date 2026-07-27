@@ -453,9 +453,12 @@ export function generateUnifiedHouseholdReceiptHtml(
   }
 
   if (printMode === 'combined' || printMode === 'ward_only') {
+    const rawWardFundPrefix = localStorage.getItem('ward_fund_prefix');
+    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '[UBND Phường]';
+    const wardPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
     summary.wardLineItems.forEach(item => {
       receiptRows.push({
-        name: '[UBND Phường] ' + item.fundName,
+        name: wardPrefixStr + item.fundName,
         type: item.isHouseholdScope ? 'Hộ gia đình' : 'Nhân khẩu LĐ',
         rate: item.targetVal.toLocaleString('vi-VN') + (item.isHouseholdScope ? ' đ/hộ' : ' đ/khẩu'),
         amount: item.displayAmount,
