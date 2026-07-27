@@ -273,22 +273,36 @@ export function calculateHouseholdFinancialSummary(
   const laborCount = laborResidents.length;
 
   // 1. Quỹ TDP
-  const tdpLineItems: HouseholdFinancialSummary['tdpLineItems'] = [];
-  let tdpTotal = 0;
+  const hhAddressStr = ((household.address || '') + ' ' + (members?.[0]?.permanent_address || '') + ' ' + ((household as any).self_management_group || '') + ' ' + ((household as any).group_name || '')).toLowerCase();
+  const isGroup8 = hhAddressStr.includes('tổ 8') || hhAddressStr.includes('to 8') || hhAddressStr.includes('tổ: 8') || ((household as any).self_management_group || '').trim() === 'Tổ 8' || ((household as any).self_management_group || '').trim() === '8';
 
   tdpActiveFunds.forEach(fund => {
+    const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
     const targetVal = typeof fund.target === 'number' ? fund.target : (parseInt(String((fund as any).target || '0').replace(/[^\d]/g, ''), 10) || 0);
     const paidFund = householdPaidFunds.find(hf => hf.household_id === household.id && hf.fund_name === fund.name && Number(hf.year) === targetYear);
     const rawPaid = paidFund ? paidFund.amount : 0;
     const paidAmountNum = typeof rawPaid === 'number' ? rawPaid : (parseInt(String(rawPaid || '0').replace(/[^\d]/g, ''), 10) || 0);
 
-    const displayAmount = paidAmountNum > 0 ? paidAmountNum : targetVal;
-    tdpTotal += displayAmount;
-
+    let displayAmount = targetVal;
     let noteText = 'Theo định mức';
-    if (paidFund && paidAmountNum > 0) {
-      noteText = paidAmountNum >= targetVal ? 'Đã thu đủ' : `Đã nộp ${paidAmountNum.toLocaleString('vi-VN')} đ`;
+
+    if (isKhuyenHoc && isGroup8 && Number(targetYear) === 2026) {
+      displayAmount = 0;
+      noteText = (paidFund && paidFund.note && paidFund.note !== 'Đã thu đủ theo thông báo') ? paidFund.note : 'Đã thu trước';
+    } else if (paidFund) {
+      displayAmount = paidAmountNum;
+      if (paidFund.note) {
+        noteText = paidFund.note;
+      } else if (paidAmountNum >= targetVal) {
+        noteText = 'Đã thu đủ';
+      } else if (paidAmountNum > 0) {
+        noteText = `Đã nộp ${paidAmountNum.toLocaleString('vi-VN')} đ`;
+      } else {
+        noteText = '0 đ';
+      }
     }
+
+    tdpTotal += displayAmount;
 
     tdpLineItems.push({
       fundName: fund.name,

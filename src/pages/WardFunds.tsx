@@ -1436,15 +1436,23 @@ const WardFunds = () => {
               const flagText = `[QUY_${targetId}]`;
               const matchedGeneral = financialRecords.find(r => r.description.includes(flagText));
 
+              const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
+              const hhAddr = ((household?.address || '') + ' ' + ((household as any)?.self_management_group || '') + ' ' + ((household as any)?.group_name || '') + ' ' + (firstMember?.permanent_address || '')).toLowerCase();
+              const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || hhAddr.includes('tổ: 8') || ((household as any)?.self_management_group || '').trim() === 'Tổ 8' || ((household as any)?.self_management_group || '').trim() === '8';
+              const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(selectedYear) === 2026;
+
+              const fundAmount = isExemptTdpGroup8 ? 0 : fund.target;
+              const fundNote = isExemptTdpGroup8 ? 'Đã thu trước' : 'Đã thu đủ theo thông báo';
+
               if (shouldPay) {
                 const payload: HouseholdFund = {
                   id: targetId,
                   household_id: householdId,
                   year: selectedYear,
                   fund_name: fund.name,
-                  amount: fund.target,
+                  amount: fundAmount,
                   paid_at: today,
-                  note: 'Đã thu đủ theo thông báo'
+                  note: fundNote
                 };
                 await db.saveHouseholdFund(payload);
 
@@ -1452,7 +1460,7 @@ const WardFunds = () => {
                   id: matchedGeneral ? matchedGeneral.id : generateUUID(),
                   group_id: db.getGroupId(),
                   type: 'income',
-                  amount: fund.target,
+                  amount: fundAmount,
                   category: fund.name,
                   description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
                   recorded_by: 'Hệ thống tự động',

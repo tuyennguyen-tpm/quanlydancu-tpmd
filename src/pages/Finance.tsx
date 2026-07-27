@@ -2047,15 +2047,23 @@ const Finance = () => {
         const flagText = `[QUY_${targetId}]`;
         const matchedGeneral = records.find(r => r.description.includes(flagText));
 
+        const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
+        const hhAddr = ((hh?.address || '') + ' ' + ((hh as any)?.self_management_group || '') + ' ' + ((hh as any)?.group_name || '') + ' ' + (members?.[0]?.permanent_address || '')).toLowerCase();
+        const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || hhAddr.includes('tổ: 8') || ((hh as any)?.self_management_group || '').trim() === 'Tổ 8' || ((hh as any)?.self_management_group || '').trim() === '8';
+        const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(fundYear) === 2026;
+
+        const fundAmount = isExemptTdpGroup8 ? 0 : fund.target;
+        const fundNote = isExemptTdpGroup8 ? 'Đã thu trước' : 'Đã thu đủ theo thông báo';
+
         if (shouldPay) {
           const payload: HouseholdFund = {
             id: targetId,
             household_id: householdId,
             year: fundYear,
             fund_name: fund.name,
-            amount: fund.target,
+            amount: fundAmount,
             paid_at: today,
-            note: 'Đã thu đủ theo thông báo'
+            note: fundNote
           };
           await db.saveHouseholdFund(payload);
 
@@ -2063,7 +2071,7 @@ const Finance = () => {
             id: matchedGeneral ? matchedGeneral.id : generateUUID(),
             group_id: db.getGroupId(),
             type: 'income',
-            amount: fund.target,
+            amount: fundAmount,
             category: fund.name,
             description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
             recorded_by: 'Hệ thống tự động',
