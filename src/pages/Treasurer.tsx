@@ -103,7 +103,10 @@ export default function Treasurer() {
     loadData();
   }, []);
 
-  // Consolidate auto household fund records by Date + Category so the table isn't filled with hundreds of individual rows
+  // State for including auto-generated ward fund records
+  const [includeAutoFunds, setIncludeAutoFunds] = useState(false);
+
+  // Process Records: By default, exclude auto household ward fund records so Treasurer list stays clean and short
   const processedRecords = useMemo(() => {
     const manualRecords: FinancialRecord[] = [];
     const autoFundRecords: FinancialRecord[] = [];
@@ -116,6 +119,16 @@ export default function Treasurer() {
       }
     });
 
+    if (!includeAutoFunds) {
+      // Exclude automatic ward fund collections to keep treasurer list clean
+      return manualRecords.sort((a, b) => {
+        const dateA = a.date || a.created_at || '';
+        const dateB = b.date || b.created_at || '';
+        return dateB.localeCompare(dateA);
+      });
+    }
+
+    // If enabled, group auto ward fund records by Date + Category
     const autoGroupsMap = new Map<string, { date: string; category: string; amount: number; count: number; created_at: string }>();
     
     autoFundRecords.forEach(r => {
@@ -156,7 +169,7 @@ export default function Treasurer() {
       const dateB = b.date || b.created_at || '';
       return dateB.localeCompare(dateA);
     });
-  }, [records]);
+  }, [records, includeAutoFunds]);
 
   // Filtered Records based on date, method, search, tab
   const filteredRecords = useMemo(() => {
@@ -788,6 +801,17 @@ export default function Treasurer() {
               <option value="cash">💵 Tiền mặt</option>
               <option value="transfer">💳 Chuyển khoản</option>
             </select>
+
+            {/* Toggle Auto Funds */}
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#475569', cursor: 'pointer', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={includeAutoFunds}
+                onChange={(e) => setIncludeAutoFunds(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>Bao gồm thu quỹ Phường tự động</span>
+            </label>
           </div>
         </div>
 
