@@ -3266,8 +3266,8 @@ const WardFunds = () => {
     const freshReceiptHtml = generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     const SAVE_KEY = `receipt_html_ward_indiv_${item.id}_${selectedYear}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-    const hasSavedVersion = !!savedReceiptHtml;
-    const receiptHtml = savedReceiptHtml ? applyWardFundPrefixToHtml(savedReceiptHtml) : freshReceiptHtml;
+    const hasSavedVersion = Boolean(savedReceiptHtml);
+    const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -4521,7 +4521,7 @@ const WardFunds = () => {
     } catch { /* ignore */ }
 
     const hasSavedVersion = Boolean(savedReceiptHtml);
-    let receiptHtml = savedReceiptHtml ? applyWardFundPrefixToHtml(savedReceiptHtml) : freshReceiptHtml;
+    let receiptHtml = freshReceiptHtml;
 
     // Tự động kiểm tra và bổ sung tên Tổ nếu bản lưu cũ chưa có
     const hhGroupStr = (household as any).self_management_group || (activeMembers?.[0] as any)?.self_management_group || '';

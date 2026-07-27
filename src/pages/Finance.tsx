@@ -1377,7 +1377,7 @@ const Finance = () => {
     } catch { /* ignore */ }
 
     const hasSavedVersion = Boolean(savedReceiptHtml);
-    const receiptHtml = savedReceiptHtml ? applyWardFundPrefixToHtml(savedReceiptHtml) : freshReceiptHtml;
+    const receiptHtml = freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
