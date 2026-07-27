@@ -585,7 +585,7 @@ export function generateUnifiedHouseholdReceiptHtml(
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
-            <td style="text-align: left;">Thu tổng hợp các khoản đóng góp tự nguyện (TDP + Phường) năm ${new Date().getFullYear()}</td>
+            <td style="text-align: left;">Thu tổng hợp các khoản đóng góp tự nguyện TDP và các khoản đóng góp theo quy định của Nhà nước năm ${new Date().getFullYear()}</td>
           </tr>
         </table>
 
