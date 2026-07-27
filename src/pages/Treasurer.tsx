@@ -61,16 +61,16 @@ export default function Treasurer() {
 
   const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
   const isThuQuy = currentRole === 'thu_quy';
-  const isAdminOrToTruong = currentRole === 'to_truong' || currentRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+  const isAuthorizedForTreasurer = currentRole === 'to_truong' || currentRole === 'admin' || currentRole === 'thu_quy' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
 
-  if (!isAdminOrToTruong) {
+  if (!isAuthorizedForTreasurer) {
     return (
       <div className="page-container">
         <div className="card" style={{ padding: '40px 24px', textAlign: 'center', marginTop: '20px' }}>
           <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
           <h2 style={{ color: '#ef4444', marginBottom: '10px' }}>Quyền truy cập bị hạn chế</h2>
           <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.6' }}>
-            Chỉ có <strong>Tổ trưởng dân phố</strong> và <strong>Quản trị hệ thống (Admin)</strong> mới được phép truy cập, xem, in hoặc tải thông tin Thủ quỹ.<br />
+            Chỉ có <strong>Thủ quỹ</strong>, <strong>Tổ trưởng dân phố</strong> và <strong>Quản trị hệ thống (Admin)</strong> mới được phép truy cập.<br />
             Tất cả các Chi hội đoàn thể không có quyền truy cập phần này.
           </p>
         </div>

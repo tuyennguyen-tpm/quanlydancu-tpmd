@@ -2485,14 +2485,14 @@ const App = () => {
         return <WardFunds />;
       case 'treasurer': {
         const currentActionRole = localStorage.getItem('current_role') || userRole;
-        const isAdminOrToTruong = currentActionRole === 'to_truong' || currentActionRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
-        if (!isAdminOrToTruong) {
+        const isAuthorizedForTreasurer = currentActionRole === 'to_truong' || currentActionRole === 'admin' || currentActionRole === 'thu_quy' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+        if (!isAuthorizedForTreasurer) {
           return (
             <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
               <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔒</div>
               <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Quyền truy cập bị hạn chế</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.6' }}>
-                Chỉ có <strong>Tổ trưởng dân phố</strong> và <strong>Quản trị hệ thống (Admin)</strong> mới được phép truy cập, xem, in hoặc tải thông tin Thủ quỹ.<br />
+                Chỉ có <strong>Thủ quỹ</strong>, <strong>Tổ trưởng dân phố</strong> và <strong>Quản trị hệ thống (Admin)</strong> mới được phép truy cập.<br />
                 Tất cả các Chi hội đoàn thể không có quyền truy cập phần này.
               </p>
             </div>
@@ -2587,8 +2587,8 @@ const App = () => {
     }
     if (item.id === 'treasurer') {
       const currentActionRole = localStorage.getItem('current_role') || userRole;
-      const isAdminOrToTruong = currentActionRole === 'to_truong' || currentActionRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
-      return isAdminOrToTruong;
+      const isAuthorizedForTreasurer = currentActionRole === 'to_truong' || currentActionRole === 'admin' || currentActionRole === 'thu_quy' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+      return isAuthorizedForTreasurer;
     }
     if (item.id === 'settings') {
       return userRole === 'to_truong' || userRole === 'admin';
