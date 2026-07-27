@@ -1414,12 +1414,16 @@ const WardFunds = () => {
         'success'
       );
 
-      // Chạy lưu CSDL ngầm không làm đơ/trễ nút bấm
+      // Lưu đồng bộ trực tiếp vào CSDL Supabase
       (async () => {
         try {
-          await Promise.all(members.map(async (m, idx) => {
-            await db.saveWardFund({ ...m, contributions: memberContribMaps[idx], note: shouldPay ? 'Đã nộp đủ đợt tập trung' : '' });
+          const wardFundsToSave: WardFund[] = members.map((m, idx) => ({
+            ...m,
+            contributions: memberContribMaps[idx],
+            note: shouldPay ? 'Đã nộp đủ đợt tập trung' : ''
           }));
+          
+          await db.saveWardFundsBatch(wardFundsToSave);
 
           if (householdId && !householdId.startsWith('addr__')) {
             const firstMember = members[0];
@@ -1466,7 +1470,11 @@ const WardFunds = () => {
               }
             }
           }
-        } catch { /* ignore bg errors */ }
+          window.dispatchEvent(new CustomEvent('db-changed'));
+        } catch (err) {
+          console.error('Save to CSDL failed:', err);
+          showToast('Có lỗi khi lưu vào CSDL!', 'danger');
+        }
       })();
     } catch { showToast('Có lỗi khi cập nhật!', 'danger'); }
   };
