@@ -1556,7 +1556,7 @@ const WardFunds = () => {
     }
   };
 
-  // Khôi phục tự động tất cả dữ liệu nộp tiền bị mất
+  // Khôi phục tự động tất cả dữ liệu nộp tiền bị mất (kết hợp đối soát dữ liệu Thu Chi TDP)
   const handleAutoRepairPaymentData = async () => {
     try {
       setIsLoading(true);
@@ -1564,8 +1564,19 @@ const WardFunds = () => {
       const wardFundsToSave: WardFund[] = [];
       const today = new Date().toISOString().slice(0, 10);
 
+      // Lấy danh sách mã hộ gia đình đã nộp quỹ TDP từ Thu Chi TDP
+      const tdpPaidHhIds = new Set(
+        householdFunds
+          .filter(hf => Number(hf.year) === selectedYear && (hf.amount > 0 || hf.note?.includes('Đã thu đủ')))
+          .map(hf => hf.household_id)
+          .filter(Boolean)
+      );
+
       funds.forEach(f => {
-        const isMarkedPaid = f.note === 'Đã nộp đủ đợt tập trung' || (f.contributions && Object.values(f.contributions).some(c => c && (c.actual > 0 || c.date)));
+        const hhId = fundMetaMap.get(f.id)?.householdId;
+        const isTdpPaidHH = hhId ? tdpPaidHhIds.has(hhId) : false;
+
+        const isMarkedPaid = isTdpPaidHH || f.note === 'Đã nộp đủ đợt tập trung' || (f.contributions && Object.values(f.contributions).some(c => c && (c.actual > 0 || c.date)));
         if (isMarkedPaid) {
           let changed = false;
           const newContrib = { ...f.contributions };
@@ -1582,7 +1593,7 @@ const WardFunds = () => {
               changed = true;
             }
           });
-          if (changed) {
+          if (changed || f.note !== 'Đã nộp đủ đợt tập trung') {
             repairedCount++;
             wardFundsToSave.push({
               ...f,
@@ -1595,11 +1606,11 @@ const WardFunds = () => {
 
       if (wardFundsToSave.length > 0) {
         await db.saveWardFundsBatch(wardFundsToSave);
-        showToast(`✅ Đã khôi phục thành công ${repairedCount} bản ghi nộp tiền vào CSDL!`, 'success');
+        showToast(`✅ Đã đối soát với Thu Chi TDP & khôi phục thành công ${repairedCount} nhân khẩu/hộ nộp đủ vào CSDL!`, 'success');
         await loadData(true);
         window.dispatchEvent(new CustomEvent('db-changed'));
       } else {
-        showToast('Tất cả dữ liệu nộp tiền hiện tại đã chuẩn xác!', 'info');
+        showToast('Tất cả dữ liệu Quỹ Phường hiện tại đã đồng bộ chuẩn xác với Thu Chi TDP!', 'info');
       }
     } catch (err) {
       console.error('Error repairing data:', err);
