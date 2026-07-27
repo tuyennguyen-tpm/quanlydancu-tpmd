@@ -23,7 +23,7 @@ import {
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -3273,7 +3273,7 @@ const WardFunds = () => {
     const SAVE_KEY = `receipt_html_ward_indiv_${item.id}_${selectedYear}`;
     const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
     const hasSavedVersion = !!savedReceiptHtml;
-    const receiptHtml = savedReceiptHtml ? savedReceiptHtml : freshReceiptHtml;
+    const receiptHtml = savedReceiptHtml ? applyWardFundPrefixToHtml(savedReceiptHtml) : freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -4527,7 +4527,7 @@ const WardFunds = () => {
     } catch { /* ignore */ }
 
     const hasSavedVersion = Boolean(savedReceiptHtml);
-    let receiptHtml = savedReceiptHtml || freshReceiptHtml;
+    let receiptHtml = savedReceiptHtml ? applyWardFundPrefixToHtml(savedReceiptHtml) : freshReceiptHtml;
 
     // Tự động kiểm tra và bổ sung tên Tổ nếu bản lưu cũ chưa có
     const hhGroupStr = (household as any).self_management_group || (activeMembers?.[0] as any)?.self_management_group || '';

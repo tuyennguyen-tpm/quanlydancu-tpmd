@@ -426,6 +426,20 @@ export function calculateHouseholdFinancialSummary(
 }
 
 /**
+ * Tự động cập nhật tiền tố Quỹ Phường trên chuỗi HTML phiếu thu (kể cả bản chỉnh sửa đã lưu trước đó của người dùng)
+ * mà không làm ảnh hưởng hay mất bất kỳ nội dung chỉnh sửa thủ công nào khác.
+ */
+export function applyWardFundPrefixToHtml(htmlStr: string): string {
+  if (!htmlStr) return htmlStr;
+  const rawPrefix = localStorage.getItem('ward_fund_prefix');
+  const wardFundPrefix = rawPrefix !== null ? rawPrefix.trim() : '[UBND Phường]';
+  const newPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
+
+  // Thay thế tất cả tiền tố dạng [UBND...], [Phường...], [Cấp Phường...] đứng trước tên quỹ bằng tiền tố mới nhất
+  return htmlStr.replace(/(\[\s*(?:UBND|UBND Phường|UBND Xã|Phường|Cấp Phường|Xã)\s*\]\s*)/gi, newPrefixStr);
+}
+
+/**
  * Xuất HTML Phiếu Thu 2 Liên (Mẫu 01-TT theo Thông tư 200/2014/TT-BTC) chuẩn hóa 100%.
  */
 export function generateUnifiedHouseholdReceiptHtml(
