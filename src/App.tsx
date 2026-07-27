@@ -2119,6 +2119,13 @@ const App = () => {
     await (db as any).saveWardFundList(mappedWardFunds);
     window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
 
+    // Xóa bộ nhớ đệm phiếu thu cũ để mọi phiếu thu tự động nhảy 100% theo Cài đặt mới
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('receipt_html_')) {
+        localStorage.removeItem(key);
+      }
+    });
+
     // Save groups configuration
     const cleanedGroups = groupsConfig.map(g => g.trim()).filter(Boolean);
     if (cleanedGroups.length === 0) {

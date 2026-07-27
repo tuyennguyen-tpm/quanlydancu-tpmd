@@ -5613,8 +5613,12 @@ const WardFunds = () => {
       ? `${wardHouseholdTotal > 0 ? `${wardHouseholdTotal.toLocaleString('vi-VN')}đ/hộ/năm` : ''}${wardHouseholdTotal > 0 && wardPersonTotal > 0 ? ' + ' : ''}${wardPersonTotal > 0 ? `${wardPersonTotal.toLocaleString('vi-VN')}đ/khẩu/năm (khẩu lao động)` : ''}`
       : '....................................';
 
+    const rawWardFundPrefix = localStorage.getItem('ward_fund_prefix');
+    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '[UBND Phường]';
+    const wardPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
+
     let wardListHtml = defaultWardItems.map((item) => `
-      <li style="margin-bottom: 3px;"><b>${item.name}:</b> ${item.text}</li>
+      <li style="margin-bottom: 3px;"><b>${wardPrefixStr}${item.name}:</b> ${item.text}</li>
     `).join('');
 
     if (wardFundsList.length > 0) {
@@ -5623,7 +5627,7 @@ const WardFunds = () => {
         const targetStr = typeof wf.target === 'number' ? wf.target.toLocaleString('vi-VN') + 'đ' : (wf.target ? wf.target + 'đ' : '....đ');
         const unitStr = isHousehold ? 'hộ' : 'khẩu';
         const noteStr = wf.age_range ? ` (${wf.age_range})` : (isHousehold ? '' : ' (Trong độ tuổi lao động – Có danh sách kèm theo)');
-        return `<li style="margin-bottom: 3px;"><b>${wf.name}:</b> ${targetStr} / ${unitStr} / năm${noteStr}</li>`;
+        return `<li style="margin-bottom: 3px;"><b>${wardPrefixStr}${wf.name}:</b> ${targetStr} / ${unitStr} / năm${noteStr}</li>`;
       }).join('');
     }
 
