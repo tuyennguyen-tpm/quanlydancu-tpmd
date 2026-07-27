@@ -1544,7 +1544,7 @@ const Finance = () => {
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
           <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
-          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Đặt lại mẫu phiếu in gốc</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
             <option value="7pt">7pt</option>

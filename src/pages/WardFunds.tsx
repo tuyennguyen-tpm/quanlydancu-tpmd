@@ -3513,7 +3513,7 @@ const WardFunds = () => {
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
-          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Đặt lại mẫu phiếu in gốc</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
             <option value="8pt">8pt</option>
@@ -3529,7 +3529,7 @@ const WardFunds = () => {
         </div>
 
         <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
-          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của cá nhân này.</strong> Mọi chỉnh sửa trước đây đã được giữ nguyên. (Bấm <strong>🔄 Tải dữ liệu gốc từ hệ thống</strong> nếu muốn hủy bỏ chỉnh sửa).
+          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của cá nhân này.</strong> Mọi chỉnh sửa trước đây đã được giữ nguyên. (Bấm <strong>🔄 Đặt lại mẫu phiếu in gốc</strong> nếu muốn hủy bỏ chỉnh sửa).
         </div>
 
         <div class="editor-area" contenteditable="true" style="outline: none;">
@@ -4775,7 +4775,7 @@ const WardFunds = () => {
         <div class="print-toolbar">
           <button class="toolbar-btn btn-print" id="btn-save-and-print">&#x1F4BE;&#x1F5A8;&#xFE0F; L&#x01B0;u &amp; In</button>
           <button class="toolbar-btn btn-save" id="btn-save">&#x1F4BE; L&#x01B0;u ch&#x1EC9;nh s&#x1EED;a</button>
-          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Tải dữ liệu gốc từ hệ thống</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Đặt lại mẫu phiếu in gốc</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select">
             <option value="7pt">7pt</option>
@@ -4793,7 +4793,7 @@ const WardFunds = () => {
         </div>
 
         <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
-          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây của bạn đã được giữ nguyên. (Bấm <strong>🔄 Tải dữ liệu gốc từ hệ thống</strong> nếu muốn hủy bỏ chỉnh sửa và khôi phục dữ liệu ban đầu).
+          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây của bạn đã được giữ nguyên. (Bấm <strong>🔄 Đặt lại mẫu phiếu in gốc</strong> nếu muốn hủy bỏ chỉnh sửa và khôi phục dữ liệu ban đầu).
         </div>
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
