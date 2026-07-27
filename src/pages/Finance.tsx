@@ -2203,7 +2203,7 @@ const Finance = () => {
       : '....................................';
 
     const rawWardFundPrefix = localStorage.getItem('ward_fund_prefix');
-    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '[UBND Phường]';
+    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '';
     const wardPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
 
     let wardListHtml = defaultWardItems.map((item) => `

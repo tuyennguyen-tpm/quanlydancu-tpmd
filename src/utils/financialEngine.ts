@@ -432,8 +432,8 @@ export function calculateHouseholdFinancialSummary(
 export function applyWardFundPrefixToHtml(htmlStr: string): string {
   if (!htmlStr) return htmlStr;
   const rawPrefix = localStorage.getItem('ward_fund_prefix');
-  const wardFundPrefix = rawPrefix !== null ? rawPrefix.trim() : '[UBND Phường]';
-  const newPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
+  if (!rawPrefix || !rawPrefix.trim()) return htmlStr;
+  const newPrefixStr = rawPrefix.trim() + ' ';
 
   // Thay thế tất cả tiền tố dạng [UBND...], [Phường...], [Cấp Phường...] đứng trước tên quỹ bằng tiền tố mới nhất
   return htmlStr.replace(/(\[\s*(?:UBND|UBND Phường|UBND Xã|Phường|Cấp Phường|Xã)\s*\]\s*)/gi, newPrefixStr);
@@ -468,7 +468,7 @@ export function generateUnifiedHouseholdReceiptHtml(
 
   if (printMode === 'combined' || printMode === 'ward_only') {
     const rawWardFundPrefix = localStorage.getItem('ward_fund_prefix');
-    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '[UBND Phường]';
+    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '';
     const wardPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
     summary.wardLineItems.forEach(item => {
       receiptRows.push({

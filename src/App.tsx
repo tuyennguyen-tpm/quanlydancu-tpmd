@@ -1077,7 +1077,7 @@ const App = () => {
   const [sbKey, setSbKey] = useState(localStorage.getItem('supabase_anon_key') || '');
   const [tdpNameInput, setTdpNameInput] = useState(tdpName);
   const [wardNameInput, setWardNameInput] = useState(wardName);
-  const [wardFundPrefixInput, setWardFundPrefixInput] = useState(localStorage.getItem('ward_fund_prefix') ?? '[UBND Phường]');
+  const [wardFundPrefixInput, setWardFundPrefixInput] = useState(localStorage.getItem('ward_fund_prefix') ?? '');
   const [leaderNameInput, setLeaderNameInput] = useState(leaderName);
   const [leaderPhoneInput, setLeaderPhoneInput] = useState(leaderPhone);
   const [groupIdInput, setGroupIdInput] = useState(groupId);
@@ -1951,7 +1951,7 @@ const App = () => {
   const handleOpenSettings = () => {
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
-    setWardFundPrefixInput(localStorage.getItem('ward_fund_prefix') ?? '[UBND Phường]');
+    setWardFundPrefixInput(localStorage.getItem('ward_fund_prefix') ?? '');
     setLeaderNameInput(leaderName);
     setLeaderPhoneInput(leaderPhone);
     setGroupIdInput(groupId);

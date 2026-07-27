@@ -2993,7 +2993,7 @@ const WardFunds = () => {
     // Tính tiền Quỹ Phường thực tế đã nộp (actual)
     let wardTotal = 0;
     const rawWardFundPrefix = localStorage.getItem('ward_fund_prefix');
-    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '[UBND Phường]';
+    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '';
     const wardPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
     const wardRows = activeFunds.map((fund, idx) => {
       const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
@@ -5614,7 +5614,7 @@ const WardFunds = () => {
       : '....................................';
 
     const rawWardFundPrefix = localStorage.getItem('ward_fund_prefix');
-    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '[UBND Phường]';
+    const wardFundPrefix = rawWardFundPrefix !== null ? rawWardFundPrefix.trim() : '';
     const wardPrefixStr = wardFundPrefix ? wardFundPrefix + ' ' : '';
 
     let wardListHtml = defaultWardItems.map((item) => `
