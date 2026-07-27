@@ -71,6 +71,23 @@ const Finance = () => {
   }, []);
 
   const userRole = localStorage.getItem('user_role') || '';
+  const currentActionRole = localStorage.getItem('current_role') || userRole;
+  const isAdminOrToTruong = currentActionRole === 'to_truong' || currentActionRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+
+  if (!isAdminOrToTruong) {
+    return (
+      <div className="page-container">
+        <div className="card" style={{ padding: '40px 24px', textAlign: 'center', marginTop: '20px' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
+          <h2 style={{ color: '#ef4444', marginBottom: '10px' }}>Quyền truy cập bị hạn chế</h2>
+          <p style={{ color: '#64748b', fontSize: '0.95rem', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.6' }}>
+            Chỉ có <strong>Tổ trưởng dân phố</strong> và <strong>Quản trị hệ thống (Admin)</strong> mới được phép truy cập Quản lý Thu chi TDP.<br />
+            Tất cả các vai trò khác không có quyền truy cập phần này.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const isWardUser = userRole === 'ward_admin' || userRole === 'super_admin';
   const isKeToan = currentRole === 'ke_toan' || userRole === 'ke_toan';
   const isThuQuy = currentRole === 'thu_quy' || userRole === 'thu_quy';
