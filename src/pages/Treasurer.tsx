@@ -101,7 +101,7 @@ export default function Treasurer() {
 
   // Form State - Sổ tay Thu tiền ngoài lề (Nhập tay)
   const [incPayer, setIncPayer] = useState('');
-  const [incCategory, setIncCategory] = useState('Thu nhận tiền hàng ngày');
+  const [incCategory, setIncCategory] = useState('Thu quỹ TDP + Phường');
   const [incAmount, setIncAmount] = useState('');
   const [incMethod, setIncMethod] = useState<'Tiền mặt' | 'Chuyển khoản'>('Tiền mặt');
   const [incDate, setIncDate] = useState(new Date().toISOString().slice(0, 10));
@@ -514,14 +514,19 @@ export default function Treasurer() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Khoản thu / Hạng mục:</label>
-                  <input
-                    type="text"
-                    placeholder="VD: Thu nhận tiền mặt, Đóng góp..."
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Khoản thu (Hạng mục):</label>
+                  <select
                     value={incCategory}
                     onChange={(e) => setIncCategory(e.target.value)}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
-                  />
+                  >
+                    <option value="Thu quỹ TDP + Phường">Thu quỹ TDP + Phường</option>
+                    <option value="Thu quỹ TDP">Thu quỹ TDP</option>
+                    <option value="Thu quỹ Phường">Thu quỹ Phường</option>
+                    <option value="Đóng góp tự nguyện">Đóng góp tự nguyện</option>
+                    <option value="Ủng hộ lễ hội / Sự kiện">Ủng hộ lễ hội / Sự kiện</option>
+                    <option value="Thu khác">Thu khác</option>
+                  </select>
                 </div>
 
                 <div>
