@@ -1556,6 +1556,59 @@ const WardFunds = () => {
     }
   };
 
+  // Khôi phục tự động tất cả dữ liệu nộp tiền bị mất
+  const handleAutoRepairPaymentData = async () => {
+    try {
+      setIsLoading(true);
+      let repairedCount = 0;
+      const wardFundsToSave: WardFund[] = [];
+      const today = new Date().toISOString().slice(0, 10);
+
+      funds.forEach(f => {
+        const isMarkedPaid = f.note === 'Đã nộp đủ đợt tập trung' || (f.contributions && Object.values(f.contributions).some(c => c && (c.actual > 0 || c.date)));
+        if (isMarkedPaid) {
+          let changed = false;
+          const newContrib = { ...f.contributions };
+          activeFunds.forEach(fund => {
+            const compExp = computedExpectedMap.get(f.id) || {};
+            const targetExp = compExp[fund.name] ?? (f.contributions?.[fund.name]?.expected || fund.target);
+            const currentAct = f.contributions?.[fund.name]?.actual || 0;
+            if (targetExp > 0 && currentAct < targetExp) {
+              newContrib[fund.name] = {
+                expected: targetExp,
+                actual: targetExp,
+                date: f.contributions?.[fund.name]?.date || today
+              };
+              changed = true;
+            }
+          });
+          if (changed) {
+            repairedCount++;
+            wardFundsToSave.push({
+              ...f,
+              contributions: newContrib,
+              note: 'Đã nộp đủ đợt tập trung'
+            });
+          }
+        }
+      });
+
+      if (wardFundsToSave.length > 0) {
+        await db.saveWardFundsBatch(wardFundsToSave);
+        showToast(`✅ Đã khôi phục thành công ${repairedCount} bản ghi nộp tiền vào CSDL!`, 'success');
+        await loadData(true);
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } else {
+        showToast('Tất cả dữ liệu nộp tiền hiện tại đã chuẩn xác!', 'info');
+      }
+    } catch (err) {
+      console.error('Error repairing data:', err);
+      showToast('Lỗi khi khôi phục dữ liệu!', 'danger');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Clear All Year Data
   const handleClearYearData = async () => {
     if (isGuest || currentRole === 'to_truong') {
@@ -6479,6 +6532,28 @@ const WardFunds = () => {
           >
             <RefreshCw size={16} className={isLoading ? 'spin-animation' : ''} />
           </button>
+          {!isGuest && (
+            <button
+              onClick={handleAutoRepairPaymentData}
+              title="Quét và khôi phục tự động trạng thái nộp đủ cho các hộ gia đình"
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1.5px solid #10b981',
+                backgroundColor: '#ecfdf5',
+                color: '#047857',
+                fontWeight: '750',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 4px rgba(16,185,129,0.15)'
+              }}
+            >
+              ⚡ Khôi phục nộp đủ
+            </button>
+          )}
         </div>
       </div>
 
