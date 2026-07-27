@@ -40,6 +40,12 @@ export interface TreasurerManualNote {
   created_at: string;
 }
 
+const formatNumberWithDots = (val: string) => {
+  const rawDigits = val.replace(/\D/g, '');
+  if (!rawDigits) return '';
+  return rawDigits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
 export default function Treasurer() {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'thu_quy');
   const userRole = localStorage.getItem('user_role') || '';
@@ -532,10 +538,10 @@ export default function Treasurer() {
                 <div>
                   <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Số tiền (VNĐ):</label>
                   <input
-                    type="number"
-                    placeholder="Ví dụ: 200000"
+                    type="text"
+                    placeholder="Ví dụ: 100.000"
                     value={incAmount}
-                    onChange={(e) => setIncAmount(e.target.value)}
+                    onChange={(e) => setIncAmount(formatNumberWithDots(e.target.value))}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.92rem', fontWeight: 'bold', color: '#15803d', background: 'white' }}
                   />
                 </div>
@@ -588,7 +594,7 @@ export default function Treasurer() {
             {/* Summary Bar for Manual Notebook */}
             <div style={{
               display: 'flex',
-              justify: 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               background: '#f8fafc',
               padding: '12px 18px',
