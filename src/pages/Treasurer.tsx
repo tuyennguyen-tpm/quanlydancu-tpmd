@@ -80,9 +80,7 @@ export default function Treasurer() {
 
   // State for System Financial Records
   const [records, setRecords] = useState<FinancialRecord[]>([]);
-  const [residents, setResidents] = useState<Resident[]>([]);
-  const [households, setHouseholds] = useState<Household[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingSystemData, setLoadingSystemData] = useState(false);
 
   // State for Treasurer Manual Notebook Entries (Sổ tay thu ngoài lề - Không liên quan CSDL thu chi chính)
   const [manualNotes, setManualNotes] = useState<TreasurerManualNote[]>(() => {
@@ -101,10 +99,6 @@ export default function Treasurer() {
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
 
-  // Modals (System)
-  const [showIncomeModal, setShowIncomeModal] = useState(false);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-
   // Form State - Sổ tay Thu tiền ngoài lề (Nhập tay)
   const [incPayer, setIncPayer] = useState('');
   const [incCategory, setIncCategory] = useState('Thu quỹ TDP + Phường');
@@ -113,37 +107,24 @@ export default function Treasurer() {
   const [incDate, setIncDate] = useState(new Date().toISOString().slice(0, 10));
   const [incNote, setIncNote] = useState('');
 
-  // Form State - Chi (Expense System)
-  const [expPayee, setExpPayee] = useState('');
-  const [expCategory, setExpCategory] = useState('Hoạt động chung TDP');
-  const [expAmount, setExpAmount] = useState('');
-  const [expMethod, setExpMethod] = useState<'Tiền mặt' | 'Chuyển khoản'>('Tiền mặt');
-  const [expDate, setExpDate] = useState(new Date().toISOString().slice(0, 10));
-  const [expApprover, setExpApprover] = useState('Tổ trưởng TDP');
-  const [expNote, setExpNote] = useState('');
-
-  // Load System Data
-  const loadData = async () => {
-    setLoading(true);
+  // Load System Financial Data (Lazy load only when requested)
+  const loadSystemRecords = async () => {
+    setLoadingSystemData(true);
     try {
-      const [finRecs, resList, hhList] = await Promise.all([
-        db.getFinancialRecords(),
-        db.getResidents(),
-        db.getHouseholds()
-      ]);
+      const finRecs = await db.getFinancialRecords();
       setRecords(finRecs || []);
-      setResidents(resList || []);
-      setHouseholds(hhList || []);
     } catch (err) {
-      console.error('Lỗi nạp dữ liệu Thủ quỹ:', err);
+      console.error('Lỗi nạp CSDL thu chi:', err);
     } finally {
-      setLoading(false);
+      setLoadingSystemData(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (activeTab !== 'manual' && records.length === 0) {
+      loadSystemRecords();
+    }
+  }, [activeTab]);
 
   // Save Manual Entry into Treasurer Notebook (Sổ tay ngoài lề)
   const handleSaveManualNote = () => {
@@ -690,7 +671,7 @@ export default function Treasurer() {
             <div style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic', marginBottom: '12px' }}>
               💡 <strong>Lưu ý:</strong> Đây là danh sách thu chi chính thức được lưu trong CSDL của ứng dụng (dùng chung cho Kế toán, Tổ trưởng và Báo cáo).
             </div>
-            {loading ? (
+            {loadingSystemData ? (
               <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                 <Clock size={32} className="pulse" style={{ marginBottom: '8px' }} />
                 <div>Đang tải dữ liệu CSDL thu chi...</div>
