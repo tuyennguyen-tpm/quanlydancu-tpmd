@@ -8,6 +8,7 @@ import AIAssistant from './pages/AIAssistant';
 import CitizenMap from './pages/CitizenMap';
 import Finance from './pages/Finance';
 import WardFunds from './pages/WardFunds';
+import Treasurer from './pages/Treasurer';
 import Households from './pages/Households';
 import Residents from './pages/Residents';
 import Policies from './pages/Policies';
@@ -42,7 +43,8 @@ import {
   FileText, 
   PieChart, 
   Map as MapIcon, 
-  Menu, 
+  Menu,
+  Landmark, 
   X, 
   LogOut,
   Bell,
@@ -2481,6 +2483,19 @@ const App = () => {
           );
         }
         return <WardFunds />;
+      case 'treasurer':
+        if (userRole === 'demo' || userRole === 'trang_chu') {
+          return (
+            <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔒</div>
+              <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Quyền truy cập bị hạn chế</h3>
+              <p style={{ color: 'var(--text-muted)' }}>
+                Vai trò <strong>Trang chủ</strong> không được phép xem thông tin Sổ quỹ Thủ quỹ. Vui lòng chuyển sang vai trò thao tác phù hợp để xem.
+              </p>
+            </div>
+          );
+        }
+        return <Treasurer />;
       case 'party-cell':
         return <PartyCell />;
       case 'meetings':
@@ -2550,6 +2565,7 @@ const App = () => {
     { id: 'regulations', icon: Check, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
     { id: 'finance', icon: Wallet, label: 'Thu chi TDP', group: 'Tài chính' },
     { id: 'ward-funds', icon: Wallet, label: 'Quỹ nộp phường', group: 'Tài chính' },
+    { id: 'treasurer', icon: Landmark, label: 'Thủ quỹ', group: 'Tài chính' },
     { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount, badgeColor: '#ef4444' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },
     { id: 'settings', icon: Settings, label: 'Cài đặt', group: 'Tiện ích' },
@@ -2558,12 +2574,12 @@ const App = () => {
       return item.id === 'security';
     }
     if (userRole === 'demo' || userRole === 'trang_chu') {
-      if (item.id === 'finance' || item.id === 'ward-funds') {
+      if (item.id === 'finance' || item.id === 'ward-funds' || item.id === 'treasurer') {
         return false;
       }
     }
     if (isGuestMode) {
-      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'settings'].includes(item.id);
+      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'treasurer', 'settings'].includes(item.id);
     }
     if (item.id === 'settings') {
       return userRole === 'to_truong' || userRole === 'admin';
