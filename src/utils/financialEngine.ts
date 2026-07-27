@@ -211,6 +211,24 @@ export function docSoTien(number: number): string {
 }
 
 /**
+ * Lấy dữ liệu khoản đóng góp từ object contributions với cơ chế khớp tên thông minh (bỏ qua tiền tố Quỹ, [TDP], [NGƯỜI CAO TUỔI PHƯỜNG]...)
+ */
+export function getContributionData(contributions: Record<string, any> | undefined, fundName: string): { expected?: number; actual?: number; date?: string } | undefined {
+  if (!contributions) return undefined;
+  if (contributions[fundName]) return contributions[fundName];
+  const norm = (s: string) => s.toLowerCase().replace(/^\[.*?\]\s*/, '').replace(/^quỹ\s+/, '').trim();
+  const target = norm(fundName);
+  for (const k of Object.keys(contributions)) {
+    if (norm(k) === target) return contributions[k];
+  }
+  for (const k of Object.keys(contributions)) {
+    const nk = norm(k);
+    if (nk.includes(target) || target.includes(nk)) return contributions[k];
+  }
+  return undefined;
+}
+
+/**
  * Tạo mã đối soát ngẫu nhiên / checksum xác thực phiếu thu.
  */
 export function generateReceiptVerificationCode(householdId: string, year: number, grandTotal: number): string {
@@ -346,7 +364,8 @@ export function calculateHouseholdFinancialSummary(
         const isLabor = (r.user_id && laborResidentIds.has(r.user_id)) || laborResidentNames.has((r.full_name || '').trim().toLowerCase());
         if (!isLabor) return sum;
       }
-      const raw = r.contributions?.[wf.name]?.actual ?? 0;
+      const contrib = getContributionData(r.contributions, wf.name);
+      const raw = contrib?.actual ?? 0;
       const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
       return sum + val;
     }, 0);

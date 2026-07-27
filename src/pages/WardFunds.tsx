@@ -23,7 +23,7 @@ import {
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -1033,19 +1033,26 @@ const WardFunds = () => {
       let sumExp = 0;
       funds.forEach(f => {
         const compExp = computedExpectedMap.get(f.id) || {};
-        const exp = compExp[fund.name] ?? (f.contributions?.[fund.name]?.expected || 0);
+        const contrib = getContributionData(f.contributions, fund.name);
+        const exp = compExp[fund.name] ?? (contrib?.expected || 0);
         sumExp += exp;
       });
       const expected = sumExp > 0 ? sumExp : fund.target * (isHouseholdScope ? totalHhCount : funds.length);
 
-      const actual = funds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
+      const actual = funds.reduce((sum, f) => {
+        const contrib = getContributionData(f.contributions, fund.name);
+        return sum + (contrib?.actual || 0);
+      }, 0);
       const percent = expected > 0 ? Math.round((actual / expected) * 100) : 0;
       const remaining = Math.max(0, expected - actual);
 
       // Đếm số hộ đã đóng tiền cho riêng quỹ này
       let paidHouseholdsForFund = 0;
       hhMap.forEach((members) => {
-        const hhFundActual = members.reduce((s, m) => s + (m.contributions?.[fund.name]?.actual || 0), 0);
+        const hhFundActual = members.reduce((s, m) => {
+          const contrib = getContributionData(m.contributions, fund.name);
+          return s + (contrib?.actual || 0);
+        }, 0);
         if (hhFundActual > 0) {
           paidHouseholdsForFund++;
         }
@@ -1575,7 +1582,7 @@ const WardFunds = () => {
       // Lấy danh sách mã hộ gia đình đã nộp quỹ TDP từ Thu Chi TDP
       const tdpPaidHhIds = new Set(
         householdFunds
-          .filter(hf => Number(hf.year) === selectedYear && (hf.amount > 0 || hf.note?.includes('Đã thu đủ')))
+          .filter(hf => Number(hf.year) === selectedYear && (hf.amount > 0 || !!hf.paid_at || hf.note?.includes('Đã thu') || hf.note?.includes('Đã nộp')))
           .map(hf => hf.household_id)
           .filter(Boolean)
       );
@@ -1590,13 +1597,14 @@ const WardFunds = () => {
           const newContrib = { ...f.contributions };
           activeFunds.forEach(fund => {
             const compExp = computedExpectedMap.get(f.id) || {};
-            const targetExp = compExp[fund.name] ?? (f.contributions?.[fund.name]?.expected || fund.target);
-            const currentAct = f.contributions?.[fund.name]?.actual || 0;
+            const contrib = getContributionData(f.contributions, fund.name);
+            const targetExp = compExp[fund.name] ?? (contrib?.expected || fund.target);
+            const currentAct = contrib?.actual || 0;
             if (targetExp > 0 && currentAct < targetExp) {
               newContrib[fund.name] = {
                 expected: targetExp,
                 actual: targetExp,
-                date: f.contributions?.[fund.name]?.date || today
+                date: contrib?.date || today
               };
               changed = true;
             }
