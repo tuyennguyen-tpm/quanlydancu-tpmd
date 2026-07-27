@@ -558,7 +558,7 @@ export default function Treasurer() {
         </div>
 
         {/* Action Buttons */}
-        {!isReadOnly && !isThuQuy && (
+        {!isDemoRole && localStorage.getItem('guest_mode') !== 'true' && (
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setShowIncomeModal(true)}
@@ -577,31 +577,33 @@ export default function Treasurer() {
             >
               <Plus size={18} /> Lập Phiếu Thu (Nhận tiền)
             </button>
-            <button
-              onClick={() => setShowExpenseModal(true)}
-              className="btn btn-secondary"
-              style={{
-                background: 'rgba(239, 68, 68, 0.15)',
-                color: '#fca5a5',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                padding: '10px 18px',
-                borderRadius: '10px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <Plus size={18} /> Lập Phiếu Chi (Xuất tiền)
-            </button>
+            {!isThuQuy && (
+              <button
+                onClick={() => setShowExpenseModal(true)}
+                className="btn btn-secondary"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#fca5a5',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Plus size={18} /> Lập Phiếu Chi (Xuất tiền)
+              </button>
+            )}
           </div>
         )}
 
         {isThuQuy && (
           <div style={{
-            background: 'rgba(234, 179, 8, 0.15)',
-            border: '1px solid rgba(234, 179, 8, 0.4)',
-            color: '#fef08a',
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid rgba(16, 185, 129, 0.4)',
+            color: '#a7f3d0',
             padding: '8px 14px',
             borderRadius: '10px',
             fontSize: '0.82rem',
@@ -610,8 +612,8 @@ export default function Treasurer() {
             alignItems: 'center',
             gap: '8px'
           }}>
-            <ShieldAlert size={18} color="#eab308" />
-            <span>Chế độ vai trò <strong>Thủ quỹ</strong>: Chỉ xem dữ liệu Sổ quỹ, không có quyền chỉnh sửa, lập phiếu hay in/xuất báo cáo.</span>
+            <ShieldAlert size={18} color="#10b981" />
+            <span>Vai trò <strong>Thủ quỹ</strong>: Được phép lập phiếu thu & nhập tay thu tiền hàng ngày thủ công. Không có quyền xóa hoặc in/xuất dữ liệu.</span>
           </div>
         )}
       </div>
@@ -816,7 +818,7 @@ export default function Treasurer() {
         </div>
 
         {/* Khung nhập tay thu tiền hàng ngày trực tiếp */}
-        {activeTab === 'income' && !isReadOnly && !isThuQuy && (
+        {activeTab === 'income' && !isDemoRole && localStorage.getItem('guest_mode') !== 'true' && (
           <div style={{
             background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
             border: '1.5px solid #a7f3d0',
