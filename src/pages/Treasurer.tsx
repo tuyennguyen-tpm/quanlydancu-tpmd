@@ -1,36 +1,25 @@
 import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { 
   Landmark, 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Plus, 
   Search, 
-  Printer, 
   Download, 
-  Calendar, 
   X, 
-  CheckCircle, 
-  Clock, 
-  DollarSign, 
-  Filter, 
-  FileText, 
-  User, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  ShieldAlert,
-  CreditCard,
-  Building,
-  BookOpen,
-  Trash2
+  ShieldAlert, 
+  BookOpen, 
+  Trash2,
+  Printer,
+  TrendingUp,
+  TrendingDown,
+  Wallet
 } from 'lucide-react';
-import { db, generateUUID } from '../services/db';
+import { generateUUID } from '../services/db';
 import { formatDateVN } from '../utils/dateUtils';
-import type { FinancialRecord, Resident, Household } from '../types';
+import { docSoTien } from '../utils/financialEngine';
 import ExcelJS from 'exceljs';
 
 export interface TreasurerManualNote {
   id: string;
+  type?: 'income' | 'expense';
   payer: string;
   category: string;
   amount: number;
@@ -59,8 +48,6 @@ export default function Treasurer() {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
 
-  const isDemoRole = currentRole === 'demo' || currentRole === 'trang_chu';
-  const isThuQuy = currentRole === 'thu_quy';
   const isAuthorizedForTreasurer = currentRole === 'to_truong' || currentRole === 'admin' || currentRole === 'thu_quy' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
 
   if (!isAuthorizedForTreasurer) {
@@ -78,11 +65,7 @@ export default function Treasurer() {
     );
   }
 
-  // State for System Financial Records
-  const [records, setRecords] = useState<FinancialRecord[]>([]);
-  const [loadingSystemData, setLoadingSystemData] = useState(false);
-
-  // State for Treasurer Manual Notebook Entries (Sổ tay thu ngoài lề - Không liên quan CSDL thu chi chính)
+  // State for Treasurer Manual Notebook Entries (Sổ tay thu chi ngoài lề)
   const [manualNotes, setManualNotes] = useState<TreasurerManualNote[]>(() => {
     try {
       const saved = localStorage.getItem('treasurer_manual_notes');
@@ -92,14 +75,18 @@ export default function Treasurer() {
     }
   });
 
-  // Tab & Filters
-  const [activeTab, setActiveTab] = useState<'manual' | 'all' | 'income' | 'expense'>('manual');
+  // Print Voucher Modal State
+  const [printModalNote, setPrintModalNote] = useState<TreasurerManualNote | null>(null);
+
+  // Filters
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [dateFilter, setDateFilter] = useState<'today' | 'this_week' | 'this_month' | 'all'>('this_month');
   const [methodFilter, setMethodFilter] = useState<'all' | 'cash' | 'transfer'>('all');
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
 
-  // Form State - Sổ tay Thu tiền ngoài lề (Nhập tay)
+  // Form State - Sổ tay Thu/Chi ngoài lề (Nhập tay)
+  const [entryType, setEntryType] = useState<'income' | 'expense'>('income');
   const [incPayer, setIncPayer] = useState('');
   const [incCategory, setIncCategory] = useState('Thu quỹ TDP + Phường');
   const [incAmount, setIncAmount] = useState('');
@@ -107,39 +94,32 @@ export default function Treasurer() {
   const [incDate, setIncDate] = useState(new Date().toISOString().slice(0, 10));
   const [incNote, setIncNote] = useState('');
 
-  // Load System Financial Data (Lazy load only when requested)
-  const loadSystemRecords = async () => {
-    setLoadingSystemData(true);
-    try {
-      const finRecs = await db.getFinancialRecords();
-      setRecords(finRecs || []);
-    } catch (err) {
-      console.error('Lỗi nạp CSDL thu chi:', err);
-    } finally {
-      setLoadingSystemData(false);
+  // Update default category when switching type
+  const handleTypeChange = (type: 'income' | 'expense') => {
+    setEntryType(type);
+    if (type === 'income') {
+      setIncCategory('Thu quỹ TDP + Phường');
+    } else {
+      setIncCategory('Chi hoạt động TDP');
     }
   };
-
-  useEffect(() => {
-    if (activeTab !== 'manual' && records.length === 0) {
-      loadSystemRecords();
-    }
-  }, [activeTab]);
 
   // Save Manual Entry into Treasurer Notebook (Sổ tay ngoài lề)
   const handleSaveManualNote = () => {
     const amt = parseFloat(incAmount.replace(/[^0-9]/g, ''));
     if (!amt || amt <= 0) {
       window.dispatchEvent(new CustomEvent('show-toast', {
-        detail: { message: '⚠️ Vui lòng nhập số tiền thu hợp lệ!', type: 'warning' }
+        detail: { message: '⚠️ Vui lòng nhập số tiền hợp lệ!', type: 'warning' }
       }));
       return;
     }
 
+    const isInc = entryType === 'income';
     const newNote: TreasurerManualNote = {
       id: generateUUID(),
-      payer: incPayer.trim() || 'Người nộp tự do',
-      category: incCategory.trim() || 'Thu tiền ngoài lề',
+      type: entryType,
+      payer: incPayer.trim() || (isInc ? 'Người nộp tự do' : 'Người nhận tiền'),
+      category: incCategory.trim() || (isInc ? 'Thu tiền ngoài lề' : 'Chi tiền ngoài lề'),
       amount: amt,
       method: incMethod,
       date: incDate,
@@ -152,7 +132,10 @@ export default function Treasurer() {
     localStorage.setItem('treasurer_manual_notes', JSON.stringify(updated));
 
     window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: { message: '✅ Đã ghi vào Sổ tay ngoài lề thành công! (Tách biệt khỏi CSDL ứng dụng)', type: 'success' }
+      detail: { 
+        message: `✅ Đã lập ${isInc ? 'Phiếu Thu' : 'Phiếu Chi'} Sổ tay thành công! (Tách biệt CSDL)`, 
+        type: 'success' 
+      }
     }));
 
     // Reset form
@@ -163,12 +146,12 @@ export default function Treasurer() {
 
   // Delete Manual Entry from Treasurer Notebook
   const handleDeleteManualNote = (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn xóa dòng ghi chép này khỏi Sổ tay ngoài lề?')) return;
+    if (!window.confirm('Bạn có chắc muốn xóa dòng chứng từ này khỏi Sổ tay ngoài lề?')) return;
     const updated = manualNotes.filter(n => n.id !== id);
     setManualNotes(updated);
     localStorage.setItem('treasurer_manual_notes', JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: { message: 'Đã xóa ghi chép khỏi Sổ tay ngoài lề', type: 'info' }
+      detail: { message: 'Đã xóa chứng từ khỏi Sổ tay ngoài lề', type: 'info' }
     }));
   };
 
@@ -183,6 +166,10 @@ export default function Treasurer() {
     const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 
     return manualNotes.filter(e => {
+      const eType = e.type || 'income';
+      if (typeFilter === 'income' && eType !== 'income') return false;
+      if (typeFilter === 'expense' && eType !== 'expense') return false;
+
       const eDate = (e.date || e.created_at || '').slice(0, 10);
       if (dateFilter === 'today' && eDate !== todayStr) return false;
       if (dateFilter === 'this_week' && eDate < startOfWeekStr) return false;
@@ -193,73 +180,34 @@ export default function Treasurer() {
 
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
-        const matchPayer = e.payer.toLowerCase().includes(q);
-        const matchCat = e.category.toLowerCase().includes(q);
-        const matchNote = e.note.toLowerCase().includes(q);
-        const matchAmt = e.amount.toString().includes(q);
+        const matchPayer = (e.payer || '').toLowerCase().includes(q);
+        const matchCat = (e.category || '').toLowerCase().includes(q);
+        const matchNote = (e.note || '').toLowerCase().includes(q);
+        const matchAmt = (e.amount || 0).toString().includes(q);
         if (!matchPayer && !matchCat && !matchNote && !matchAmt) return false;
       }
       return true;
     });
-  }, [manualNotes, dateFilter, methodFilter, searchTerm]);
+  }, [manualNotes, typeFilter, dateFilter, methodFilter, searchTerm]);
 
-  // Total amount in Treasurer Notebook
-  const manualTotalSum = useMemo(() => {
-    return filteredManualNotes.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  // Statistics calculation for Manual Notebook
+  const { totalIncome, totalExpense, balance } = useMemo(() => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+    filteredManualNotes.forEach(item => {
+      const amt = Number(item.amount) || 0;
+      if ((item.type || 'income') === 'income') {
+        totalIncome += amt;
+      } else {
+        totalExpense += amt;
+      }
+    });
+    return {
+      totalIncome,
+      totalExpense,
+      balance: totalIncome - totalExpense
+    };
   }, [filteredManualNotes]);
-
-  // Consolidated system records for reference
-  const processedSystemRecords = useMemo(() => {
-    const manualRecords: FinancialRecord[] = [];
-    const autoFundRecords: FinancialRecord[] = [];
-
-    records.forEach(r => {
-      if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động' || r.description.includes('[HỘ_')) {
-        autoFundRecords.push(r);
-      } else {
-        manualRecords.push(r);
-      }
-    });
-
-    const autoGroupsMap = new Map<string, { date: string; category: string; amount: number; count: number; created_at: string }>();
-    autoFundRecords.forEach(r => {
-      const cleanCat = r.category || 'Thu quỹ TDP';
-      const rDate = (r.date || r.created_at || '').slice(0, 10);
-      const key = `${rDate}_${cleanCat}`;
-      
-      const existing = autoGroupsMap.get(key);
-      if (existing) {
-        existing.amount += Number(r.amount) || 0;
-        existing.count += 1;
-      } else {
-        autoGroupsMap.set(key, {
-          date: rDate,
-          category: cleanCat,
-          amount: Number(r.amount) || 0,
-          count: 1,
-          created_at: r.created_at || new Date().toISOString()
-        });
-      }
-    });
-
-    const groupedAutoRecords: FinancialRecord[] = Array.from(autoGroupsMap.values()).map(g => ({
-      id: `summary_${g.date}_${g.category.replace(/\s+/g, '_')}`,
-      group_id: 'default',
-      type: 'income',
-      amount: g.amount,
-      category: g.category,
-      description: `Tổng thu ${g.category} trong ngày (Gom nhóm ${g.count} hộ nộp)`,
-      recorded_by: 'Tổng hợp thu ngày',
-      date: g.date,
-      created_at: g.created_at
-    }));
-
-    return [...manualRecords, ...groupedAutoRecords].sort((a, b) => {
-      const dateA = a.date || a.created_at || '';
-      const dateB = b.date || b.created_at || '';
-      return dateB.localeCompare(dateA);
-    });
-  }, [records]);
 
   // Format currency
   const formatVND = (num: number) => {
@@ -269,27 +217,32 @@ export default function Treasurer() {
   // Export Sổ tay ngoài lề
   const handleExportManualExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('So_Tay_Thu_Ngoai_Le');
+    const worksheet = workbook.addWorksheet('So_Tay_Thu_Chi_Ngoai_Le');
 
     worksheet.columns = [
       { header: 'STT', key: 'stt', width: 8 },
-      { header: 'Ngày thu', key: 'date', width: 16 },
-      { header: 'Người / Hộ nhận', key: 'payer', width: 25 },
-      { header: 'Khoản thu / Hạng mục', key: 'category', width: 25 },
+      { header: 'Ngày lập', key: 'date', width: 16 },
+      { header: 'Loại chứng từ', key: 'type', width: 16 },
+      { header: 'Người nộp / nhận tiền', key: 'payer', width: 25 },
+      { header: 'Hạng mục Thu / Chi', key: 'category', width: 25 },
       { header: 'Phương thức', key: 'method', width: 16 },
-      { header: 'Ghi chú', key: 'note', width: 35 },
-      { header: 'Số tiền (VNĐ)', key: 'amount', width: 18 }
+      { header: 'Ghi chú / Diễn giải', key: 'note', width: 35 },
+      { header: 'Số tiền Thu (VNĐ)', key: 'incAmount', width: 18 },
+      { header: 'Số tiền Chi (VNĐ)', key: 'expAmount', width: 18 }
     ];
 
     filteredManualNotes.forEach((e, idx) => {
+      const isInc = (e.type || 'income') === 'income';
       worksheet.addRow({
         stt: idx + 1,
         date: formatDateVN(e.date || e.created_at),
+        type: isInc ? 'PHIẾU THU' : 'PHIẾU CHI',
         payer: e.payer,
         category: e.category,
         method: e.method,
         note: e.note || '-',
-        amount: e.amount
+        incAmount: isInc ? e.amount : 0,
+        expAmount: !isInc ? e.amount : 0
       });
     });
 
@@ -298,13 +251,38 @@ export default function Treasurer() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `So_Tay_Thu_Ngoai_Le_Thu_Quy_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.download = `So_Tay_Thu_Chi_Ngoai_Le_Thu_Quy_${new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
   return (
     <div className="page-container" style={{ paddingBottom: '40px' }}>
+      {/* Dynamic print styles */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #printable-voucher, #printable-voucher * {
+            visibility: visible !important;
+          }
+          #printable-voucher {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            padding: 30px !important;
+            background: white !important;
+            box-shadow: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* Header Banner */}
       <div className="card" style={{
         background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
@@ -335,10 +313,10 @@ export default function Treasurer() {
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: '800', color: 'white', letterSpacing: '-0.3px' }}>
-              Sổ Quỹ & Sổ Tay Thủ Quỹ
+              Sổ Tay Thu Chi Thủ Quỹ
             </h1>
             <p style={{ margin: '4px 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>
-              Nhật ký nhập tay thu tiền hàng ngày ngoài lề và theo dõi tình hình thu chi ứng dụng
+              Nhật ký lập phiếu Thu - Chi tiền nhập tay thủ công ngoài lề của Thủ quỹ
             </p>
           </div>
         </div>
@@ -357,64 +335,262 @@ export default function Treasurer() {
           gap: '8px'
         }}>
           <ShieldAlert size={18} color="#10b981" />
-          <span>Sổ tay thu tiền nhập tay thủ công của Thủ quỹ được lưu trữ riêng biệt, hoàn toàn ngoài lề không làm ảnh hưởng đến CSDL ứng dụng.</span>
+          <span>Sổ tay thu chi thủ công của Thủ quỹ được lưu trữ riêng biệt, không làm ảnh hưởng đến CSDL chính.</span>
         </div>
       </div>
 
       {/* Main Content Card */}
       <div className="card" style={{ padding: '24px', borderRadius: '16px', background: 'white' }}>
-        {/* Controls Header: Tabs & Filters */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-          {/* Top Control Bar: Tabs & Search */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            {/* Navigation Tabs */}
-            <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
-              <button
-                onClick={() => setActiveTab('manual')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '0.85rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: activeTab === 'manual' ? '#16a34a' : 'transparent',
-                  color: activeTab === 'manual' ? 'white' : '#64748b',
-                  boxShadow: activeTab === 'manual' ? '0 2px 4px rgba(22, 163, 74, 0.3)' : 'none'
-                }}
-              >
-                📒 Sổ tay thu ngoài lề ({manualNotes.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('all')}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '0.85rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: activeTab === 'all' ? '#0f172a' : 'transparent',
-                  color: activeTab === 'all' ? 'white' : '#64748b',
-                  boxShadow: activeTab === 'all' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
-                }}
-              >
-                📋 Thu chi ứng dụng CSDL ({records.length})
-              </button>
+        
+        {/* Statistics Bar for Manual Notebook */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gap: '14px',
+          marginBottom: '24px'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+            border: '1px solid #bbf7d0',
+            padding: '16px 20px',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
+          }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+              <TrendingUp size={22} />
             </div>
-
-            {/* Excel Export Button for Manual Notebook */}
-            {activeTab === 'manual' && manualNotes.length > 0 && (
-              <button
-                onClick={handleExportManualExcel}
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px' }}
-              >
-                <Download size={16} /> Xuất Sổ tay ngoài lề Excel
-              </button>
-            )}
+            <div>
+              <div style={{ fontSize: '0.78rem', color: '#166534', fontWeight: '700', textTransform: 'uppercase' }}>TỔNG THU SỔ TAY</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#15803d', marginTop: '2px' }}>+{formatVND(totalIncome)}</div>
+            </div>
           </div>
 
+          <div style={{
+            background: 'linear-gradient(135deg, #fef2f2 0%, #ffe4e6 100%)',
+            border: '1px solid #fecdd3',
+            padding: '16px 20px',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
+          }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+              <TrendingDown size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.78rem', color: '#991b1b', fontWeight: '700', textTransform: 'uppercase' }}>TỔNG CHI SỔ TAY</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#b91c1c', marginTop: '2px' }}>-{formatVND(totalExpense)}</div>
+            </div>
+          </div>
+
+          <div style={{
+            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+            border: '1px solid #bfdbfe',
+            padding: '16px 20px',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px'
+          }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+              <Wallet size={22} />
+            </div>
+            <div>
+              <div style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: '700', textTransform: 'uppercase' }}>TỒN QUỸ SỔ TAY</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: '800', color: balance >= 0 ? '#1d4ed8' : '#b91c1c', marginTop: '2px' }}>
+                {formatVND(balance)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* FORM NHẬP THU / CHI THỦ CÔNG */}
+        <div style={{
+          background: entryType === 'income' ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%)',
+          border: entryType === 'income' ? '1.5px solid #86efac' : '1.5px solid #feb2b2',
+          borderRadius: '14px',
+          padding: '20px 22px',
+          marginBottom: '24px',
+          boxShadow: entryType === 'income' ? '0 4px 14px rgba(22, 163, 74, 0.08)' : '0 4px 14px rgba(220, 38, 38, 0.08)'
+        }}>
+          {/* Voucher Type Selector Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ fontWeight: '800', fontSize: '0.95rem', color: entryType === 'income' ? '#15803d' : '#9b2c2c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>📒 LẬP PHIẾU THU / PHIẾU CHI THỦ CÔNG (SỔ TAY NGOÀI LỀ)</span>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.7)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.1)' }}>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('income')}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '0.83rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  background: entryType === 'income' ? '#16a34a' : 'transparent',
+                  color: entryType === 'income' ? 'white' : '#475569',
+                  boxShadow: entryType === 'income' ? '0 2px 6px rgba(22, 163, 74, 0.3)' : 'none'
+                }}
+              >
+                📥 LẬP PHIẾU THU
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTypeChange('expense')}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontSize: '0.83rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  background: entryType === 'expense' ? '#dc2626' : 'transparent',
+                  color: entryType === 'expense' ? 'white' : '#475569',
+                  boxShadow: entryType === 'expense' ? '0 2px 6px rgba(220, 38, 38, 0.3)' : 'none'
+                }}
+              >
+                📤 LẬP PHIẾU CHI
+              </button>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '0.8rem', color: entryType === 'income' ? '#166534' : '#742a2a', marginBottom: '16px', lineHeight: '1.4' }}>
+            📌 <strong>Quy định:</strong> Dữ liệu lập phiếu tại đây để ghi chép nội bộ Thủ quỹ và có thể <strong>in phiếu chi/thu có đủ 4 chữ ký</strong> (Tổ trưởng TDP, Thủ quỹ, Người lập, Người nộp/nhận).
+          </div>
+
+          {/* Form Inputs Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px', alignItems: 'flex-end' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: entryType === 'income' ? '#15803d' : '#9b2c2c', marginBottom: '4px' }}>
+                {entryType === 'income' ? 'Người nộp / Hộ dân:' : 'Người nhận tiền / Đơn vị:'}
+              </label>
+              <input
+                type="text"
+                placeholder={entryType === 'income' ? 'Tên người nộp tiền...' : 'Tên người nhận tiền...'}
+                value={incPayer}
+                onChange={(e) => setIncPayer(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: entryType === 'income' ? '1px solid #4ade80' : '1px solid #feb2b2', fontSize: '0.88rem', background: 'white' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: entryType === 'income' ? '#15803d' : '#9b2c2c', marginBottom: '4px' }}>
+                Hạng mục ({entryType === 'income' ? 'Thu' : 'Chi'}):
+              </label>
+              {entryType === 'income' ? (
+                <select
+                  value={incCategory}
+                  onChange={(e) => setIncCategory(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
+                >
+                  <option value="Thu quỹ TDP + Phường">Thu quỹ TDP + Phường</option>
+                  <option value="Thu quỹ TDP">Thu quỹ TDP</option>
+                  <option value="Thu quỹ Phường">Thu quỹ Phường</option>
+                  <option value="Đóng góp tự nguyện">Đóng góp tự nguyện</option>
+                  <option value="Ủng hộ lễ hội / Sự kiện">Ủng hộ lễ hội / Sự kiện</option>
+                  <option value="Thu khác">Thu khác</option>
+                </select>
+              ) : (
+                <select
+                  value={incCategory}
+                  onChange={(e) => setIncCategory(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #feb2b2', fontSize: '0.88rem', background: 'white' }}
+                >
+                  <option value="Chi hoạt động TDP">Chi hoạt động TDP</option>
+                  <option value="Chi thăm hỏi / Ốm đau / Hiếu hỷ">Chi thăm hỏi / Ốm đau / Hiếu hỷ</option>
+                  <option value="Chi tiếp khách / Hội nghị">Chi tiếp khách / Hội nghị</option>
+                  <option value="Chi sửa chữa / Sắm thiết bị">Chi sửa chữa / Sắm thiết bị</option>
+                  <option value="Chi hỗ trợ phong trào">Chi hỗ trợ phong trào</option>
+                  <option value="Chi khác">Chi khác</option>
+                </select>
+              )}
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: entryType === 'income' ? '#15803d' : '#9b2c2c', marginBottom: '4px' }}>Số tiền (VNĐ):</label>
+              <input
+                type="text"
+                placeholder="Ví dụ: 500.000"
+                value={incAmount}
+                onChange={(e) => setIncAmount(formatNumberWithDots(e.target.value))}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: entryType === 'income' ? '1px solid #4ade80' : '1px solid #feb2b2',
+                  fontSize: '0.92rem',
+                  fontWeight: 'bold',
+                  color: entryType === 'income' ? '#15803d' : '#b91c1c',
+                  background: 'white'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: entryType === 'income' ? '#15803d' : '#9b2c2c', marginBottom: '4px' }}>Phương thức:</label>
+              <select
+                value={incMethod}
+                onChange={(e) => setIncMethod(e.target.value as any)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: entryType === 'income' ? '1px solid #4ade80' : '1px solid #feb2b2', fontSize: '0.88rem', background: 'white' }}
+              >
+                <option value="Tiền mặt">💵 Tiền mặt</option>
+                <option value="Chuyển khoản">💳 Chuyển khoản</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: entryType === 'income' ? '#15803d' : '#9b2c2c', marginBottom: '4px' }}>
+                Ngày {entryType === 'income' ? 'thu' : 'chi'}:
+              </label>
+              <input
+                type="date"
+                value={incDate}
+                onChange={(e) => setIncDate(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: entryType === 'income' ? '1px solid #4ade80' : '1px solid #feb2b2', fontSize: '0.88rem', background: 'white' }}
+              />
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={handleSaveManualNote}
+                className="btn btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: entryType === 'income' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                  border: 'none',
+                  fontWeight: '700',
+                  fontSize: '0.88rem',
+                  boxShadow: entryType === 'income' ? '0 4px 10px rgba(22, 163, 74, 0.3)' : '0 4px 10px rgba(220, 38, 38, 0.3)',
+                  height: '40px'
+                }}
+              >
+                ➕ {entryType === 'income' ? 'Ghi Phiếu Thu' : 'Ghi Phiếu Chi'}
+              </button>
+            </div>
+          </div>
+
+          {/* Optional Note Row */}
+          <div style={{ marginTop: '12px' }}>
+            <input
+              type="text"
+              placeholder={entryType === 'income' ? "Ghi chú chi tiết cho khoản thu (nếu có)..." : "Lý do / Diễn giải chi tiết cho khoản chi..."}
+              value={incNote}
+              onChange={(e) => setIncNote(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: entryType === 'income' ? '1px solid #a7f3d0' : '1px solid #fecca9', fontSize: '0.83rem', background: 'white' }}
+            />
+          </div>
+        </div>
+
+        {/* Controls Header: Search & Filters */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
           {/* Sub Filters Row */}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
             {/* Search Input */}
@@ -422,7 +598,7 @@ export default function Treasurer() {
               <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
-                placeholder={activeTab === 'manual' ? "Tìm trong Sổ tay ngoài lề theo tên, lý do, số tiền..." : "Tìm trong CSDL ứng dụng..."}
+                placeholder="Tìm trong Sổ tay theo tên người, lý do, số tiền..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 style={{
@@ -443,6 +619,17 @@ export default function Treasurer() {
                 </button>
               )}
             </div>
+
+            {/* Type Filter */}
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', background: 'white', fontWeight: '600' }}
+            >
+              <option value="all">📂 Tất cả Thu & Chi</option>
+              <option value="income">📥 Chỉ xem PHIẾU THU</option>
+              <option value="expense">📤 Chỉ xem PHIẾU CHI</option>
+            </select>
 
             {/* Date Filter */}
             <select
@@ -466,261 +653,309 @@ export default function Treasurer() {
               <option value="cash">💵 Tiền mặt</option>
               <option value="transfer">💳 Chuyển khoản</option>
             </select>
+
+            {/* Excel Export Button */}
+            {manualNotes.length > 0 && (
+              <button
+                onClick={handleExportManualExcel}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px' }}
+              >
+                <Download size={16} /> Xuất Sổ tay Excel
+              </button>
+            )}
           </div>
         </div>
 
-        {/* TAB 1: SỔ TAY THU TIỀN NGOÀI LỀ (NHẬP TAY THỦ CÔNG) */}
-        {activeTab === 'manual' && (
-          <>
-            {/* Form Nhập Tay Thu Tiền Trực Tiếp */}
-            <div style={{
-              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-              border: '1.5px solid #86efac',
-              borderRadius: '14px',
-              padding: '20px 22px',
-              marginBottom: '24px',
-              boxShadow: '0 4px 14px rgba(22, 163, 74, 0.08)'
-            }}>
-              <div style={{ fontWeight: '800', fontSize: '0.95rem', color: '#15803d', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>📒 GHI CHÉP NHẬP TAY THU TIỀN HÀNG NGÀY (SỔ TAY NGOÀI LỀ)</span>
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#166534', marginBottom: '16px', lineHeight: '1.4' }}>
-                📌 <strong>Quy định Sổ tay ngoài lề:</strong> Đây là sổ chép tay cá nhân thủ công của Thủ quỹ. Dữ liệu nhập tại đây được lưu riêng biệt để theo dõi, <strong>KHÔNG ghi vào CSDL ứng dụng</strong> và KHÔNG làm ảnh hưởng đến báo cáo tài chính chính thức của Phường / Tổ.
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px', alignItems: 'flex-end' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Người nhận / Hộ dân:</label>
-                  <input
-                    type="text"
-                    placeholder="Tên người hoặc hộ nhận..."
-                    value={incPayer}
-                    onChange={(e) => setIncPayer(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Khoản thu (Hạng mục):</label>
-                  <select
-                    value={incCategory}
-                    onChange={(e) => setIncCategory(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
-                  >
-                    <option value="Thu quỹ TDP + Phường">Thu quỹ TDP + Phường</option>
-                    <option value="Thu quỹ TDP">Thu quỹ TDP</option>
-                    <option value="Thu quỹ Phường">Thu quỹ Phường</option>
-                    <option value="Đóng góp tự nguyện">Đóng góp tự nguyện</option>
-                    <option value="Ủng hộ lễ hội / Sự kiện">Ủng hộ lễ hội / Sự kiện</option>
-                    <option value="Thu khác">Thu khác</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Số tiền (VNĐ):</label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: 100.000"
-                    value={incAmount}
-                    onChange={(e) => setIncAmount(formatNumberWithDots(e.target.value))}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.92rem', fontWeight: 'bold', color: '#15803d', background: 'white' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Phương thức nhận:</label>
-                  <select
-                    value={incMethod}
-                    onChange={(e) => setIncMethod(e.target.value as any)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
-                  >
-                    <option value="Tiền mặt">💵 Tiền mặt</option>
-                    <option value="Chuyển khoản">💳 Chuyển khoản</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#15803d', marginBottom: '4px' }}>Ngày thu nhận:</label>
-                  <input
-                    type="date"
-                    value={incDate}
-                    onChange={(e) => setIncDate(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
-                  />
-                </div>
-
-                <div>
-                  <button
-                    type="button"
-                    onClick={handleSaveManualNote}
-                    className="btn btn-primary"
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                      border: 'none',
-                      fontWeight: '700',
-                      fontSize: '0.88rem',
-                      boxShadow: '0 4px 10px rgba(22, 163, 74, 0.3)',
-                      height: '40px'
-                    }}
-                  >
-                    ➕ Ghi vào Sổ tay
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary Bar for Manual Notebook */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: '#f8fafc',
-              padding: '12px 18px',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              marginBottom: '16px'
-            }}>
-              <span style={{ fontSize: '0.88rem', color: '#475569', fontWeight: '600' }}>
-                Tổng cộng có <strong>{filteredManualNotes.length}</strong> khoản thu ghi trong Sổ tay ngoài lề
-              </span>
-              <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#15803d' }}>
-                Tổng thu Sổ tay: {formatVND(manualTotalSum)}
-              </div>
-            </div>
-
-            {/* Table of Manual Entries */}
-            {filteredManualNotes.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                <BookOpen size={40} color="#94a3b8" style={{ marginBottom: '10px' }} />
-                <h3 style={{ margin: 0, color: '#334155', fontSize: '1rem' }}>Chưa có ghi chép nào trong Sổ tay ngoài lề</h3>
-                <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>
-                  Điền thông tin ở khung phía trên và nhấn "Ghi vào Sổ tay" để lưu lịch sử thu tiền thủ công của Thủ quỹ.
-                </p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ background: '#ecfdf5', borderBottom: '2px solid #a7f3d0' }}>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '50px' }}>STT</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '110px' }}>Ngày thu</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '180px' }}>Người / Hộ nhận</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '180px' }}>Khoản thu / Hạng mục</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', width: '120px' }}>Phương thức</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700' }}>Ghi chú</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', textAlign: 'right', width: '150px' }}>Số tiền (VNĐ)</th>
-                      <th style={{ padding: '10px 12px', color: '#065f46', fontWeight: '700', textAlign: 'center', width: '80px' }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredManualNotes.map((entry, idx) => (
-                      <tr key={entry.id} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                        <td style={{ padding: '10px 12px', color: '#64748b', fontWeight: '600' }}>{idx + 1}</td>
-                        <td style={{ padding: '10px 12px', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>
-                          {formatDateVN(entry.date || entry.created_at)}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: '700', color: '#1e293b' }}>
-                          {entry.payer}
-                        </td>
-                        <td style={{ padding: '10px 12px', color: '#047857', fontWeight: '600' }}>
-                          {entry.category}
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            background: entry.method === 'Chuyển khoản' ? '#eff6ff' : '#ecfdf5',
-                            color: entry.method === 'Chuyển khoản' ? '#1d4ed8' : '#047857'
-                          }}>
-                            {entry.method === 'Chuyển khoản' ? '💳 Chuyển khoản' : '💵 Tiền mặt'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px', color: '#64748b' }}>
-                          {entry.note || '-'}
-                        </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', fontSize: '0.92rem', color: '#047857' }}>
-                          +{formatVND(entry.amount)}
-                        </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+        {/* Table of Manual Entries */}
+        {filteredManualNotes.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+            <BookOpen size={40} color="#94a3b8" style={{ marginBottom: '10px' }} />
+            <h3 style={{ margin: 0, color: '#334155', fontSize: '1rem' }}>Chưa có ghi chép chứng từ nào trong Sổ tay</h3>
+            <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+              Điền thông tin ở khung phía trên và nhấn "Ghi Phiếu Thu" hoặc "Ghi Phiếu Chi" để lưu nhật ký Thủ quỹ.
+            </p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '45px' }}>STT</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '100px' }}>Ngày lập</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '90px' }}>Loại</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '170px' }}>Người nộp / nhận</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '170px' }}>Hạng mục</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '110px' }}>Phương thức</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700' }}>Ghi chú</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', textAlign: 'right', width: '140px' }}>Số tiền (VNĐ)</th>
+                  <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', textAlign: 'center', width: '120px' }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredManualNotes.map((entry, idx) => {
+                  const isInc = (entry.type || 'income') === 'income';
+                  return (
+                    <tr key={entry.id} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <td style={{ padding: '10px 12px', color: '#64748b', fontWeight: '600' }}>{idx + 1}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>
+                        {formatDateVN(entry.date || entry.created_at)}
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: isInc ? '#dcfce7' : '#fee2e2',
+                          color: isInc ? '#15803d' : '#b91c1c',
+                          display: 'inline-block'
+                        }}>
+                          {isInc ? '📥 THU' : '📤 CHI'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', fontWeight: '700', color: '#1e293b' }}>
+                        {entry.payer}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: isInc ? '#047857' : '#b91c1c', fontWeight: '600' }}>
+                        {entry.category}
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: entry.method === 'Chuyển khoản' ? '#eff6ff' : '#f8fafc',
+                          color: entry.method === 'Chuyển khoản' ? '#1d4ed8' : '#475569',
+                          border: '1px solid #cbd5e1'
+                        }}>
+                          {entry.method === 'Chuyển khoản' ? '💳 CK' : '💵 Tiền mặt'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: '#64748b' }}>
+                        {entry.note || '-'}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', fontSize: '0.92rem', color: isInc ? '#047857' : '#b91c1c' }}>
+                        {isInc ? '+' : '-'}{formatVND(entry.amount)}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => setPrintModalNote(entry)}
+                            title="In phiếu chứng từ (có 4 chữ ký)"
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #bbf7d0',
+                              background: '#f0fdf4',
+                              color: '#16a34a',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '700'
+                            }}
+                          >
+                            <Printer size={14} /> In
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteManualNote(entry.id)}
-                            title="Xóa khỏi sổ tay"
+                            title="Xóa chứng từ"
                             style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }}
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={14} />
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* TAB 2: SỔ THU CHI CHÍNH CỦA ỨNG DỤNG CSDL */}
-        {activeTab !== 'manual' && (
-          <div>
-            <div style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic', marginBottom: '12px' }}>
-              💡 <strong>Lưu ý:</strong> Đây là danh sách thu chi chính thức được lưu trong CSDL của ứng dụng (dùng chung cho Kế toán, Tổ trưởng và Báo cáo).
-            </div>
-            {loadingSystemData ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-                <Clock size={32} className="pulse" style={{ marginBottom: '8px' }} />
-                <div>Đang tải dữ liệu CSDL thu chi...</div>
-              </div>
-            ) : processedSystemRecords.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                <Landmark size={40} color="#94a3b8" style={{ marginBottom: '10px' }} />
-                <h3 style={{ margin: 0, color: '#334155', fontSize: '1rem' }}>Chưa có chứng từ CSDL nào</h3>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #cbd5e1' }}>
-                      <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '50px' }}>STT</th>
-                      <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '110px' }}>Ngày lập</th>
-                      <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '100px' }}>Phân loại</th>
-                      <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', width: '160px' }}>Hạng mục</th>
-                      <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700' }}>Diễn giải CSDL</th>
-                      <th style={{ padding: '10px 12px', color: '#475569', fontWeight: '700', textAlign: 'right', width: '140px' }}>Số tiền (VNĐ)</th>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {processedSystemRecords.map((r, idx) => {
-                      const isInc = r.type === 'income';
-                      return (
-                        <tr key={r.id} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                          <td style={{ padding: '10px 12px', color: '#64748b' }}>{idx + 1}</td>
-                          <td style={{ padding: '10px 12px', fontWeight: '600', color: '#334155' }}>{formatDateVN(r.date || r.created_at)}</td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', background: isInc ? '#ecfdf5' : '#fef2f2', color: isInc ? '#047857' : '#b91c1c' }}>
-                              {isInc ? '📥 THU' : '📤 CHI'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '10px 12px', fontWeight: '600' }}>{r.category}</td>
-                          <td style={{ padding: '10px 12px', color: '#334155' }}>{r.description}</td>
-                          <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '800', color: isInc ? '#047857' : '#b91c1c' }}>
-                            {isInc ? '+' : '-'}{formatVND(r.amount)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+
+      {/* PRINT VOUCHER MODAL */}
+      {printModalNote && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '16px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            maxWidth: '750px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Control Header (Hidden when printing) */}
+            <div className="no-print" style={{
+              padding: '16px 24px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Printer size={20} color={printModalNote.type === 'expense' ? '#dc2626' : '#16a34a'} />
+                Mẫu In {printModalNote.type === 'expense' ? 'PHIẾU CHI' : 'PHIẾU THU'} (Sổ tay ngoài lề)
+              </h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: printModalNote.type === 'expense' ? '#dc2626' : '#16a34a',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Printer size={16} /> In Phiếu Ngay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintModalNote(null)}
+                  style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', cursor: 'pointer' }}
+                >
+                  <X size={18} color="#64748b" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Voucher Paper */}
+            <div id="printable-voucher" style={{ padding: '36px 40px', background: 'white', color: '#000', fontFamily: 'Times New Roman, serif' }}>
+              {/* Voucher Header Top Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '1rem', textTransform: 'uppercase' }}>TỔ DÂN PHỐ QUẢNG GIAO</div>
+                  <div style={{ fontSize: '0.9rem' }}>Phường Quảng Giao, Thành Phố</div>
+                  <div style={{ fontSize: '0.82rem', fontStyle: 'italic', color: '#444', marginTop: '2px' }}>(Sổ tay theo dõi nội bộ Thủ quỹ)</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>Mẫu số 02-TT</div>
+                  <div style={{ fontSize: '0.85rem', color: '#444', marginTop: '2px' }}>
+                    Quyển số: .........<br />
+                    Số phiếu: #{printModalNote.id.slice(0, 8).toUpperCase()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Title Header */}
+              <div style={{ textAlign: 'center', margin: '20px 0 16px 0' }}>
+                <h2 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  {printModalNote.type === 'expense' ? 'PHIẾU CHI' : 'PHIẾU THU'}
+                </h2>
+                <div style={{ fontSize: '0.95rem', fontStyle: 'italic', marginTop: '4px' }}>
+                  {formatDateVN(printModalNote.date || printModalNote.created_at)}
+                </div>
+              </div>
+
+              {/* Content Detail Lines */}
+              <div style={{ fontSize: '1.05rem', lineHeight: '2.2', marginTop: '16px' }}>
+                <div style={{ display: 'flex' }}>
+                  <span style={{ width: '220px', fontWeight: '500' }}>
+                    Họ và tên người {printModalNote.type === 'expense' ? 'nhận tiền' : 'nộp tiền'}:
+                  </span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #888', fontWeight: 'bold', paddingLeft: '8px' }}>
+                    {printModalNote.payer}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex' }}>
+                  <span style={{ width: '220px', fontWeight: '500' }}>Địa chỉ / Đơn vị:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #888', paddingLeft: '8px' }}>
+                    Tổ dân phố Quảng Giao
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex' }}>
+                  <span style={{ width: '220px', fontWeight: '500' }}>Lý do {printModalNote.type === 'expense' ? 'chi' : 'thu'}:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #888', paddingLeft: '8px' }}>
+                    {printModalNote.category} {printModalNote.note ? `(${printModalNote.note})` : ''}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex' }}>
+                  <span style={{ width: '220px', fontWeight: '500' }}>Số tiền {printModalNote.type === 'expense' ? 'chi' : 'thu'}:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #888', fontWeight: 'bold', fontSize: '1.15rem', paddingLeft: '8px' }}>
+                    {formatVND(printModalNote.amount)} ({printModalNote.method})
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex' }}>
+                  <span style={{ width: '220px', fontWeight: '500' }}>Viết bằng chữ:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #888', fontStyle: 'italic', fontWeight: 'bold', paddingLeft: '8px' }}>
+                    {docSoTien(printModalNote.amount)}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex' }}>
+                  <span style={{ width: '220px', fontWeight: '500' }}>Kèm theo:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #888', paddingLeft: '8px' }}>
+                    ..................................................... chứng từ gốc.
+                  </span>
+                </div>
+              </div>
+
+              {/* Date Place Footer */}
+              <div style={{ textAlign: 'right', marginTop: '24px', fontSize: '0.95rem', fontStyle: 'italic' }}>
+                Tổ dân phố Quảng Giao, {formatDateVN(printModalNote.date || printModalNote.created_at)}
+              </div>
+
+              {/* 4 Signatures Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '10px',
+                marginTop: '16px',
+                textAlign: 'center',
+                fontSize: '0.88rem'
+              }}>
+                <div>
+                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>TỔ TRƯỜNG TDP</div>
+                  <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#555', marginBottom: '65px' }}>(Ký, ghi rõ họ tên)</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>THỦ QUỸ</div>
+                  <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#555', marginBottom: '65px' }}>(Ký, ghi rõ họ tên)</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>NGƯỜI LẬP PHIẾU</div>
+                  <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#555', marginBottom: '65px' }}>(Ký, ghi rõ họ tên)</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
+                    {printModalNote.type === 'expense' ? 'NGƯỜI NHẬN TIỀN' : 'NGƯỜI NỘP TIỀN'}
+                  </div>
+                  <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#555', marginBottom: '65px' }}>(Ký, ghi rõ họ tên)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
