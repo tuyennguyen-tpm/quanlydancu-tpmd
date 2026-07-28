@@ -2459,6 +2459,18 @@ const App = () => {
         return <Environment />;
       case 'finance': {
         const currentActionRole = localStorage.getItem('current_role') || userRole;
+        const HIDE_FINANCE_FOR_TO_TRUONG = true;
+        if (HIDE_FINANCE_FOR_TO_TRUONG && (currentActionRole === 'to_truong' || userRole === 'to_truong')) {
+          return (
+            <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔒</div>
+              <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Quyền truy cập bị hạn chế</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                Tính năng <strong>Thu chi TDP</strong> đang tạm ẩn đối với vai trò Tổ trưởng dân phố.
+              </p>
+            </div>
+          );
+        }
         const isAdminOrToTruong = currentActionRole === 'to_truong' || currentActionRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
         if (!isAdminOrToTruong) {
           return (
@@ -2591,6 +2603,10 @@ const App = () => {
     }
     if (item.id === 'finance') {
       const currentActionRole = localStorage.getItem('current_role') || userRole;
+      const HIDE_FINANCE_FOR_TO_TRUONG = true;
+      if (HIDE_FINANCE_FOR_TO_TRUONG && (currentActionRole === 'to_truong' || userRole === 'to_truong')) {
+        return false;
+      }
       const isAdminOrToTruong = currentActionRole === 'to_truong' || currentActionRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
       return isAdminOrToTruong;
     }
