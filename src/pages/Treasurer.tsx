@@ -935,7 +935,7 @@ export default function Treasurer() {
               </div>
 
               {/* Content Detail Lines */}
-              <div style={{ fontSize: '0.96rem', lineHeight: '1.9', marginTop: '10px' }}>
+              <div style={{ fontSize: '0.96rem', lineHeight: '1.0', marginTop: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline' }}>
                   <span style={{ width: '200px', fontWeight: 'bold' }}>
                     Họ và tên người {printModalNote.type === 'expense' ? 'nhận tiền' : 'nộp tiền'}:
