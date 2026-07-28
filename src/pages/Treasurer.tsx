@@ -12,7 +12,7 @@ import {
   TrendingDown,
   Wallet
 } from 'lucide-react';
-import { generateUUID } from '../services/db';
+import { db, generateUUID } from '../services/db';
 import { formatDateVN } from '../utils/dateUtils';
 import { docSoTien } from '../utils/financialEngine';
 import ExcelJS from 'exceljs';
@@ -76,6 +76,23 @@ export default function Treasurer() {
     }
   });
 
+  // Đồng bộ Sổ tay thủ quỹ với CSDL đám mây (Supabase)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchNotes = async () => {
+      try {
+        const cloudNotes = await db.getTreasurerManualNotes();
+        if (isMounted && cloudNotes && Array.isArray(cloudNotes)) {
+          setManualNotes(cloudNotes);
+        }
+      } catch (e) {
+        console.error('Lỗi tải dữ liệu Sổ tay thủ quỹ:', e);
+      }
+    };
+    fetchNotes();
+    return () => { isMounted = false; };
+  }, []);
+
   // Print Voucher Modal State
   const [printModalNote, setPrintModalNote] = useState<TreasurerManualNote | null>(null);
 
@@ -106,7 +123,7 @@ export default function Treasurer() {
   };
 
   // Save Manual Entry into Treasurer Notebook (Sổ tay ngoài lề)
-  const handleSaveManualNote = () => {
+  const handleSaveManualNote = async () => {
     const amt = parseFloat(incAmount.replace(/[^0-9]/g, ''));
     if (!amt || amt <= 0) {
       window.dispatchEvent(new CustomEvent('show-toast', {
@@ -130,11 +147,11 @@ export default function Treasurer() {
 
     const updated = [newNote, ...manualNotes];
     setManualNotes(updated);
-    localStorage.setItem('treasurer_manual_notes', JSON.stringify(updated));
+    await db.saveTreasurerManualNotes(updated);
 
     window.dispatchEvent(new CustomEvent('show-toast', {
       detail: { 
-        message: `✅ Đã lập ${isInc ? 'Phiếu Thu' : 'Phiếu Chi'} Sổ tay thành công! (Tách biệt CSDL)`, 
+        message: `✅ Đã lập ${isInc ? 'Phiếu Thu' : 'Phiếu Chi'} Sổ tay thành công & Đồng bộ liên máy!`, 
         type: 'success' 
       }
     }));
@@ -146,7 +163,7 @@ export default function Treasurer() {
   };
 
   // Delete Manual Entry from Treasurer Notebook (Only To Truong or Admin allowed)
-  const handleDeleteManualNote = (id: string) => {
+  const handleDeleteManualNote = async (id: string) => {
     if (!canEditOrDelete) {
       window.dispatchEvent(new CustomEvent('show-toast', {
         detail: { message: '🔒 Quyền bị hạn chế: Thủ quỹ không được phép xóa/chỉnh sửa chứng từ đã lập!', type: 'warning' }
@@ -157,9 +174,9 @@ export default function Treasurer() {
     if (!window.confirm('Bạn có chắc muốn xóa dòng chứng từ này khỏi Sổ tay ngoài lề?')) return;
     const updated = manualNotes.filter(n => n.id !== id);
     setManualNotes(updated);
-    localStorage.setItem('treasurer_manual_notes', JSON.stringify(updated));
+    await db.saveTreasurerManualNotes(updated);
     window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: { message: 'Đã xóa chứng từ khỏi Sổ tay ngoài lề', type: 'info' }
+      detail: { message: 'Đã xóa chứng từ khỏi Sổ tay ngoài lề & Cập nhật liên máy', type: 'info' }
     }));
   };
 

@@ -2119,6 +2119,58 @@ export const db = {
     }
 
     return newHead;
+  },
+
+  getTreasurerManualNotes: async (): Promise<any[]> => {
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        if (uId) {
+          const { data, error } = await supabase
+            .from('app_config')
+            .select('value')
+            .eq('user_id', uId)
+            .eq('key', 'treasurer_manual_notes')
+            .maybeSingle();
+          if (!error && data && data.value) {
+            try {
+              const parsed = JSON.parse(data.value);
+              localStorage.setItem('treasurer_manual_notes', data.value);
+              return parsed;
+            } catch (e) {
+              console.error('Failed to parse treasurer_manual_notes JSON:', e);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch treasurer_manual_notes from Supabase:', err);
+      }
+    }
+    try {
+      const saved = localStorage.getItem('treasurer_manual_notes');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  },
+  saveTreasurerManualNotes: async (notes: any[]): Promise<void> => {
+    const valueStr = JSON.stringify(notes);
+    localStorage.setItem('treasurer_manual_notes', valueStr);
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        if (uId) {
+          await supabase.from('app_config').upsert({
+            user_id: uId,
+            key: 'treasurer_manual_notes',
+            value: valueStr,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,key' });
+        }
+      } catch (err) {
+        console.error('Failed to sync treasurer_manual_notes to Supabase:', err);
+      }
+    }
   }
 };
 
