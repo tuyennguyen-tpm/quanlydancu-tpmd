@@ -23,7 +23,7 @@ import {
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml, docSoTien } from '../utils/financialEngine';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -122,6 +122,35 @@ const Finance = () => {
   const [recordedByFilter, setRecordedByFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
+  const [printModalRecord, setPrintModalRecord] = useState<FinancialRecord | null>(null);
+
+  const officialsConfig = useMemo(() => {
+    const tdpName = localStorage.getItem('tdp_name') || localStorage.getItem('unit_name') || 'TỔ DÂN PHỐ QUẢNG GIAO';
+    const wardName = localStorage.getItem('ward_name') || 'Phường Quảng Giao';
+    const leaderName = localStorage.getItem('leader_name') || '';
+
+    let sigs: any[] = [];
+    try {
+      sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+    } catch { sigs = []; }
+
+    const getOfficial = (id: string, defaultName = '', defaultTitle = '') => {
+      const found = sigs.find((s: any) => s.id === id);
+      return {
+        name: found?.name?.trim() || defaultName,
+        title: found?.title?.trim() || defaultTitle,
+        signatureUrl: found?.signatureUrl?.trim() || ''
+      };
+    };
+
+    return {
+      tdpName,
+      wardName,
+      toTruong: getOfficial('to_truong', leaderName || 'Nguyễn Kim Tuyến', 'Tổ trưởng dân phố'),
+      thuQuy: getOfficial('thu_quy', '', 'Thủ quỹ'),
+      keToan: getOfficial('ke_toan', '', 'Kế toán trưởng')
+    };
+  }, []);
 
   // Form states
   const [type, setType] = useState<'income' | 'expense'>('income');
@@ -5349,7 +5378,259 @@ const Finance = () => {
           .content-filters { flex-direction: column; align-items: stretch; gap: 16px; }
           .search-mini input { width: 100%; }
         }
+
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-voucher, #printable-voucher * {
+            visibility: visible;
+          }
+          #printable-voucher {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
       `}</style>
+
+      {/* PRINT VOUCHER MODAL */}
+      {printModalRecord && (
+        <div className="modal-backdrop" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '16px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            maxWidth: '750px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Control Header (Hidden when printing) */}
+            <div className="no-print" style={{
+              padding: '16px 24px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#f8fafc',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Printer size={20} color={printModalRecord.type === 'expense' ? '#dc2626' : '#16a34a'} />
+                Mẫu In {printModalRecord.type === 'expense' ? 'PHIẾU CHI' : 'PHIẾU THU'} (Thu chi TDP)
+              </h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="btn btn-primary"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: printModalRecord.type === 'expense' ? '#dc2626' : '#16a34a',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Printer size={16} /> In Phiếu Ngay
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintModalRecord(null)}
+                  style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', cursor: 'pointer' }}
+                >
+                  <X size={18} color="#64748b" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Voucher Paper - Compact Half A4 (A5) Standard Design */}
+            <div
+              id="printable-voucher"
+              style={{
+                padding: '24px 30px',
+                background: 'white',
+                color: '#000',
+                fontFamily: '"Times New Roman", Times, serif',
+                fontSize: '13.5px',
+                border: '2px double #1e293b',
+                borderRadius: '8px',
+                margin: '0 auto',
+                maxWidth: '720px',
+                boxSizing: 'border-box'
+              }}
+            >
+              {/* Voucher Header Top Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.98rem', textTransform: 'uppercase' }}>{officialsConfig.tdpName}</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: '600' }}>{officialsConfig.wardName}</div>
+                  <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#444' }}>(Sổ theo dõi Thu chi TDP)</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Mẫu số 02 - TT</div>
+                  <div style={{ fontSize: '0.75rem', color: '#444', fontStyle: 'italic' }}>
+                    (Ban hành theo TT 200 & 133/BTC)<br />
+                    Số: <strong>#{printModalRecord.id.slice(0, 8).toUpperCase()}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Title Header */}
+              <div style={{ textAlign: 'center', margin: '10px 0 12px 0' }}>
+                <h2 style={{ margin: 0, fontSize: '1.65rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1.5px', color: printModalRecord.type === 'expense' ? '#991b1b' : '#14532d' }}>
+                  {printModalRecord.type === 'expense' ? 'PHIẾU CHI' : 'PHIẾU THU'}
+                </h2>
+                <div style={{ fontSize: '0.88rem', fontStyle: 'italic', marginTop: '2px' }}>
+                  {formatDateVN(printModalRecord.date || printModalRecord.created_at)}
+                </div>
+              </div>
+
+              {/* Content Detail Lines */}
+              <div style={{ fontSize: '0.96rem', lineHeight: '1.8', marginTop: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                  <span style={{ width: '200px', fontWeight: 'bold' }}>
+                    Họ và tên người {printModalRecord.type === 'expense' ? 'nhận tiền' : 'nộp tiền'}:
+                  </span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '1.05rem', paddingLeft: '6px' }}>
+                    {printModalRecord.recorded_by || 'Ban Quản lý TDP'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                  <span style={{ width: '200px', fontWeight: 'bold' }}>Địa chỉ / Đơn vị:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '6px' }}>
+                    {officialsConfig.tdpName}, {officialsConfig.wardName}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                  <span style={{ width: '200px', fontWeight: 'bold' }}>Hạng mục / Diễn giải:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '6px' }}>
+                    {printModalRecord.category} {cleanDescription(printModalRecord.description) ? `— ${cleanDescription(printModalRecord.description)}` : ''}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                  <span style={{ width: '200px', fontWeight: 'bold' }}>Số tiền {printModalRecord.type === 'expense' ? 'chi' : 'thu'}:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '1.12rem', color: printModalRecord.type === 'expense' ? '#b91c1c' : '#047857', paddingLeft: '6px' }}>
+                    {formatCurrency(printModalRecord.amount)} VNĐ
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                  <span style={{ width: '200px', fontWeight: 'bold' }}>Viết bằng chữ:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #555', fontStyle: 'italic', fontWeight: 'bold', paddingLeft: '6px' }}>
+                    {docSoTien(printModalRecord.amount)}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline' }}>
+                  <span style={{ width: '200px', fontWeight: 'bold' }}>Kèm theo:</span>
+                  <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '6px' }}>
+                    ......................................................................................... chứng từ gốc.
+                  </span>
+                </div>
+              </div>
+
+              {/* Date Place Footer */}
+              <div style={{ textAlign: 'right', marginTop: '14px', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                {officialsConfig.wardName}, {formatDateVN(printModalRecord.date || printModalRecord.created_at)}
+              </div>
+
+              {/* 4 Signatures Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '6px',
+                marginTop: '12px',
+                textAlign: 'center',
+                fontSize: '0.83rem'
+              }}>
+                {/* 1. Tổ trưởng TDP */}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>TỔ TRƯỜNG TDP</div>
+                    <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
+                  </div>
+                  <div style={{ margin: '4px 0' }}>
+                    {officialsConfig.toTruong.signatureUrl ? (
+                      <img src={officialsConfig.toTruong.signatureUrl} alt="Chữ ký" style={{ maxHeight: '42px', objectFit: 'contain', margin: '0 auto' }} />
+                    ) : (
+                      <div style={{ height: '35px' }}></div>
+                    )}
+                  </div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
+                    {officialsConfig.toTruong.name || 'Nguyễn Kim Tuyến'}
+                  </div>
+                </div>
+
+                {/* 2. Thủ quỹ */}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>THỦ QUỸ</div>
+                    <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
+                  </div>
+                  <div style={{ margin: '4px 0' }}>
+                    {officialsConfig.thuQuy.signatureUrl ? (
+                      <img src={officialsConfig.thuQuy.signatureUrl} alt="Chữ ký" style={{ maxHeight: '42px', objectFit: 'contain', margin: '0 auto' }} />
+                    ) : (
+                      <div style={{ height: '35px' }}></div>
+                    )}
+                  </div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
+                    {officialsConfig.thuQuy.name || 'Thủ quỹ'}
+                  </div>
+                </div>
+
+                {/* 3. Người lập phiếu */}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>NGƯỜI LẬP PHIẾU</div>
+                    <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
+                  </div>
+                  <div style={{ height: '35px' }}></div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
+                    {printModalRecord.recorded_by || 'Ban Quản lý'}
+                  </div>
+                </div>
+
+                {/* 4. Người nộp / nhận tiền */}
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>
+                      NGƯỜI {printModalRecord.type === 'expense' ? 'NHẬN TIỀN' : 'NỘP TIỀN'}
+                    </div>
+                    <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
+                  </div>
+                  <div style={{ height: '35px' }}></div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
+                    .........................
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
