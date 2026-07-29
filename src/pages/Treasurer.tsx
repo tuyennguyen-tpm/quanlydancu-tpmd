@@ -108,6 +108,7 @@ export default function Treasurer() {
   const [entryType, setEntryType] = useState<'income' | 'expense'>('income');
   const [incPayer, setIncPayer] = useState('');
   const [incCategory, setIncCategory] = useState('Thu quỹ TDP + Phường');
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryDetail, setCustomCategoryDetail] = useState('');
   const [incAmount, setIncAmount] = useState('');
   const [incMethod, setIncMethod] = useState<'Tiền mặt' | 'Chuyển khoản'>('Tiền mặt');
@@ -117,6 +118,7 @@ export default function Treasurer() {
   // Update default category when switching type
   const handleTypeChange = (type: 'income' | 'expense') => {
     setEntryType(type);
+    setIsCustomCategory(false);
     setCustomCategoryDetail('');
     if (type === 'income') {
       setIncCategory('Thu quỹ TDP + Phường');
@@ -136,20 +138,30 @@ export default function Treasurer() {
     }
 
     const isInc = entryType === 'income';
-    const isCustomCat = incCategory === 'Chi khác' || incCategory === 'Thu khác' || incCategory.startsWith('Chi khác') || incCategory.startsWith('Thu khác');
-    const finalCategory = isCustomCat
-      ? (customCategoryDetail.trim() ? `${incCategory === 'Thu khác' ? 'Thu khác' : 'Chi khác'}: ${customCategoryDetail.trim()}` : incCategory)
-      : incCategory;
+    let finalCategory = incCategory;
+    if (isCustomCategory) {
+      if (customCategoryDetail.trim()) {
+        const detail = customCategoryDetail.trim();
+        const lower = detail.toLowerCase();
+        if (lower.startsWith('chi') || lower.startsWith('thu')) {
+          finalCategory = detail;
+        } else {
+          finalCategory = `${isInc ? 'Thu khác' : 'Chi khác'}: ${detail}`;
+        }
+      } else {
+        finalCategory = isInc ? 'Thu khác' : 'Chi khác';
+      }
+    }
 
     const newNote: TreasurerManualNote = {
       id: generateUUID(),
       type: entryType,
       payer: incPayer.trim() || (isInc ? 'Người nộp tự do' : 'Người nhận tiền'),
-      category: finalCategory.trim() || (isInc ? 'Thu tiền ngoài lề' : 'Chi tiền ngoài lề'),
+      category: finalCategory.trim(),
       amount: amt,
       method: incMethod,
       date: incDate,
-      note: incNote.trim() || (isCustomCat ? customCategoryDetail.trim() : ''),
+      note: incNote.trim() || (isCustomCategory ? customCategoryDetail.trim() : ''),
       created_at: new Date().toISOString()
     };
 
@@ -169,6 +181,7 @@ export default function Treasurer() {
     setIncAmount('');
     setIncNote('');
     setCustomCategoryDetail('');
+    setIsCustomCategory(false);
   };
 
   // Delete Manual Entry from Treasurer Notebook (Only Admin allowed)
@@ -542,15 +555,53 @@ export default function Treasurer() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: entryType === 'income' ? '#15803d' : '#9b2c2c', marginBottom: '4px' }}>
-                Hạng mục ({entryType === 'income' ? 'Thu' : 'Chi'}):
-              </label>
-              {entryType === 'income' ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: entryType === 'income' ? '#15803d' : '#9b2c2c' }}>
+                  Hạng mục ({entryType === 'income' ? 'Thu' : 'Chi'}):
+                </label>
+                {isCustomCategory && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomCategory(false);
+                      setIncCategory(entryType === 'income' ? 'Thu quỹ TDP + Phường' : 'Chi hoạt động TDP');
+                      setCustomCategoryDetail('');
+                    }}
+                    style={{ border: 'none', background: 'none', color: '#2563eb', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  >
+                    ↩️ Danh mục mẫu
+                  </button>
+                )}
+              </div>
+
+              {isCustomCategory ? (
+                <input
+                  type="text"
+                  placeholder={entryType === 'expense' ? "✏️ Tự gõ nội dung cần chi (VD: Mua loa kéo, Chi tiếp đoàn...)" : "✏️ Tự gõ nội dung cần thu..."}
+                  value={customCategoryDetail}
+                  onChange={(e) => setCustomCategoryDetail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    border: entryType === 'income' ? '1.5px solid #16a34a' : '1.5px solid #dc2626',
+                    fontSize: '0.88rem',
+                    background: '#ffffff',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                  }}
+                  autoFocus
+                />
+              ) : entryType === 'income' ? (
                 <select
-                  value={incCategory.startsWith('Thu khác') ? 'Thu khác' : incCategory}
+                  value={incCategory}
                   onChange={(e) => {
-                    setIncCategory(e.target.value);
-                    if (e.target.value !== 'Thu khác') setCustomCategoryDetail('');
+                    if (e.target.value === 'Thu khác') {
+                      setIsCustomCategory(true);
+                      setIncCategory('Thu khác');
+                      setCustomCategoryDetail('');
+                    } else {
+                      setIncCategory(e.target.value);
+                    }
                   }}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #4ade80', fontSize: '0.88rem', background: 'white' }}
                 >
@@ -559,14 +610,19 @@ export default function Treasurer() {
                   <option value="Thu quỹ Phường">Thu quỹ Phường</option>
                   <option value="Đóng góp tự nguyện">Đóng góp tự nguyện</option>
                   <option value="Ủng hộ lễ hội / Sự kiện">Ủng hộ lễ hội / Sự kiện</option>
-                  <option value="Thu khác">✏️ Thu khác...</option>
+                  <option value="Thu khác">✏️ Thu khác (Tự viết nội dung thu)...</option>
                 </select>
               ) : (
                 <select
-                  value={incCategory.startsWith('Chi khác') ? 'Chi khác' : incCategory}
+                  value={incCategory}
                   onChange={(e) => {
-                    setIncCategory(e.target.value);
-                    if (e.target.value !== 'Chi khác') setCustomCategoryDetail('');
+                    if (e.target.value === 'Chi khác') {
+                      setIsCustomCategory(true);
+                      setIncCategory('Chi khác');
+                      setCustomCategoryDetail('');
+                    } else {
+                      setIncCategory(e.target.value);
+                    }
                   }}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #feb2b2', fontSize: '0.88rem', background: 'white' }}
                 >
@@ -575,29 +631,8 @@ export default function Treasurer() {
                   <option value="Chi tiếp khách / Hội nghị">Chi tiếp khách / Hội nghị</option>
                   <option value="Chi sửa chữa / Sắm thiết bị">Chi sửa chữa / Sắm thiết bị</option>
                   <option value="Chi hỗ trợ phong trào">Chi hỗ trợ phong trào</option>
-                  <option value="Chi khác">✏️ Chi khác...</option>
+                  <option value="Chi khác">✏️ Chi khác (Tự viết nội dung chi)...</option>
                 </select>
-              )}
-
-              {(incCategory === 'Chi khác' || incCategory === 'Thu khác' || incCategory.startsWith('Chi khác') || incCategory.startsWith('Thu khác')) && (
-                <div style={{ marginTop: '6px' }}>
-                  <input
-                    type="text"
-                    placeholder={entryType === 'expense' ? "✏️ Nhập nội dung chi tiết cần chi (VD: Mua loa kéo, sửa mái NVH...)" : "✏️ Nhập nội dung chi tiết cần thu..."}
-                    value={customCategoryDetail}
-                    onChange={(e) => setCustomCategoryDetail(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '7px 10px',
-                      borderRadius: '6px',
-                      border: entryType === 'income' ? '1.5px solid #16a34a' : '1.5px solid #dc2626',
-                      fontSize: '0.83rem',
-                      background: '#ffffff',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
-                    }}
-                    autoFocus
-                  />
-                </div>
               )}
             </div>
 
