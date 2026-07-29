@@ -4338,7 +4338,8 @@ const Finance = () => {
                          </td>
                          {!isGuest && (
                            <td style={{textAlign: 'right', whiteSpace: 'nowrap', paddingRight: '16px'}}>
-                              <button 
+                              <button type="button" onClick={() => setPrintModalRecord(t)} title="In phiếu chứng từ (mẫu chuẩn 4 chữ ký)" style={{ marginRight: '6px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#16a34a', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: '700' }}><Printer size={13} /> In</button>
+                               <button 
                                 className="icon-btn-action edit-btn" 
                                 onClick={() => handleOpenEdit(t)}
                                 title="Chỉnh sửa phiếu"
