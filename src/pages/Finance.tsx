@@ -4459,19 +4459,31 @@ const Finance = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Danh mục quỹ *</label>
+                    <label>Danh mục {type === 'income' ? 'thu' : 'chi'} *</label>
                     <input 
                       type="text" 
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      placeholder="Ví dụ: Mạnh thường quân ủng hộ, Phí vệ sinh, Đơn vị mừng..."
+                      placeholder={type === 'expense' ? "Ví dụ: Chi hoạt động TDP, Chi khác: Mua loa kéo..." : "Ví dụ: Mạnh thường quân ủng hộ, Thu khác..."}
                       required
                     />
                     <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Gợi ý nhanh:</span>
-                      <button type="button" onClick={() => setCategory('Mạnh thường quân ủng hộ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎁 Mạnh thường quân ủng hộ</button>
-                      <button type="button" onClick={() => setCategory('Đơn vị mừng / Tài trợ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>💐 Đơn vị mừng / Tài trợ</button>
-                      <button type="button" onClick={() => setCategory('Ủng hộ / Quyên góp')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fef08a', background: '#fefce8', color: '#a16207', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🤝 Ủng hộ / Quyên góp</button>
+                      {type === 'income' ? (
+                        <>
+                          <button type="button" onClick={() => setCategory('Mạnh thường quân ủng hộ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎁 Mạnh thường quân ủng hộ</button>
+                          <button type="button" onClick={() => setCategory('Đơn vị mừng / Tài trợ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>💐 Đơn vị mừng / Tài trợ</button>
+                          <button type="button" onClick={() => setCategory('Ủng hộ / Quyên góp')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fef08a', background: '#fefce8', color: '#a16207', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🤝 Ủng hộ / Quyên góp</button>
+                          <button type="button" onClick={() => setCategory('Thu khác: ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>✏️ Thu khác...</button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" onClick={() => setCategory('Chi hoạt động TDP')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>📢 Chi hoạt động TDP</button>
+                          <button type="button" onClick={() => setCategory('Chi thăm hỏi / Hiếu hỷ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fed7aa', background: '#fff7ed', color: '#c2410c', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>❤️ Chi thăm hỏi / Hiếu hỷ</button>
+                          <button type="button" onClick={() => setCategory('Chi sửa chữa / Sắm thiết bị')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #e9d5ff', background: '#faf5ff', color: '#7e22ce', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🛠️ Chi sửa chữa / Sắm thiết bị</button>
+                          <button type="button" onClick={() => setCategory('Chi khác: ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fed7aa', background: '#fff7ed', color: '#c2410c', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>✏️ Chi khác...</button>
+                        </>
+                      )}
                     </div>
                   </div>
 
