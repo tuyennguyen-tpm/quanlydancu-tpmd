@@ -49,7 +49,8 @@ export default function Treasurer() {
   }, []);
 
   const isAuthorizedForTreasurer = currentRole === 'to_truong' || currentRole === 'admin' || currentRole === 'thu_quy' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
-  const canEditOrDelete = currentRole === 'to_truong' || currentRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+  const isAdmin = currentRole === 'admin' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+  const canEditOrDelete = isAdmin;
 
   if (!isAuthorizedForTreasurer) {
     return (
@@ -162,13 +163,13 @@ export default function Treasurer() {
     setIncNote('');
   };
 
-  // Delete Manual Entry from Treasurer Notebook (Only To Truong or Admin allowed)
+  // Delete Manual Entry from Treasurer Notebook (Only Admin allowed)
   const handleDeleteManualNote = async (id: string) => {
-    if (!canEditOrDelete) {
+    if (!isAdmin) {
       window.dispatchEvent(new CustomEvent('show-toast', {
-        detail: { message: '🔒 Quyền bị hạn chế: Thủ quỹ không được phép xóa/chỉnh sửa chứng từ đã lập!', type: 'warning' }
+        detail: { message: '🔒 Quyền bị hạn chế: Tổ trưởng và Thủ quỹ không có quyền xóa phiếu thu/chi của Thủ quỹ! Chỉ Admin mới có quyền xóa.', type: 'warning' }
       }));
-      alert('🔒 Quyền bị hạn chế:\n\nThủ quỹ chỉ có quyền nạp chứng từ và in phiếu.\nKhông thể xóa hoặc chỉnh sửa nội dung đã chi/thu.\nChỉ có Tổ trưởng dân phố hoặc Quản trị hệ thống (Admin) mới có quyền xóa chứng từ này.');
+      alert('🔒 Quyền bị hạn chế:\n\nTổ trưởng dân phố và Thủ quỹ không được phép xóa phiếu thu, phiếu chi của Thủ quỹ.\nChỉ có Quản trị hệ thống (Admin) mới được phép xóa các chứng từ này.');
       return;
     }
     if (!window.confirm('Bạn có chắc muốn xóa dòng chứng từ này khỏi Sổ tay ngoài lề?')) return;
@@ -819,7 +820,7 @@ export default function Treasurer() {
                             <button
                               type="button"
                               onClick={() => handleDeleteManualNote(entry.id)}
-                              title="Xóa chứng từ (Quyền Tổ trưởng / Admin)"
+                              title="Xóa chứng từ (Quyền Quản trị viên / Admin)"
                               style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }}
                             >
                               <Trash2 size={14} />
@@ -828,8 +829,8 @@ export default function Treasurer() {
                             <button
                               type="button"
                               onClick={() => handleDeleteManualNote(entry.id)}
-                              title="🔒 Thủ quỹ không có quyền xóa chứng từ đã lập"
-                              style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#94a3b8', cursor: 'not-allowed' }}
+                              title="🔒 Tổ trưởng và Thủ quỹ không có quyền xóa chứng từ của Thủ quỹ (Chỉ Admin)"
+                              style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#94a3b8', cursor: 'pointer' }}
                             >
                               🔒
                             </button>

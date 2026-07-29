@@ -360,6 +360,19 @@ const Finance = () => {
   };
 
   const handleDelete = async (id: string) => {
+    const recordToDelete = records.find(r => r.id === id);
+    const isAdmin = currentActionRole === 'admin' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+    const isToTruong = currentActionRole === 'to_truong' || userRole === 'to_truong';
+    
+    const recBy = (recordToDelete?.recorded_by || '').toLowerCase();
+    const isRecordedByThuQuy = recBy.includes('thủ quỹ') || recBy.includes('thu_quy') || recBy.includes('thu quy');
+
+    if (isToTruong && !isAdmin && isRecordedByThuQuy) {
+      showToast('🔒 Vai trò Tổ trưởng không được phép xóa phiếu thu, phiếu chi của Thủ quỹ! Chỉ Admin mới có quyền xóa.', 'warning');
+      alert('🔒 Quyền bị hạn chế:\n\nVai trò Tổ trưởng dân phố không được phép xóa phiếu thu, phiếu chi do Thủ quỹ lập.\nChỉ có Quản trị hệ thống (Admin) mới có quyền xóa chứng từ này.');
+      return;
+    }
+
     if (window.confirm('Bạn có chắc chắn muốn xóa phiếu thu/chi này khỏi hệ thống?')) {
       try {
         await db.deleteFinancialRecord(id);
