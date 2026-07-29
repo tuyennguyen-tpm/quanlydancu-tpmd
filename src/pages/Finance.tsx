@@ -73,7 +73,7 @@ const Finance = () => {
   const userRole = localStorage.getItem('user_role') || '';
   const currentActionRole = localStorage.getItem('current_role') || userRole;
   // Cấu hình tạm ẩn Thu chi TDP đối với vai trò Tổ Trưởng (Đổi thành false nếu muốn mở lại)
-  const HIDE_FINANCE_FOR_TO_TRUONG = true;
+  const HIDE_FINANCE_FOR_TO_TRUONG = false;
 
   if (HIDE_FINANCE_FOR_TO_TRUONG && (currentActionRole === 'to_truong' || userRole === 'to_truong')) {
     return (

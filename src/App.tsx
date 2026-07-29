@@ -2459,7 +2459,7 @@ const App = () => {
         return <Environment />;
       case 'finance': {
         const currentActionRole = localStorage.getItem('current_role') || userRole;
-        const HIDE_FINANCE_FOR_TO_TRUONG = true;
+        const HIDE_FINANCE_FOR_TO_TRUONG = false;
         if (HIDE_FINANCE_FOR_TO_TRUONG && (currentActionRole === 'to_truong' || userRole === 'to_truong')) {
           return (
             <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
@@ -2603,7 +2603,7 @@ const App = () => {
     }
     if (item.id === 'finance') {
       const currentActionRole = localStorage.getItem('current_role') || userRole;
-      const HIDE_FINANCE_FOR_TO_TRUONG = true;
+      const HIDE_FINANCE_FOR_TO_TRUONG = false;
       if (HIDE_FINANCE_FOR_TO_TRUONG && (currentActionRole === 'to_truong' || userRole === 'to_truong')) {
         return false;
       }
