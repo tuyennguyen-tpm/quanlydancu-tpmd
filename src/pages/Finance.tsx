@@ -157,7 +157,7 @@ const Finance = () => {
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [recordedBy, setRecordedBy] = useState(localStorage.getItem('user_full_name') || 'Nguyễn Kim Tuyến');
+  const [recordedBy, setRecordedBy] = useState('');
   const [payer, setPayer] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [formItems, setFormItems] = useState<Array<{ id: string; name: string; amount: string }>>([]);
@@ -371,7 +371,7 @@ const Finance = () => {
     setAmount('');
     setCategory('');
     setDescription('');
-    setRecordedBy('Ban Quản lý');
+    setRecordedBy('');
     setPayer('');
     setDate(new Date().toISOString().slice(0, 10));
     setFormItems([]);
@@ -426,6 +426,10 @@ const Finance = () => {
     }
     if (!category.trim() || !description.trim()) {
       showToast('Vui lòng nhập đầy đủ danh mục và nội dung!', 'warning');
+      return;
+    }
+    if (!recordedBy.trim()) {
+      showToast('Vui lòng nhập họ tên Người lập phiếu!', 'warning');
       return;
     }
 
@@ -4571,6 +4575,7 @@ const Finance = () => {
                         type="text" 
                         value={recordedBy}
                         onChange={(e) => setRecordedBy(e.target.value)}
+                        placeholder="Họ tên người lập phiếu..."
                         required
                       />
                     </div>
