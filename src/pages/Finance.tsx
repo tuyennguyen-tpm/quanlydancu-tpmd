@@ -436,10 +436,6 @@ const Finance = () => {
       showToast('Vui lòng nhập đầy đủ danh mục và nội dung!', 'warning');
       return;
     }
-    if (!recordedBy.trim()) {
-      showToast('Vui lòng nhập họ tên Người lập phiếu!', 'warning');
-      return;
-    }
 
     if (type === 'expense') {
       if (!payer.trim()) {
@@ -460,7 +456,7 @@ const Finance = () => {
       amount: parsedAmount,
       category,
       description,
-      recorded_by: recordedBy,
+      recorded_by: recordedBy.trim() || 'Ban Quản lý',
       payer: payer.trim(),
       date,
       created_at: editingRecord ? editingRecord.created_at : new Date().toISOString()
@@ -4578,13 +4574,12 @@ const Finance = () => {
                       />
                     </div>
                     <div className="form-group">
-                      <label>Người lập phiếu *</label>
+                      <label>Người lập phiếu</label>
                       <input 
                         type="text" 
                         value={recordedBy}
                         onChange={(e) => setRecordedBy(e.target.value)}
-                        placeholder="Họ tên người lập phiếu..."
-                        required
+                        placeholder="Có thể để trống (Mặc định: Ban Quản lý)..."
                       />
                     </div>
                   </div>
