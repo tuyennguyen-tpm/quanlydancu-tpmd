@@ -2173,57 +2173,136 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           </div>
       </div>
 
-      {categoryFilter === 'senior' && (
-        <div style={{
-          background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-          border: '1.5px solid #93c5fd',
-          borderRadius: '12px',
-          padding: '12px 20px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '12px',
-          boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.1)',
-          animation: 'fadeIn 0.25s ease'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              background: '#2563eb',
-              color: '#ffffff',
-              borderRadius: '10px',
-              width: '42px',
-              height: '42px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '20px',
-              boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)'
-            }}>
-              👴
+      {(() => {
+        if (categoryFilter === 'all' && groupFilter === 'all' && householdFilter === 'all' && !showDeceased && !searchTerm.trim() && viewMode === 'all') {
+          return null;
+        }
+
+        let icon = '📊';
+        let title = '';
+        let subtitle = '';
+        let bgGradient = 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)';
+        let borderColor = '#93c5fd';
+        let iconBg = '#2563eb';
+        let titleColor = '#1e40af';
+        let badgeUnit = 'người';
+
+        if (categoryFilter === 'senior') {
+          icon = '👴';
+          title = 'THỐNG KÊ NGƯỜI CAO TUỔI (Từ 60 tuổi trở lên)';
+          subtitle = 'Danh sách tổng hợp các nhân khẩu có độ tuổi từ 60 trở lên trong địa bàn Tổ dân phố.';
+          bgGradient = 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)';
+          borderColor = '#93c5fd';
+          iconBg = '#2563eb';
+          titleColor = '#1e40af';
+        } else if (categoryFilter === 'child') {
+          icon = '👶';
+          title = 'THỐNG KÊ TRẺ EM (Dưới 16 tuổi)';
+          subtitle = 'Danh sách các cháu nhỏ và thiếu niên dưới 16 tuổi trong địa bàn Tổ dân phố.';
+          bgGradient = 'linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)';
+          borderColor = '#c084fc';
+          iconBg = '#9333ea';
+          titleColor = '#6b21a8';
+          badgeUnit = 'cháu';
+        } else if (categoryFilter === 'military') {
+          icon = '🛡️';
+          title = 'THỐNG KÊ THANH NIÊN TRONG ĐỘ TUỔI NGHĨA VỤ QUÂN SỰ (18 - 27 tuổi)';
+          subtitle = 'Danh sách nam thanh niên từ 18 đến 27 tuổi thuộc diện đăng ký, quản lý hoặc tham gia NVQS.';
+          bgGradient = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+          borderColor = '#86efac';
+          iconBg = '#16a34a';
+          titleColor = '#166534';
+          badgeUnit = 'thanh niên';
+        } else if (categoryFilter === 'longevity') {
+          icon = '🎉';
+          title = `THỐNG KÊ DANH SÁCH MỪNG THỌ NĂM ${longevityYear} (70 - 150 tuổi)`;
+          subtitle = `Danh sách các cụ tròn mốc tuổi mừng thọ (70, 75, 80, 85, 90, 95, 100+ tuổi) trong năm ${longevityYear}.`;
+          bgGradient = 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)';
+          borderColor = '#fdba74';
+          iconBg = '#ea580c';
+          titleColor = '#9a3412';
+          badgeUnit = 'cụ';
+        } else if (showDeceased) {
+          icon = '🖤';
+          title = 'THỐNG KÊ DANH SÁCH NHÂN KHẨU ĐÃ MẤT';
+          subtitle = 'Danh sách nhân khẩu đã qua đời được lưu trữ hồ sơ trong hệ thống.';
+          bgGradient = 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)';
+          borderColor = '#cbd5e1';
+          iconBg = '#475569';
+          titleColor = '#334155';
+        } else if (groupFilter !== 'all') {
+          icon = '🏢';
+          title = `THỐNG KÊ NHÂN KHẨU - ${groupFilter.toUpperCase()}`;
+          subtitle = `Danh sách nhân khẩu đang cư trú tại ${groupFilter}.`;
+          bgGradient = 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)';
+          borderColor = '#7dd3fc';
+          iconBg = '#0284c7';
+          titleColor = '#075985';
+        } else if (searchTerm.trim()) {
+          icon = '🔍';
+          title = `KẾT QUẢ TÌM KIẾM NHÂN KHẨU: "${searchTerm.trim()}"`;
+          subtitle = `Danh sách các nhân khẩu khớp với từ khóa tìm kiếm.`;
+          bgGradient = 'linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%)';
+          borderColor = '#f0abfc';
+          iconBg = '#c026d3';
+          titleColor = '#86198f';
+        }
+
+        const maleCount = filteredResidents.filter(r => r.gender === 'male').length;
+        const femaleCount = filteredResidents.filter(r => r.gender === 'female').length;
+
+        return (
+          <div style={{
+            background: bgGradient,
+            border: `1.5px solid ${borderColor}`,
+            borderRadius: '12px',
+            padding: '12px 20px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+            animation: 'fadeIn 0.25s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                background: iconBg,
+                color: '#ffffff',
+                borderRadius: '10px',
+                width: '42px',
+                height: '42px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '20px',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)'
+              }}>
+                {icon}
+              </div>
+              <div>
+                <h4 style={{ margin: 0, color: titleColor, fontSize: '0.98rem', fontWeight: '700' }}>
+                  {title}
+                </h4>
+                <p style={{ margin: '2px 0 0 0', color: '#475569', fontSize: '0.85rem' }}>
+                  {subtitle}
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 style={{ margin: 0, color: '#1e40af', fontSize: '1rem', fontWeight: '700' }}>
-                THỐNG KÊ NGƯỜI CAO TUỔI (Từ 60 tuổi trở lên)
-              </h4>
-              <p style={{ margin: '2px 0 0 0', color: '#1e3a8a', fontSize: '0.85rem' }}>
-                Danh sách tổng hợp các nhân khẩu có độ tuổi từ 60 trở lên trong địa bàn Tổ dân phố.
-              </p>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ background: '#ffffff', padding: '6px 16px', borderRadius: '10px', border: `1.5px solid ${borderColor}`, textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: '600' }}>Tổng số danh sách:</span>
+                <strong style={{ fontSize: '1.2rem', color: titleColor }}>{filteredResidents.length}</strong> <span style={{ fontSize: '0.85rem', color: titleColor, fontWeight: 'bold' }}>{badgeUnit}</span>
+              </div>
+              <div style={{ background: '#ffffff', padding: '6px 16px', borderRadius: '10px', border: `1.5px solid ${borderColor}`, textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: '600' }}>Cơ cấu Nam / Nữ:</span>
+                <strong style={{ fontSize: '1.05rem', color: '#0284c7' }}>{maleCount} Nam</strong> - <strong style={{ fontSize: '1.05rem', color: '#db2777' }}>{femaleCount} Nữ</strong>
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div style={{ background: '#ffffff', padding: '6px 16px', borderRadius: '10px', border: '1.5px solid #bfdbfe', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: '600' }}>Tổng số người cao tuổi:</span>
-              <strong style={{ fontSize: '1.25rem', color: '#1d4ed8' }}>{filteredResidents.length}</strong> <span style={{ fontSize: '0.85rem', color: '#1e40af', fontWeight: 'bold' }}>người</span>
-            </div>
-            <div style={{ background: '#ffffff', padding: '6px 16px', borderRadius: '10px', border: '1.5px solid #bfdbfe', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: '600' }}>Cơ cấu Nam / Nữ:</span>
-              <strong style={{ fontSize: '1.05rem', color: '#0284c7' }}>{filteredResidents.filter(r => r.gender === 'male').length} Nam</strong> - <strong style={{ fontSize: '1.05rem', color: '#db2777' }}>{filteredResidents.filter(r => r.gender === 'female').length} Nữ</strong>
-            </div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="table-container">
         <table className="data-table">
