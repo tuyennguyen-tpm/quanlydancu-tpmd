@@ -456,7 +456,7 @@ const Finance = () => {
       amount: parsedAmount,
       category,
       description,
-      recorded_by: recordedBy.trim() || 'Ban Quản lý',
+      recorded_by: recordedBy.trim(),
       payer: payer.trim(),
       date,
       created_at: editingRecord ? editingRecord.created_at : new Date().toISOString()
@@ -4579,7 +4579,7 @@ const Finance = () => {
                         type="text" 
                         value={recordedBy}
                         onChange={(e) => setRecordedBy(e.target.value)}
-                        placeholder="Có thể để trống (Mặc định: Ban Quản lý)..."
+                        placeholder="Tùy chọn: Nhập tên người lập hoặc để trống..."
                       />
                     </div>
                   </div>
@@ -5660,7 +5660,7 @@ const Finance = () => {
                   </div>
                   <div style={{ height: '35px' }}></div>
                   <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
-                    {printModalRecord.recorded_by || 'Ban Quản lý'}
+                    {printModalRecord.recorded_by || '.........................'}
                   </div>
                 </div>
 
