@@ -145,7 +145,7 @@ const WardFunds = () => {
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
   const [isLoading, setIsLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'paid_all' | 'unpaid_any'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'marked_paid' | 'unmarked_paid' | 'paid_all' | 'unpaid_any'>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [groups, setGroups] = useState<string[]>(() => {
     const saved = localStorage.getItem('tdp_groups_config');
@@ -854,7 +854,11 @@ const WardFunds = () => {
       }
 
       let matchesStatus = true;
-      if (filterStatus === 'paid_all') {
+      if (filterStatus === 'marked_paid') {
+        matchesStatus = (f.note === 'Đã nộp đủ đợt tập trung');
+      } else if (filterStatus === 'unmarked_paid') {
+        matchesStatus = (f.note !== 'Đã nộp đủ đợt tập trung');
+      } else if (filterStatus === 'paid_all') {
         if (f.note === 'Đã nộp đủ đợt tập trung') {
           matchesStatus = true;
         } else {
@@ -6786,8 +6790,10 @@ const WardFunds = () => {
             }}
           >
             <option value="all">Tất cả trạng thái</option>
-            <option value="paid_all">Đã nộp đủ các quỹ</option>
-            <option value="unpaid_any">Chưa nộp đủ ít nhất 1 quỹ</option>
+            <option value="marked_paid">✅ Đã tích "Thu đủ cả nhà"</option>
+            <option value="unmarked_paid">⏳ Chưa tích "Thu đủ cả nhà"</option>
+            <option value="paid_all">🟢 Đã nộp đủ tất cả các quỹ</option>
+            <option value="unpaid_any">🔴 Chưa nộp đủ ít nhất 1 quỹ</option>
           </select>
 
           {/* Group Filter */}
