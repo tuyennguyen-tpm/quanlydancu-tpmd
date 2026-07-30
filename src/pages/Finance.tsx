@@ -621,7 +621,7 @@ const Finance = () => {
       worksheet.addRow([]); // Dòng trống
 
       // 4. BẢNG DỮ LIỆU CHI TIẾT
-      const headers = ['STT', 'Ngày lập', 'Loại phiếu', 'Nội dung khoản Thu / Chi', 'Danh mục', 'Người lập', 'Số tiền (VND)'];
+      const headers = ['STT', 'Ngày lập', 'Loại phiếu', 'Nội dung khoản Thu / Chi', 'Danh mục', 'Người lập', 'Người nhận / nộp', 'Số tiền (VND)'];
       const headerRow = worksheet.addRow(headers);
       headerRow.height = 28;
 
@@ -643,7 +643,8 @@ const Finance = () => {
           r.type === 'income' ? 'THU' : 'CHI',
           cleanDescription(r.description),
           r.category || '—',
-          r.recorded_by || 'Ban quản lý',
+          r.recorded_by || '—',
+          r.payer || '—',
           r.amount
         ];
         const row = worksheet.addRow(rowData);
@@ -3953,7 +3954,10 @@ const Finance = () => {
 
   const cleanDescription = (desc: string) => {
     if (!desc) return '';
-    return desc.replace(/\[QUY_[^\]]+\]/g, '').trim();
+    return desc
+      .replace(/\[QUY_[^\]]+\]/g, '')
+      .replace(/\[(?:Payer|NguoiNhan|Người nhận|Người nộp):[^\]]+\]/gi, '')
+      .trim();
   };
 
   const formatInputNumber = (val: string) => {
@@ -4402,6 +4406,7 @@ const Finance = () => {
                       <th>Nội dung</th>
                       <th>Danh mục</th>
                       <th>Người lập</th>
+                      <th>Người nhận / nộp</th>
                       <th style={{textAlign: 'right'}}>Số tiền</th>
                       {!isGuest && <th style={{textAlign: 'right', paddingRight: '20px'}}>Hành động</th>}
                    </tr>
@@ -4415,7 +4420,8 @@ const Finance = () => {
                             {cleanDescription(t.description)}
                          </td>
                          <td><span className="category-tag">{t.category}</span></td>
-                         <td>{t.recorded_by}</td>
+                         <td>{t.recorded_by || '—'}</td>
+                         <td>{t.payer || '—'}</td>
                          <td className={`amount-cell ${t.type === 'income' ? 'success' : 'danger'}`}>
                             {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                          </td>

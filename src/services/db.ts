@@ -1058,7 +1058,23 @@ export const db = {
             hasMore = false;
           }
         }
-        if (!hasError) return allData;
+        if (!hasError) {
+          const localRecords = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
+          const localMap = new Map(localRecords.map(r => [r.id, r]));
+          const mergedData = allData.map(remote => {
+            const local = localMap.get(remote.id);
+            let payerName = remote.payer || local?.payer || '';
+            if (!payerName && remote.description) {
+              const match = remote.description.match(/\[(?:Payer|NguoiNhan|Người nhận|Người nộp):\s*([^\]]+)\]/i);
+              if (match) payerName = match[1].trim();
+            }
+            return {
+              ...remote,
+              payer: payerName
+            };
+          });
+          return mergedData;
+        }
       } catch (e) {
         console.error('Supabase getFinancialRecords error, falling back to local storage', e);
       }
@@ -1071,10 +1087,18 @@ export const db = {
     });
   },
   saveFinancialRecord: async (record: Omit<FinancialRecord, 'created_at'> & { created_at?: string }): Promise<FinancialRecord> => {
+    let descriptionWithPayer = record.description || '';
+    if (record.payer && record.payer.trim()) {
+      descriptionWithPayer = descriptionWithPayer.replace(/\[(?:Payer|NguoiNhan|Người nhận|Người nộp):[^\]]+\]/gi, '').trim();
+      descriptionWithPayer += ` [Payer: ${record.payer.trim()}]`;
+    }
+
     const fullRecord: FinancialRecord = {
       ...record,
+      description: descriptionWithPayer,
       created_at: record.created_at || new Date().toISOString()
     };
+
     if (supabase) {
       try {
         const uId = await getSessionUserId();
@@ -1102,7 +1126,11 @@ export const db = {
             records.push(fullRecord);
           }
           setStorageItem('financial_records', records);
-          return fullRecord;
+          return {
+            ...fullRecord,
+            ...data,
+            payer: fullRecord.payer
+          };
         }
       } catch (e) {
         console.error('Supabase saveFinancialRecord error, saving to local storage', e);
