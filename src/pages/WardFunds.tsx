@@ -728,98 +728,6 @@ const WardFunds = () => {
     return map;
   }, [funds, fundMetaMap, residentsByHouseholdIdMap]);
 
-  // Filtered List với Tìm kiếm siêu thông minh (Hỗ trợ Không dấu + Tìm theo tên mọi thành viên trong hộ + Địa chỉ + Ghi chú + Tổ)
-  const filteredFunds = useMemo(() => {
-    const rawTerm = searchTerm.trim().toLowerCase();
-    const termNoAccent = rawTerm ? removeAccents(rawTerm) : '';
-
-    const list = funds.filter(f => {
-      if (rawTerm) {
-        const sMeta = searchMetaMap.get(f.id);
-        if (sMeta) {
-          const matchesSearch = sMeta.searchableText.includes(rawTerm) || 
-            sMeta.searchableNoAccent.includes(termNoAccent);
-          if (!matchesSearch) return false;
-        }
-      }
-
-      let matchesStatus = true;
-      if (filterStatus === 'paid_all') {
-        matchesStatus = activeFunds.every(fund => {
-          const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
-          return contrib.actual >= contrib.expected;
-        });
-      } else if (filterStatus === 'unpaid_any') {
-        matchesStatus = activeFunds.some(fund => {
-          const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
-          return contrib.actual < contrib.expected;
-        });
-      }
-      if (!matchesStatus) return false;
-
-      // Filter group
-      if (groupFilter !== 'all') {
-        const meta = fundMetaMap.get(f.id);
-        const fundGroup = meta?.groupName || '';
-        if (fundGroup !== groupFilter) return false;
-      }
-
-      return true;
-    });
-
-    // Lọc chỉ giữ lại đại diện hộ nếu ở Tab thu theo Hộ:
-    let filteredByMode: WardFund[];
-    if (subTabMode === 'household_list') {
-      const seenHouseholdIds = new Set<string>();
-      const seenNames = new Set<string>();
-      filteredByMode = list.filter(f => {
-        const nameKey = f.full_name.trim().toLowerCase();
-        const meta = fundMetaMap.get(f.id);
-        const hhId = meta?.householdId;
-
-        if (hhId && seenHouseholdIds.has(hhId)) return false;
-        if (seenNames.has(nameKey)) return false;
-
-        const isHead = headNamesSet.has(nameKey) || (f.note && (f.note.includes('Chủ hộ') || f.note.includes('Hộ')));
-        
-        if (isHead) {
-          if (hhId) seenHouseholdIds.add(hhId);
-          seenNames.add(nameKey);
-          return true;
-        }
-
-        // Đảm bảo mọi Hộ dân xuất hiện ít nhất 1 dòng đại diện trong Tab Hộ
-        if (hhId && !seenHouseholdIds.has(hhId)) {
-          seenHouseholdIds.add(hhId);
-          seenNames.add(nameKey);
-          return true;
-        }
-
-        return false;
-      });
-    } else {
-      filteredByMode = list;
-    }
-
-    // Sắp xếp thứ tự ưu tiên theo Cụm/Tổ đã cấu hình
-    return filteredByMode.sort((a, b) => {
-      const grpA = fundMetaMap.get(a.id)?.groupName || '';
-      const grpB = fundMetaMap.get(b.id)?.groupName || '';
-
-      const idxA = groups.findIndex(g => g.trim().toLowerCase() === grpA.trim().toLowerCase());
-      const idxB = groups.findIndex(g => g.trim().toLowerCase() === grpB.trim().toLowerCase());
-
-      const rankA = idxA !== -1 ? idxA : 999;
-      const rankB = idxB !== -1 ? idxB : 999;
-
-      if (rankA !== rankB) {
-        return rankA - rankB;
-      }
-
-      return a.full_name.localeCompare(b.full_name, 'vi');
-    });
-  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, fundMetaMap, groups, headNamesSet, searchMetaMap]);
-
   // *** Map tính chỉ tiêu kỳ vọng ĐÚNG theo tuổi/giới tính thực tế từ CSDL nhân khẩu ***
   // Override giá trị lưu trong DB để hiển thị đúng ngay lập tức, không cần đồng bộ thủ công
   const computedExpectedMap = useMemo(() => {
@@ -901,7 +809,6 @@ const WardFunds = () => {
         const age = dobStr ? calculateExactAge(dobStr, selectedYear) : -1;
 
         // Chuẩn độ tuổi lao động: Nữ (18-58 tuổi), Nam (18-61 tuổi)
-        // Nếu không có ngày sinh và tên có chữ "Ông/Bà" -> Coi như hết tuổi lao động (miễn)
         let inAgeRange = false;
         if (age === -1) {
           const isTitleElder = fullNameCheck.startsWith('ông ') || fullNameCheck.startsWith('bà ');
@@ -930,6 +837,120 @@ const WardFunds = () => {
     });
     return resultMap;
   }, [funds, residents, residentsByNameMap, activeFunds, households]);
+
+  // Filtered List với Tìm kiếm siêu thông minh (Hỗ trợ Không dấu + Tìm theo tên mọi thành viên trong hộ + Địa chỉ + Ghi chú + Tổ)
+  const filteredFunds = useMemo(() => {
+    const rawTerm = searchTerm.trim().toLowerCase();
+    const termNoAccent = rawTerm ? removeAccents(rawTerm) : '';
+
+    const list = funds.filter(f => {
+      if (rawTerm) {
+        const sMeta = searchMetaMap.get(f.id);
+        if (sMeta) {
+          const matchesSearch = sMeta.searchableText.includes(rawTerm) || 
+            sMeta.searchableNoAccent.includes(termNoAccent);
+          if (!matchesSearch) return false;
+        }
+      }
+
+      let matchesStatus = true;
+      if (filterStatus === 'paid_all') {
+        if (f.note === 'Đã nộp đủ đợt tập trung') {
+          matchesStatus = true;
+        } else {
+          const compExp = computedExpectedMap.get(f.id) || {};
+          matchesStatus = activeFunds.every(fund => {
+            const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            const expected = compExp[fund.name] ?? (contrib.expected || fund.target);
+            const actual = contrib.actual || 0;
+            if (expected === 0) return true;
+            return actual >= expected;
+          });
+        }
+      } else if (filterStatus === 'unpaid_any') {
+        if (f.note === 'Đã nộp đủ đợt tập trung') {
+          matchesStatus = false;
+        } else {
+          const compExp = computedExpectedMap.get(f.id) || {};
+          let hasUnpaid = false;
+          for (const fund of activeFunds) {
+            const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            const expected = compExp[fund.name] ?? (contrib.expected || fund.target);
+            const actual = contrib.actual || 0;
+            if (expected > 0 && actual < expected) {
+              hasUnpaid = true;
+              break;
+            }
+          }
+          matchesStatus = hasUnpaid;
+        }
+      }
+      if (!matchesStatus) return false;
+
+      // Filter group
+      if (groupFilter !== 'all') {
+        const meta = fundMetaMap.get(f.id);
+        const fundGroup = meta?.groupName || '';
+        if (fundGroup !== groupFilter) return false;
+      }
+
+      return true;
+    });
+
+    // Lọc chỉ giữ lại đại diện hộ nếu ở Tab thu theo Hộ:
+    let filteredByMode: WardFund[];
+    if (subTabMode === 'household_list') {
+      const seenHouseholdIds = new Set<string>();
+      const seenNames = new Set<string>();
+      filteredByMode = list.filter(f => {
+        const nameKey = f.full_name.trim().toLowerCase();
+        const meta = fundMetaMap.get(f.id);
+        const hhId = meta?.householdId;
+
+        if (hhId && seenHouseholdIds.has(hhId)) return false;
+        if (seenNames.has(nameKey)) return false;
+
+        const isHead = headNamesSet.has(nameKey) || (f.note && (f.note.includes('Chủ hộ') || f.note.includes('Hộ')));
+        
+        if (isHead) {
+          if (hhId) seenHouseholdIds.add(hhId);
+          seenNames.add(nameKey);
+          return true;
+        }
+
+        // Đảm bảo mọi Hộ dân xuất hiện ít nhất 1 dòng đại diện trong Tab Hộ
+        if (hhId && !seenHouseholdIds.has(hhId)) {
+          seenHouseholdIds.add(hhId);
+          seenNames.add(nameKey);
+          return true;
+        }
+
+        return false;
+      });
+    } else {
+      filteredByMode = list;
+    }
+
+    // Sắp xếp thứ tự ưu tiên theo Cụm/Tổ đã cấu hình
+    return filteredByMode.sort((a, b) => {
+      const grpA = fundMetaMap.get(a.id)?.groupName || '';
+      const grpB = fundMetaMap.get(b.id)?.groupName || '';
+
+      const idxA = groups.findIndex(g => g.trim().toLowerCase() === grpA.trim().toLowerCase());
+      const idxB = groups.findIndex(g => g.trim().toLowerCase() === grpB.trim().toLowerCase());
+
+      const rankA = idxA !== -1 ? idxA : 999;
+      const rankB = idxB !== -1 ? idxB : 999;
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+
+      return a.full_name.localeCompare(b.full_name, 'vi');
+    });
+  }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, fundMetaMap, groups, headNamesSet, searchMetaMap]);
+
+
 
   // Danh sách gom theo hộ gia đình cho chế độ xem “Thu gom theo Hộ”
   const householdGroupedFunds = useMemo(() => {
