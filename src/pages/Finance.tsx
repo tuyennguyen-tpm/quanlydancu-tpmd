@@ -371,7 +371,15 @@ const Finance = () => {
     setAmount('');
     setCategory('');
     setDescription('');
-    setRecordedBy('');
+    
+    let defaultCreator = '';
+    try {
+      const sigs = JSON.parse(localStorage.getItem('official_signatures') || '[]');
+      const kt = sigs.find((s: any) => s.id === 'ke_toan');
+      if (kt?.name?.trim()) defaultCreator = kt.name.trim();
+    } catch {}
+
+    setRecordedBy(defaultCreator);
     setPayer('');
     setDate(new Date().toISOString().slice(0, 10));
     setFormItems([]);

@@ -1102,7 +1102,7 @@ const App = () => {
     { id: 'to_truong', title: 'Tổ trưởng dân phố', name: '', signatureUrl: '' },
     { id: 'to_pho',   title: 'Tổ phó dân phố',   name: '', signatureUrl: '' },
     { id: 'mat_tran', title: 'Trưởng ban Mặt trận', name: '', signatureUrl: '' },
-    { id: 'ke_toan',  title: 'Kế toán trưởng',       name: '', signatureUrl: '' },
+    { id: 'ke_toan',  title: 'Kế toán / Người lập phiếu',  name: '', signatureUrl: '' },
     { id: 'thu_quy',  title: 'Thủ quỹ',               name: '', signatureUrl: '' },
     { id: 'thu_ky',   title: 'Thư ký',               name: '', signatureUrl: '' },
     { id: 'thu_ky2',  title: 'Thư ký (2)',           name: '', signatureUrl: '' },
