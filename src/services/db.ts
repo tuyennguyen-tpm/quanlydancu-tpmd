@@ -1079,9 +1079,31 @@ export const db = {
       try {
         const uId = await getSessionUserId();
         const payload = enrichPayload({ ...fullRecord, user_id: uId });
-        const { data, error } = await supabase.from('financial_records').upsert(payload).select().single();
+        let { data, error } = await supabase.from('financial_records').upsert(payload).select().single();
+        
+        // Nếu DB chưa có cột 'payer', tự động lược bỏ 'payer' khi lưu Supabase để tránh lỗi HTTP 400
+        if (error && (payload as any).payer !== undefined) {
+          const sanitizedPayload = { ...payload };
+          delete (sanitizedPayload as any).payer;
+          const retryRes = await supabase.from('financial_records').upsert(sanitizedPayload).select().single();
+          if (!retryRes.error) {
+            data = { ...retryRes.data, payer: fullRecord.payer };
+            error = null;
+          }
+        }
+
         if (error) handleDbError('lưu bản ghi thu chi', error);
-        if (!error && data) return data;
+        if (!error && data) {
+          const records = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
+          const index = records.findIndex(r => r.id === record.id);
+          if (index >= 0) {
+            records[index] = fullRecord;
+          } else {
+            records.push(fullRecord);
+          }
+          setStorageItem('financial_records', records);
+          return fullRecord;
+        }
       } catch (e) {
         console.error('Supabase saveFinancialRecord error, saving to local storage', e);
       }
