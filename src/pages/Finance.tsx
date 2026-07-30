@@ -120,6 +120,7 @@ const Finance = () => {
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
   const [recordedByFilter, setRecordedByFilter] = useState<string>('all');
+  const [payerFilter, setPayerFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
   const [printModalRecord, setPrintModalRecord] = useState<FinancialRecord | null>(null);
@@ -3896,20 +3897,39 @@ const Finance = () => {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'));
   }, [records]);
 
-  const creatorStats = useMemo(() => {
-    if (recordedByFilter === 'all') return null;
-    const userRecords = records.filter(r => (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase());
+  const payerOptions = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach(r => {
+      if (r.payer && r.payer.trim()) {
+        set.add(r.payer.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [records]);
+
+  const personStats = useMemo(() => {
+    if (recordedByFilter === 'all' && payerFilter === 'all') return null;
+    let userRecords = records;
+    let titleParts: string[] = [];
+    if (recordedByFilter !== 'all') {
+      userRecords = userRecords.filter(r => (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase());
+      titleParts.push(`Người lập: ${recordedByFilter}`);
+    }
+    if (payerFilter !== 'all') {
+      userRecords = userRecords.filter(r => (r.payer || '').trim().toLowerCase() === payerFilter.trim().toLowerCase());
+      titleParts.push(`Người nhận/nộp: ${payerFilter}`);
+    }
     const income = userRecords.filter(r => r.type === 'income').reduce((sum, r) => sum + r.amount, 0);
     const expense = userRecords.filter(r => r.type === 'expense').reduce((sum, r) => sum + r.amount, 0);
     const count = userRecords.length;
     return {
-      name: recordedByFilter,
+      name: titleParts.join(' | '),
       income,
       expense,
       balance: income - expense,
       count
     };
-  }, [records, recordedByFilter]);
+  }, [records, recordedByFilter, payerFilter]);
 
   const filteredRecords = useMemo(() => records.filter(r => {
     // Ẩn các bản ghi tự động đồng bộ từ việc đóng quỹ của các hộ dân
@@ -3919,10 +3939,12 @@ const Finance = () => {
     const matchesType = activeType === 'all' || r.type === activeType;
     const matchesSearch = r.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           r.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.recorded_by.toLowerCase().includes(searchTerm.toLowerCase());
+                          r.recorded_by.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (r.payer || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRecordedBy = recordedByFilter === 'all' || (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase();
-    return matchesType && matchesSearch && matchesRecordedBy;
-  }), [records, activeType, searchTerm, recordedByFilter]);
+    const matchesPayer = payerFilter === 'all' || (r.payer || '').trim().toLowerCase() === payerFilter.trim().toLowerCase();
+    return matchesType && matchesSearch && matchesRecordedBy && matchesPayer;
+  }), [records, activeType, searchTerm, recordedByFilter, payerFilter]);
 
   const formatCurrency = (amt: number) => {
     if (amt === undefined || amt === null || isNaN(amt)) return '0';
@@ -4276,12 +4298,39 @@ const Finance = () => {
               </select>
             </div>
 
+            {/* Bộ lọc theo Người nhận / Nộp tiền */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-card)', padding: '4px 10px', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                🤝 Người nhận / nộp:
+              </span>
+              <select 
+                value={payerFilter}
+                onChange={(e) => setPayerFilter(e.target.value)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-main)',
+                  color: payerFilter !== 'all' ? '#059669' : 'var(--text-main)',
+                  fontSize: '0.83rem',
+                  fontWeight: payerFilter !== 'all' ? '700' : '600',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="all">Tất cả người nhận / nộp</option>
+                {payerOptions.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="search-and-date">
                 <div className="search-mini">
                   <Search size={16} />
                   <input 
                     type="text" 
-                    placeholder="Tìm nội dung, danh mục..." 
+                    placeholder="Tìm nội dung, danh mục, người..." 
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                   />
@@ -4290,8 +4339,8 @@ const Finance = () => {
             </div>
           </div>
 
-          {/* Banner Thống kê riêng cho Người Lập Phiếu được chọn */}
-          {creatorStats && (
+          {/* Banner Thống kê riêng theo bộ lọc Người Lập / Người Nhận */}
+          {personStats && (
             <div style={{
               marginBottom: '16px',
               padding: '14px 20px',
@@ -4307,27 +4356,27 @@ const Finance = () => {
             }}>
               <div>
                 <div style={{ fontWeight: '800', fontSize: '0.95rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  👤 THỐNG KÊ GIAO DỊCH CỦA NGƯỜI LẬP: <span style={{ color: '#1d4ed8', textDecoration: 'underline' }}>{creatorStats.name}</span>
+                  📊 THỐNG KÊ THEO BỘ LỌC: <span style={{ color: '#1d4ed8', textDecoration: 'underline' }}>{personStats.name}</span>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#3b82f6', marginTop: '3px' }}>
-                  Tổng cộng <strong>{creatorStats.count}</strong> chứng từ đã lập
+                  Tổng cộng <strong>{personStats.count}</strong> chứng từ thỏa mãn
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
                   <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: '600' }}>🟢 Tổng Thu: </span>
-                  <strong style={{ fontSize: '0.95rem', color: '#15803d' }}>{formatCurrency(creatorStats.income)} đ</strong>
+                  <strong style={{ fontSize: '0.95rem', color: '#15803d' }}>{formatCurrency(personStats.income)} đ</strong>
                 </div>
                 <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '10px', border: '1px solid #fecaca' }}>
                   <span style={{ fontSize: '0.75rem', color: '#991b1b', fontWeight: '600' }}>🔴 Tổng Chi: </span>
-                  <strong style={{ fontSize: '0.95rem', color: '#b91c1c' }}>{formatCurrency(creatorStats.expense)} đ</strong>
+                  <strong style={{ fontSize: '0.95rem', color: '#b91c1c' }}>{formatCurrency(personStats.expense)} đ</strong>
                 </div>
                 <div style={{ background: '#ffffff', padding: '6px 14px', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
                   <span style={{ fontSize: '0.75rem', color: '#1e40af', fontWeight: '600' }}>🔵 Cân Đối: </span>
-                  <strong style={{ fontSize: '0.95rem', color: creatorStats.balance >= 0 ? '#1d4ed8' : '#b91c1c' }}>{formatCurrency(creatorStats.balance)} đ</strong>
+                  <strong style={{ fontSize: '0.95rem', color: personStats.balance >= 0 ? '#1d4ed8' : '#b91c1c' }}>{formatCurrency(personStats.balance)} đ</strong>
                 </div>
                 <button 
-                  onClick={() => setRecordedByFilter('all')}
+                  onClick={() => { setRecordedByFilter('all'); setPayerFilter('all'); }}
                   style={{
                     padding: '6px 12px',
                     borderRadius: '8px',
@@ -4339,7 +4388,7 @@ const Finance = () => {
                     cursor: 'pointer'
                   }}
                 >
-                  ✖ Bỏ lọc người lập
+                  ✖ Xóa bộ lọc
                 </button>
               </div>
             </div>
