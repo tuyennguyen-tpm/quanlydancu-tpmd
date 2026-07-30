@@ -3337,7 +3337,7 @@ const WardFunds = () => {
     `;
   };
 
-  const handlePrintIndividualReceipt_Ward = (item: WardFund) => {
+  const handlePrintIndividualReceipt_Ward = async (item: WardFund) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
@@ -3360,9 +3360,15 @@ const WardFunds = () => {
 
     const freshReceiptHtml = generateWardStateReceiptHtml(item, dateText, tdpNameVal, wardNameVal, leaderName, leaderSigUrl);
     const SAVE_KEY = `receipt_html_ward_indiv_${item.id}_${selectedYear}`;
-    const savedReceiptHtml = localStorage.getItem(SAVE_KEY);
+    let savedReceiptHtml: string | null = null;
+    try {
+      savedReceiptHtml = localStorage.getItem(SAVE_KEY);
+      if (!savedReceiptHtml && (db as any).getReceiptCustomization) {
+        savedReceiptHtml = await (db as any).getReceiptCustomization(SAVE_KEY);
+      }
+    } catch { /* ignore */ }
     const hasSavedVersion = Boolean(savedReceiptHtml);
-    const receiptHtml = freshReceiptHtml;
+    const receiptHtml = savedReceiptHtml || freshReceiptHtml;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -3795,7 +3801,12 @@ const WardFunds = () => {
           } catch (e) {}
 
           btnSave.addEventListener('click', function() {
-            localStorage.setItem(SAVE_KEY, editor.innerHTML);
+            safeSaveStorage(SAVE_KEY, editor.innerHTML);
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+              }
+            } catch (err) {}
             const notice = document.getElementById('saved-notice');
             if (notice) {
               notice.style.display = 'flex';
@@ -3804,7 +3815,7 @@ const WardFunds = () => {
               notice.style.color = '#14532d';
               notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của cá nhân này đã được lưu lại cho các lần mở tiếp theo.';
             }
-            alert('Đã lưu bản chỉnh sửa phiếu thu thành công! Lần sau mở phiếu thu của cá nhân này ra, hệ thống sẽ tự động hiển thị nội dung bạn vừa lưu.');
+            show2DToast('Đã lưu bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
           });
 
           btnReset.addEventListener('click', function() {
@@ -4616,7 +4627,7 @@ const WardFunds = () => {
     } catch { /* ignore */ }
 
     const hasSavedVersion = Boolean(savedReceiptHtml);
-    let receiptHtml = freshReceiptHtml;
+    let receiptHtml = savedReceiptHtml || freshReceiptHtml;
 
     // Tự động kiểm tra và bổ sung tên Tổ nếu bản lưu cũ chưa có
     const hhGroupStr = (household as any).self_management_group || (activeMembers?.[0] as any)?.self_management_group || '';

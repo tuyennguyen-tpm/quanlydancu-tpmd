@@ -1454,7 +1454,17 @@ const Finance = () => {
     } catch { /* ignore */ }
 
     const hasSavedVersion = Boolean(savedReceiptHtml);
-    const receiptHtml = freshReceiptHtml;
+    let receiptHtml = savedReceiptHtml || freshReceiptHtml;
+
+    const hhGroupStr = (household as any).self_management_group || '';
+    if (savedReceiptHtml && hhGroupStr) {
+      const formattedGroup = hhGroupStr.trim().toLowerCase().startsWith('tổ') || hhGroupStr.trim().toLowerCase().startsWith('cụm') 
+        ? hhGroupStr.trim() 
+        : `Tổ ${hhGroupStr.trim()}`;
+      if (!savedReceiptHtml.includes(formattedGroup)) {
+        receiptHtml = savedReceiptHtml.replace(/(Họ và tên người nộp tiền:\s*<\/td>\s*<td[^>]*>\s*<strong>[^<]+<\/strong>\s*(?:\([^)]+\))?)/i, `$1 ${formattedGroup}`);
+      }
+    }
 
     const htmlContent = `
       <!DOCTYPE html>
