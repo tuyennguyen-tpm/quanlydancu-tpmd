@@ -1834,7 +1834,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     const age = getAge(r.dob);
     let matchesCategory = true;
     if (categoryFilter === 'senior') {
-      matchesCategory = age >= 70;
+      matchesCategory = age >= 60;
     } else if (categoryFilter === 'child') {
       matchesCategory = age < 16;
     } else if (categoryFilter === 'military') {
@@ -2129,25 +2129,25 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
               <>
                 <button 
                   className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('senior')}
+                  onClick={() => setCategoryFilter(categoryFilter === 'senior' ? 'all' : 'senior')}
                 >
-                  <UserCheck size={16} /> Người cao tuổi (≥70)
+                  <UserCheck size={16} /> Người cao tuổi (≥60)
                 </button>
                 <button 
                   className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('child')}
+                  onClick={() => setCategoryFilter(categoryFilter === 'child' ? 'all' : 'child')}
                 >
                   <Baby size={16} /> Trẻ em (&lt;16)
                 </button>
                 <button 
                   className={`filter-btn filter-btn-military ${categoryFilter === 'military' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('military')}
+                  onClick={() => setCategoryFilter(categoryFilter === 'military' ? 'all' : 'military')}
                 >
                   <ShieldAlert size={16} /> Thanh niên NVQS (18-27)
                 </button>
                 <button 
                   className={`filter-btn filter-btn-longevity ${categoryFilter === 'longevity' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('longevity')}
+                  onClick={() => setCategoryFilter(categoryFilter === 'longevity' ? 'all' : 'longevity')}
                 >
                   🎉 Mừng thọ (70-150)
                 </button>
@@ -2172,6 +2172,58 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             )}
           </div>
       </div>
+
+      {categoryFilter === 'senior' && (
+        <div style={{
+          background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+          border: '1.5px solid #93c5fd',
+          borderRadius: '12px',
+          padding: '12px 20px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.1)',
+          animation: 'fadeIn 0.25s ease'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              background: '#2563eb',
+              color: '#ffffff',
+              borderRadius: '10px',
+              width: '42px',
+              height: '42px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '20px',
+              boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)'
+            }}>
+              👴
+            </div>
+            <div>
+              <h4 style={{ margin: 0, color: '#1e40af', fontSize: '1rem', fontWeight: '700' }}>
+                THỐNG KÊ NGƯỜI CAO TUỔI (Từ 60 tuổi trở lên)
+              </h4>
+              <p style={{ margin: '2px 0 0 0', color: '#1e3a8a', fontSize: '0.85rem' }}>
+                Danh sách tổng hợp các nhân khẩu có độ tuổi từ 60 trở lên trong địa bàn Tổ dân phố.
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ background: '#ffffff', padding: '6px 16px', borderRadius: '10px', border: '1.5px solid #bfdbfe', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: '600' }}>Tổng số người cao tuổi:</span>
+              <strong style={{ fontSize: '1.25rem', color: '#1d4ed8' }}>{filteredResidents.length}</strong> <span style={{ fontSize: '0.85rem', color: '#1e40af', fontWeight: 'bold' }}>người</span>
+            </div>
+            <div style={{ background: '#ffffff', padding: '6px 16px', borderRadius: '10px', border: '1.5px solid #bfdbfe', textAlign: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+              <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', fontWeight: '600' }}>Cơ cấu Nam / Nữ:</span>
+              <strong style={{ fontSize: '1.05rem', color: '#0284c7' }}>{filteredResidents.filter(r => r.gender === 'male').length} Nam</strong> - <strong style={{ fontSize: '1.05rem', color: '#db2777' }}>{filteredResidents.filter(r => r.gender === 'female').length} Nữ</strong>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="table-container">
         <table className="data-table">

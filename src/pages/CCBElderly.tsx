@@ -522,7 +522,7 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
     const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
     const wardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
     let titleText = selectedTab === 'seniors' ? 'DANH SÁCH NGƯỜI CAO TUỔI' : 'DANH SÁCH HỘI VIÊN CỰU CHIẾN BINH';
-    if (selectedTab === 'seniors' && subFilter === 'senior70') titleText = 'DANH SÁCH NGƯỜI CAO TUỔI (≥70 TUỔI)';
+    if (selectedTab === 'seniors' && subFilter === 'senior70') titleText = 'DANH SÁCH NGƯỜI CAO TUỔI (≥60 TUỔI)';
     if (selectedTab === 'seniors' && subFilter === 'longevity') titleText = `DANH SÁCH NGƯỜI CAO TUỔI MỪNG THỌ NĂM ${longevityYear}`;
 
     let rowsHtml = '';
@@ -940,7 +940,7 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
               cursor: 'pointer'
             }}
           >
-            👴 Người cao tuổi (≥70)
+            👴 Người cao tuổi (≥60)
           </button>
           <button
             onClick={() => setSubFilter('longevity')}
