@@ -78,6 +78,7 @@ export interface FinancialRecord {
   category: string;
   description: string;
   recorded_by: string;
+  payer?: string;
   date: string;
   created_at: string;
 }

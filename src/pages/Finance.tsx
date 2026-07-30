@@ -158,6 +158,7 @@ const Finance = () => {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [recordedBy, setRecordedBy] = useState(localStorage.getItem('user_full_name') || 'Nguyễn Kim Tuyến');
+  const [payer, setPayer] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [formItems, setFormItems] = useState<Array<{ id: string; name: string; amount: string }>>([]);
 
@@ -371,6 +372,7 @@ const Finance = () => {
     setCategory('');
     setDescription('');
     setRecordedBy('Ban Quản lý');
+    setPayer('');
     setDate(new Date().toISOString().slice(0, 10));
     setFormItems([]);
     setIsFormOpen(true);
@@ -383,6 +385,7 @@ const Finance = () => {
     setCategory(record.category);
     setDescription(record.description);
     setRecordedBy(record.recorded_by);
+    setPayer(record.payer || '');
     setDate(record.date);
     setFormItems([]);
     setIsFormOpen(true);
@@ -426,6 +429,18 @@ const Finance = () => {
       return;
     }
 
+    if (type === 'expense') {
+      if (!payer.trim()) {
+        showToast('Vui lòng nhập tên Người nhận tiền / Đơn vị nhận tiền!', 'warning');
+        return;
+      }
+      if (payer.trim().toLowerCase() === recordedBy.trim().toLowerCase()) {
+        showToast('⚠️ Theo quy định tài chính, Người nhận tiền và Người lập phiếu không được là 1 người!', 'warning');
+        alert('⚠️ Quy định quản lý tài chính:\n\n"Người nhận tiền" và "Người lập phiếu" KHÔNG ĐƯỢC THUỘC VỀ CÙNG 1 NGƯỜI.\nVui lòng kiểm tra lại họ tên Người nhận tiền / Đơn vị thụ hưởng thực tế!');
+        return;
+      }
+    }
+
     const payload: FinancialRecord = {
       id: editingRecord ? editingRecord.id : generateUUID(),
       group_id: db.getGroupId(),
@@ -434,6 +449,7 @@ const Finance = () => {
       category,
       description,
       recorded_by: recordedBy,
+      payer: payer.trim(),
       date,
       created_at: editingRecord ? editingRecord.created_at : new Date().toISOString()
     };
@@ -4540,7 +4556,17 @@ const Finance = () => {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Người lập phiếu</label>
+                      <label>{type === 'expense' ? 'Người nhận tiền / Đơn vị nhận *' : 'Người nộp tiền / Đơn vị nộp'}</label>
+                      <input 
+                        type="text" 
+                        value={payer}
+                        onChange={(e) => setPayer(e.target.value)}
+                        placeholder={type === 'expense' ? "Tên người nhận tiền thực tế..." : "Tên người nộp tiền..."}
+                        required={type === 'expense'}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Người lập phiếu *</label>
                       <input 
                         type="text" 
                         value={recordedBy}
@@ -4548,15 +4574,21 @@ const Finance = () => {
                         required
                       />
                     </div>
-                    <div className="form-group">
-                      <label>Ngày ghi nhận</label>
-                      <input 
-                        type="date" 
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        required
-                      />
+                  </div>
+                  {type === 'expense' && payer.trim() && recordedBy.trim() && payer.trim().toLowerCase() === recordedBy.trim().toLowerCase() && (
+                    <div style={{ padding: '6px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '10px' }}>
+                      ⚠️ Lưu ý: Theo quy định tài chính, Người nhận tiền không được trùng tên với Người lập phiếu!
                     </div>
+                  )}
+
+                  <div className="form-group">
+                    <label>Ngày ghi nhận *</label>
+                    <input 
+                      type="date" 
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      required
+                    />
                   </div>
 
                   <div className="form-actions">
@@ -5634,7 +5666,7 @@ const Finance = () => {
                   </div>
                   <div style={{ height: '35px' }}></div>
                   <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
-                    .........................
+                    {printModalRecord.payer || '.........................'}
                   </div>
                 </div>
               </div>

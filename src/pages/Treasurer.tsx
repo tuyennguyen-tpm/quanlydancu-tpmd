@@ -134,6 +134,23 @@ export default function Treasurer() {
     }
 
     const isInc = entryType === 'income';
+    if (!isInc) {
+      if (!incPayer.trim()) {
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { message: '⚠️ Vui lòng nhập tên Người nhận tiền / Đơn vị nhận tiền!', type: 'warning' }
+        }));
+        return;
+      }
+      const p = incPayer.trim().toLowerCase();
+      const creator = (officialsConfig.keToan.name || officialsConfig.thuQuy.name || '').trim().toLowerCase();
+      if (p && creator && p === creator) {
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { message: '⚠️ Theo quy định tài chính, Người nhận tiền và Người lập phiếu không được là cùng 1 người!', type: 'warning' }
+        }));
+        alert('⚠️ Quy định quản lý tài chính:\n\n"Người nhận tiền" và "Người lập phiếu" KHÔNG ĐƯỢC LÀ CÙNG 1 NGƯỜI.\nVui lòng kiểm tra lại tên Người nhận tiền thực tế!');
+        return;
+      }
+    }
     const newNote: TreasurerManualNote = {
       id: generateUUID(),
       type: entryType,
