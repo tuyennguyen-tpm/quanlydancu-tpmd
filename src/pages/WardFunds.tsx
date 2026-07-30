@@ -147,6 +147,7 @@ const WardFunds = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'marked_paid' | 'unmarked_paid' | 'paid_all' | 'unpaid_any'>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
+  const [summaryDate, setSummaryDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [groups, setGroups] = useState<string[]>(() => {
     const saved = localStorage.getItem('tdp_groups_config');
     return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
@@ -1097,6 +1098,29 @@ const WardFunds = () => {
       };
     });
   }, [activeFunds, funds, fundMetaMap, households]);
+
+  const dailyStats = useMemo(() => {
+    const targetDateStr = summaryDate;
+    let totalAmount = 0;
+    const paidHouseholdIds = new Set<string>();
+    const byCategory: Record<string, number> = {};
+
+    householdFunds.forEach(hf => {
+      const pDate = (hf.paid_at || '').slice(0, 10);
+      if (pDate === targetDateStr && hf.amount > 0) {
+        totalAmount += hf.amount;
+        paidHouseholdIds.add(hf.household_id);
+        byCategory[hf.fund_name] = (byCategory[hf.fund_name] || 0) + hf.amount;
+      }
+    });
+
+    return {
+      date: targetDateStr,
+      totalAmount,
+      householdCount: paidHouseholdIds.size,
+      byCategory
+    };
+  }, [householdFunds, summaryDate]);
 
   // Add new record manually
   const handleAddNewRecord = () => {
@@ -6629,6 +6653,86 @@ const WardFunds = () => {
           gap: '20px', 
           marginBottom: '10px' 
         }}>
+          {/* Card Thống kê Thu Quỹ Theo Ngày (Tổng kết mỗi ngày) */}
+          <div 
+            style={{
+              backgroundColor: '#eff6ff',
+              border: '1.5px solid #bfdbfe',
+              borderRadius: '14px',
+              padding: '14px 18px',
+              boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', fontWeight: '850', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📅 Thu quỹ theo ngày (Tổng kết)
+                </span>
+                <h3 style={{ margin: '4px 0 0 0', fontSize: '1.45rem', fontWeight: '850', color: '#1d4ed8' }}>
+                  {dailyStats.totalAmount.toLocaleString('vi-VN')} VNĐ
+                </h3>
+              </div>
+
+              {/* Chọn Ngày */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <input
+                  type="date"
+                  value={summaryDate}
+                  onChange={(e) => setSummaryDate(e.target.value)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #93c5fd',
+                    background: '#ffffff',
+                    color: '#1e3a8a',
+                    fontWeight: '700',
+                    fontSize: '0.82rem',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setSummaryDate(new Date().toISOString().slice(0, 10))}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '8px',
+                    border: '1px solid #93c5fd',
+                    background: summaryDate === new Date().toISOString().slice(0, 10) ? '#2563eb' : '#ffffff',
+                    color: summaryDate === new Date().toISOString().slice(0, 10) ? '#ffffff' : '#1d4ed8',
+                    fontWeight: '700',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Hôm nay
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#334155', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
+              <span>Số hộ hoàn thành thu: <strong style={{ color: '#16a34a' }}>{dailyStats.householdCount} hộ</strong></span>
+              <span>Ngày: <strong>{new Date(summaryDate).toLocaleDateString('vi-VN')}</strong></span>
+            </div>
+
+            {/* Chi tiết thu từng quỹ trong ngày */}
+            {Object.keys(dailyStats.byCategory).length > 0 ? (
+              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dotted #93c5fd', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {Object.entries(dailyStats.byCategory).map(([catName, amt]) => (
+                  <span key={catName} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '6px', fontSize: '0.73rem', color: '#1e293b' }}>
+                    {catName}: <strong style={{ color: '#16a34a' }}>{amt.toLocaleString('vi-VN')}đ</strong>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div style={{ marginTop: '8px', fontSize: '0.73rem', color: '#64748b', fontStyle: 'italic' }}>
+                (Chưa có phát sinh thu quỹ trong ngày này)
+              </div>
+            )}
+          </div>
+
           {/* Card Thống kê Tổng quan Hộ Gia Đình Nộp Quỹ Phường */}
           <div 
             style={{
