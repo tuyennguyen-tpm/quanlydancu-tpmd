@@ -6653,77 +6653,94 @@ const WardFunds = () => {
           gap: '20px', 
           marginBottom: '10px' 
         }}>
-          {/* Card Thống kê Thu Quỹ Theo Ngày (Tổng kết mỗi ngày) */}
+          {/* Card Thống kê Thu Quỹ Theo Ngày (Tổng kết mỗi ngày) - Thiết kế Premium Đồ Họa Cân Đối */}
           <div 
             style={{
-              backgroundColor: '#eff6ff',
-              border: '1.5px solid #bfdbfe',
-              borderRadius: '14px',
-              padding: '14px 18px',
-              boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
-              position: 'relative',
-              overflow: 'hidden'
+              background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              border: '1.5px solid #93c5fd',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              boxShadow: '0 4px 12px rgba(37,99,235,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '175px',
+              maxHeight: '220px',
+              boxSizing: 'border-box'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              <div>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <span style={{ fontSize: '0.78rem', fontWeight: '850', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   📅 Thu quỹ theo ngày (Tổng kết)
                 </span>
-                <h3 style={{ margin: '4px 0 0 0', fontSize: '1.45rem', fontWeight: '850', color: '#1d4ed8' }}>
-                  {dailyStats.totalAmount.toLocaleString('vi-VN')} VNĐ
-                </h3>
+
+                {/* Chọn Ngày */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input
+                    type="date"
+                    value={summaryDate}
+                    onChange={(e) => setSummaryDate(e.target.value)}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                      border: '1px solid #93c5fd',
+                      background: '#ffffff',
+                      color: '#1e3a8a',
+                      fontWeight: '700',
+                      fontSize: '0.8rem',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSummaryDate(new Date().toISOString().slice(0, 10))}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: summaryDate === new Date().toISOString().slice(0, 10) ? '#2563eb' : '#ffffff',
+                      color: summaryDate === new Date().toISOString().slice(0, 10) ? '#ffffff' : '#1d4ed8',
+                      fontWeight: '700',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    Hôm nay
+                  </button>
+                </div>
               </div>
 
-              {/* Chọn Ngày */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <input
-                  type="date"
-                  value={summaryDate}
-                  onChange={(e) => setSummaryDate(e.target.value)}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '8px',
-                    border: '1.5px solid #93c5fd',
-                    background: '#ffffff',
-                    color: '#1e3a8a',
-                    fontWeight: '700',
-                    fontSize: '0.82rem',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setSummaryDate(new Date().toISOString().slice(0, 10))}
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '8px',
-                    border: '1px solid #93c5fd',
-                    background: summaryDate === new Date().toISOString().slice(0, 10) ? '#2563eb' : '#ffffff',
-                    color: summaryDate === new Date().toISOString().slice(0, 10) ? '#ffffff' : '#1d4ed8',
-                    fontWeight: '700',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Hôm nay
-                </button>
+              <h3 style={{ margin: '6px 0 2px 0', fontSize: '1.55rem', fontWeight: '850', color: '#1d4ed8' }}>
+                {dailyStats.totalAmount.toLocaleString('vi-VN')} VNĐ
+              </h3>
+
+              <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginTop: '2px' }}>
+                Đã thu của <strong style={{ color: '#16a34a' }}>{dailyStats.householdCount} hộ</strong> ngày <strong>{new Date(summaryDate).toLocaleDateString('vi-VN')}</strong>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#334155', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
-              <span>Số hộ hoàn thành thu: <strong style={{ color: '#16a34a' }}>{dailyStats.householdCount} hộ</strong></span>
-              <span>Ngày: <strong>{new Date(summaryDate).toLocaleDateString('vi-VN')}</strong></span>
-            </div>
-
-            {/* Chi tiết thu từng quỹ trong ngày */}
+            {/* Chi tiết từng quỹ thu được trong ngày (Thanh cuộn gọn gàng, tự cân đối chiều cao) */}
             {Object.keys(dailyStats.byCategory).length > 0 ? (
-              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dotted #93c5fd', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              <div 
+                style={{ 
+                  marginTop: '8px', 
+                  paddingTop: '8px', 
+                  borderTop: '1px solid #93c5fd', 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '6px',
+                  maxHeight: '68px',
+                  overflowY: 'auto',
+                  paddingRight: '2px'
+                }}
+              >
                 {Object.entries(dailyStats.byCategory).map(([catName, amt]) => (
-                  <span key={catName} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '2px 8px', borderRadius: '6px', fontSize: '0.73rem', color: '#1e293b' }}>
+                  <div key={catName} style={{ background: '#ffffff', border: '1px solid #bfdbfe', padding: '3px 8px', borderRadius: '6px', fontSize: '0.73rem', color: '#1e293b', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                     {catName}: <strong style={{ color: '#16a34a' }}>{amt.toLocaleString('vi-VN')}đ</strong>
-                  </span>
+                  </div>
                 ))}
               </div>
             ) : (
