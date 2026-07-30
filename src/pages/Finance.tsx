@@ -5617,7 +5617,7 @@ const Finance = () => {
                     Họ và tên người {printModalRecord.type === 'expense' ? 'nhận tiền' : 'nộp tiền'}:
                   </span>
                   <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '1.05rem', paddingLeft: '6px' }}>
-                    {printModalRecord.recorded_by || 'Ban Quản lý TDP'}
+                    {printModalRecord.payer || '.........................'}
                   </span>
                 </div>
 
