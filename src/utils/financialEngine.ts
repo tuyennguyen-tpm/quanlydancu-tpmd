@@ -213,7 +213,7 @@ export function docSoTien(number: number): string {
 /**
  * Lấy dữ liệu khoản đóng góp từ object contributions với cơ chế khớp tên thông minh (bỏ qua tiền tố Quỹ, [TDP], [NGƯỜI CAO TUỔI PHƯỜNG]...)
  */
-export function getContributionData(contributions: Record<string, any> | undefined, fundName: string): { expected?: number; actual?: number; date?: string } | undefined {
+export function getContributionData(contributions: Record<string, any> | undefined, fundName: string): { expected?: number; actual?: number; date?: string; is_manual_exempt?: boolean; is_manual_target?: boolean } | undefined {
   if (!contributions) return undefined;
   if (contributions[fundName]) return contributions[fundName];
   const norm = (s: string) => s.toLowerCase().replace(/^\[.*?\]\s*/, '').replace(/^quỹ\s+/, '').trim();
