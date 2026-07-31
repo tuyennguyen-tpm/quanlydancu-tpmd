@@ -23,7 +23,7 @@ import {
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml, docSoTien } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml, docSoTien, getCanonicalHouseholdReceiptKey } from '../utils/financialEngine';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -346,16 +346,28 @@ const Finance = () => {
     window.addEventListener('db-changed', loadData);
 
     const handleSaveNoticeMessage = async (event: MessageEvent) => {
-      if (!event.data || event.data.type !== 'SAVE_NOTICE_TEMPLATE') return;
-      const { year, html, fontSize } = event.data;
-      if (year && html) {
-        if (typeof (db as any).saveNoticeCustomization === 'function') {
-          await (db as any).saveNoticeCustomization(year, html, fontSize);
-        } else {
-          localStorage.setItem(`notice_template_html_${year}`, html);
-          if (fontSize) localStorage.setItem(`notice_template_fontsize_${year}`, fontSize);
+      if (!event.data) return;
+      if (event.data.type === 'RECEIPT_SAVED') {
+        const { key, html } = event.data;
+        if (key && html) {
+          try {
+            await (db as any).saveReceiptCustomization(key, html);
+            showToast('✅ Đã lưu vĩnh viễn phiếu thu vào CSDL thành công!', 'success');
+          } catch (e) {
+            console.error('Lỗi lưu receipt qua postMessage:', e);
+          }
         }
-        showToast('Đã lưu vĩnh viễn mẫu Thông báo dự kiến thu vào CSDL Supabase!', 'success');
+      } else if (event.data.type === 'SAVE_NOTICE_TEMPLATE') {
+        const { year, html, fontSize } = event.data;
+        if (year && html) {
+          if (typeof (db as any).saveNoticeCustomization === 'function') {
+            await (db as any).saveNoticeCustomization(year, html, fontSize);
+          } else {
+            localStorage.setItem(`notice_template_html_${year}`, html);
+            if (fontSize) localStorage.setItem(`notice_template_fontsize_${year}`, fontSize);
+          }
+          showToast('Đã lưu vĩnh viễn mẫu Thông báo dự kiến thu vào CSDL Supabase!', 'success');
+        }
       }
     };
     window.addEventListener('message', handleSaveNoticeMessage);
@@ -1470,12 +1482,14 @@ const Finance = () => {
       printMode
     );
 
-    const SAVE_KEY = `receipt_html_${householdId}_${fundYear}_${printMode}`;
+    const SAVE_KEY = getCanonicalHouseholdReceiptKey(householdId, fundYear, printMode);
     let savedReceiptHtml: string | null = null;
     try {
-      savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-      if (!savedReceiptHtml && (db as any).getReceiptCustomization) {
+      if ((db as any).getReceiptCustomization) {
         savedReceiptHtml = await (db as any).getReceiptCustomization(SAVE_KEY);
+      }
+      if (!savedReceiptHtml) {
+        savedReceiptHtml = localStorage.getItem(SAVE_KEY);
       }
     } catch { /* ignore */ }
 
@@ -1654,7 +1668,7 @@ const Finance = () => {
       </head>
       <body>
         <div class="print-toolbar">
-          <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
+          <button class="toolbar-btn btn-print" id="btn-save-and-print">💾🖨️ Lưu & In</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
           <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Đặt lại mẫu phiếu in gốc</button>
@@ -1683,7 +1697,7 @@ const Finance = () => {
         </div>
         
         <script>
-          const SAVE_KEY = 'receipt_html_${householdId}_${fundYear}_${printMode}';
+          const SAVE_KEY = '${SAVE_KEY}';
           const currentPrintMode = '${printMode}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
           const btnSave = document.getElementById('btn-save');
@@ -1730,40 +1744,69 @@ const Finance = () => {
             return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
           }
 
-          let isRecalculating = false;
-          function recalculateReceiptTotals() {
-            if (isRecalculating) return;
-            isRecalculating = true;
+          function syncReceiptFields() {
             try {
               const containers = document.querySelectorAll('.receipt-container');
-              if (containers.length === 0) return;
+              if (containers.length <= 1) return;
 
-              if (containers.length > 1) {
-                let activeEl = document.activeElement;
+              let activeEl = null;
+              const sel = window.getSelection();
+              if (sel && sel.anchorNode) {
+                activeEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+              }
+              if (!activeEl || !editor.contains(activeEl)) {
+                activeEl = document.activeElement;
                 if (activeEl && activeEl.nodeType === 3) {
                   activeEl = activeEl.parentElement;
                 }
-                if (activeEl && typeof activeEl.closest === 'function' && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
-                  const activeContainer = activeEl.closest('.receipt-container');
-                  const activeRow = activeEl.closest('tr');
-                  const activeTd = activeEl.closest('td');
-                  if (activeContainer && activeRow && activeTd && !activeRow.classList.contains('receipt-total-row') && !(activeRow.textContent || activeRow.innerText || '').toUpperCase().includes('TỔNG CỘNG')) {
-                    const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
+              }
+
+              if (activeEl && typeof activeEl.closest === 'function' && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
+                const activeContainer = activeEl.closest('.receipt-container');
+                const activeRow = activeEl.closest('tr');
+                const activeTd = activeEl.closest('td');
+
+                if (activeContainer && activeRow && activeTd && !activeRow.classList.contains('receipt-total-row')) {
+                  const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
+                  
+                  const activeDetailsTable = activeEl.closest('.receipt-details-table');
+                  if (activeDetailsTable) {
                     const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
                     const rowIndex = sourceRows.indexOf(activeRow);
-                    
                     if (rowIndex >= 0) {
                       const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                      const newValue = activeTd.textContent || activeTd.innerText || '';
-                      
+                      const newValue = activeTd.innerHTML || activeTd.textContent || '';
                       if (cellIndex >= 0 && newValue !== undefined) {
                         containers.forEach((cnt, idx) => {
                           if (idx !== sourceContainerIndex) {
                             const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
                             if (targetRows[rowIndex]) {
                               const targetTd = targetRows[rowIndex].children[cellIndex];
-                              if (targetTd && targetTd !== activeTd && (targetTd.textContent || targetTd.innerText || '') !== newValue) {
-                                targetTd.textContent = newValue;
+                              if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
+                                targetTd.innerHTML = newValue;
+                              }
+                            }
+                          }
+                        });
+                      }
+                    }
+                  }
+
+                  const activeInfoTable = activeEl.closest('.receipt-info-table');
+                  if (activeInfoTable) {
+                    const sourceRows = Array.from(activeInfoTable.querySelectorAll('tr'));
+                    const rowIndex = sourceRows.indexOf(activeRow);
+                    if (rowIndex >= 0) {
+                      const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
+                      const newValue = activeTd.innerHTML || activeTd.textContent || '';
+                      if (cellIndex >= 0 && newValue !== undefined) {
+                        containers.forEach((cnt, idx) => {
+                          if (idx !== sourceContainerIndex) {
+                            const targetRows = cnt.querySelectorAll('.receipt-info-table tr');
+                            if (targetRows[rowIndex]) {
+                              const targetTd = targetRows[rowIndex].children[cellIndex];
+                              if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
+                                targetTd.innerHTML = newValue;
                               }
                             }
                           }
@@ -1773,114 +1816,80 @@ const Finance = () => {
                   }
                 }
               }
+            } catch (e) { /* ignore */ }
+          }
 
+          let isRecalculating = false;
+          function recalculateReceiptTotals() {
+            if (isRecalculating) return;
+            isRecalculating = true;
+            try {
+              syncReceiptFields();
+
+              const containers = document.querySelectorAll('.receipt-container');
               containers.forEach(container => {
                 const table = container.querySelector('.receipt-details-table');
                 if (!table) return;
 
                 const rows = Array.from(table.querySelectorAll('tbody tr'));
-                if (rows.length === 0) return;
+                if (rows.length < 2) return;
 
-                let totalRow = table.querySelector('tr.receipt-total-row');
-                if (!totalRow) {
-                  totalRow = rows.find(r => (r.textContent || r.innerText || '').toUpperCase().includes('TỔNG CỘNG'));
-                  if (totalRow) totalRow.classList.add('receipt-total-row');
-                }
+                const totalRow = rows[rows.length - 1];
+                const dataRows = rows.slice(0, rows.length - 1);
 
-                const ths = Array.from(table.querySelectorAll('thead th'));
-                let amountColIdx = -1;
-                ths.forEach((th, idx) => {
-                  const text = (th.textContent || th.innerText || '').toLowerCase();
-                  if (text.includes('số tiền') || text.includes('thành tiền') || text.includes('mức nộp')) {
-                    amountColIdx = idx;
-                  }
-                });
+                let effectiveTotal = 0;
 
-                let grandTotal = 0;
-                let tdpTotal = 0;
-                let wardTotal = 0;
-
-                rows.forEach(row => {
-                  const rText = (row.textContent || row.innerText || '').toUpperCase();
-                  if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
-                    return;
-                  }
-
+                dataRows.forEach(row => {
                   const tds = Array.from(row.querySelectorAll('td'));
                   if (tds.length < 2) return;
 
-                  let amountTd = row.querySelector('.receipt-amount-cell');
-                  if (!amountTd) {
-                    if (tds.length >= 6) amountTd = tds[4];
-                    else if (tds.length >= 4) amountTd = tds[2];
-                    else amountTd = tds[tds.length - 2];
-                  }
-
-                  const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
-                  const digits = cellText.replace(/[^\d]/g, '');
-                  const num = digits ? parseInt(digits, 10) : 0;
-
-                  const fundTypeAttr = row.getAttribute('data-fund-type');
-                  const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                  const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
-
-                  if (isWard) {
-                    wardTotal += num;
+                  let amountTd = null;
+                  if (tds.length >= 6) {
+                    amountTd = tds[4];
+                  } else if (tds.length >= 4) {
+                    amountTd = tds[2];
                   } else {
-                    tdpTotal += num;
+                    amountTd = row.querySelector('.receipt-amount-cell') || tds[tds.length - 2];
                   }
 
-                  grandTotal += num;
-                });
-
-                if (grandTotal === 0) {
-                  let activeEl = document.activeElement;
-                  const isEditingTable = activeEl && table.contains(activeEl);
-                  if (!isEditingTable) {
-                    return;
-                  }
-                }
-
-                const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
-                let effectiveTotal = grandTotal;
-                if (activePrintMode === 'tdp_only') {
-                  effectiveTotal = tdpTotal;
-                } else if (activePrintMode === 'ward_only') {
-                  effectiveTotal = wardTotal;
-                }
-
-                if (totalRow) {
-                  const totalTds = totalRow.querySelectorAll('td');
-                  if (totalTds.length >= 2) {
-                    const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
-                    const existingDigits = existingText.replace(/[^\d]/g, '');
-                    const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
-
-                    if (effectiveTotal === 0 && existingNum > 0) {
-                      const hasAnyNonEmptyRow = rows.some(r => {
-                        if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
-                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
-                        const cellDigits = cell ? (cell.textContent || '').replace(/[^\d]/g, '') : '';
-                        return cellDigits.length > 0;
-                      });
-                      if (hasAnyNonEmptyRow) {
-                        effectiveTotal = existingNum;
+                  if (amountTd) {
+                    const cellText = amountTd.textContent || amountTd.innerText || '';
+                    const digits = cellText.replace(/[^\d]/g, '');
+                    if (digits.length > 0) {
+                      const num = parseInt(digits, 10);
+                      if (!isNaN(num)) {
+                        effectiveTotal += num;
                       }
                     }
+                  }
+                });
 
-                    const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
+                if (effectiveTotal > 0 && totalRow) {
+                  const totalTds = totalRow.querySelectorAll('td');
+                  if (totalTds.length >= 2) {
+                    const firstBodyRow = dataRows[0];
                     const ths = Array.from(table.querySelectorAll('thead th'));
                     const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
                     
                     if (is6Col && totalTds.length >= 2) {
                       const labelTd = totalTds[0];
                       labelTd.setAttribute('colspan', '4');
+                      
                       let printModeText = '';
-                      if (activePrintMode === 'tdp_only') {
-                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
-                      } else if (activePrintMode === 'ward_only') {
-                        printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
-                      } else {
+                      if (currentPrintMode === 'tdp_only') printModeText = '(Tổ dân phố)';
+                      else if (currentPrintMode === 'ward_only') printModeText = '(UBND Phường)';
+                      else {
+                        let tdpTotal = 0;
+                        let wardTotal = 0;
+                        dataRows.forEach(row => {
+                          const tds = Array.from(row.querySelectorAll('td'));
+                          const nameText = tds[1] ? (tds[1].textContent || '') : '';
+                          const amountText = tds[4] ? (tds[4].textContent || '') : '';
+                          const digits = amountText.replace(/[^\d]/g, '');
+                          const amt = digits ? parseInt(digits, 10) : 0;
+                          if (nameText.includes('[TDP]')) tdpTotal += amt;
+                          else wardTotal += amt;
+                        });
                         printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       }
                       labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
@@ -1933,21 +1942,28 @@ const Finance = () => {
             recalculateReceiptTotals();
           } catch (e) {}
 
-
-
           function safeSaveStorage(key, val) {
+            let saved = false;
             try {
               localStorage.setItem(key, val);
-              return true;
-            } catch (e) {
-              try {
-                if (window.opener && window.opener.localStorage) {
-                  window.opener.localStorage.setItem(key, val);
-                  return true;
-                }
-              } catch (err) {}
-            }
-            return false;
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(key, val);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  customs[key] = val;
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+                saved = true;
+              }
+            } catch (err) {}
+            try {
+              if (window.opener && window.opener.postMessage) {
+                window.opener.postMessage({ type: 'RECEIPT_SAVED', key: key, html: val }, '*');
+              }
+            } catch (err) {}
+            return saved;
           }
 
           function safeGetStorage(key) {
@@ -1970,6 +1986,11 @@ const Finance = () => {
             try {
               if (window.opener && window.opener.localStorage) {
                 window.opener.localStorage.removeItem(key);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  delete customs[key];
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
               }
             } catch (err) {}
           }
@@ -1999,11 +2020,37 @@ const Finance = () => {
             }, 2800);
           }
 
-          btnSave.addEventListener('click', function() {
+          var btnSaveAndPrint = document.getElementById('btn-save-and-print');
+          if (btnSaveAndPrint) {
+            btnSaveAndPrint.addEventListener('click', async function() {
+              safeSaveStorage(SAVE_KEY, editor.innerHTML);
+              try {
+                if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                  await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+                }
+              } catch (err) {}
+              var saveNotice = document.getElementById('saved-notice');
+              if (saveNotice) {
+                saveNotice.style.display = 'flex';
+                saveNotice.style.background = '#dcfce7';
+                saveNotice.style.border = '1.5px solid #16a34a';
+                saveNotice.style.color = '#14532d';
+                saveNotice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Đang tiến hành in...';
+              }
+              show2DToast('✅ Đã lưu phiếu thu vào CSDL. Đang mở hộp thoại in...', 'success');
+              setTimeout(function() {
+                var t = document.getElementById('custom-2d-toast');
+                if (t) t.style.display = 'none';
+                window.print();
+              }, 400);
+            });
+          }
+
+          btnSave.addEventListener('click', async function() {
             const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
             try {
               if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
               }
             } catch (err) {}
 
@@ -3149,9 +3196,16 @@ const Finance = () => {
       return nameA.localeCompare(nameB, 'vi');
     });
 
-    const receiptsHtml = sortedList.map((item, idx) => {
+    const receiptsHtmlList = await Promise.all(sortedList.map(async (item, idx) => {
+      const key = getCanonicalHouseholdReceiptKey(item.household.id, fundYear, 'combined');
+      let customHtml: string | null = null;
+      try {
+        if ((db as any).getReceiptCustomization) {
+          customHtml = await (db as any).getReceiptCustomization(key);
+        }
+      } catch {}
       const tdpNameVal = tdpMap[item.household.user_id || ''] || localStorage.getItem('tdp_name') || 'Tổ dân phố';
-      const receiptBody = generateHouseholdReceiptHtml(
+      const receiptBody = customHtml || generateHouseholdReceiptHtml(
         item.household,
         item.members,
         item.memberWardRecords,
@@ -3168,7 +3222,8 @@ const Finance = () => {
           ${receiptBody}
         </div>
       `;
-    }).join('\n');
+    }));
+    const receiptsHtml = receiptsHtmlList.join('\n');
 
     const htmlContent = `
       <!DOCTYPE html>

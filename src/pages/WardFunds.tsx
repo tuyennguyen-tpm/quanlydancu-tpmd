@@ -23,7 +23,7 @@ import {
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData, getCanonicalHouseholdReceiptKey } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -346,7 +346,7 @@ const WardFunds = () => {
     return () => window.removeEventListener('db-changed', handleSilentReload);
   }, [selectedYear]);
 
-  // Lắng nghe tín hiệu từ cửa sổ in → hiện banner nhắc nhở thu đủ cả nhà & lưu mẫu thông báo vào CSDL
+  // Lắng nghe tín hiệu từ cửa sổ in → hiện banner nhắc nhở thu đủ cả nhà & lưu phiếu thu / mẫu thông báo vào CSDL
   useEffect(() => {
     const handlePrintMessage = async (event: MessageEvent) => {
       if (!event.data) return;
@@ -362,6 +362,16 @@ const WardFunds = () => {
         printReminderTimerRef.current = setTimeout(() => {
           setPrintReminder(null);
         }, 60000);
+      } else if (event.data.type === 'RECEIPT_SAVED') {
+        const { key, html } = event.data;
+        if (key && html) {
+          try {
+            await (db as any).saveReceiptCustomization(key, html);
+            showToast('✅ Đã lưu vĩnh viễn phiếu thu vào CSDL thành công!', 'success');
+          } catch (e) {
+            console.error('Lỗi lưu receipt qua postMessage:', e);
+          }
+        }
       } else if (event.data.type === 'SAVE_NOTICE_TEMPLATE') {
         const { year, html, fontSize } = event.data;
         if (year && html) {
@@ -4666,12 +4676,14 @@ const WardFunds = () => {
       leaderSigUrl,
       printMode
     );
-    const SAVE_KEY = `receipt_html_${householdId}_${selectedYear}_${printMode}`;
+    const SAVE_KEY = getCanonicalHouseholdReceiptKey(householdId, selectedYear, printMode);
     let savedReceiptHtml: string | null = null;
     try {
-      savedReceiptHtml = localStorage.getItem(SAVE_KEY);
-      if (!savedReceiptHtml && (db as any).getReceiptCustomization) {
+      if ((db as any).getReceiptCustomization) {
         savedReceiptHtml = await (db as any).getReceiptCustomization(SAVE_KEY);
+      }
+      if (!savedReceiptHtml) {
+        savedReceiptHtml = localStorage.getItem(SAVE_KEY);
       }
     } catch { /* ignore */ }
 
@@ -5124,18 +5136,27 @@ const WardFunds = () => {
 
 
           function safeSaveStorage(key, val) {
+            let saved = false;
             try {
               localStorage.setItem(key, val);
-              return true;
-            } catch (e) {
-              try {
-                if (window.opener && window.opener.localStorage) {
-                  window.opener.localStorage.setItem(key, val);
-                  return true;
-                }
-              } catch (err) {}
-            }
-            return false;
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(key, val);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  customs[key] = val;
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+                saved = true;
+              }
+            } catch (err) {}
+            try {
+              if (window.opener && window.opener.postMessage) {
+                window.opener.postMessage({ type: 'RECEIPT_SAVED', key: key, html: val }, '*');
+              }
+            } catch (err) {}
+            return saved;
           }
 
           function safeGetStorage(key) {
@@ -5158,6 +5179,11 @@ const WardFunds = () => {
             try {
               if (window.opener && window.opener.localStorage) {
                 window.opener.localStorage.removeItem(key);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  delete customs[key];
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
               }
             } catch (err) {}
           }
@@ -5190,11 +5216,11 @@ const WardFunds = () => {
           // === NUT LUU & IN: luu vao CSDL roi in ===
           var btnSaveAndPrint = document.getElementById('btn-save-and-print');
           if (btnSaveAndPrint) {
-            btnSaveAndPrint.addEventListener('click', function() {
+            btnSaveAndPrint.addEventListener('click', async function() {
               safeSaveStorage(SAVE_KEY, editor.innerHTML);
               try {
                 if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                  window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+                  await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
                 }
               } catch (err) {}
               var saveNotice = document.getElementById('saved-notice');
@@ -5219,11 +5245,11 @@ const WardFunds = () => {
             });
           }
 
-          btnSave.addEventListener('click', function() {
+          btnSave.addEventListener('click', async function() {
             const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
             try {
               if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
               }
             } catch (err) {}
 
@@ -5279,7 +5305,7 @@ const WardFunds = () => {
     printWindow.document.close();
   };
 
-  const handlePrintBulkReceiptsA5_Household = () => {
+  const handlePrintBulkReceiptsA5_Household = async () => {
     if (householdGroupedFunds.length === 0) {
       showToast('Không có dữ liệu hộ gia đình nào để in!', 'warning');
       return;
@@ -5371,8 +5397,15 @@ const WardFunds = () => {
       if (toTruong?.signatureUrl?.trim()) leaderSigUrl = toTruong.signatureUrl.trim();
     } catch { /* ignore */ }
 
-    const receiptsHtml = listToPrint.map((item, idx) => {
-      const receiptBody = generateHouseholdReceiptHtml(
+    const receiptsHtmlList = await Promise.all(listToPrint.map(async (item, idx) => {
+      const key = getCanonicalHouseholdReceiptKey(item.household.id, selectedYear, 'combined');
+      let customHtml: string | null = null;
+      try {
+        if ((db as any).getReceiptCustomization) {
+          customHtml = await (db as any).getReceiptCustomization(key);
+        }
+      } catch {}
+      const receiptBody = customHtml || generateHouseholdReceiptHtml(
         item.household,
         item.members,
         item.memberWardRecords,
@@ -5389,7 +5422,8 @@ const WardFunds = () => {
           ${receiptBody}
         </div>
       `;
-    }).join('\n');
+    }));
+    const receiptsHtml = receiptsHtmlList.join('\n');
 
     const htmlContent = `
       <!DOCTYPE html>

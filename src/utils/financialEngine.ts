@@ -476,6 +476,19 @@ export function applyWardFundPrefixToHtml(htmlStr: string): string {
 }
 
 /**
+ * Chuẩn hóa khóa lưu trữ receipt key duy nhất cho mọi góc nhìn
+ */
+export function getCanonicalHouseholdReceiptKey(
+  householdId: string,
+  year: number | string,
+  printMode: string = 'combined'
+): string {
+  let cleanId = String(householdId || '').trim();
+  return `receipt_html_${cleanId}_${year}_${printMode}`;
+}
+
+
+/**
  * Xuất HTML Phiếu Thu 2 Liên (Mẫu 01-TT theo Thông tư 200/2014/TT-BTC) chuẩn hóa 100%.
  */
 export function generateUnifiedHouseholdReceiptHtml(
