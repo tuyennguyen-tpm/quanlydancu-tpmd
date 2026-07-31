@@ -354,9 +354,30 @@ export function calculateHouseholdFinancialSummary(
     if (isPolicyHH) {
       expectedTotal = 0;
     } else if (isHouseholdScope) {
-      expectedTotal = wfTargetVal;
+      const manualExemptHH = memberWardRecords.some(r => {
+        const c = getContributionData(r.contributions, wf.name);
+        return c?.expected === 0 || c?.is_manual_exempt === true;
+      });
+      expectedTotal = manualExemptHH ? 0 : wfTargetVal;
     } else {
-      expectedTotal = wfTargetVal * laborCount;
+      expectedTotal = laborResidents.reduce((sum, res) => {
+        const rec = memberWardRecords.find(f => 
+          (f.user_id && f.user_id === res.id) || 
+          (f.full_name && f.full_name.trim().toLowerCase() === res.full_name.trim().toLowerCase())
+        );
+        if (rec) {
+          const contrib = getContributionData(rec.contributions, wf.name);
+          if (contrib) {
+            if (contrib.expected === 0 || contrib.is_manual_exempt === true) {
+              return sum;
+            }
+            if (typeof contrib.expected === 'number') {
+              return sum + contrib.expected;
+            }
+          }
+        }
+        return sum + wfTargetVal;
+      }, 0);
     }
 
     const actualPaidSum = memberWardRecords.reduce((sum, r) => {
