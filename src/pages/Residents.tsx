@@ -22,6 +22,8 @@ import { showToast } from '../utils/toast';
 import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
+import { VoiceInputButton } from '../components/VoiceInputButton';
+
 
 const MILESTONE_AGES = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150];
 
@@ -2034,13 +2036,22 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       </div>
 
       <div className="filter-section">
-          <div className="search-box" style={{ width: '250px', maxWidth: '100%', height: '36px' }}>
-            <Search size={16} />
-            <input 
-              type="text" 
-              placeholder="Tìm theo tên, số CCCD, Sđt..." 
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="search-box" style={{ width: '250px', maxWidth: '100%', height: '36px' }}>
+              <Search size={16} />
+              <input 
+                type="text" 
+                placeholder="Tìm hoặc đọc tên, CCCD, Sđt..." 
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+            </div>
+            <VoiceInputButton
+              currentValue={searchInput}
+              size="sm"
+              showAiRefine={false}
+              title="Tìm kiếm nhân khẩu bằng giọng nói"
+              onTranscript={(text) => setSearchInput(text)}
             />
           </div>
           <div className="filter-dropdown-box">

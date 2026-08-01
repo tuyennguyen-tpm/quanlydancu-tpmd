@@ -3,6 +3,8 @@ import { FileText, Printer, RotateCcw, Calendar, User, Clock, MapPin, Trash2, Pl
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Meeting, MeetingMinutesData } from '../types';
+import { VoiceInputButton } from '../components/VoiceInputButton';
+
 
 const MeetingMinutes = () => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
@@ -1579,30 +1581,44 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           </div>
 
           <div className="form-group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
               <label style={{ fontWeight: '600', fontSize: '0.85rem', margin: 0 }}>Nội dung diễn biến chi tiết</label>
-              <button
-                type="button"
-                onClick={() => setIsFullscreenEdit(true)}
-                style={{
-                  background: 'rgba(79, 70, 229, 0.08)',
-                  border: 'none',
-                  color: '#4f46e5',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.78rem',
-                  fontWeight: '600',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.15)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.08)'}
-              >
-                <Maximize2 size={12} /> Phóng to soạn thảo (Word)
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <VoiceInputButton
+                  currentValue={content}
+                  aiContext="biên bản cuộc họp"
+                  size="sm"
+                  onTranscript={(text, mode) => {
+                    if (mode === 'replace') {
+                      setContent(text);
+                    } else {
+                      setContent(prev => (prev ? `${prev}\n- ${text}` : `- ${text}`));
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreenEdit(true)}
+                  style={{
+                    background: 'rgba(79, 70, 229, 0.08)',
+                    border: 'none',
+                    color: '#4f46e5',
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.78rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.15)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(79, 70, 229, 0.08)'}
+                >
+                  <Maximize2 size={12} /> Phóng to soạn thảo (Word)
+                </button>
+              </div>
             </div>
             <textarea
               value={content}
@@ -2424,7 +2440,21 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               </div>
 
               {/* Part II */}
-              <div style={{ fontWeight: 'bold', fontSize: '13pt', marginTop: '16px' }}>II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', marginBottom: '8px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '13pt' }}>II. NỘI DUNG DIỄN BIẾN CUỘC HỌP</div>
+                <VoiceInputButton
+                  currentValue={content}
+                  aiContext="biên bản cuộc họp"
+                  size="sm"
+                  onTranscript={(text, mode) => {
+                    if (mode === 'replace') {
+                      setContent(text);
+                    } else {
+                      setContent(prev => (prev ? `${prev}\n- ${text}` : `- ${text}`));
+                    }
+                  }}
+                />
+              </div>
               
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                 <textarea

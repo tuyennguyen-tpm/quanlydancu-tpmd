@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { db } from '../services/db';
 import type { Household, Resident } from '../types';
-import { Search, Filter, Users } from 'lucide-react';
+import { Search, Filter, Users, Sparkles } from 'lucide-react';
+import { VoiceInputButton } from '../components/VoiceInputButton';
+import { parseInvitationFromSpeech } from '../services/ai';
+import { showToast } from '../utils/toast';
+
 
 const InvitationTemplates: React.FC = () => {
   const rawWardName = localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn';
@@ -743,14 +747,22 @@ const InvitationTemplates: React.FC = () => {
 
           {/* Search input */}
           <div>
-            <label className="inv-label" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              Tìm chủ hộ / địa chỉ:
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label className="inv-label" style={{ display: 'flex', alignItems: 'center', gap: '4px', margin: 0 }}>
+                Tìm chủ hộ / địa chỉ:
+              </label>
+              <VoiceInputButton
+                currentValue={searchInput}
+                size="sm"
+                showAiRefine={false}
+                onTranscript={(text) => setSearchInput(text)}
+              />
+            </div>
             <input
               className="inv-input"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
-              placeholder="Nhập tên chủ hộ, số hộ khẩu..."
+              placeholder="Nhập hoặc đọc tên chủ hộ, số hộ khẩu..."
             />
           </div>
 
@@ -843,9 +855,34 @@ const InvitationTemplates: React.FC = () => {
           
           {/* Soạn nội dung giấy mời (Nằm ngang) */}
           <div style={{ background: 'white', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ margin: '0 0 16px 0', color: '#1e40af', fontSize: '15px', fontWeight: 700, borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-              ✏️ Soạn nội dung giấy mời
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+              <h3 style={{ margin: 0, color: '#1e40af', fontSize: '15px', fontWeight: 700 }}>
+                ✏️ Soạn nội dung giấy mời
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <VoiceInputButton
+                  title="Đọc toàn bộ nội dung Giấy mời bằng giọng nói để AI tự động điền"
+                  aiContext="giấy mời họp"
+                  size="sm"
+                  onTranscript={async (spokenText) => {
+                    showToast('🤖 AI đang phân tích câu nói để điền Giấy mời...', 'info');
+                    const parsed = await parseInvitationFromSpeech(spokenText);
+                    if (parsed.reason || parsed.title) setContent(parsed.reason || parsed.title || spokenText);
+                    if (parsed.location) setLocation(parsed.location);
+                    if (parsed.time) setMeetingTime(parsed.time);
+                    if (parsed.date) {
+                      const parts = parsed.date.split('-');
+                      if (parts.length === 3) {
+                        setMeetingYear(parts[0]);
+                        setMeetingMonth(parts[1]);
+                        setMeetingDay(parts[2]);
+                      }
+                    }
+                    showToast('Đã tự động bóc tách và điền Giấy mời!', 'success');
+                  }}
+                />
+              </div>
+            </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '12px' }}>
               {/* Hàng 1 */}

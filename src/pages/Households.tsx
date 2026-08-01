@@ -22,6 +22,8 @@ import { showToast } from '../utils/toast';
 import { formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
 import type { Household, Resident } from '../types';
 import ExcelJS from 'exceljs';
+import { VoiceInputButton } from '../components/VoiceInputButton';
+
 
 const formatToDisplayDate = (dateStr: string) => {
   return formatDateVN(dateStr);
@@ -2062,13 +2064,22 @@ const Households = () => {
       </div>
 
       <div className="filter-bar" style={{ flexWrap: 'wrap', gap: '10px' }}>
-        <div className="search-box" style={{ width: '250px', maxWidth: '100%', height: '36px' }}>
-          <Search size={16} />
-          <input 
-            type="text" 
-            placeholder="Tìm hộ gia đình..." 
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div className="search-box" style={{ width: '250px', maxWidth: '100%', height: '36px' }}>
+            <Search size={16} />
+            <input 
+              type="text" 
+              placeholder="Tìm hoặc đọc tên hộ..." 
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+          <VoiceInputButton
+            currentValue={searchInput}
+            size="sm"
+            showAiRefine={false}
+            title="Tìm kiếm hộ gia đình bằng giọng nói"
+            onTranscript={(text) => setSearchInput(text)}
           />
         </div>
         
