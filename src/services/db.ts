@@ -2172,49 +2172,94 @@ export const db = {
   },
 
   getTreasurerManualNotes: async (): Promise<any[]> => {
+    let localNotes: any[] = [];
+    try {
+      const saved = localStorage.getItem('treasurer_manual_notes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) localNotes = parsed;
+      }
+    } catch {
+      localNotes = [];
+    }
+
     if (supabase) {
       try {
         const uId = await getSessionUserId();
+        // Lấy dữ liệu Sổ tay từ Supabase (ưu tiên uId hiện tại, nếu không có sẽ lấy theo key mặc định)
+        let cloudDataStr: string | null = null;
         if (uId) {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('app_config')
             .select('value')
             .eq('user_id', uId)
             .eq('key', 'treasurer_manual_notes')
             .maybeSingle();
-          if (!error && data && data.value) {
-            try {
-              const parsed = JSON.parse(data.value);
-              localStorage.setItem('treasurer_manual_notes', data.value);
-              return parsed;
-            } catch (e) {
-              console.error('Failed to parse treasurer_manual_notes JSON:', e);
+          if (data && data.value) cloudDataStr = data.value;
+        }
+
+        if (!cloudDataStr) {
+          const { data } = await supabase
+            .from('app_config')
+            .select('value')
+            .eq('key', 'treasurer_manual_notes')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (data && data.value) cloudDataStr = data.value;
+        }
+
+        if (cloudDataStr) {
+          try {
+            const cloudNotes = JSON.parse(cloudDataStr);
+            if (Array.isArray(cloudNotes)) {
+              // Hợp nhất dữ liệu local và cloud theo ID để đảm bảo không bị mất phiếu thu/chi nào
+              const noteMap = new Map<string, any>();
+              cloudNotes.forEach(n => { if (n && n.id) noteMap.set(n.id, n); });
+              localNotes.forEach(n => { if (n && n.id && !noteMap.has(n.id)) noteMap.set(n.id, n); });
+
+              const mergedNotes = Array.from(noteMap.values()).sort((a, b) => {
+                const dateA = new Date(a.date || a.created_at || 0).getTime();
+                const dateB = new Date(b.date || b.created_at || 0).getTime();
+                return dateB - dateA;
+              });
+
+              localStorage.setItem('treasurer_manual_notes', JSON.stringify(mergedNotes));
+              return mergedNotes;
             }
+          } catch (e) {
+            console.error('Failed to parse treasurer_manual_notes JSON:', e);
           }
         }
       } catch (err) {
         console.error('Failed to fetch treasurer_manual_notes from Supabase:', err);
       }
     }
-    try {
-      const saved = localStorage.getItem('treasurer_manual_notes');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    return localNotes;
   },
   saveTreasurerManualNotes: async (notes: any[]): Promise<void> => {
     const valueStr = JSON.stringify(notes);
     localStorage.setItem('treasurer_manual_notes', valueStr);
     if (supabase) {
       try {
-        const uId = await getSessionUserId();
-        if (uId) {
+        const uId = (await getSessionUserId()) || 'default_user';
+        const now = new Date().toISOString();
+        
+        // Lưu cho user_id hiện tại
+        await supabase.from('app_config').upsert({
+          user_id: uId,
+          key: 'treasurer_manual_notes',
+          value: valueStr,
+          updated_at: now
+        }, { onConflict: 'user_id,key' });
+
+        // Nếu có user_id riêng, lưu thêm bản ghi dùng chung key để các tài khoản khác trong TDP cùng truy cập được
+        if (uId !== 'default_user') {
           await supabase.from('app_config').upsert({
-            user_id: uId,
+            user_id: 'default_user',
             key: 'treasurer_manual_notes',
             value: valueStr,
-            updated_at: new Date().toISOString()
+            updated_at: now
           }, { onConflict: 'user_id,key' });
         }
       } catch (err) {

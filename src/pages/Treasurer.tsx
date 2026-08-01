@@ -10,7 +10,8 @@ import {
   Printer,
   TrendingUp,
   TrendingDown,
-  Wallet
+  Wallet,
+  RefreshCw
 } from 'lucide-react';
 import { db, generateUUID } from '../services/db';
 import { formatDateVN } from '../utils/dateUtils';
@@ -77,21 +78,35 @@ export default function Treasurer() {
     }
   });
 
+  const [isSyncing, setIsSyncing] = useState(false);
+
   // Đồng bộ Sổ tay thủ quỹ với CSDL đám mây (Supabase)
-  useEffect(() => {
-    let isMounted = true;
-    const fetchNotes = async () => {
-      try {
-        const cloudNotes = await db.getTreasurerManualNotes();
-        if (isMounted && cloudNotes && Array.isArray(cloudNotes)) {
-          setManualNotes(cloudNotes);
+  const fetchCloudNotes = async (showToast = false) => {
+    setIsSyncing(true);
+    try {
+      const cloudNotes = await db.getTreasurerManualNotes();
+      if (cloudNotes && Array.isArray(cloudNotes)) {
+        setManualNotes(cloudNotes);
+        if (showToast) {
+          window.dispatchEvent(new CustomEvent('show-toast', {
+            detail: { message: `✅ Đã đồng bộ an toàn ${cloudNotes.length} chứng từ từ CSDL đám mây!`, type: 'success' }
+          }));
         }
-      } catch (e) {
-        console.error('Lỗi tải dữ liệu Sổ tay thủ quỹ:', e);
       }
-    };
-    fetchNotes();
-    return () => { isMounted = false; };
+    } catch (e) {
+      console.error('Lỗi tải dữ liệu Sổ tay thủ quỹ:', e);
+      if (showToast) {
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { message: '⚠️ Lỗi kết nối CSDL đám mây.', type: 'warning' }
+        }));
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCloudNotes(false);
   }, []);
 
   // Print Voucher Modal State
@@ -407,7 +422,7 @@ export default function Treasurer() {
           gap: '8px'
         }}>
           <ShieldAlert size={18} color="#10b981" />
-          <span>Sổ tay thu chi thủ công của Thủ quỹ được lưu trữ riêng biệt, không làm ảnh hưởng đến CSDL chính.</span>
+          <span>Sổ tay thu chi thủ công của Thủ quỹ được lưu trữ an toàn riêng biệt trên CSDL Đám mây Supabase, độc lập và không làm ảnh hưởng đến CSDL Thu Chi TDP.</span>
         </div>
       </div>
 
@@ -745,7 +760,17 @@ export default function Treasurer() {
               <option value="transfer">💳 Chuyển khoản</option>
             </select>
 
-            {/* Excel Export Button */}
+            {/* Sync Cloud & Excel Export Buttons */}
+            <button
+              onClick={() => fetchCloudNotes(true)}
+              disabled={isSyncing}
+              className="btn btn-secondary"
+              title="Tải & Đồng bộ toàn bộ dữ liệu Sổ Tay Thủ Quỹ từ CSDL Đám mây Supabase"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}
+            >
+              <RefreshCw size={15} className={isSyncing ? 'animate-spin' : ''} /> {isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ CSDL'}
+            </button>
+
             {manualNotes.length > 0 && (
               <button
                 onClick={handleExportManualExcel}
