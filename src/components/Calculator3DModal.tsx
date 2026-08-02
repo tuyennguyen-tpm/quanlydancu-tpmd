@@ -227,39 +227,39 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
         onClick={() => setIsMinimized(false)}
         style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
+          bottom: '20px',
+          right: '20px',
           zIndex: 9999,
-          padding: '10px 18px',
-          borderRadius: '30px',
+          padding: '6px 14px',
+          borderRadius: '20px',
           background: 'linear-gradient(145deg, #0284c7, #0369a1)',
           color: 'white',
           fontWeight: '800',
-          fontSize: '0.88rem',
-          boxShadow: '0 10px 25px -5px rgba(2, 132, 199, 0.6), 0 0 0 2px rgba(255,255,255,0.2)',
+          fontSize: '0.78rem',
+          boxShadow: '0 6px 18px -2px rgba(2, 132, 199, 0.6), 0 0 0 1.5px rgba(255,255,255,0.25)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
           transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
         }}
         title="Bấm để mở bung máy tính 3D mini"
-        onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+        onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.06)'; }}
         onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
       >
         <div style={{
-          width: '26px',
-          height: '26px',
+          width: '20px',
+          height: '20px',
           borderRadius: '50%',
-          background: 'rgba(255,255,255,0.2)',
+          background: 'rgba(255,255,255,0.22)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <Calculator size={16} color="white" />
+          <Calculator size={12} color="white" />
         </div>
         <span>🧮 {formatDisplay(display)} đ</span>
-        <Maximize2 size={14} style={{ opacity: 0.8 }} />
+        <Maximize2 size={12} style={{ opacity: 0.85 }} />
       </div>
     );
   }
@@ -270,10 +270,10 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
   const containerStyle: React.CSSProperties = isFloating
     ? {
         position: 'fixed',
-        bottom: '20px',
-        right: '20px',
+        bottom: '16px',
+        right: '16px',
         zIndex: 9995,
-        width: '350px'
+        width: '285px'
       }
     : {
         position: 'fixed',
@@ -288,11 +288,11 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
 
   const innerStyle: React.CSSProperties = {
     width: '100%',
-    maxWidth: isFloating ? '350px' : '395px',
-    borderRadius: '24px',
+    maxWidth: isFloating ? '285px' : '395px',
+    borderRadius: '20px',
     background: 'linear-gradient(145deg, #1e293b, #0f172a)',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 0 0 2px rgba(51, 65, 85, 0.8)',
-    padding: '18px 20px',
+    boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 0 0 2px rgba(51, 65, 85, 0.8)',
+    padding: isFloating ? '14px' : '18px 20px',
     color: '#f8fafc',
     boxSizing: 'border-box',
     userSelect: 'none'
