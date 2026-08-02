@@ -315,27 +315,16 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
   // Floating Mini Panel vs Backdrop Modal
   const isFloating = mode === 'floating';
 
-  const containerStyle: React.CSSProperties = isFloating
-    ? {
-        position: 'fixed',
-        left: position ? `${position.x}px` : undefined,
-        top: position ? `${position.y}px` : undefined,
-        bottom: position ? undefined : '16px',
-        right: position ? undefined : '16px',
-        zIndex: 999999,
-        width: '280px',
-        touchAction: 'none'
-      }
-    : {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 999999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(8px)'
-      };
+  const containerStyle: React.CSSProperties = {
+    position: 'fixed',
+    left: position ? `${position.x}px` : undefined,
+    top: position ? `${position.y}px` : undefined,
+    bottom: position ? undefined : '20px',
+    right: position ? undefined : '20px',
+    zIndex: 999999,
+    width: '280px',
+    touchAction: 'none'
+  };
 
   const innerStyle: React.CSSProperties = {
     width: '100%',

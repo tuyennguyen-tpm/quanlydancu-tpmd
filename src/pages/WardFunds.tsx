@@ -3449,7 +3449,7 @@ const WardFunds = () => {
               margin: 0;
               padding: 0;
             }
-            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"] {
+            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"], #print-calc-3d {
               display: none !important;
             }
             body {
@@ -3624,7 +3624,7 @@ const WardFunds = () => {
         </div>
 
         <!-- Draggable 3D Mini Calculator Widget for Print Window -->
-        <div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+        <div id="print-calc-3d" style="display:block; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
           <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
             <div style="display:flex; align-items:center; gap:6px;">
               <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
@@ -4844,7 +4844,7 @@ const WardFunds = () => {
               margin: 0;
               padding: 0;
             }
-            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"] {
+            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"], #print-calc-3d {
               display: none !important;
             }
             body {
@@ -5018,7 +5018,7 @@ const WardFunds = () => {
         </div>
 
         <!-- Draggable 3D Mini Calculator Widget for Print Window -->
-        <div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+        <div id="print-calc-3d" style="display:block; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
           <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
             <div style="display:flex; align-items:center; gap:6px;">
               <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
