@@ -3623,6 +3623,52 @@ const WardFunds = () => {
           ${receiptHtml}
         </div>
 
+        <!-- Draggable 3D Mini Calculator Widget for Print Window -->
+        <div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+          <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
+            </div>
+            <button id="calc-close-btn" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:22px; height:22px; cursor:pointer;">✕</button>
+          </div>
+          <div style="background:linear-gradient(180deg,#022c22,#064e3b); border-radius:12px; padding:8px 10px; margin-bottom:8px; text-align:right;">
+            <div id="calc-eq" style="font-size:0.72rem; color:#6ee7b7; height:14px; font-family:monospace;"></div>
+            <div id="calc-disp" style="font-size:1.55rem; font-weight:900; color:#34d399; font-family:monospace;">0 đ</div>
+            <div id="calc-words" style="font-size:0.66rem; color:#d1fae5; font-style:italic; border-top:1px dashed rgba(52,211,153,0.3); margin-top:2px; text-align:left; display:none;"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-bottom:8px;">
+            <button class="c-quick" data-val="10000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
+            <button class="c-quick" data-val="20000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
+            <button class="c-quick" data-val="50000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
+            <button class="c-quick" data-val="100000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
+            <button class="c-quick" data-val="200000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
+            <button class="c-quick" data-val="500000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;">
+            <button class="c-btn" data-key="AC" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
+            <button class="c-btn" data-key="DEL" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
+            <button class="c-btn" data-key="%" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
+            <button class="c-btn" data-key="/" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
+            <button class="c-btn" data-key="7" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
+            <button class="c-btn" data-key="8" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
+            <button class="c-btn" data-key="9" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
+            <button class="c-btn" data-key="*" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
+            <button class="c-btn" data-key="4" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
+            <button class="c-btn" data-key="5" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
+            <button class="c-btn" data-key="6" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
+            <button class="c-btn" data-key="-" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
+            <button class="c-btn" data-key="1" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
+            <button class="c-btn" data-key="2" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
+            <button class="c-btn" data-key="3" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
+            <button class="c-btn" data-key="+" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
+            <button class="c-btn" data-key="0" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
+            <button class="c-btn" data-key="000" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
+            <button class="c-btn" data-key="." style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
+            <button class="c-btn" data-key="=" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
+          </div>
+          <button id="calc-copy-btn" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
+        </div>
+
         <script>
           const SAVE_KEY = 'receipt_html_ward_indiv_${item.id}_${selectedYear}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
@@ -3890,135 +3936,87 @@ const WardFunds = () => {
             }
           });
 
-
-<!-- Draggable 3D Mini Calculator Widget for Print Window -->
-<div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
-  <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
-    <div style="display:flex; align-items:center; gap:6px;">
-      <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
-    </div>
-    <button id="calc-close-btn" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:22px; height:22px; cursor:pointer;">✕</button>
-  </div>
-  <div style="background:linear-gradient(180deg,#022c22,#064e3b); border-radius:12px; padding:8px 10px; margin-bottom:8px; text-align:right;">
-    <div id="calc-eq" style="font-size:0.72rem; color:#6ee7b7; height:14px; font-family:monospace;"></div>
-    <div id="calc-disp" style="font-size:1.55rem; font-weight:900; color:#34d399; font-family:monospace;">0 đ</div>
-    <div id="calc-words" style="font-size:0.66rem; color:#d1fae5; font-style:italic; border-top:1px dashed rgba(52,211,153,0.3); margin-top:2px; text-align:left; display:none;"></div>
-  </div>
-  <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-bottom:8px;">
-    <button class="c-quick" data-val="10000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
-    <button class="c-quick" data-val="20000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
-    <button class="c-quick" data-val="50000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
-    <button class="c-quick" data-val="100000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
-    <button class="c-quick" data-val="200000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
-    <button class="c-quick" data-val="500000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
-  </div>
-  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;">
-    <button class="c-btn" data-key="AC" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
-    <button class="c-btn" data-key="DEL" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
-    <button class="c-btn" data-key="%" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
-    <button class="c-btn" data-key="/" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
-    <button class="c-btn" data-key="7" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
-    <button class="c-btn" data-key="8" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
-    <button class="c-btn" data-key="9" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
-    <button class="c-btn" data-key="*" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
-    <button class="c-btn" data-key="4" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
-    <button class="c-btn" data-key="5" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
-    <button class="c-btn" data-key="6" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
-    <button class="c-btn" data-key="-" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
-    <button class="c-btn" data-key="1" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
-    <button class="c-btn" data-key="2" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
-    <button class="c-btn" data-key="3" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
-    <button class="c-btn" data-key="+" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
-    <button class="c-btn" data-key="0" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
-    <button class="c-btn" data-key="000" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
-    <button class="c-btn" data-key="." style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
-    <button class="c-btn" data-key="=" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
-  </div>
-  <button id="calc-copy-btn" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
-</div>
-
-<script>
-  (function() {
-    var b = document.getElementById('btn-calc');
-    var m = document.getElementById('print-calc-3d');
-    var h = document.getElementById('calc-header');
-    var c = document.getElementById('calc-close-btn');
-    if (b && m) { b.onclick = function() { m.style.display = m.style.display === 'none' ? 'block' : 'none'; }; }
-    if (c && m) { c.onclick = function() { m.style.display = 'none'; }; }
-    if (h && m) {
-      var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
-      h.onmousedown = function(e) {
-        if (e.target.tagName === 'BUTTON') return;
-        isD = true;
-        var r = m.getBoundingClientRect();
-        sX = e.clientX; sY = e.clientY; iL = r.left; iT = r.top;
-        m.style.bottom = 'auto'; m.style.right = 'auto';
-        m.style.left = iL + 'px'; m.style.top = iT + 'px';
-        h.style.cursor = 'grabbing';
-      };
-      document.addEventListener('mousemove', function(e) {
-        if (!isD) return;
-        m.style.left = Math.max(0, iL + (e.clientX - sX)) + 'px';
-        m.style.top = Math.max(0, iT + (e.clientY - sY)) + 'px';
-      });
-      document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
-    }
-    var dV = "0", eV = "", nN = true;
-    function uUI() {
-      var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
-      var num = parseFloat(dV);
-      if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
-      if (eE) eE.innerText = eV;
-      if (wE) {
-        if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
-          wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
-        } else { wE.style.display = 'none'; }
-      }
-    }
-    document.querySelectorAll('.c-quick').forEach(function(btn) {
-      btn.onclick = function() {
-        var aV = parseFloat(this.getAttribute('data-val') || '0');
-        var cV = parseFloat(dV) || 0;
-        dV = String(nN ? aV : cV + aV); nN = false; uUI();
-      };
-    });
-    document.querySelectorAll('.c-btn').forEach(function(btn) {
-      btn.onclick = function() {
-        var k = this.getAttribute('data-key');
-        if (!k) return;
-        if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
-        else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
-        else if (['+', '-', '*', '/'].includes(k)) {
-          var op = k === '*' ? '×' : k === '/' ? '÷' : k;
-          eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
-        } else if (k === '=') {
-          if (eV) {
-            try {
-              var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
-              dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
-            } catch(err) { dV = "Error"; eV = ""; }
-          }
-        } else if (k === '000') {
-          if (!nN && dV !== '0') dV += '000';
-        } else {
-          if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
-        }
-        uUI();
-      };
-    });
-    var cp = document.getElementById('calc-copy-btn');
-    if (cp) {
-      cp.onclick = function() {
-        var num = parseFloat(dV);
-        if (!isNaN(num)) {
-          navigator.clipboard.writeText(String(num));
-          cp.innerText = '✅ Đã sao chép!';
-          setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
-        }
-      };
-    }
-  })();
-</script>
+          (function initPrintCalc3D() {
+            var b = document.getElementById('btn-calc');
+            var m = document.getElementById('print-calc-3d');
+            var h = document.getElementById('calc-header');
+            var c = document.getElementById('calc-close-btn');
+            if (b && m) { b.onclick = function() { m.style.display = m.style.display === 'none' ? 'block' : 'none'; }; }
+            if (c && m) { c.onclick = function() { m.style.display = 'none'; }; }
+            if (h && m) {
+              var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
+              h.onmousedown = function(e) {
+                if (e.target.tagName === 'BUTTON') return;
+                isD = true;
+                var r = m.getBoundingClientRect();
+                sX = e.clientX; sY = e.clientY; iL = r.left; iT = r.top;
+                m.style.bottom = 'auto'; m.style.right = 'auto';
+                m.style.left = iL + 'px'; m.style.top = iT + 'px';
+                h.style.cursor = 'grabbing';
+              };
+              document.addEventListener('mousemove', function(e) {
+                if (!isD) return;
+                m.style.left = Math.max(0, iL + (e.clientX - sX)) + 'px';
+                m.style.top = Math.max(0, iT + (e.clientY - sY)) + 'px';
+              });
+              document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
+            }
+            var dV = "0", eV = "", nN = true;
+            function uUI() {
+              var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
+              var num = parseFloat(dV);
+              if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
+              if (eE) eE.innerText = eV;
+              if (wE) {
+                if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
+                  wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
+                } else { wE.style.display = 'none'; }
+              }
+            }
+            document.querySelectorAll('.c-quick').forEach(function(btn) {
+              btn.onclick = function() {
+                var aV = parseFloat(this.getAttribute('data-val') || '0');
+                var cV = parseFloat(dV) || 0;
+                dV = String(nN ? aV : cV + aV); nN = false; uUI();
+              };
+            });
+            document.querySelectorAll('.c-btn').forEach(function(btn) {
+              btn.onclick = function() {
+                var k = this.getAttribute('data-key');
+                if (!k) return;
+                if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
+                else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
+                else if (['+', '-', '*', '/'].includes(k)) {
+                  var op = k === '*' ? '×' : k === '/' ? '÷' : k;
+                  eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
+                } else if (k === '=') {
+                  if (eV) {
+                    try {
+                      var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
+                      dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
+                    } catch(err) { dV = "Error"; eV = ""; }
+                  }
+                } else if (k === '000') {
+                  if (!nN && dV !== '0') dV += '000';
+                } else {
+                  if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
+                }
+                uUI();
+              };
+            });
+            var cp = document.getElementById('calc-copy-btn');
+            if (cp) {
+              cp.onclick = function() {
+                var num = parseFloat(dV);
+                if (!isNaN(num)) {
+                  navigator.clipboard.writeText(String(num));
+                  cp.innerText = '✅ Đã sao chép!';
+                  setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
+                }
+              };
+            }
+          })();
+        </script>
       </body>
       </html>
     `;
@@ -5018,7 +5016,53 @@ const WardFunds = () => {
         <div class="editor-area" contenteditable="true" style="outline: none;">
           ${receiptHtml}
         </div>
-        
+
+        <!-- Draggable 3D Mini Calculator Widget for Print Window -->
+        <div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+          <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
+            </div>
+            <button id="calc-close-btn" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:22px; height:22px; cursor:pointer;">✕</button>
+          </div>
+          <div style="background:linear-gradient(180deg,#022c22,#064e3b); border-radius:12px; padding:8px 10px; margin-bottom:8px; text-align:right;">
+            <div id="calc-eq" style="font-size:0.72rem; color:#6ee7b7; height:14px; font-family:monospace;"></div>
+            <div id="calc-disp" style="font-size:1.55rem; font-weight:900; color:#34d399; font-family:monospace;">0 đ</div>
+            <div id="calc-words" style="font-size:0.66rem; color:#d1fae5; font-style:italic; border-top:1px dashed rgba(52,211,153,0.3); margin-top:2px; text-align:left; display:none;"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-bottom:8px;">
+            <button class="c-quick" data-val="10000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
+            <button class="c-quick" data-val="20000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
+            <button class="c-quick" data-val="50000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
+            <button class="c-quick" data-val="100000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
+            <button class="c-quick" data-val="200000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
+            <button class="c-quick" data-val="500000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;">
+            <button class="c-btn" data-key="AC" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
+            <button class="c-btn" data-key="DEL" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
+            <button class="c-btn" data-key="%" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
+            <button class="c-btn" data-key="/" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
+            <button class="c-btn" data-key="7" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
+            <button class="c-btn" data-key="8" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
+            <button class="c-btn" data-key="9" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
+            <button class="c-btn" data-key="*" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
+            <button class="c-btn" data-key="4" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
+            <button class="c-btn" data-key="5" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
+            <button class="c-btn" data-key="6" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
+            <button class="c-btn" data-key="-" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
+            <button class="c-btn" data-key="1" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
+            <button class="c-btn" data-key="2" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
+            <button class="c-btn" data-key="3" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
+            <button class="c-btn" data-key="+" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
+            <button class="c-btn" data-key="0" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
+            <button class="c-btn" data-key="000" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
+            <button class="c-btn" data-key="." style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
+            <button class="c-btn" data-key="=" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
+          </div>
+          <button id="calc-copy-btn" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
+        </div>
+
         <script>
           const SAVE_KEY = 'receipt_html_${householdId}_${selectedYear}_${printMode}';
           const currentPrintMode = '${printMode}';
@@ -5449,103 +5493,87 @@ const WardFunds = () => {
     <button class="c-btn" data-key="9" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
     <button class="c-btn" data-key="*" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
     <button class="c-btn" data-key="4" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
-    <button class="c-btn" data-key="5" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
-    <button class="c-btn" data-key="6" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
-    <button class="c-btn" data-key="-" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
-    <button class="c-btn" data-key="1" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
-    <button class="c-btn" data-key="2" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
-    <button class="c-btn" data-key="3" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
-    <button class="c-btn" data-key="+" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
-    <button class="c-btn" data-key="0" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
-    <button class="c-btn" data-key="000" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
-    <button class="c-btn" data-key="." style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
-    <button class="c-btn" data-key="=" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
-  </div>
-  <button id="calc-copy-btn" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
-</div>
-
-<script>
-  (function() {
-    var b = document.getElementById('btn-calc');
-    var m = document.getElementById('print-calc-3d');
-    var h = document.getElementById('calc-header');
-    var c = document.getElementById('calc-close-btn');
-    if (b && m) { b.onclick = function() { m.style.display = m.style.display === 'none' ? 'block' : 'none'; }; }
-    if (c && m) { c.onclick = function() { m.style.display = 'none'; }; }
-    if (h && m) {
-      var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
-      h.onmousedown = function(e) {
-        if (e.target.tagName === 'BUTTON') return;
-        isD = true;
-        var r = m.getBoundingClientRect();
-        sX = e.clientX; sY = e.clientY; iL = r.left; iT = r.top;
-        m.style.bottom = 'auto'; m.style.right = 'auto';
-        m.style.left = iL + 'px'; m.style.top = iT + 'px';
-        h.style.cursor = 'grabbing';
-      };
-      document.addEventListener('mousemove', function(e) {
-        if (!isD) return;
-        m.style.left = Math.max(0, iL + (e.clientX - sX)) + 'px';
-        m.style.top = Math.max(0, iT + (e.clientY - sY)) + 'px';
-      });
-      document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
-    }
-    var dV = "0", eV = "", nN = true;
-    function uUI() {
-      var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
-      var num = parseFloat(dV);
-      if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
-      if (eE) eE.innerText = eV;
-      if (wE) {
-        if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
-          wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
-        } else { wE.style.display = 'none'; }
-      }
-    }
-    document.querySelectorAll('.c-quick').forEach(function(btn) {
-      btn.onclick = function() {
-        var aV = parseFloat(this.getAttribute('data-val') || '0');
-        var cV = parseFloat(dV) || 0;
-        dV = String(nN ? aV : cV + aV); nN = false; uUI();
-      };
-    });
-    document.querySelectorAll('.c-btn').forEach(function(btn) {
-      btn.onclick = function() {
-        var k = this.getAttribute('data-key');
-        if (!k) return;
-        if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
-        else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
-        else if (['+', '-', '*', '/'].includes(k)) {
-          var op = k === '*' ? '×' : k === '/' ? '÷' : k;
-          eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
-        } else if (k === '=') {
-          if (eV) {
-            try {
-              var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
-              dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
-            } catch(err) { dV = "Error"; eV = ""; }
-          }
-        } else if (k === '000') {
-          if (!nN && dV !== '0') dV += '000';
-        } else {
-          if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
-        }
-        uUI();
-      };
-    });
-    var cp = document.getElementById('calc-copy-btn');
-    if (cp) {
-      cp.onclick = function() {
-        var num = parseFloat(dV);
-        if (!isNaN(num)) {
-          navigator.clipboard.writeText(String(num));
-          cp.innerText = '✅ Đã sao chép!';
-          setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
-        }
-      };
-    }
-  })();
-</script>
+          (function initPrintCalc3D() {
+            var b = document.getElementById('btn-calc');
+            var m = document.getElementById('print-calc-3d');
+            var h = document.getElementById('calc-header');
+            var c = document.getElementById('calc-close-btn');
+            if (b && m) { b.onclick = function() { m.style.display = m.style.display === 'none' ? 'block' : 'none'; }; }
+            if (c && m) { c.onclick = function() { m.style.display = 'none'; }; }
+            if (h && m) {
+              var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
+              h.onmousedown = function(e) {
+                if (e.target.tagName === 'BUTTON') return;
+                isD = true;
+                var r = m.getBoundingClientRect();
+                sX = e.clientX; sY = e.clientY; iL = r.left; iT = r.top;
+                m.style.bottom = 'auto'; m.style.right = 'auto';
+                m.style.left = iL + 'px'; m.style.top = iT + 'px';
+                h.style.cursor = 'grabbing';
+              };
+              document.addEventListener('mousemove', function(e) {
+                if (!isD) return;
+                m.style.left = Math.max(0, iL + (e.clientX - sX)) + 'px';
+                m.style.top = Math.max(0, iT + (e.clientY - sY)) + 'px';
+              });
+              document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
+            }
+            var dV = "0", eV = "", nN = true;
+            function uUI() {
+              var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
+              var num = parseFloat(dV);
+              if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
+              if (eE) eE.innerText = eV;
+              if (wE) {
+                if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
+                  wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
+                } else { wE.style.display = 'none'; }
+              }
+            }
+            document.querySelectorAll('.c-quick').forEach(function(btn) {
+              btn.onclick = function() {
+                var aV = parseFloat(this.getAttribute('data-val') || '0');
+                var cV = parseFloat(dV) || 0;
+                dV = String(nN ? aV : cV + aV); nN = false; uUI();
+              };
+            });
+            document.querySelectorAll('.c-btn').forEach(function(btn) {
+              btn.onclick = function() {
+                var k = this.getAttribute('data-key');
+                if (!k) return;
+                if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
+                else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
+                else if (['+', '-', '*', '/'].includes(k)) {
+                  var op = k === '*' ? '×' : k === '/' ? '÷' : k;
+                  eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
+                } else if (k === '=') {
+                  if (eV) {
+                    try {
+                      var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
+                      dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
+                    } catch(err) { dV = "Error"; eV = ""; }
+                  }
+                } else if (k === '000') {
+                  if (!nN && dV !== '0') dV += '000';
+                } else {
+                  if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
+                }
+                uUI();
+              };
+            });
+            var cp = document.getElementById('calc-copy-btn');
+            if (cp) {
+              cp.onclick = function() {
+                var num = parseFloat(dV);
+                if (!isNaN(num)) {
+                  navigator.clipboard.writeText(String(num));
+                  cp.innerText = '✅ Đã sao chép!';
+                  setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
+                }
+              };
+            }
+          })();
+        </script>
       </body>
       </html>
     `;
