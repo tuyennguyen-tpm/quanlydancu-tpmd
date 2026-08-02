@@ -328,7 +328,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
                 MÁY TÍNH MINI 3D
               </div>
               <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                Trực tiếp trên trang
+                Nguyễn Kim Tuyến
               </div>
             </div>
           </div>
