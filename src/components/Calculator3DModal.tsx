@@ -288,11 +288,11 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
 
   const innerStyle: React.CSSProperties = {
     width: '100%',
-    maxWidth: isFloating ? '285px' : '395px',
-    borderRadius: '20px',
+    maxWidth: isFloating ? '280px' : '370px',
+    borderRadius: '18px',
     background: 'linear-gradient(145deg, #1e293b, #0f172a)',
     boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 0 0 2px rgba(51, 65, 85, 0.8)',
-    padding: isFloating ? '14px' : '18px 20px',
+    padding: isFloating ? '11px 13px' : '15px 18px',
     color: '#f8fafc',
     boxSizing: 'border-box',
     userSelect: 'none'
@@ -306,8 +306,8 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '8px',
+          marginBottom: '8px',
+          paddingBottom: '6px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -404,18 +404,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
 
         {/* 3D LED LCD Screen */}
         <div style={{
-          borderRadius: '14px',
+          borderRadius: '12px',
           background: 'linear-gradient(180deg, #022c22 0%, #064e3b 100%)',
           boxShadow: 'inset 0 4px 8px rgba(0, 0, 0, 0.6), inset 0 -2px 4px rgba(255, 255, 255, 0.05), 0 0 0 1px #047857',
-          padding: '12px 14px',
-          marginBottom: '12px',
+          padding: '8px 10px',
+          marginBottom: '8px',
           textAlign: 'right',
           overflow: 'hidden'
         }}>
           <div style={{
-            fontSize: '0.75rem',
+            fontSize: '0.72rem',
             color: '#6ee7b7',
-            height: '16px',
+            height: '14px',
             fontFamily: 'monospace',
             letterSpacing: '1px',
             overflow: 'hidden',
@@ -425,7 +425,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             {equation || '\u00A0'}
           </div>
           <div style={{
-            fontSize: display.length > 10 ? '1.35rem' : '1.85rem',
+            fontSize: display.length > 10 ? '1.25rem' : '1.55rem',
             fontWeight: '900',
             color: '#34d399',
             fontFamily: '"Courier New", Courier, monospace',
@@ -436,18 +436,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap'
           }}>
-            {formatDisplay(display)} <span style={{ fontSize: '0.85rem', color: '#a7f3d0' }}>đ</span>
+            {formatDisplay(display)} <span style={{ fontSize: '0.8rem', color: '#a7f3d0' }}>đ</span>
           </div>
 
           {wordsRepresentation && (
             <div style={{
-              fontSize: '0.7rem',
+              fontSize: '0.66rem',
               color: '#d1fae5',
               fontStyle: 'italic',
-              marginTop: '3px',
+              marginTop: '2px',
               textAlign: 'left',
               borderTop: '1px dashed rgba(52, 211, 153, 0.3)',
-              paddingTop: '3px',
+              paddingTop: '2px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
@@ -461,8 +461,8 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(6, 1fr)',
-          gap: '5px',
-          marginBottom: '12px'
+          gap: '4px',
+          marginBottom: '8px'
         }}>
           {[
             { label: '+10k', val: 10000 },
@@ -507,15 +507,15 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '8px',
-          marginBottom: '12px'
+          gap: '6px',
+          marginBottom: '8px'
         }}>
           {/* Row 1 */}
           <button
             type="button"
             onClick={handleClear}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #ef4444, #dc2626)',
@@ -534,7 +534,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={handleBackspace}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #f59e0b, #d97706)',
@@ -556,7 +556,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={handlePercent}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #334155, #1e293b)',
@@ -575,7 +575,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('÷')}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
@@ -598,7 +598,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               type="button"
               onClick={() => handleDigit(num)}
               style={{
-                padding: '10px 0',
+                padding: '7px 0',
                 borderRadius: '10px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #475569, #334155)',
@@ -618,7 +618,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('×')}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
@@ -641,7 +641,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               type="button"
               onClick={() => handleDigit(num)}
               style={{
-                padding: '10px 0',
+                padding: '7px 0',
                 borderRadius: '10px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #475569, #334155)',
@@ -661,7 +661,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('-')}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
@@ -684,7 +684,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               type="button"
               onClick={() => handleDigit(num)}
               style={{
-                padding: '10px 0',
+                padding: '7px 0',
                 borderRadius: '10px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #475569, #334155)',
@@ -704,7 +704,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('+')}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
@@ -725,7 +725,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleDigit('0')}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #475569, #334155)',
@@ -744,7 +744,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleDigit('000')}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #475569, #334155)',
@@ -763,7 +763,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={handleDecimal}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #475569, #334155)',
@@ -782,7 +782,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={handleEqual}
             style={{
-              padding: '10px 0',
+              padding: '7px 0',
               borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #10b981, #059669)',
