@@ -1707,41 +1707,38 @@ const Finance = () => {
           const fontSizeSelect = document.getElementById('font-size-select');
 
           function docSoTien(number) {
-            if (isNaN(number) || number === 0) return 'Không đồng';
-            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-            
-            function readTriple(n, showZero) {
+            if (isNaN(number) || !number || number <= 0) return 'Không đồng';
+            const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            function readTriple(n, isHighestTriple) {
               let tram = Math.floor(n / 100);
               let chuc = Math.floor((n % 100) / 10);
               let donvi = n % 10;
               let res = "";
-              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
-              if (chuc === 0 && donvi > 0) res += "lẻ ";
-              else if (chuc === 1) res += "mười ";
-              else if (chuc > 1) res += arrays[chuc] + " mươi ";
-              
-              if (donvi === 1 && chuc > 1) res += "mốt";
-              else if (donvi === 5 && chuc > 0) res += "lăm";
-              else if (donvi > 0) res += arrays[donvi];
+              if (tram > 0 || !isHighestTriple) res += digits[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) {
+                if (tram > 0 || !isHighestTriple) res += "lẻ ";
+              } else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += digits[chuc] + " mươi ";
+              if (donvi === 1) res += chuc > 1 ? "mốt" : "một";
+              else if (donvi === 5) res += chuc > 0 ? "lăm" : "năm";
+              else if (donvi > 0) res += digits[donvi];
               return res.trim();
             }
-
-            let str = "";
-            let units = ["", " nghìn", " triệu", " tỷ"];
-            let temp = Math.abs(Math.floor(number));
-            let i = 0;
-            while (temp > 0) {
-              let triple = temp % 1000;
-              if (triple > 0) {
-                let s = readTriple(triple, i > 0);
-                str = s + units[i] + " " + str;
-              }
-              temp = Math.floor(temp / 1000);
-              i++;
+            let n = Math.floor(Math.abs(number));
+            let triples = [];
+            while (n > 0) { triples.push(n % 1000); n = Math.floor(n / 1000); }
+            const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ"];
+            let parts = [];
+            for (let i = triples.length - 1; i >= 0; i--) {
+              let val = triples[i];
+              if (val === 0) continue;
+              let str = readTriple(val, i === triples.length - 1);
+              let unit = units[i] ? " " + units[i] : "";
+              parts.push(str + unit);
             }
-            const finalStr = str.trim();
-            if (!finalStr) return "Không đồng";
-            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+            let finalStr = parts.join(" ").trim();
+            if (!finalStr) return 'Không đồng';
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/\s+/g, ' ');
           }
 
           function syncReceiptFields() {
@@ -3336,41 +3333,38 @@ const Finance = () => {
         ${receiptsHtml}
         <script>
           function docSoTien(number) {
-            if (isNaN(number) || number === 0) return 'Không đồng';
-            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-            
-            function readTriple(n, showZero) {
+            if (isNaN(number) || !number || number <= 0) return 'Không đồng';
+            const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            function readTriple(n, isHighestTriple) {
               let tram = Math.floor(n / 100);
               let chuc = Math.floor((n % 100) / 10);
               let donvi = n % 10;
               let res = "";
-              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
-              if (chuc === 0 && donvi > 0) res += "lẻ ";
-              else if (chuc === 1) res += "mười ";
-              else if (chuc > 1) res += arrays[chuc] + " mươi ";
-              
-              if (donvi === 1 && chuc > 1) res += "mốt";
-              else if (donvi === 5 && chuc > 0) res += "lăm";
-              else if (donvi > 0) res += arrays[donvi];
+              if (tram > 0 || !isHighestTriple) res += digits[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) {
+                if (tram > 0 || !isHighestTriple) res += "lẻ ";
+              } else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += digits[chuc] + " mươi ";
+              if (donvi === 1) res += chuc > 1 ? "mốt" : "một";
+              else if (donvi === 5) res += chuc > 0 ? "lăm" : "năm";
+              else if (donvi > 0) res += digits[donvi];
               return res.trim();
             }
-
-            let str = "";
-            let units = ["", " nghìn", " triệu", " tỷ"];
-            let temp = Math.abs(Math.floor(number));
-            let i = 0;
-            while (temp > 0) {
-              let triple = temp % 1000;
-              if (triple > 0) {
-                let s = readTriple(triple, i > 0);
-                str = s + units[i] + " " + str;
-              }
-              temp = Math.floor(temp / 1000);
-              i++;
+            let n = Math.floor(Math.abs(number));
+            let triples = [];
+            while (n > 0) { triples.push(n % 1000); n = Math.floor(n / 1000); }
+            const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ"];
+            let parts = [];
+            for (let i = triples.length - 1; i >= 0; i--) {
+              let val = triples[i];
+              if (val === 0) continue;
+              let str = readTriple(val, i === triples.length - 1);
+              let unit = units[i] ? " " + units[i] : "";
+              parts.push(str + unit);
             }
-            const finalStr = str.trim();
-            if (!finalStr) return "Không đồng";
-            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+            let finalStr = parts.join(" ").trim();
+            if (!finalStr) return 'Không đồng';
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/\s+/g, ' ');
           }
 
           function recalculateReceiptTotals() {
@@ -5623,9 +5617,27 @@ const Finance = () => {
               </div>
             </div>
 
+            {/* Direct Edit Hint Banner */}
+            <div style={{
+              padding: '8px 14px',
+              backgroundColor: '#eff6ff',
+              border: '1px dashed #3b82f6',
+              borderRadius: '8px',
+              margin: '10px 0 14px 0',
+              fontSize: '0.82rem',
+              color: '#1d4ed8',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span>✏️ <strong>Sửa trực tiếp:</strong> Bạn có thể nhấp chuột vào bất kỳ chữ/số nào trên Mẫu Phiếu bên dưới (họ tên, diễn giải, số tiền, chữ viết, ngày tháng...) để tự do gõ sửa trực tiếp trước khi bấm "In Phiếu Ngay"!</span>
+            </div>
+
             {/* Printable Voucher Paper - Compact Half A4 (A5) Standard Design */}
             <div
               id="printable-voucher"
+              contentEditable={true}
+              suppressContentEditableWarning={true}
               style={{
                 padding: '24px 30px',
                 background: 'white',
@@ -5636,7 +5648,8 @@ const Finance = () => {
                 borderRadius: '8px',
                 margin: '0 auto',
                 maxWidth: '720px',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                outline: 'none'
               }}
             >
               {/* Voucher Header Top Bar */}

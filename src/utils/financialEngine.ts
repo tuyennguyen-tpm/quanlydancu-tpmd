@@ -162,52 +162,62 @@ export function getHouseholdLaborResidents(members: Resident[], targetYear: numb
  */
 export function docSoTien(number: number): string {
   if (!number || isNaN(number) || number <= 0) return 'Không đồng';
-  const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+  const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
 
-  const readTriple = (n: number, showZero: boolean): string => {
+  const readTriple = (n: number, isHighestTriple: boolean): string => {
     let tram = Math.floor(n / 100);
     let chuc = Math.floor((n % 100) / 10);
     let donvi = n % 10;
     let res = "";
 
-    if (tram > 0 || showZero) {
-      res += arrays[tram] + " trăm ";
+    if (tram > 0 || !isHighestTriple) {
+      res += digits[tram] + " trăm ";
     }
 
     if (chuc === 0 && donvi > 0) {
-      res += "lẻ ";
+      if (tram > 0 || !isHighestTriple) {
+        res += "lẻ ";
+      }
     } else if (chuc === 1) {
       res += "mười ";
     } else if (chuc > 1) {
-      res += arrays[chuc] + " mươi ";
+      res += digits[chuc] + " mươi ";
     }
 
-    if (donvi === 1 && chuc > 1) {
-      res += "mốt";
-    } else if (donvi === 5 && chuc > 0) {
-      res += "lăm";
+    if (donvi === 1) {
+      res += chuc > 1 ? "mốt" : "một";
+    } else if (donvi === 5) {
+      res += chuc > 0 ? "lăm" : "năm";
     } else if (donvi > 0) {
-      res += arrays[donvi];
+      res += digits[donvi];
     }
     return res.trim();
   };
 
-  let str = "";
-  let units = ["", " nghìn", " triệu", " tỷ"];
-  let temp = Math.floor(number);
-  let i = 0;
-
-  while (temp > 0) {
-    let triple = temp % 1000;
-    if (triple > 0) {
-      let s = readTriple(triple, i > 0);
-      str = s + units[i] + " " + str;
-    }
-    temp = Math.floor(temp / 1000);
-    i++;
+  let n = Math.floor(Math.abs(number));
+  let triples: number[] = [];
+  while (n > 0) {
+    triples.push(n % 1000);
+    n = Math.floor(n / 1000);
   }
-  const finalStr = str.trim();
-  return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+
+  const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
+  let parts: string[] = [];
+
+  for (let i = triples.length - 1; i >= 0; i--) {
+    const val = triples[i];
+    if (val === 0) continue;
+    const isHighestTriple = (i === triples.length - 1);
+    const str = readTriple(val, isHighestTriple);
+    const unit = units[i] ? " " + units[i] : "";
+    parts.push(str + unit);
+  }
+
+  let finalStr = parts.join(" ").trim();
+  if (!finalStr) return 'Không đồng';
+
+  finalStr = finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+  return finalStr.replace(/\s+/g, ' ');
 }
 
 /**
@@ -356,7 +366,7 @@ export function calculateHouseholdFinancialSummary(
     } else if (isHouseholdScope) {
       const manualExemptHH = memberWardRecords.some(r => {
         const c = getContributionData(r.contributions, wf.name);
-        return c?.expected === 0 || c?.is_manual_exempt === true;
+        return c?.is_manual_exempt === true;
       });
       expectedTotal = manualExemptHH ? 0 : wfTargetVal;
     } else {

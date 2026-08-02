@@ -240,7 +240,10 @@ const WardFunds = () => {
 
       activeFundsList.forEach((fund: any) => {
         let expected = 0;
-        if (!isPensioner && !fund.scope && isInAgeRange) {
+        const isHouseholdScope = fund.scope ? fund.scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
+        if (isHouseholdScope) {
+          expected = fund.target;
+        } else if (!isPensioner && isInAgeRange) {
           expected = fund.target;
         }
         contributions[fund.name] = {
@@ -1875,21 +1878,19 @@ const WardFunds = () => {
 
           activeFundsList.forEach((fund: any) => {
             let expected = 0;
+            const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
 
             if (isPolicyHousehold) {
               expected = 0;
+            } else if (isHouseholdScope) {
+              if (isHead || age >= 18) {
+                expected = fund.target;
+              }
             } else if (isPensioner) {
               expected = 0;
             } else {
-              const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ'));
-              if (isHouseholdScope) {
-                if (isHead && age >= 18) {
-                  expected = fund.target;
-                }
-              } else {
-                if (isInAgeRange) {
-                  expected = fund.target;
-                }
+              if (isInAgeRange) {
+                expected = fund.target;
               }
             }
 
@@ -3627,41 +3628,38 @@ const WardFunds = () => {
           const fontSizeSelect = document.getElementById('font-size-select');
 
           function docSoTien(number) {
-            if (isNaN(number) || number === 0) return 'Không đồng';
-            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-            
-            function readTriple(n, showZero) {
+            if (isNaN(number) || !number || number <= 0) return 'Không đồng';
+            const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            function readTriple(n, isHighestTriple) {
               let tram = Math.floor(n / 100);
               let chuc = Math.floor((n % 100) / 10);
               let donvi = n % 10;
               let res = "";
-              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
-              if (chuc === 0 && donvi > 0) res += "lẻ ";
-              else if (chuc === 1) res += "mười ";
-              else if (chuc > 1) res += arrays[chuc] + " mươi ";
-              
-              if (donvi === 1 && chuc > 1) res += "mốt";
-              else if (donvi === 5 && chuc > 0) res += "lăm";
-              else if (donvi > 0) res += arrays[donvi];
+              if (tram > 0 || !isHighestTriple) res += digits[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) {
+                if (tram > 0 || !isHighestTriple) res += "lẻ ";
+              } else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += digits[chuc] + " mươi ";
+              if (donvi === 1) res += chuc > 1 ? "mốt" : "một";
+              else if (donvi === 5) res += chuc > 0 ? "lăm" : "năm";
+              else if (donvi > 0) res += digits[donvi];
               return res.trim();
             }
-
-            let str = "";
-            let units = ["", " nghìn", " triệu", " tỷ"];
-            let temp = Math.abs(Math.floor(number));
-            let i = 0;
-            while (temp > 0) {
-              let triple = temp % 1000;
-              if (triple > 0) {
-                let s = readTriple(triple, i > 0);
-                str = s + units[i] + " " + str;
-              }
-              temp = Math.floor(temp / 1000);
-              i++;
+            let n = Math.floor(Math.abs(number));
+            let triples = [];
+            while (n > 0) { triples.push(n % 1000); n = Math.floor(n / 1000); }
+            const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ"];
+            let parts = [];
+            for (let i = triples.length - 1; i >= 0; i--) {
+              let val = triples[i];
+              if (val === 0) continue;
+              let str = readTriple(val, i === triples.length - 1);
+              let unit = units[i] ? " " + units[i] : "";
+              parts.push(str + unit);
             }
-            const finalStr = str.trim();
-            if (!finalStr) return "Không đồng";
-            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+            let finalStr = parts.join(" ").trim();
+            if (!finalStr) return 'Không đồng';
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/\s+/g, ' ');
           }
 
           let isRecalculating = false;
@@ -4900,41 +4898,38 @@ const WardFunds = () => {
           const fontSizeSelect = document.getElementById('font-size-select');
 
           function docSoTien(number) {
-            if (isNaN(number) || number === 0) return 'Không đồng';
-            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-            
-            function readTriple(n, showZero) {
+            if (isNaN(number) || !number || number <= 0) return 'Không đồng';
+            const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            function readTriple(n, isHighestTriple) {
               let tram = Math.floor(n / 100);
               let chuc = Math.floor((n % 100) / 10);
               let donvi = n % 10;
               let res = "";
-              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
-              if (chuc === 0 && donvi > 0) res += "lẻ ";
-              else if (chuc === 1) res += "mười ";
-              else if (chuc > 1) res += arrays[chuc] + " mươi ";
-              
-              if (donvi === 1 && chuc > 1) res += "mốt";
-              else if (donvi === 5 && chuc > 0) res += "lăm";
-              else if (donvi > 0) res += arrays[donvi];
+              if (tram > 0 || !isHighestTriple) res += digits[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) {
+                if (tram > 0 || !isHighestTriple) res += "lẻ ";
+              } else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += digits[chuc] + " mươi ";
+              if (donvi === 1) res += chuc > 1 ? "mốt" : "một";
+              else if (donvi === 5) res += chuc > 0 ? "lăm" : "năm";
+              else if (donvi > 0) res += digits[donvi];
               return res.trim();
             }
-
-            let str = "";
-            let units = ["", " nghìn", " triệu", " tỷ"];
-            let temp = Math.abs(Math.floor(number));
-            let i = 0;
-            while (temp > 0) {
-              let triple = temp % 1000;
-              if (triple > 0) {
-                let s = readTriple(triple, i > 0);
-                str = s + units[i] + " " + str;
-              }
-              temp = Math.floor(temp / 1000);
-              i++;
+            let n = Math.floor(Math.abs(number));
+            let triples = [];
+            while (n > 0) { triples.push(n % 1000); n = Math.floor(n / 1000); }
+            const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ"];
+            let parts = [];
+            for (let i = triples.length - 1; i >= 0; i--) {
+              let val = triples[i];
+              if (val === 0) continue;
+              let str = readTriple(val, i === triples.length - 1);
+              let unit = units[i] ? " " + units[i] : "";
+              parts.push(str + unit);
             }
-            const finalStr = str.trim();
-            if (!finalStr) return "Không đồng";
-            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+            let finalStr = parts.join(" ").trim();
+            if (!finalStr) return 'Không đồng';
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/\s+/g, ' ');
           }
 
           function syncReceiptFields() {
@@ -5536,41 +5531,38 @@ const WardFunds = () => {
         ${receiptsHtml}
         <script>
           function docSoTien(number) {
-            if (isNaN(number) || number === 0) return 'Không đồng';
-            const arrays = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-            
-            function readTriple(n, showZero) {
+            if (isNaN(number) || !number || number <= 0) return 'Không đồng';
+            const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            function readTriple(n, isHighestTriple) {
               let tram = Math.floor(n / 100);
               let chuc = Math.floor((n % 100) / 10);
               let donvi = n % 10;
               let res = "";
-              if (tram > 0 || showZero) res += arrays[tram] + " trăm ";
-              if (chuc === 0 && donvi > 0) res += "lẻ ";
-              else if (chuc === 1) res += "mười ";
-              else if (chuc > 1) res += arrays[chuc] + " mươi ";
-              
-              if (donvi === 1 && chuc > 1) res += "mốt";
-              else if (donvi === 5 && chuc > 0) res += "lăm";
-              else if (donvi > 0) res += arrays[donvi];
+              if (tram > 0 || !isHighestTriple) res += digits[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) {
+                if (tram > 0 || !isHighestTriple) res += "lẻ ";
+              } else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += digits[chuc] + " mươi ";
+              if (donvi === 1) res += chuc > 1 ? "mốt" : "một";
+              else if (donvi === 5) res += chuc > 0 ? "lăm" : "năm";
+              else if (donvi > 0) res += digits[donvi];
               return res.trim();
             }
-
-            let str = "";
-            let units = ["", " nghìn", " triệu", " tỷ"];
-            let temp = Math.abs(Math.floor(number));
-            let i = 0;
-            while (temp > 0) {
-              let triple = temp % 1000;
-              if (triple > 0) {
-                let s = readTriple(triple, i > 0);
-                str = s + units[i] + " " + str;
-              }
-              temp = Math.floor(temp / 1000);
-              i++;
+            let n = Math.floor(Math.abs(number));
+            let triples = [];
+            while (n > 0) { triples.push(n % 1000); n = Math.floor(n / 1000); }
+            const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ"];
+            let parts = [];
+            for (let i = triples.length - 1; i >= 0; i--) {
+              let val = triples[i];
+              if (val === 0) continue;
+              let str = readTriple(val, i === triples.length - 1);
+              let unit = units[i] ? " " + units[i] : "";
+              parts.push(str + unit);
             }
-            const finalStr = str.trim();
-            if (!finalStr) return "Không đồng";
-            return finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn";
+            let finalStr = parts.join(" ").trim();
+            if (!finalStr) return 'Không đồng';
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/\s+/g, ' ');
           }
 
           function recalculateReceiptTotals() {

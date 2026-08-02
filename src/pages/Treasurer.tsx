@@ -971,9 +971,27 @@ export default function Treasurer() {
               </div>
             </div>
 
+            {/* Direct Edit Hint Banner */}
+            <div style={{
+              padding: '8px 14px',
+              backgroundColor: '#eff6ff',
+              border: '1px dashed #3b82f6',
+              borderRadius: '8px',
+              margin: '10px 0 14px 0',
+              fontSize: '0.82rem',
+              color: '#1d4ed8',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span>✏️ <strong>Sửa trực tiếp:</strong> Bạn có thể nhấp chuột vào bất kỳ chữ/số nào trên Mẫu Phiếu bên dưới (họ tên, lý do, số tiền, chữ viết, ngày tháng...) để tự do gõ sửa trực tiếp trước khi bấm "In Phiếu Ngay"!</span>
+            </div>
+
             {/* Printable Voucher Paper - Compact Half A4 (A5) Standard Design */}
             <div
               id="printable-voucher"
+              contentEditable={true}
+              suppressContentEditableWarning={true}
               style={{
                 padding: '24px 30px',
                 background: 'white',
@@ -984,7 +1002,8 @@ export default function Treasurer() {
                 borderRadius: '8px',
                 margin: '0 auto',
                 maxWidth: '720px',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                outline: 'none'
               }}
             >
               {/* Voucher Header Top Bar */}
