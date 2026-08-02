@@ -1122,109 +1122,150 @@ export default function Treasurer() {
               {/* Bottom Row: Actions Toolbar */}
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
+                flexDirection: 'column',
                 gap: '10px',
                 background: '#ffffff',
-                padding: '10px 14px',
+                padding: '12px 14px',
                 borderRadius: '10px',
                 border: '1px solid #e2e8f0'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>📜 Mẫu chứng từ:</span>
-                    <select
-                      value={printDocTemplate}
-                      onChange={(e) => handleDocTemplateChange(e.target.value as 'voucher' | 'handover')}
-                      style={{
-                        padding: '7px 12px',
-                        borderRadius: '8px',
-                        border: '1.5px solid #0284c7',
-                        fontSize: '0.88rem',
-                        fontWeight: '700',
-                        color: '#0284c7',
-                        background: '#f0f9ff',
-                        cursor: 'pointer',
-                        outline: 'none'
-                      }}
-                      title="Chọn mẫu in phiếu thu/chi tiêu chuẩn hoặc Biên bản bàn giao tiền"
-                    >
-                      <option value="voucher">📋 Phiếu Thu/Chi tiêu chuẩn (Mẫu 02-TT)</option>
-                      <option value="handover">🤝 Biên bản bàn giao tiền (Bên A & Bên B)</option>
-                    </select>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>📜 Mẫu chứng từ:</span>
+                      <select
+                        value={printDocTemplate}
+                        onChange={(e) => handleDocTemplateChange(e.target.value as 'voucher' | 'handover')}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #0284c7',
+                          fontSize: '0.88rem',
+                          fontWeight: '700',
+                          color: '#0284c7',
+                          background: '#f0f9ff',
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                        title="Chọn mẫu in phiếu thu/chi tiêu chuẩn hoặc Biên bản bàn giao tiền"
+                      >
+                        <option value="voucher">📋 Phiếu Thu/Chi tiêu chuẩn (Mẫu 02-TT)</option>
+                        <option value="handover">🤝 Biên bản bàn giao tiền (Bên A & Bên B)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>📋 Số liên in:</span>
+                      <select
+                        value={printLienCount}
+                        onChange={(e) => handleLienCountChange(parseInt(e.target.value, 10))}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #0284c7',
+                          fontSize: '0.88rem',
+                          fontWeight: '700',
+                          color: '#0284c7',
+                          background: '#f0f9ff',
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                        title="Chọn số liên muốn in cho mỗi phiếu thu/chi"
+                      >
+                        <option value={1}>📄 In 1 Liên (Bản đơn)</option>
+                        <option value={2}>📄📄 In 2 Liên (Liên 1 + Liên 2)</option>
+                        <option value={3}>📄📄📄 In 3 Liên (Liên 1 + 2 + 3)</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>📋 Số liên in:</span>
-                    <select
-                      value={printLienCount}
-                      onChange={(e) => handleLienCountChange(parseInt(e.target.value, 10))}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShow3DCalculator(true)}
                       style={{
-                        padding: '7px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#0284c7',
+                        border: 'none',
+                        padding: '8px 16px',
                         borderRadius: '8px',
-                        border: '1.5px solid #0284c7',
-                        fontSize: '0.88rem',
+                        color: 'white',
                         fontWeight: '700',
-                        color: '#0284c7',
-                        background: '#f0f9ff',
-                        cursor: 'pointer',
-                        outline: 'none'
+                        fontSize: '0.88rem',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer'
                       }}
-                      title="Chọn số liên muốn in cho mỗi phiếu thu/chi"
+                      title="Mở máy tính 3D cầm tay để tính số tiền"
                     >
-                      <option value={1}>📄 In 1 Liên (Bản đơn)</option>
-                      <option value={2}>📄📄 In 2 Liên (Liên 1 + Liên 2)</option>
-                      <option value={3}>📄📄📄 In 3 Liên (Liên 1 + 2 + 3)</option>
-                    </select>
+                      <Calculator size={16} /> Máy tính 3D
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="btn btn-primary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: printModalNote.type === 'expense' ? '#dc2626' : '#16a34a',
+                        border: 'none',
+                        padding: '8px 18px',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '0.88rem',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    >
+                      <Printer size={16} /> In Phiếu Ngay ({printLienCount} liên)
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShow3DCalculator(true)}
+                {/* Quick Edit Person A Name Field */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  paddingTop: '8px',
+                  borderTop: '1px dashed #cbd5e1',
+                  marginTop: '2px'
+                }}>
+                  <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                    👤 Tên Bên A (Người giao tiền):
+                  </span>
+                  <input
+                    type="text"
+                    value={printModalNote.payer || ''}
+                    onChange={(e) => setPrintModalNote({ ...printModalNote, payer: e.target.value })}
+                    placeholder="Nhập/sửa tên Bên giao tiền (Bên A)..."
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: '#0284c7',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontWeight: '700',
+                      flex: 1,
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      border: '1.5px solid #3b82f6',
                       fontSize: '0.88rem',
-                      whiteSpace: 'nowrap',
-                      cursor: 'pointer'
-                    }}
-                    title="Mở máy tính 3D cầm tay để tính số tiền"
-                  >
-                    <Calculator size={16} /> Máy tính 3D
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => window.print()}
-                    className="btn btn-primary"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: printModalNote.type === 'expense' ? '#dc2626' : '#16a34a',
-                      border: 'none',
-                      padding: '8px 18px',
-                      borderRadius: '8px',
-                      color: 'white',
                       fontWeight: '700',
-                      fontSize: '0.88rem',
-                      whiteSpace: 'nowrap',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      color: '#1d4ed8',
+                      background: '#eff6ff',
+                      outline: 'none'
                     }}
-                  >
-                    <Printer size={16} /> In Phiếu Ngay ({printLienCount} liên)
-                  </button>
+                    title="Gõ thay đổi tên Bên A ở đây, tên trên tờ in sẽ lập tức cập nhật theo!"
+                  />
+                  <span style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#64748b', whiteSpace: 'nowrap' }}>
+                    (Gõ sửa ở ô này sẽ tự động cập nhật ngay lên bản in)
+                  </span>
                 </div>
               </div>
             </div>
