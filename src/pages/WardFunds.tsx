@@ -4019,7 +4019,6 @@ const WardFunds = () => {
     }
   })();
 </script>
-        </script>
       </body>
       </html>
     `;
@@ -5547,7 +5546,6 @@ const WardFunds = () => {
     }
   })();
 </script>
-        </script>
       </body>
       </html>
     `;

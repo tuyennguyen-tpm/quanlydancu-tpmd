@@ -2246,7 +2246,6 @@ const Finance = () => {
     }
   })();
 </script>
-        </script>
       </body>
       </html>
     `;
