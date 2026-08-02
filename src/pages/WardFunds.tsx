@@ -4016,6 +4016,15 @@ const WardFunds = () => {
             }
           });
 
+          const btnClose = document.getElementById('btn-close');
+          if (btnClose) {
+            btnClose.addEventListener('click', function() {
+              try { window.close(); } catch (e) {}
+              try { self.close(); } catch (e) {}
+              try { top.close(); } catch (e) {}
+            });
+          }
+
           (function initPrintCalc3D() {
             var b = document.getElementById('btn-calc');
             var m = document.getElementById('print-calc-3d');
@@ -5541,38 +5550,6 @@ const WardFunds = () => {
             });
           }
 
-
-<!-- Draggable 3D Mini Calculator Widget for Print Window -->
-<div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
-  <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
-    <div style="display:flex; align-items:center; gap:6px;">
-      <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
-    </div>
-    <button id="calc-close-btn" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:22px; height:22px; cursor:pointer;">✕</button>
-  </div>
-  <div style="background:linear-gradient(180deg,#022c22,#064e3b); border-radius:12px; padding:8px 10px; margin-bottom:8px; text-align:right;">
-    <div id="calc-eq" style="font-size:0.72rem; color:#6ee7b7; height:14px; font-family:monospace;"></div>
-    <div id="calc-disp" style="font-size:1.55rem; font-weight:900; color:#34d399; font-family:monospace;">0 đ</div>
-    <div id="calc-words" style="font-size:0.66rem; color:#d1fae5; font-style:italic; border-top:1px dashed rgba(52,211,153,0.3); margin-top:2px; text-align:left; display:none;"></div>
-  </div>
-  <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-bottom:8px;">
-    <button class="c-quick" data-val="10000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
-    <button class="c-quick" data-val="20000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
-    <button class="c-quick" data-val="50000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
-    <button class="c-quick" data-val="100000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
-    <button class="c-quick" data-val="200000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
-    <button class="c-quick" data-val="500000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
-  </div>
-  <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;">
-    <button class="c-btn" data-key="AC" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
-    <button class="c-btn" data-key="DEL" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
-    <button class="c-btn" data-key="%" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
-    <button class="c-btn" data-key="/" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
-    <button class="c-btn" data-key="7" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
-    <button class="c-btn" data-key="8" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
-    <button class="c-btn" data-key="9" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
-    <button class="c-btn" data-key="*" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
-    <button class="c-btn" data-key="4" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
           (function initPrintCalc3D() {
             var b = document.getElementById('btn-calc');
             var m = document.getElementById('print-calc-3d');
