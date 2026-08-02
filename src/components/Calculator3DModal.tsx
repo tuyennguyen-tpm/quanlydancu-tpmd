@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Copy, Check, Calculator, Delete, RotateCcw } from 'lucide-react';
+import { X, Copy, Check, Calculator, Delete, Minus, Maximize2, Minimize2 } from 'lucide-react';
 import { docSoTien } from '../utils/financialEngine';
 import { showToast } from '../utils/toast';
 
@@ -7,18 +7,21 @@ interface Calculator3DModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectAmount?: (amount: number) => void;
+  initialMode?: 'floating' | 'modal';
 }
 
 export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
   isOpen,
   onClose,
-  onSelectAmount
+  onSelectAmount,
+  initialMode = 'floating'
 }) => {
   const [display, setDisplay] = useState<string>('0');
   const [equation, setEquation] = useState<string>('');
   const [isNewNumber, setIsNewNumber] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
-  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
+  const [mode, setMode] = useState<'floating' | 'modal'>(initialMode);
 
   // Formatting helpers
   const cleanNumberStr = (str: string): number => {
@@ -70,7 +73,6 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
 
   const calculateResult = (expr: string): number => {
     try {
-      // Replace display unicode operators with JS operators
       const sanitized = expr
         .replace(/×/g, '*')
         .replace(/÷/g, '/')
@@ -78,7 +80,6 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
         .replace(/[^\d.+\-*/()]/g, '');
       
       if (!sanitized) return 0;
-      // Evaluate expression safely
       const func = new Function(`return ${sanitized}`);
       const res = func();
       if (!isFinite(res) || isNaN(res)) throw new Error('Invalid calculation');
@@ -175,12 +176,13 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
 
   // Keyboard shortcut listener
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!isOpen) return;
+    if (!isOpen || isMinimized) return;
+    const target = e.target as HTMLElement;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      return; // Do not intercept typing in active inputs
+    }
 
-    // Trigger visual key press pulse
     const key = e.key;
-    setActiveKey(key);
-    setTimeout(() => setActiveKey(null), 150);
 
     if (key >= '0' && key <= '9') {
       handleDigit(key);
@@ -205,7 +207,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
     } else if (key.toLowerCase() === 'c') {
       handleClear();
     }
-  }, [isOpen, display, equation, isNewNumber]);
+  }, [isOpen, isMinimized, display, equation, isNewNumber]);
 
   useEffect(() => {
     if (isOpen) {
@@ -218,98 +220,202 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Minimized Floating Quick Pill Widget on screen
+  if (isMinimized) {
+    return (
+      <div
+        onClick={() => setIsMinimized(false)}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9999,
+          padding: '10px 18px',
+          borderRadius: '30px',
+          background: 'linear-gradient(145deg, #0284c7, #0369a1)',
+          color: 'white',
+          fontWeight: '800',
+          fontSize: '0.88rem',
+          boxShadow: '0 10px 25px -5px rgba(2, 132, 199, 0.6), 0 0 0 2px rgba(255,255,255,0.2)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+        }}
+        title="Bấm để mở bung máy tính 3D mini"
+        onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+        onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+      >
+        <div style={{
+          width: '26px',
+          height: '26px',
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Calculator size={16} color="white" />
+        </div>
+        <span>🧮 {formatDisplay(display)} đ</span>
+        <Maximize2 size={14} style={{ opacity: 0.8 }} />
+      </div>
+    );
+  }
+
+  // Floating Mini Panel vs Backdrop Modal
+  const isFloating = mode === 'floating';
+
+  const containerStyle: React.CSSProperties = isFloating
+    ? {
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 9995,
+        width: '350px'
+      }
+    : {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(8px)'
+      };
+
+  const innerStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: isFloating ? '350px' : '395px',
+    borderRadius: '24px',
+    background: 'linear-gradient(145deg, #1e293b, #0f172a)',
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 0 0 2px rgba(51, 65, 85, 0.8)',
+    padding: '18px 20px',
+    color: '#f8fafc',
+    boxSizing: 'border-box',
+    userSelect: 'none'
+  };
+
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(15, 23, 42, 0.75)',
-      backdropFilter: 'blur(8px)',
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '395px',
-        margin: '16px',
-        borderRadius: '24px',
-        background: 'linear-gradient(145deg, #1e293b, #0f172a)',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 0 0 2px rgba(51, 65, 85, 0.8)',
-        padding: '22px',
-        color: '#f8fafc',
-        boxSizing: 'border-box',
-        userSelect: 'none'
-      }}>
+    <div style={containerStyle}>
+      <div style={innerStyle}>
         {/* Header Bar */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '16px',
-          paddingBottom: '10px',
+          marginBottom: '14px',
+          paddingBottom: '8px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
               background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 4px 8px rgba(37, 99, 235, 0.4)'
             }}>
-              <Calculator size={18} color="white" />
+              <Calculator size={15} color="white" />
             </div>
             <div>
-              <div style={{ fontWeight: '800', fontSize: '0.95rem', letterSpacing: '0.5px' }}>
-                MÁY TÍNH 3D
+              <div style={{ fontWeight: '800', fontSize: '0.88rem', letterSpacing: '0.5px', color: '#f8fafc' }}>
+                MÁY TÍNH MINI 3D
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                Tính toán tài chính Quỹ TDP / Phường
+              <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                Trực tiếp trên trang
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              border: 'none',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              color: '#cbd5e1',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.color = 'white'; }}
-            onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.color = '#cbd5e1'; }}
-          >
-            <X size={16} />
-          </button>
+
+          {/* Action Toolbar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {/* Toggle Floating vs Modal */}
+            <button
+              type="button"
+              onClick={() => setMode(m => m === 'floating' ? 'modal' : 'floating')}
+              title={isFloating ? 'Phóng to thành Hộp thoại ở giữa màn hình' : 'Thu nhỏ thành Máy tính mini góc màn hình'}
+              style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                color: '#cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              {isFloating ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+            </button>
+
+            {/* Minimize to Pill */}
+            <button
+              type="button"
+              onClick={() => setIsMinimized(true)}
+              title="Thu gọn thành nút bấm tròn ở góc màn hình"
+              style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                color: '#cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <Minus size={14} />
+            </button>
+
+            {/* Close */}
+            <button
+              type="button"
+              onClick={onClose}
+              title="Tắt máy tính"
+              style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                color: '#cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#ef4444'; e.currentTarget.style.color = 'white'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'; e.currentTarget.style.color = '#cbd5e1'; }}
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
 
         {/* 3D LED LCD Screen */}
         <div style={{
-          borderRadius: '16px',
+          borderRadius: '14px',
           background: 'linear-gradient(180deg, #022c22 0%, #064e3b 100%)',
           boxShadow: 'inset 0 4px 8px rgba(0, 0, 0, 0.6), inset 0 -2px 4px rgba(255, 255, 255, 0.05), 0 0 0 1px #047857',
-          padding: '14px 16px',
-          marginBottom: '16px',
+          padding: '12px 14px',
+          marginBottom: '12px',
           textAlign: 'right',
           overflow: 'hidden'
         }}>
           <div style={{
-            fontSize: '0.8rem',
+            fontSize: '0.75rem',
             color: '#6ee7b7',
-            height: '18px',
+            height: '16px',
             fontFamily: 'monospace',
             letterSpacing: '1px',
             overflow: 'hidden',
@@ -319,7 +425,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             {equation || '\u00A0'}
           </div>
           <div style={{
-            fontSize: display.length > 10 ? '1.5rem' : '2.1rem',
+            fontSize: display.length > 10 ? '1.35rem' : '1.85rem',
             fontWeight: '900',
             color: '#34d399',
             fontFamily: '"Courier New", Courier, monospace',
@@ -330,18 +436,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap'
           }}>
-            {formatDisplay(display)} <span style={{ fontSize: '0.9rem', color: '#a7f3d0' }}>đ</span>
+            {formatDisplay(display)} <span style={{ fontSize: '0.85rem', color: '#a7f3d0' }}>đ</span>
           </div>
 
           {wordsRepresentation && (
             <div style={{
-              fontSize: '0.72rem',
+              fontSize: '0.7rem',
               color: '#d1fae5',
               fontStyle: 'italic',
-              marginTop: '4px',
+              marginTop: '3px',
               textAlign: 'left',
               borderTop: '1px dashed rgba(52, 211, 153, 0.3)',
-              paddingTop: '4px',
+              paddingTop: '3px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
@@ -355,8 +461,8 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(6, 1fr)',
-          gap: '6px',
-          marginBottom: '14px'
+          gap: '5px',
+          marginBottom: '12px'
         }}>
           {[
             { label: '+10k', val: 10000 },
@@ -371,25 +477,25 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               type="button"
               onClick={() => handleQuickAddVnd(btn.val)}
               style={{
-                padding: '6px 2px',
-                borderRadius: '8px',
+                padding: '5px 1px',
+                borderRadius: '6px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #1e3a8a, #1d4ed8)',
-                boxShadow: '0 3px 0 #0f172a, 0 3px 6px rgba(0, 0, 0, 0.3)',
+                boxShadow: '0 2px 0 #0f172a, 0 2px 4px rgba(0, 0, 0, 0.3)',
                 color: '#eff6ff',
                 fontWeight: '800',
-                fontSize: '0.72rem',
+                fontSize: '0.68rem',
                 cursor: 'pointer',
                 transition: 'all 0.1s ease',
                 textShadow: '0 1px 2px rgba(0,0,0,0.5)'
               }}
               onMouseDown={(e) => {
-                e.currentTarget.style.transform = 'translateY(2px)';
+                e.currentTarget.style.transform = 'translateY(1px)';
                 e.currentTarget.style.boxShadow = '0 1px 0 #0f172a';
               }}
               onMouseUp={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 3px 0 #0f172a, 0 3px 6px rgba(0, 0, 0, 0.3)';
+                e.currentTarget.style.boxShadow = '0 2px 0 #0f172a, 0 2px 4px rgba(0, 0, 0, 0.3)';
               }}
             >
               {btn.label}
@@ -401,26 +507,26 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '10px',
-          marginBottom: '16px'
+          gap: '8px',
+          marginBottom: '12px'
         }}>
           {/* Row 1 */}
           <button
             type="button"
             onClick={handleClear}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #ef4444, #dc2626)',
-              boxShadow: '0 5px 0 #991b1b, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #991b1b, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1rem',
+              fontSize: '0.9rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #991b1b'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #991b1b, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #991b1b'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #991b1b, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             AC
           </button>
@@ -428,40 +534,40 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={handleBackspace}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #f59e0b, #d97706)',
-              boxShadow: '0 5px 0 #b45309, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #b45309, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1rem',
+              fontSize: '0.9rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #b45309'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #b45309, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #b45309'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #b45309, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
-            <Delete size={18} />
+            <Delete size={16} />
           </button>
           <button
             type="button"
             onClick={handlePercent}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #334155, #1e293b)',
-              boxShadow: '0 5px 0 #0f172a, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #0f172a, 0 4px 8px rgba(0,0,0,0.4)',
               color: '#94a3b8',
               fontWeight: '900',
-              fontSize: '1.05rem',
+              fontSize: '0.95rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #0f172a'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #0f172a, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #0f172a'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #0f172a, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             %
           </button>
@@ -469,18 +575,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('÷')}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
-              boxShadow: '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             ÷
           </button>
@@ -492,18 +598,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               type="button"
               onClick={() => handleDigit(num)}
               style={{
-                padding: '12px 0',
-                borderRadius: '12px',
+                padding: '10px 0',
+                borderRadius: '10px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #475569, #334155)',
-                boxShadow: '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)',
+                boxShadow: '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)',
                 color: 'white',
                 fontWeight: '800',
-                fontSize: '1.2rem',
+                fontSize: '1.1rem',
                 cursor: 'pointer'
               }}
-              onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
-              onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)'; }}
+              onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
+              onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)'; }}
             >
               {num}
             </button>
@@ -512,18 +618,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('×')}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
-              boxShadow: '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             ×
           </button>
@@ -535,18 +641,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               type="button"
               onClick={() => handleDigit(num)}
               style={{
-                padding: '12px 0',
-                borderRadius: '12px',
+                padding: '10px 0',
+                borderRadius: '10px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #475569, #334155)',
-                boxShadow: '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)',
+                boxShadow: '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)',
                 color: 'white',
                 fontWeight: '800',
-                fontSize: '1.2rem',
+                fontSize: '1.1rem',
                 cursor: 'pointer'
               }}
-              onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
-              onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)'; }}
+              onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
+              onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)'; }}
             >
               {num}
             </button>
@@ -555,18 +661,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('-')}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
-              boxShadow: '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1.3rem',
+              fontSize: '1.2rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             -
           </button>
@@ -578,18 +684,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               type="button"
               onClick={() => handleDigit(num)}
               style={{
-                padding: '12px 0',
-                borderRadius: '12px',
+                padding: '10px 0',
+                borderRadius: '10px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #475569, #334155)',
-                boxShadow: '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)',
+                boxShadow: '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)',
                 color: 'white',
                 fontWeight: '800',
-                fontSize: '1.2rem',
+                fontSize: '1.1rem',
                 cursor: 'pointer'
               }}
-              onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
-              onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)'; }}
+              onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
+              onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)'; }}
             >
               {num}
             </button>
@@ -598,18 +704,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleOperator('+')}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #8b5cf6, #7c3aed)',
-              boxShadow: '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #5b21b6, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #5b21b6'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #5b21b6, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             +
           </button>
@@ -619,18 +725,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleDigit('0')}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #475569, #334155)',
-              boxShadow: '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '800',
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             0
           </button>
@@ -638,18 +744,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={() => handleDigit('000')}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #475569, #334155)',
-              boxShadow: '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '800',
-              fontSize: '0.95rem',
+              fontSize: '0.88rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             000
           </button>
@@ -657,18 +763,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={handleDecimal}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #475569, #334155)',
-              boxShadow: '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #1e293b, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #1e293b'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #1e293b, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             ,
           </button>
@@ -676,46 +782,46 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
             type="button"
             onClick={handleEqual}
             style={{
-              padding: '12px 0',
-              borderRadius: '12px',
+              padding: '10px 0',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #10b981, #059669)',
-              boxShadow: '0 5px 0 #047857, 0 5px 10px rgba(0,0,0,0.4)',
+              boxShadow: '0 4px 0 #047857, 0 4px 8px rgba(0,0,0,0.4)',
               color: 'white',
               fontWeight: '900',
-              fontSize: '1.3rem',
+              fontSize: '1.2rem',
               cursor: 'pointer'
             }}
-            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(3px)'; e.currentTarget.style.boxShadow = '0 2px 0 #047857'; }}
-            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 5px 0 #047857, 0 5px 10px rgba(0,0,0,0.4)'; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(2px)'; e.currentTarget.style.boxShadow = '0 2px 0 #047857'; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 0 #047857, 0 4px 8px rgba(0,0,0,0.4)'; }}
           >
             =
           </button>
         </div>
 
         {/* Footer Action buttons: Copy / Close */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           <button
             type="button"
             onClick={handleCopyResult}
             style={{
               flex: 1,
-              padding: '10px',
-              borderRadius: '12px',
+              padding: '8px',
+              borderRadius: '10px',
               border: 'none',
               background: 'linear-gradient(145deg, #334155, #1e293b)',
               color: '#f8fafc',
               fontWeight: '700',
-              fontSize: '0.85rem',
+              fontSize: '0.8rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
+              boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
             }}
           >
-            {copied ? <Check size={16} color="#34d399" /> : <Copy size={16} />}
+            {copied ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
             {copied ? 'Đã sao chép!' : 'Sao chép kết quả'}
           </button>
 
@@ -725,22 +831,22 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
               onClick={handleUseResult}
               style={{
                 flex: 1,
-                padding: '10px',
-                borderRadius: '12px',
+                padding: '8px',
+                borderRadius: '10px',
                 border: 'none',
                 background: 'linear-gradient(145deg, #2563eb, #1d4ed8)',
                 color: 'white',
                 fontWeight: '700',
-                fontSize: '0.85rem',
+                fontSize: '0.8rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                boxShadow: '0 3px 6px rgba(37,99,235,0.4)'
+                boxShadow: '0 2px 4px rgba(37,99,235,0.4)'
               }}
             >
-              <Check size={16} /> Sử dụng số này
+              <Check size={14} /> Sử dụng số này
             </button>
           )}
         </div>
