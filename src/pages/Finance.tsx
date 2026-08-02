@@ -18,8 +18,10 @@ import {
   Check,
   BookOpen,
   Users,
-  HeartHandshake
+  HeartHandshake,
+  Calculator
 } from 'lucide-react';
+import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
@@ -124,6 +126,7 @@ const Finance = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
   const [printModalRecord, setPrintModalRecord] = useState<FinancialRecord | null>(null);
+  const [show3DCalculator, setShow3DCalculator] = useState(false);
 
   const officialsConfig = useMemo(() => {
     const tdpName = localStorage.getItem('tdp_name') || localStorage.getItem('unit_name') || 'TỔ DÂN PHỐ QUẢNG GIAO';
@@ -4930,6 +4933,32 @@ const Finance = () => {
                 )}
               </div>
 
+              <button
+                type="button"
+                onClick={() => setShow3DCalculator(true)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                  color: 'white',
+                  fontWeight: '700',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 6px rgba(2, 132, 199, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  transition: 'all 0.15s ease',
+                  minHeight: '36px'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                title="Mở máy tính 3D cầm tay để cộng trừ nhân chia số tiền"
+              >
+                <Calculator size={16} /> Máy tính 3D
+              </button>
+
               {canPrintExport && (
                 <>
                   <button 
@@ -5805,6 +5834,10 @@ const Finance = () => {
           </div>
         </div>
       )}
+      <Calculator3DModal
+        isOpen={show3DCalculator}
+        onClose={() => setShow3DCalculator(false)}
+      />
     </div>
   );
 };

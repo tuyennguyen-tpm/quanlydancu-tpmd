@@ -18,8 +18,10 @@ import {
   Home,
   Database,
   PlusCircle,
-  UserPlus
+  UserPlus,
+  Calculator
 } from 'lucide-react';
+import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
@@ -182,6 +184,7 @@ const WardFunds = () => {
   const [contribInputs, setContribInputs] = useState<Record<string, { expected: string; actual: string; date: string }>>({});
   const [showDataMenu, setShowDataMenu] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [show3DCalculator, setShow3DCalculator] = useState(false);
   const [note, setNote] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list'); // Chế độ xem danh sách hay gom theo hộ
 
@@ -7207,6 +7210,32 @@ const WardFunds = () => {
               </div>
             )}
 
+            {/* 3D Calculator Button */}
+            <button
+              type="button"
+              onClick={() => setShow3DCalculator(true)}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+                color: 'white',
+                fontWeight: '700',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 4px 6px rgba(2, 132, 199, 0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+              title="Mở máy tính 3D cầm tay để cộng trừ nhân chia số tiền thu quỹ"
+            >
+              <Calculator size={16} /> Máy tính 3D
+            </button>
+
             {/* Print/Export Actions Dropdown */}
             {canPrintExport && (
               <div style={{ position: 'relative' }}>
@@ -8477,6 +8506,11 @@ const WardFunds = () => {
           </div>
         </div>
       )}
+
+      <Calculator3DModal
+        isOpen={show3DCalculator}
+        onClose={() => setShow3DCalculator(false)}
+      />
 
       <input
         type="file"
