@@ -3598,7 +3598,7 @@ const WardFunds = () => {
       <body>
         <div class="print-toolbar">
           <button class="toolbar-btn" id="btn-calc" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
-          <button class="toolbar-btn btn-print" onclick="window.print()">🖨️ In ngay</button>
+          <button class="toolbar-btn btn-print" id="btn-save-and-print">💾🖨️ Lưu &amp; In</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
           <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Đặt lại mẫu phiếu in gốc</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
@@ -3907,11 +3907,86 @@ const WardFunds = () => {
             recalculateReceiptTotals();
           } catch (e) {}
 
-          btnSave.addEventListener('click', function() {
+          function safeSaveStorage(key, val) {
+            let saved = false;
+            try { localStorage.setItem(key, val); } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(key, val);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  customs[key] = val;
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+                saved = true;
+              }
+            } catch (err) {}
+            try {
+              if (window.opener && window.opener.postMessage) {
+                window.opener.postMessage({ type: 'RECEIPT_SAVED', key: key, html: val }, '*');
+              }
+            } catch (err) {}
+            return saved;
+          }
+
+          function safeGetStorage(key) {
+            try { const val = localStorage.getItem(key); if (val) return val; } catch (e) {}
+            try { if (window.opener && window.opener.localStorage) return window.opener.localStorage.getItem(key); } catch (err) {}
+            return null;
+          }
+
+          function safeRemoveStorage(key) {
+            try { localStorage.removeItem(key); } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.removeItem(key);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  delete customs[key];
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+              }
+            } catch (err) {}
+          }
+
+          function show2DToast(msg, type = 'success') {
+            let toast = document.getElementById('custom-2d-toast');
+            if (!toast) {
+              toast = document.createElement('div');
+              toast.id = 'custom-2d-toast';
+              toast.className = 'no-print';
+              toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;padding:12px 20px;border-radius:10px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);display:flex;align-items:center;gap:10px;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);transform:translateY(-20px) scale(0.95);opacity:0;';
+              document.body.appendChild(toast);
+            }
+            const isSuccess = type === 'success';
+            toast.style.background = isSuccess ? '#ecfdf5' : '#fffbe8';
+            toast.style.color = isSuccess ? '#065f46' : '#92400e';
+            toast.style.border = isSuccess ? '1.5px solid #10b981' : '1.5px solid #f59e0b';
+            toast.innerHTML = isSuccess ? '<span style="font-size:16px;">✅</span> <span>' + msg + '</span>' : '<span style="font-size:16px;">ℹ️</span> <span>' + msg + '</span>';
+            requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0) scale(1)'; });
+            if (toast.timeoutId) clearTimeout(toast.timeoutId);
+            toast.timeoutId = setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(-20px) scale(0.95)'; }, 2800);
+          }
+
+          var btnSaveAndPrint = document.getElementById('btn-save-and-print');
+          if (btnSaveAndPrint) {
+            btnSaveAndPrint.addEventListener('click', async function() {
+              safeSaveStorage(SAVE_KEY, editor.innerHTML);
+              try {
+                if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                  await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+                }
+              } catch (err) {}
+              show2DToast('✅ Đã lưu phiếu thu. Đang mở hộp thoại in...', 'success');
+              setTimeout(function() { window.print(); }, 400);
+            });
+          }
+
+          btnSave.addEventListener('click', async function() {
             safeSaveStorage(SAVE_KEY, editor.innerHTML);
             try {
               if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
               }
             } catch (err) {}
             const notice = document.getElementById('saved-notice');
@@ -3920,19 +3995,24 @@ const WardFunds = () => {
               notice.style.background = '#dcfce7';
               notice.style.border = '1.5px solid #16a34a';
               notice.style.color = '#14532d';
-              notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của cá nhân này đã được lưu lại cho các lần mở tiếp theo.';
+              notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của cá nhân này đã được lưu lại.';
             }
             show2DToast('Đã lưu bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
           });
 
           btnReset.addEventListener('click', function() {
             if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
-              localStorage.removeItem(SAVE_KEY);
+              safeRemoveStorage(SAVE_KEY);
+              try {
+                if (window.opener && window.opener.db && window.opener.db.deleteReceiptCustomization) {
+                  window.opener.db.deleteReceiptCustomization(SAVE_KEY);
+                }
+              } catch (err) {}
               editor.innerHTML = freshHtml;
               recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
               if (notice) notice.style.display = 'none';
-              alert('Đã khôi phục về dữ liệu gốc từ hệ thống!');
+              show2DToast('Đã khôi phục về dữ liệu gốc từ hệ thống!', 'success');
             }
           });
 
