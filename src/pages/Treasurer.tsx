@@ -12,7 +12,8 @@ import {
   TrendingDown,
   Wallet,
   RefreshCw,
-  Calculator
+  Calculator,
+  Edit3
 } from 'lucide-react';
 import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID } from '../services/db';
@@ -114,6 +115,7 @@ export default function Treasurer() {
 
   // Print Voucher Modal State
   const [printModalNote, setPrintModalNote] = useState<TreasurerManualNote | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [printLienCount, setPrintLienCount] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('treasurer_print_lien_count');
@@ -182,30 +184,89 @@ export default function Treasurer() {
         return;
       }
     }
-    const newNote: TreasurerManualNote = {
-      id: generateUUID(),
-      type: entryType,
-      payer: incPayer.trim() || (isInc ? 'Người nộp tự do' : 'Người nhận tiền'),
-      category: incCategory.trim() || (isInc ? 'Thu khác' : 'Chi khác'),
-      amount: amt,
-      method: incMethod,
-      date: incDate,
-      note: incNote.trim(),
-      created_at: new Date().toISOString()
-    };
 
-    const updated = [newNote, ...manualNotes];
-    setManualNotes(updated);
-    await db.saveTreasurerManualNotes(updated);
+    if (editingNoteId) {
+      const updated = manualNotes.map(note => {
+        if (note.id === editingNoteId) {
+          return {
+            ...note,
+            type: entryType,
+            payer: incPayer.trim() || (isInc ? 'Người nộp tự do' : 'Người nhận tiền'),
+            category: incCategory.trim() || (isInc ? 'Thu khác' : 'Chi khác'),
+            amount: amt,
+            method: incMethod,
+            date: incDate,
+            note: incNote.trim()
+          };
+        }
+        return note;
+      });
+      setManualNotes(updated);
+      await db.saveTreasurerManualNotes(updated);
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { 
+          message: `✅ Đã cập nhật ${isInc ? 'Phiếu Thu' : 'Phiếu Chi'} thành công!`, 
+          type: 'success' 
+        }
+      }));
+      setEditingNoteId(null);
+    } else {
+      const newNote: TreasurerManualNote = {
+        id: generateUUID(),
+        type: entryType,
+        payer: incPayer.trim() || (isInc ? 'Người nộp tự do' : 'Người nhận tiền'),
+        category: incCategory.trim() || (isInc ? 'Thu khác' : 'Chi khác'),
+        amount: amt,
+        method: incMethod,
+        date: incDate,
+        note: incNote.trim(),
+        created_at: new Date().toISOString()
+      };
 
-    window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: { 
-        message: `✅ Đã lập ${isInc ? 'Phiếu Thu' : 'Phiếu Chi'} Sổ tay thành công & Đồng bộ liên máy!`, 
-        type: 'success' 
-      }
-    }));
+      const updated = [newNote, ...manualNotes];
+      setManualNotes(updated);
+      await db.saveTreasurerManualNotes(updated);
+
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { 
+          message: `✅ Đã lập ${isInc ? 'Phiếu Thu' : 'Phiếu Chi'} Sổ tay thành công & Đồng bộ liên máy!`, 
+          type: 'success' 
+        }
+      }));
+    }
 
     // Reset form
+    setIncPayer('');
+    setIncAmount('');
+    setIncNote('');
+  };
+
+  // Edit Manual Entry (Only Admin allowed)
+  const handleStartEditNote = (note: TreasurerManualNote) => {
+    if (!isAdmin) {
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message: '🔒 Quyền bị hạn chế: Chỉ Admin / Quản trị viên mới có quyền sửa chứng từ!', type: 'warning' }
+      }));
+      alert('🔒 Quyền bị hạn chế:\n\nChỉ có Quản trị hệ thống (Admin) mới được phép chỉnh sửa các chứng từ trong Sổ tay thủ quỹ.');
+      return;
+    }
+    setEditingNoteId(note.id);
+    setEntryType((note.type || 'income') as 'income' | 'expense');
+    setIncPayer(note.payer || '');
+    setIncCategory(note.category || '');
+    setIncAmount(formatNumberWithDots(note.amount.toString()));
+    setIncMethod(note.method || 'Tiền mặt');
+    setIncDate(note.date || new Date().toISOString().slice(0, 10));
+    setIncNote(note.note || '');
+
+    const formElement = document.getElementById('treasurer-entry-form');
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNoteId(null);
     setIncPayer('');
     setIncAmount('');
     setIncNote('');
@@ -514,18 +575,21 @@ export default function Treasurer() {
         </div>
 
         {/* FORM NHẬP THU / CHI THỦ CÔNG */}
-        <div style={{
-          background: entryType === 'income' ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%)',
-          border: entryType === 'income' ? '1.5px solid #86efac' : '1.5px solid #feb2b2',
-          borderRadius: '14px',
-          padding: '20px 22px',
-          marginBottom: '24px',
-          boxShadow: entryType === 'income' ? '0 4px 14px rgba(22, 163, 74, 0.08)' : '0 4px 14px rgba(220, 38, 38, 0.08)'
-        }}>
+        <div
+          id="treasurer-entry-form"
+          style={{
+            background: editingNoteId ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)' : (entryType === 'income' ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%)'),
+            border: editingNoteId ? '1.5px solid #93c5fd' : (entryType === 'income' ? '1.5px solid #86efac' : '1.5px solid #feb2b2'),
+            borderRadius: '14px',
+            padding: '20px 22px',
+            marginBottom: '24px',
+            boxShadow: editingNoteId ? '0 4px 14px rgba(37, 99, 235, 0.12)' : (entryType === 'income' ? '0 4px 14px rgba(22, 163, 74, 0.08)' : '0 4px 14px rgba(220, 38, 38, 0.08)')
+          }}
+        >
           {/* Voucher Type Selector Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ fontWeight: '800', fontSize: '0.95rem', color: entryType === 'income' ? '#15803d' : '#9b2c2c', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>📒 LẬP PHIẾU THU / PHIẾU CHI THỦ CÔNG (SỔ TAY NGOÀI LỀ)</span>
+            <div style={{ fontWeight: '800', fontSize: '0.95rem', color: editingNoteId ? '#1d4ed8' : (entryType === 'income' ? '#15803d' : '#9b2c2c'), display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>{editingNoteId ? '✏️ CHỈNH SỬA PHIẾU THU / PHIẾU CHI (QUYỀN ADMIN)' : '📒 LẬP PHIẾU THU / PHIẾU CHI THỦ CÔNG (SỔ TAY NGOÀI LỀ)'}</span>
             </div>
             
             <div style={{ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.7)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.1)' }}>
@@ -663,24 +727,66 @@ export default function Treasurer() {
             </div>
 
             <div>
-              <button
-                type="button"
-                onClick={handleSaveManualNote}
-                className="btn btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  background: entryType === 'income' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                  border: 'none',
-                  fontWeight: '700',
-                  fontSize: '0.88rem',
-                  boxShadow: entryType === 'income' ? '0 4px 10px rgba(22, 163, 74, 0.3)' : '0 4px 10px rgba(220, 38, 38, 0.3)',
-                  height: '40px'
-                }}
-              >
-                ➕ {entryType === 'income' ? 'Ghi Phiếu Thu' : 'Ghi Phiếu Chi'}
-              </button>
+              {editingNoteId ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleSaveManualNote}
+                    className="btn btn-primary"
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      border: 'none',
+                      fontWeight: '700',
+                      fontSize: '0.88rem',
+                      boxShadow: '0 4px 10px rgba(37, 99, 235, 0.3)',
+                      height: '40px',
+                      color: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    💾 Cập Nhật Phiếu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      fontWeight: '700',
+                      fontSize: '0.85rem',
+                      color: '#64748b',
+                      height: '40px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ❌ Hủy
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSaveManualNote}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    background: entryType === 'income' ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                    border: 'none',
+                    fontWeight: '700',
+                    fontSize: '0.88rem',
+                    boxShadow: entryType === 'income' ? '0 4px 10px rgba(22, 163, 74, 0.3)' : '0 4px 10px rgba(220, 38, 38, 0.3)',
+                    height: '40px'
+                  }}
+                >
+                  ➕ {entryType === 'income' ? 'Ghi Phiếu Thu' : 'Ghi Phiếu Chi'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -898,19 +1004,43 @@ export default function Treasurer() {
                             <Printer size={14} /> In
                           </button>
                           {canEditOrDelete ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteManualNote(entry.id)}
-                              title="Xóa chứng từ (Quyền Quản trị viên / Admin)"
-                              style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditNote(entry)}
+                                title="Sửa chứng từ này (Quyền Admin)"
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #bfdbfe',
+                                  background: '#eff6ff',
+                                  color: '#2563eb',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '700'
+                                }}
+                              >
+                                <Edit3 size={14} /> Sửa
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteManualNote(entry.id)}
+                                title="Xóa chứng từ (Quyền Admin)"
+                                style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
                           ) : (
                             <button
                               type="button"
-                              onClick={() => handleDeleteManualNote(entry.id)}
-                              title="🔒 Tổ trưởng và Thủ quỹ không có quyền xóa chứng từ của Thủ quỹ (Chỉ Admin)"
+                              onClick={() => {
+                                alert('🔒 Quyền bị hạn chế:\n\nTổ trưởng và Thủ quỹ chỉ được lập & in phiếu.\nChỉ có Quản trị hệ thống (Admin) mới được phép chỉnh sửa hoặc xóa các chứng từ trong Sổ tay thủ quỹ.');
+                              }}
+                              title="🔒 Tổ trưởng và Thủ quỹ không có quyền sửa/xóa chứng từ của Thủ quỹ (Chỉ Admin)"
                               style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#94a3b8', cursor: 'pointer' }}
                             >
                               🔒
