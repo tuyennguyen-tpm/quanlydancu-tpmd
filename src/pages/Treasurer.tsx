@@ -938,7 +938,7 @@ export default function Treasurer() {
           <div style={{
             background: 'white',
             borderRadius: '16px',
-            maxWidth: '750px',
+            maxWidth: '820px',
             width: '100%',
             maxHeight: '90vh',
             overflowY: 'auto',
@@ -948,33 +948,59 @@ export default function Treasurer() {
           }}>
             {/* Modal Control Header (Hidden when printing) */}
             <div className="no-print" style={{
-              padding: '16px 24px',
+              padding: '16px 20px',
               borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
               background: '#f8fafc',
               borderTopLeftRadius: '16px',
-              borderTopRightRadius: '16px'
+              borderTopRightRadius: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
             }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Printer size={20} color={printModalNote.type === 'expense' ? '#dc2626' : '#16a34a'} />
-                Mẫu In {printModalNote.type === 'expense' ? 'PHIẾU CHI' : 'PHIẾU THU'} (Sổ tay ngoài lề)
-              </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Số liên in:</span>
+              {/* Top Row: Title & Close Button */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                  <Printer size={22} color={printModalNote.type === 'expense' ? '#dc2626' : '#16a34a'} />
+                  Mẫu In {printModalNote.type === 'expense' ? 'PHIẾU CHI' : 'PHIẾU THU'}
+                  <span style={{ fontSize: '0.8rem', fontWeight: '500', color: '#475569', background: '#e2e8f0', padding: '2px 10px', borderRadius: '12px' }}>
+                    Sổ tay ngoài lề
+                  </span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setPrintModalNote(null)}
+                  style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  title="Đóng"
+                >
+                  <X size={18} color="#64748b" />
+                </button>
+              </div>
+
+              {/* Bottom Row: Actions Toolbar */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                background: '#ffffff',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>📋 Số liên in:</span>
                   <select
                     value={printLienCount}
                     onChange={(e) => handleLienCountChange(parseInt(e.target.value, 10))}
                     style={{
-                      padding: '6px 12px',
+                      padding: '7px 12px',
                       borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.85rem',
+                      border: '1.5px solid #0284c7',
+                      fontSize: '0.88rem',
                       fontWeight: '700',
                       color: '#0284c7',
-                      background: '#ffffff',
+                      background: '#f0f9ff',
                       cursor: 'pointer',
                       outline: 'none'
                     }}
@@ -986,51 +1012,52 @@ export default function Treasurer() {
                   </select>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShow3DCalculator(true)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: '#0284c7',
-                    border: 'none',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                  title="Mở máy tính 3D cầm tay để tính số tiền"
-                >
-                  <Calculator size={16} /> Máy tính 3D
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="btn btn-primary"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: printModalNote.type === 'expense' ? '#dc2626' : '#16a34a',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    color: 'white',
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Printer size={16} /> In Phiếu Ngay ({printLienCount} liên)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrintModalNote(null)}
-                  style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', background: 'white', cursor: 'pointer' }}
-                >
-                  <X size={18} color="#64748b" />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShow3DCalculator(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#0284c7',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontWeight: '700',
+                      fontSize: '0.88rem',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer'
+                    }}
+                    title="Mở máy tính 3D cầm tay để tính số tiền"
+                  >
+                    <Calculator size={16} /> Máy tính 3D
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="btn btn-primary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: printModalNote.type === 'expense' ? '#dc2626' : '#16a34a',
+                      border: 'none',
+                      padding: '8px 18px',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontWeight: '700',
+                      fontSize: '0.88rem',
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    <Printer size={16} /> In Phiếu Ngay ({printLienCount} liên)
+                  </button>
+                </div>
               </div>
             </div>
 
