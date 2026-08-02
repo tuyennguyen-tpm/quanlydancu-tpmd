@@ -5619,6 +5619,25 @@ const Finance = () => {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
+                  onClick={() => setShow3DCalculator(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#0284c7',
+                    border: 'none',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                  title="Mở máy tính 3D cầm tay để tính số tiền"
+                >
+                  <Calculator size={16} /> Máy tính 3D
+                </button>
+                <button
+                  type="button"
                   onClick={() => window.print()}
                   className="btn btn-primary"
                   style={{

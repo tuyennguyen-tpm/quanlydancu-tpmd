@@ -22,6 +22,52 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [mode, setMode] = useState<'floating' | 'modal'>(initialMode);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const dragRef = React.useRef<{ startX: number; startY: number; initialX: number; initialY: number }>({
+    startX: 0, startY: 0, initialX: 0, initialY: 0
+  });
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON' || target.closest('button')) return;
+
+    setIsDragging(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentX = position ? position.x : rect.left;
+    const currentY = position ? position.y : rect.top;
+
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: currentX,
+      initialY: currentY
+    };
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragRef.current.startX;
+      const deltaY = e.clientY - dragRef.current.startY;
+      const newX = Math.max(10, Math.min(window.innerWidth - 250, dragRef.current.initialX + deltaX));
+      const newY = Math.max(10, Math.min(window.innerHeight - 250, dragRef.current.initialY + deltaY));
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   // Formatting helpers
   const cleanNumberStr = (str: string): number => {
@@ -227,9 +273,11 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
         onClick={() => setIsMinimized(false)}
         style={{
           position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          zIndex: 9999,
+          left: position ? `${position.x}px` : undefined,
+          top: position ? `${position.y}px` : undefined,
+          bottom: position ? undefined : '20px',
+          right: position ? undefined : '20px',
+          zIndex: 999999,
           padding: '6px 14px',
           borderRadius: '20px',
           background: 'linear-gradient(145deg, #0284c7, #0369a1)',
@@ -241,7 +289,7 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          transition: isDragging ? 'none' : 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
         }}
         title="Bấm để mở bung máy tính 3D mini"
         onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.06)'; }}
@@ -270,15 +318,18 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
   const containerStyle: React.CSSProperties = isFloating
     ? {
         position: 'fixed',
-        bottom: '16px',
-        right: '16px',
-        zIndex: 9995,
-        width: '285px'
+        left: position ? `${position.x}px` : undefined,
+        top: position ? `${position.y}px` : undefined,
+        bottom: position ? undefined : '16px',
+        right: position ? undefined : '16px',
+        zIndex: 999999,
+        width: '280px',
+        touchAction: 'none'
       }
     : {
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 999999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -301,15 +352,20 @@ export const Calculator3DModal: React.FC<Calculator3DModalProps> = ({
   return (
     <div style={containerStyle}>
       <div style={innerStyle}>
-        {/* Header Bar */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-          paddingBottom: '6px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-        }}>
+        {/* Header Bar (Draggable) */}
+        <div
+          onMouseDown={handleDragStart}
+          title="Bấm giữ chuột tại đây để di chuyển máy tính tự do"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '8px',
+            paddingBottom: '6px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            cursor: isDragging ? 'grabbing' : 'grab'
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
               width: '28px',
