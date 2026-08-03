@@ -416,9 +416,10 @@ const HealthCare: React.FC = () => {
             (matchedDbResident && (h.id === matchedDbResident.household_id || h.household_number === matchedDbResident.household_id))
           );
 
-          const finalGroup = matchedDbHousehold?.group_name || rawAddress || `Tổ/Cụm ${sheetName}`;
+          const finalGroup = (matchedDbHousehold as any)?.self_management_group || matchedDbHousehold?.group_name || rawAddress || `Tổ/Cụm ${sheetName}`;
           const finalAddress = `${finalGroup}, TDP Quảng Giao`;
           const householdNo = matchedDbHousehold?.household_number || matchedDbResident?.household_id || `HK-${sheetName}`;
+
 
           // Strict Matching Strategy
           const matchedIdx = currentRecords.findIndex(r => r.resident_name.toLowerCase().trim() === normName || (rawBhyt && r.bhyt_number === rawBhyt));
