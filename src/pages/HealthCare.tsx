@@ -495,21 +495,20 @@ const HealthCare: React.FC = () => {
         </div>
       </div>
 
-      {/* NAVIGATION TABS */}
+      {/* 3D NAVIGATION TABS SYSTEM */}
       <div style={{ 
         display: 'flex', 
-        gap: '8px', 
-        borderBottom: '2px solid var(--border-color, #e2e8f0)', 
-        marginBottom: '24px',
+        gap: '12px', 
+        marginBottom: '28px',
         overflowX: 'auto',
-        paddingBottom: '4px'
+        padding: '8px 6px 14px 6px'
       }}>
         {[
-          { id: 'bhyt', label: 'Bảo hiểm Y tế (BHYT)', icon: ShieldCheck, count: bhytStats.total },
-          { id: 'chronic', label: 'Bệnh nền & Sức khỏe đặc biệt', icon: Heart, count: chronicStats.withChronicCount },
-          { id: 'prevention', label: 'Tiêm chủng & Dịch bệnh TDP', icon: Syringe, count: vaccinations.length + epidemicReports.length },
-          { id: 'fertility', label: 'Dân số & Thai sản', icon: Baby, count: fertilityRecords.length },
-          { id: 'emergency', label: 'Hotline Y tế & Khẩn cấp', icon: Ambulance, count: emergencyContacts.length }
+          { id: 'bhyt', label: 'Bảo hiểm Y tế (BHYT)', icon: ShieldCheck, count: bhytStats.total, activeGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', activeShadow: 'rgba(16, 185, 129, 0.4)', activeColor: '#10b981' },
+          { id: 'chronic', label: 'Bệnh nền & Sức khỏe đặc biệt', icon: Heart, count: chronicStats.withChronicCount, activeGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', activeShadow: 'rgba(59, 130, 246, 0.4)', activeColor: '#3b82f6' },
+          { id: 'prevention', label: 'Tiêm chủng & Dịch bệnh TDP', icon: Syringe, count: vaccinations.length + epidemicReports.length, activeGradient: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', activeShadow: 'rgba(139, 92, 246, 0.4)', activeColor: '#8b5cf6' },
+          { id: 'fertility', label: 'Dân số & Thai sản', icon: Baby, count: fertilityRecords.length, activeGradient: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)', activeShadow: 'rgba(236, 72, 153, 0.4)', activeColor: '#ec4899' },
+          { id: 'emergency', label: 'Hotline Y tế & Khẩn cấp', icon: Ambulance, count: emergencyContacts.length, activeGradient: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)', activeShadow: 'rgba(239, 68, 68, 0.4)', activeColor: '#ef4444' }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -520,30 +519,59 @@ const HealthCare: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '12px 18px',
-                borderRadius: '10px 10px 0 0',
-                border: 'none',
-                borderBottom: isActive ? '3px solid #10b981' : '3px solid transparent',
-                background: isActive ? 'var(--card-bg, #ffffff)' : 'transparent',
-                color: isActive ? '#10b981' : 'var(--text-muted, #64748b)',
-                fontWeight: isActive ? 700 : 500,
-                fontSize: '0.95rem',
+                gap: '10px',
+                padding: '14px 22px',
+                borderRadius: '16px',
+                border: isActive ? '1px solid rgba(255, 255, 255, 0.6)' : '1px solid var(--border-color, #e2e8f0)',
+                background: isActive ? tab.activeGradient : 'var(--card-bg, #ffffff)',
+                color: isActive ? 'white' : 'var(--text-main, #334155)',
+                fontWeight: isActive ? 800 : 600,
+                fontSize: '0.96rem',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap'
+                transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                whiteSpace: 'nowrap',
+                boxShadow: isActive 
+                  ? `0 10px 25px -4px ${tab.activeShadow}, 0 4px 6px -2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.2)`
+                  : '0 4px 10px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 0 rgba(0,0,0,0.05)',
+                transform: isActive ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.08)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.03)';
+                }
               }}
             >
-              <Icon size={18} />
-              <span>{tab.label}</span>
+              <div style={{
+                background: isActive ? 'rgba(255, 255, 255, 0.22)' : '#f1f5f9',
+                padding: '6px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: isActive ? 'inset 0 1px 2px rgba(0,0,0,0.2)' : 'none'
+              }}>
+                <Icon size={20} color={isActive ? 'white' : tab.activeColor} />
+              </div>
+              <span style={{ textShadow: isActive ? '0 1px 2px rgba(0,0,0,0.2)' : 'none' }}>{tab.label}</span>
               {tab.count !== undefined && (
                 <span style={{ 
-                  background: isActive ? '#10b981' : '#cbd5e1', 
-                  color: 'white', 
-                  fontSize: '0.75rem', 
-                  padding: '2px 8px', 
-                  borderRadius: '12px',
-                  fontWeight: 700
+                  background: isActive ? 'rgba(255, 255, 255, 0.28)' : '#e2e8f0', 
+                  color: isActive ? 'white' : '#475569', 
+                  fontSize: '0.8rem', 
+                  padding: '3px 10px', 
+                  borderRadius: '20px',
+                  fontWeight: 800,
+                  boxShadow: isActive ? 'inset 0 1px 2px rgba(0,0,0,0.15)' : 'none',
+                  border: isActive ? '1px solid rgba(255,255,255,0.4)' : 'none'
                 }}>
                   {tab.count}
                 </span>
@@ -552,6 +580,7 @@ const HealthCare: React.FC = () => {
           );
         })}
       </div>
+
 
       {/* SEARCH AND FILTER BAR FOR TAB 1 & 2 */}
       {(activeTab === 'bhyt' || activeTab === 'chronic') && (
