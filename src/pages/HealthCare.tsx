@@ -305,7 +305,26 @@ const HealthCare: React.FC = () => {
     }>();
 
     filteredHealthRecords.forEach(rec => {
-      const hkKey = rec.household_number || rec.address || 'HK-CHUA_PHAN_HO';
+      let hkKey = rec.household_number || '';
+
+      // Extracted Head Name from note if tagged
+      if (rec.health_status_note) {
+        if (rec.health_status_note.includes('Chủ hộ')) {
+          const match = rec.health_status_note.match(/Chủ hộ\s+([^\n,;(]+)/);
+          if (match && match[1]) hkKey = `HK-${removeAccentsVN(match[1])}`;
+        } else if (rec.health_status_note.includes('Thành viên Hộ ông/bà')) {
+          const match = rec.health_status_note.match(/Thành viên Hộ ông\/bà\s+([^\n,;(]+)/);
+          if (match && match[1]) hkKey = `HK-${removeAccentsVN(match[1])}`;
+        }
+      }
+
+      // If missing or generic sheet index like HK-1, HK-2, HK-Tổ 4
+      if (!hkKey || /^HK-\d+$/.test(hkKey) || hkKey.startsWith('HK-Tổ') || hkKey.startsWith('HK-Cụm')) {
+        const familyName = rec.resident_name ? rec.resident_name.trim().split(' ').slice(0, 2).join(' ') : 'Hộ';
+        const grp = normalizeToOfficialGroup(rec.address);
+        hkKey = `HK-${removeAccentsVN(familyName)}-${removeAccentsVN(grp)}`;
+      }
+
       if (!map.has(hkKey)) {
         let grp = normalizeToOfficialGroup(rec.address);
         map.set(hkKey, {
@@ -326,8 +345,8 @@ const HealthCare: React.FC = () => {
         // Priority 1: Check if any member has note "Chủ hộ [Tên]"
         for (const m of item.members) {
           if (m.health_status_note && m.health_status_note.includes('Chủ hộ')) {
-            const match = m.health_status_note.match(/Chủ hộ\s+([^\n,;]+)/);
-            if (match) {
+            const match = m.health_status_note.match(/Chủ hộ\s+([^\n,;(]+)/);
+            if (match && match[1]) {
               headName = match[1].trim();
               break;
             }
@@ -347,11 +366,12 @@ const HealthCare: React.FC = () => {
         }
       }
 
-      item.headName = headName || 'Chủ hộ';
+      item.headName = headName || 'Chủ hộ Gia Đình';
     });
 
     return Array.from(map.values());
   }, [filteredHealthRecords, householdHeadMap]);
+
 
 
 
