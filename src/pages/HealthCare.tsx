@@ -19,7 +19,8 @@ import {
   X,
   Upload,
   FileSpreadsheet,
-  CheckCircle
+  CheckCircle,
+  Filter
 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { healthDb } from '../services/healthDb';
@@ -40,6 +41,8 @@ const HealthCare: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [bhytFilter, setBhytFilter] = useState<'all' | 'has' | 'missing'>('all');
   const [diseaseFilter, setDiseaseFilter] = useState<string>('all');
+  const [groupFilter, setGroupFilter] = useState<string>('all');
+
 
   // Modals & Editing States
   const [showHealthModal, setShowHealthModal] = useState<boolean>(false);
@@ -111,6 +114,20 @@ const HealthCare: React.FC = () => {
     return { withChronicCount: withChronic.length, disabledCount };
   }, [healthRecords]);
 
+  // Extract available Sub-groups / Cụm / Tổ from addresses
+  const availableGroups = useMemo(() => {
+    const groups = new Set<string>();
+    healthRecords.forEach(r => {
+      if (r.address) {
+        const match = r.address.match(/(Tổ\/Cụm\s*[\w\d]+|Tổ\s*\d+|Cụm\s*\d+|Thôn\s*\d+|VT)/i);
+        if (match) groups.add(match[0]);
+        else if (r.address.includes(',')) groups.add(r.address.split(',')[0].trim());
+        else groups.add(r.address.trim());
+      }
+    });
+    return Array.from(groups).sort();
+  }, [healthRecords]);
+
   // Filtered Health Records
   const filteredHealthRecords = useMemo(() => {
     return healthRecords.filter(r => {
@@ -128,9 +145,15 @@ const HealthCare: React.FC = () => {
         else matchDisease = r.chronic_diseases && r.chronic_diseases.includes(diseaseFilter);
       }
 
-      return matchSearch && matchBhyt && matchDisease;
+      let matchGroup = true;
+      if (groupFilter !== 'all') {
+        matchGroup = r.address ? r.address.toLowerCase().includes(groupFilter.toLowerCase()) : false;
+      }
+
+      return matchSearch && matchBhyt && matchDisease && matchGroup;
     });
-  }, [healthRecords, searchTerm, bhytFilter, diseaseFilter]);
+  }, [healthRecords, searchTerm, bhytFilter, diseaseFilter, groupFilter]);
+
 
   // Form State for Health Record
   const [formData, setFormData] = useState<Partial<HealthRecord>>({
@@ -926,7 +949,7 @@ const HealthCare: React.FC = () => {
           marginBottom: '20px',
           alignItems: 'center'
         }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '280px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input 
               type="text" 
@@ -944,6 +967,34 @@ const HealthCare: React.FC = () => {
               }}
             />
           </div>
+
+          {/* DROPDOWN LỌC CỤM / TỔ */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Filter size={16} color="#3b82f6" />
+            <select
+              value={groupFilter}
+              onChange={e => setGroupFilter(e.target.value)}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1px solid #3b82f6',
+                background: '#eff6ff',
+                color: '#1d4ed8',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(59, 130, 246, 0.1)'
+              }}
+            >
+              <option value="all">🏡 Tất cả Cụm / Tổ TDP ({healthRecords.length})</option>
+              {availableGroups.map((grp, idx) => (
+                <option key={idx} value={grp}>
+                  📍 {grp}
+                </option>
+              ))}
+            </select>
+          </div>
+
 
           {activeTab === 'bhyt' && (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
