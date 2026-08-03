@@ -20,8 +20,10 @@ import {
   Upload,
   FileSpreadsheet,
   CheckCircle,
-  Filter
+  Filter,
+  Download
 } from 'lucide-react';
+
 import ExcelJS from 'exceljs';
 import { healthDb } from '../services/healthDb';
 import { db } from '../services/db';
@@ -129,6 +131,53 @@ const HealthCare: React.FC = () => {
     });
     return Array.from(groups).sort();
   }, [healthRecords]);
+
+  // Compute detailed statistics per Sub-group / Cụm / Tổ
+  const groupStatsList = useMemo(() => {
+    const map = new Map<string, {
+      groupName: string;
+      households: Set<string>;
+      totalResidents: number;
+      hasBhytCount: number;
+      missingBhytCount: number;
+    }>();
+
+    healthRecords.forEach(r => {
+      let grp = 'TDP Quảng Giao';
+      if (r.address) {
+        const match = r.address.match(/(Tổ\/Cụm\s*[\w\d]+|Tổ\s*\d+|Cụm\s*\d+|Thôn\s*\d+|VT)/i);
+        if (match) grp = match[0];
+        else if (r.address.includes(',')) grp = r.address.split(',')[0].trim();
+        else grp = r.address.trim();
+      }
+
+      if (!map.has(grp)) {
+        map.set(grp, {
+          groupName: grp,
+          households: new Set(),
+          totalResidents: 0,
+          hasBhytCount: 0,
+          missingBhytCount: 0
+        });
+      }
+
+      const item = map.get(grp)!;
+      if (r.household_number) item.households.add(r.household_number);
+      item.totalResidents++;
+      if (r.has_bhyt) item.hasBhytCount++;
+      else item.missingBhytCount++;
+    });
+
+    return Array.from(map.values()).map(item => ({
+      groupName: item.groupName,
+      householdCount: item.households.size || Math.ceil(item.totalResidents / 3),
+      totalResidents: item.totalResidents,
+      hasBhytCount: item.hasBhytCount,
+      missingBhytCount: item.missingBhytCount,
+      percentage: item.totalResidents > 0 ? Math.round((item.hasBhytCount / item.totalResidents) * 100) : 0
+    })).sort((a, b) => a.groupName.localeCompare(b.groupName, 'vi'));
+  }, [healthRecords]);
+
 
   // Filtered Health Records
   const filteredHealthRecords = useMemo(() => {
@@ -502,6 +551,179 @@ const HealthCare: React.FC = () => {
     }
   };
 
+  // Export Official Household-Structured Excel BHYT File Handler (Chuẩn BHXH Hộ Gia Đình)
+  const handleExportExcelBHYT = async () => {
+    try {
+      // Load CSDL Hộ gia đình và Dân cư chính để lấy thông tin Chủ hộ & Quan hệ
+      let dbHouseholds: any[] = [];
+      let dbResidents: any[] = [];
+      try {
+        [dbHouseholds, dbResidents] = await Promise.all([db.getHouseholds(), db.getResidents()]);
+      } catch (err) {
+        console.warn('Lỗi tải CSDL Hộ dân:', err);
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('BHYT Ho Gia Dinh');
+
+      // Title & Sub-header Block (Chuẩn Mẫu BHXH Việt Nam)
+      sheet.addRow(['Tổ dân phố: Tổ dân phố Quảng Giao']);
+      sheet.mergeCells('A1:I1');
+      sheet.getRow(1).font = { name: 'Calibri', size: 11, italic: true, color: { argb: 'FF475569' } };
+
+      sheet.addRow(['THỐNG KÊ DANH SÁCH HỘ GIA ĐÌNH THAM GIA BHYT']);
+      sheet.mergeCells('A2:I2');
+      const titleRow = sheet.getRow(2);
+      titleRow.font = { name: 'Calibri', size: 15, bold: true, color: { argb: 'FF047857' } };
+      titleRow.alignment = { horizontal: 'center', vertical: 'middle' };
+      titleRow.height = 32;
+
+      sheet.addRow([`Tổ dân phố Quảng Giao - Cập nhật ngày ${new Date().toLocaleDateString('vi-VN')}`]);
+      sheet.mergeCells('A3:I3');
+      const subTitleRow = sheet.getRow(3);
+      subTitleRow.font = { name: 'Calibri', size: 11, italic: true, color: { argb: 'FF64748B' } };
+      subTitleRow.alignment = { horizontal: 'center', vertical: 'middle' };
+      sheet.addRow([]); // Blank line
+
+      // Table Header Row (Mẫu chuẩn BHXH)
+      const headerRow = sheet.addRow([
+        'STT Hộ',
+        'STT Thành viên',
+        'Họ và tên thành viên',
+        'Mã số BHXH / BHYT',
+        'Ngày tháng năm sinh',
+        'Giới tính',
+        'Mối quan hệ với chủ hộ',
+        'Số CMND / Căn cước',
+        'Tổ / Cụm cư trú',
+        'Trạng thái BHYT'
+      ]);
+
+      headerRow.height = 26;
+      headerRow.eachCell(cell => {
+        cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'medium', color: { argb: 'FF059669' } },
+          left: { style: 'thin', color: { argb: 'FF059669' } },
+          bottom: { style: 'medium', color: { argb: 'FF059669' } },
+          right: { style: 'thin', color: { argb: 'FF059669' } }
+        };
+      });
+
+      const listToExport = filteredHealthRecords.length > 0 ? filteredHealthRecords : healthRecords;
+
+      // Group records by Household (Gộp theo Hộ gia đình)
+      const householdGroups = new Map<string, HealthRecord[]>();
+      listToExport.forEach(rec => {
+        const key = rec.household_number || rec.address || 'HK-CHUA_PHAN_HO';
+        if (!householdGroups.has(key)) householdGroups.set(key, []);
+        householdGroups.get(key)!.push(rec);
+      });
+
+      let householdIndex = 0;
+      householdGroups.forEach((members, householdKey) => {
+        householdIndex++;
+
+        // Tìm thông tin Chủ hộ trong CSDL Hộ gia đình chính
+        let matchedHh = dbHouseholds.find(h => 
+          h.household_number === householdKey || 
+          h.id === householdKey ||
+          members.some(m => m.resident_name.toLowerCase().trim() === h.household_head_name?.toLowerCase().trim())
+        );
+
+        let headName = matchedHh?.household_head_name || members[0]?.resident_name || 'Chưa rõ';
+        let groupName = (matchedHh as any)?.self_management_group || members[0]?.address || 'TDP Quảng Giao';
+
+        // Add Household Section Banner Row (Dòng Tiêu đề Hộ Gia Đình)
+        const hhBannerRow = sheet.addRow([
+          householdIndex,
+          '',
+          `Tên chủ hộ: ${headName}  ;  Mã hộ gia đình: ${householdKey.replace('HK-', '')}  ;  Đơn vị: ${groupName}`,
+          '', '', '', '', '', '', ''
+        ]);
+        
+        sheet.mergeCells(`C${hhBannerRow.number}:J${hhBannerRow.number}`);
+        hhBannerRow.height = 22;
+        hhBannerRow.eachCell(cell => {
+          cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF0369A1' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+          cell.alignment = { vertical: 'middle' };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFBAE6FD' } },
+            bottom: { style: 'thin', color: { argb: 'FFBAE6FD' } }
+          };
+        });
+
+        // Add Member Rows under Household
+        members.forEach((m, mIdx) => {
+          let matchedRes = dbResidents.find(r => 
+            r.full_name?.toLowerCase().trim() === m.resident_name.toLowerCase().trim()
+          );
+
+          let relation = matchedRes?.relation_with_head || (m.resident_name.toLowerCase().trim() === headName.toLowerCase().trim() ? 'Chủ hộ' : 'Thành viên');
+          let cccd = matchedRes?.identity_card || (m.resident_id.startsWith('R_') ? m.resident_id.replace('R_', '') : '');
+
+          const row = sheet.addRow([
+            '',
+            mIdx + 1,
+            m.resident_name,
+            m.bhyt_number || 'Chưa có',
+            m.dob ? new Date(m.dob).toLocaleDateString('vi-VN') : '---',
+            m.gender === 'female' ? 'Nữ' : 'Nam',
+            relation,
+            cccd || '---',
+            groupName,
+            m.has_bhyt ? 'Đã có BHYT' : 'Chưa có BHYT'
+          ]);
+
+          row.height = 20;
+          row.eachCell((cell, colNum) => {
+            cell.alignment = { 
+              vertical: 'middle', 
+              horizontal: colNum === 2 || colNum === 4 || colNum === 5 || colNum === 6 || colNum === 7 || colNum === 8 || colNum === 10 ? 'center' : 'left' 
+            };
+            cell.font = { name: 'Calibri', size: 11 };
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+              right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+            };
+          });
+        });
+      });
+
+      // Auto Column Widths
+      sheet.columns.forEach((col, cIdx) => {
+        let maxLen = 12;
+        col.eachCell!({ includeEmpty: false }, cell => {
+          const val = String(cell.value || '');
+          if (val.length > maxLen && !val.includes('Tên chủ hộ:')) maxLen = val.length;
+        });
+        col.width = Math.min(Math.max(maxLen + 4, 12), 35);
+      });
+
+      // Trigger Download
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `thong_ke_BHYT_HoGiaDinh_TDP_Quang_Giao_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Lỗi xuất file Excel BHYT Hộ gia đình:', err);
+      alert('Có lỗi xảy ra khi xuất file Excel BHYT Hộ gia đình.');
+    }
+  };
+
+
+
   // Save & Delete Handlers
   const handleSaveHealthRecord = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -705,6 +927,27 @@ const HealthCare: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {/* EXPORT EXCEL BHYT BUTTON */}
+          <button 
+            onClick={handleExportExcelBHYT}
+            className="btn btn-outline" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '10px 16px', 
+              borderRadius: '10px',
+              background: '#eff6ff',
+              color: '#2563eb',
+              border: '1px solid #3b82f6',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+            title="Xuất file Excel danh sách BHYT chuẩn mẫu BHXH"
+          >
+            <Download size={16} /> 📊 Xuất Excel chuẩn BHYT
+          </button>
+
           {/* IMPORT EXCEL BHYT BUTTON */}
           <label className="btn btn-outline" style={{ 
             display: 'flex', 
@@ -728,6 +971,7 @@ const HealthCare: React.FC = () => {
               style={{ display: 'none' }} 
             />
           </label>
+
 
           <button 
             onClick={loadAllData}
@@ -1115,7 +1359,100 @@ const HealthCare: React.FC = () => {
 
       {/* TAB 1: BẢO HIỂM Y TẾ (BHYT) */}
       {activeTab === 'bhyt' && (
-        <div className="card-container" style={{ background: 'var(--card-bg, #ffffff)', borderRadius: '14px', border: '1px solid var(--border-color, #e2e8f0)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* BẢNG THỐNG KÊ CHI TIẾT SỐ HỘ, SỐ NHÂN KHẨU VÀ CHƯA CÓ BHYT THEO CỤM/TỔ */}
+          <div style={{ 
+            background: 'var(--card-bg, #ffffff)', 
+            padding: '20px', 
+            borderRadius: '14px', 
+            border: '1px solid var(--border-color, #e2e8f0)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={22} color="#10b981" /> Bảng Thống kê Phủ BHYT Theo Cụm / Tổ TDP Quảng Giao
+              </h3>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>
+                Tổng số {groupStatsList.length} Cụm/Tổ tự quản
+              </span>
+            </div>
+
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+              gap: '12px' 
+            }}>
+              {groupStatsList.map((g, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => { setGroupFilter(g.groupName); }}
+                  style={{ 
+                    background: groupFilter === g.groupName ? '#f0fdf4' : 'var(--bg-main, #f8fafc)',
+                    border: groupFilter === g.groupName ? '2px solid #10b981' : '1px solid var(--border-color, #e2e8f0)',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: groupFilter === g.groupName ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b' }}>
+                      📍 {g.groupName}
+                    </span>
+                    <span style={{ 
+                      background: g.percentage >= 90 ? '#ecfdf5' : '#fef3c7', 
+                      color: g.percentage >= 90 ? '#047857' : '#d97706',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '10px'
+                    }}>
+                      {g.percentage}% Phủ BHYT
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem', marginBottom: '8px' }}>
+                    <div>🏠 Số Hộ: <strong>{g.householdCount} hộ</strong></div>
+                    <div>👥 Nhân khẩu: <strong>{g.totalResidents} người</strong></div>
+                  </div>
+
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+
+                    paddingTop: '8px', 
+                    borderTop: '1px dashed #cbd5e1',
+                    fontSize: '0.82rem'
+                  }}>
+                    <span style={{ color: '#10b981', fontWeight: 700 }}>
+                      ✅ Đã có: {g.hasBhytCount}
+                    </span>
+                    <span 
+                      onClick={(e) => { e.stopPropagation(); setGroupFilter(g.groupName); setBhytFilter('missing'); }}
+                      style={{ 
+                        color: g.missingBhytCount > 0 ? '#ef4444' : '#64748b', 
+                        fontWeight: 800,
+                        background: g.missingBhytCount > 0 ? '#fef2f2' : '#f1f5f9',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                      title="Bấm để lọc danh sách người CHƯA CÓ BHYT trong Tổ này"
+                    >
+                      ⚠️ Chưa có: {g.missingBhytCount} người
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* BẢNG DANH SÁCH BHYT CHI TIẾT */}
+          <div className="card-container" style={{ background: 'var(--card-bg, #ffffff)', borderRadius: '14px', border: '1px solid var(--border-color, #e2e8f0)', overflow: 'hidden' }}>
+
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem' }}>
               <thead>
@@ -1219,7 +1556,10 @@ const HealthCare: React.FC = () => {
             </table>
           </div>
         </div>
+      </div>
       )}
+
+
 
       {/* TAB 2: BỆNH NỀN & SỨC KHỎE ĐẶC BIỆT */}
       {activeTab === 'chronic' && (
