@@ -588,10 +588,11 @@ const HealthCare: React.FC = () => {
       {/* 3D NAVIGATION TABS SYSTEM */}
       <div style={{ 
         display: 'flex', 
-        gap: '12px', 
+        gap: '10px', 
         marginBottom: '28px',
         overflowX: 'auto',
-        padding: '8px 6px 14px 6px'
+        padding: '6px 4px 12px 4px',
+        maxWidth: '100%'
       }}>
         {[
           { id: 'bhyt', label: 'Bảo hiểm Y tế (BHYT)', icon: ShieldCheck, count: bhytStats.total, activeGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', activeShadow: 'rgba(16, 185, 129, 0.4)', activeColor: '#10b981' },
@@ -609,23 +610,23 @@ const HealthCare: React.FC = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '14px 22px',
-                borderRadius: '16px',
+                gap: '8px',
+                padding: '12px 16px',
+                borderRadius: '14px',
+                flexShrink: 0,
                 border: isActive ? '1px solid rgba(255, 255, 255, 0.6)' : '1px solid var(--border-color, #e2e8f0)',
                 background: isActive ? tab.activeGradient : 'var(--card-bg, #ffffff)',
                 color: isActive ? 'white' : 'var(--text-main, #334155)',
                 fontWeight: isActive ? 800 : 600,
-                fontSize: '0.96rem',
+                fontSize: '0.9rem',
                 cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 whiteSpace: 'nowrap',
                 boxShadow: isActive 
-                  ? `0 10px 25px -4px ${tab.activeShadow}, 0 4px 6px -2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.2)`
+                  ? `0 8px 20px -4px ${tab.activeShadow}, 0 4px 6px -2px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -3px 0 rgba(0,0,0,0.2)`
                   : '0 4px 10px rgba(0,0,0,0.03), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 0 rgba(0,0,0,0.05)',
-                transform: isActive ? 'translateY(-4px) scale(1.02)' : 'translateY(0) scale(1)',
-                position: 'relative',
-                overflow: 'hidden'
+                transform: isActive ? 'translateY(-3px) scale(1.01)' : 'translateY(0) scale(1)',
+                position: 'relative'
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
