@@ -1196,7 +1196,8 @@ const HealthCare: React.FC = () => {
               }}
               title="Tự động phân bổ 100% CSDL Hộ gia đình & BHYT theo 7 Cụm/Tổ"
             >
-              <RefreshCw size={16} className={isProcessingExcel ? 'spin' : ''} /> Phân bổ CSDL Hộ Dân
+              <RefreshCw size={16} className={isProcessingExcel ? 'spin' : ''} /> 🚀 Đồng bộ 100% CSDL Hộ Gia Đình & Nhân Khẩu
+
 
             </button>
 
