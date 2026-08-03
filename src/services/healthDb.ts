@@ -326,5 +326,11 @@ export const healthDb = {
     if (idx >= 0) list[idx] = contact;
     else list.unshift(contact);
     setStoredData(STORAGE_KEYS.EMERGENCY, list);
+  },
+
+  deleteEmergencyContact: async (id: string): Promise<void> => {
+    const list = getStoredData<EmergencyContact>(STORAGE_KEYS.EMERGENCY, seedEmergencyContacts);
+    setStoredData(STORAGE_KEYS.EMERGENCY, list.filter(c => c.id !== id));
   }
 };
+

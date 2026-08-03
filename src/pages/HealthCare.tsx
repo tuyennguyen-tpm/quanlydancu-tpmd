@@ -50,6 +50,9 @@ const HealthCare: React.FC = () => {
   const [showFertilityModal, setShowFertilityModal] = useState<boolean>(false);
   const [editingFertility, setEditingFertility] = useState<FertilityRecord | null>(null);
 
+  const [showEmergencyModal, setShowEmergencyModal] = useState<boolean>(false);
+  const [editingEmergency, setEditingEmergency] = useState<EmergencyContact | null>(null);
+
   // Load Data
   const loadAllData = async () => {
     setIsLoading(true);
@@ -168,6 +171,15 @@ const HealthCare: React.FC = () => {
     notes: ''
   });
 
+  // Form State for Emergency Contact
+  const [emgForm, setEmgForm] = useState<Partial<EmergencyContact>>({
+    name: '',
+    role: '',
+    phone: '',
+    address: '',
+    notes: ''
+  });
+
   // Open Add/Edit Modals
   const openAddHealthModal = () => {
     setEditingRecord(null);
@@ -257,6 +269,24 @@ const HealthCare: React.FC = () => {
     setEditingEpidemic(epi);
     setEpiForm(epi);
     setShowEpidemicModal(true);
+  };
+
+  const openAddEmergencyModal = () => {
+    setEditingEmergency(null);
+    setEmgForm({
+      name: '',
+      role: 'Cơ sở Y tế địa phương',
+      phone: '',
+      address: 'Phường Nam Sầm Sơn, TP. Sầm Sơn',
+      notes: ''
+    });
+    setShowEmergencyModal(true);
+  };
+
+  const openEditEmergencyModal = (c: EmergencyContact) => {
+    setEditingEmergency(c);
+    setEmgForm(c);
+    setShowEmergencyModal(true);
   };
 
   // Save & Delete Handlers
@@ -377,6 +407,29 @@ const HealthCare: React.FC = () => {
     }
   };
 
+  const handleSaveEmergency = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emgForm.name || !emgForm.phone) return;
+    const contactToSave: EmergencyContact = {
+      id: editingEmergency ? editingEmergency.id : `EMG_${Date.now()}`,
+      name: emgForm.name,
+      role: emgForm.role || 'Cơ sở Y tế',
+      phone: emgForm.phone,
+      address: emgForm.address || '',
+      notes: emgForm.notes || ''
+    };
+    await healthDb.saveEmergencyContact(contactToSave);
+    setShowEmergencyModal(false);
+    loadAllData();
+  };
+
+  const handleDeleteEmergencyContact = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa số hotline liên hệ này?')) {
+      await healthDb.deleteEmergencyContact(id);
+      loadAllData();
+    }
+  };
+
   const addDiseaseTag = () => {
     if (!diseaseInput.trim()) return;
     const current = formData.chronic_diseases || [];
@@ -463,6 +516,14 @@ const HealthCare: React.FC = () => {
               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#ec4899', border: 'none', color: 'white', fontWeight: 700 }}
             >
               <Plus size={18} /> Thêm Hồ sơ Thai sản / Sinh
+            </button>
+          ) : activeTab === 'emergency' ? (
+            <button 
+              onClick={openAddEmergencyModal}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}
+            >
+              <Plus size={18} /> Thêm Hotline Khẩn cấp
             </button>
           ) : (
             <button 
@@ -1130,50 +1191,70 @@ const HealthCare: React.FC = () => {
 
       {/* TAB 5: DANH BẠ Y TẾ KHẨN CẤP */}
       {activeTab === 'emergency' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-          {emergencyContacts.map(c => (
-            <div 
-              key={c.id}
-              style={{ 
-                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(245, 158, 11, 0.05))', 
-                padding: '20px', 
-                borderRadius: '14px', 
-                border: '1px solid rgba(239, 68, 68, 0.2)',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-              }}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <PhoneCall size={22} color="#ef4444" /> Danh bạ Hotline Cấp cứu & Y tế Địa phương
+            </h3>
+            <button 
+              onClick={openAddEmergencyModal}
+              style={{ background: '#fef2f2', color: '#ef4444', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ background: '#ef4444', color: 'white', padding: '10px', borderRadius: '10px' }}>
-                  <PhoneCall size={22} />
-                </div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main, #1e293b)' }}>
-                    {c.name}
-                  </h4>
-                  <span style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 600 }}>{c.role}</span>
-                </div>
-              </div>
+              <Plus size={16} /> Thêm Hotline Khẩn cấp
+            </button>
+          </div>
 
-              <div style={{ 
-                background: 'white', 
-                padding: '12px', 
-                borderRadius: '10px', 
-                textAlign: 'center', 
-                marginBottom: '10px',
-                border: '1px solid #fee2e2'
-              }}>
-                <a 
-                  href={`tel:${c.phone}`} 
-                  style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ef4444', textDecoration: 'none', display: 'block' }}
-                >
-                  📞 {c.phone}
-                </a>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            {emergencyContacts.map(c => (
+              <div 
+                key={c.id}
+                style={{ 
+                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(245, 158, 11, 0.05))', 
+                  padding: '20px', 
+                  borderRadius: '14px', 
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+                  position: 'relative'
+                }}
+              >
+                <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '4px' }}>
+                  <button onClick={() => openEditEmergencyModal(c)} style={{ border: 'none', background: 'white', color: '#3b82f6', cursor: 'pointer', padding: '6px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} title="Sửa Hotline"><Edit size={16} /></button>
+                  <button onClick={() => handleDeleteEmergencyContact(c.id)} style={{ border: 'none', background: 'white', color: '#ef4444', cursor: 'pointer', padding: '6px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} title="Xóa Hotline"><Trash2 size={16} /></button>
+                </div>
 
-              {c.address && <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)', marginBottom: '4px' }}>📍 {c.address}</div>}
-              {c.notes && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic' }}>ℹ️ {c.notes}</div>}
-            </div>
-          ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <div style={{ background: '#ef4444', color: 'white', padding: '10px', borderRadius: '10px' }}>
+                    <PhoneCall size={22} />
+                  </div>
+                  <div style={{ paddingRight: '50px' }}>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main, #1e293b)' }}>
+                      {c.name}
+                    </h4>
+                    <span style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 600 }}>{c.role}</span>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  background: 'white', 
+                  padding: '12px', 
+                  borderRadius: '10px', 
+                  textAlign: 'center', 
+                  marginBottom: '10px',
+                  border: '1px solid #fee2e2'
+                }}>
+                  <a 
+                    href={`tel:${c.phone}`} 
+                    style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ef4444', textDecoration: 'none', display: 'block' }}
+                  >
+                    📞 {c.phone}
+                  </a>
+                </div>
+
+                {c.address && <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)', marginBottom: '4px' }}>📍 {c.address}</div>}
+                {c.notes && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic' }}>ℹ️ {c.notes}</div>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1621,6 +1702,81 @@ const HealthCare: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setShowFertilityModal(false)} className="btn btn-outline" style={{ padding: '8px 16px' }}>Hủy</button>
                 <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', background: '#ec4899', border: 'none', color: 'white', fontWeight: 700 }}>Lưu Hồ Sơ</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: THÊM / SỬA HOTLINE Y TẾ KHẨN CẤP */}
+      {showEmergencyModal && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontWeight: 800, color: '#ef4444' }}>
+                📞 {editingEmergency ? 'Chỉnh sửa Hotline Y tế' : 'Thêm Hotline Y tế Khẩn cấp'}
+              </h3>
+              <button onClick={() => setShowEmergencyModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveEmergency} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Tên Cơ sở / Cán bộ Y tế *</label>
+                <input 
+                  type="text" required
+                  placeholder="Ví dụ: Trạm Y tế Phường Nam Sầm Sơn, BS. Nguyễn Văn A..."
+                  value={emgForm.name || ''}
+                  onChange={e => setEmgForm({ ...emgForm, name: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Chức danh / Vai trò</label>
+                  <input 
+                    type="text"
+                    placeholder="Bác sĩ tuyến Phường, Cấp cứu 115..."
+                    value={emgForm.role || ''}
+                    onChange={e => setEmgForm({ ...emgForm, role: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Số điện thoại Hotline *</label>
+                  <input 
+                    type="text" required
+                    placeholder="0237 3835 115..."
+                    value={emgForm.phone || ''}
+                    onChange={e => setEmgForm({ ...emgForm, phone: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Địa chỉ cơ sở</label>
+                <input 
+                  type="text"
+                  placeholder="Đường Nam Sầm Sơn..."
+                  value={emgForm.address || ''}
+                  onChange={e => setEmgForm({ ...emgForm, address: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Ghi chú / Giờ trực</label>
+                <textarea 
+                  rows={2}
+                  value={emgForm.notes || ''}
+                  onChange={e => setEmgForm({ ...emgForm, notes: e.target.value })}
+                  placeholder="Trực 24/7 tiếp nhận cấp cứu sơ ban đầu..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setShowEmergencyModal(false)} className="btn btn-outline" style={{ padding: '8px 16px' }}>Hủy</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}>Lưu Hotline</button>
               </div>
             </form>
           </div>
