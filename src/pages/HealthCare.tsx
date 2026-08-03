@@ -618,6 +618,126 @@ const HealthCare: React.FC = () => {
     }
   };
 
+  // Automated Sync: Map CSDL Households & Residents to Health BHYT Records
+  const handleSyncHouseholdsWithBHYT = async () => {
+    setIsProcessingExcel(true);
+    try {
+      const [dbHouseholds, dbResidents] = await Promise.all([db.getHouseholds(), db.getResidents()]);
+      const currentHealth = await healthDb.getHealthRecords();
+      let updatedCount = 0;
+      let newAddedCount = 0;
+
+      const healthMapByName = new Map<string, HealthRecord>();
+      const healthMapByCccd = new Map<string, HealthRecord>();
+      const healthMapByBhyt = new Map<string, HealthRecord>();
+
+      currentHealth.forEach(rec => {
+        if (rec.resident_name) healthMapByName.set(rec.resident_name.toLowerCase().trim(), rec);
+        if (rec.bhyt_number) healthMapByBhyt.set(rec.bhyt_number.trim(), rec);
+        if (rec.resident_id && rec.resident_id.startsWith('R_')) {
+          const cccd = rec.resident_id.replace('R_', '').trim();
+          if (cccd) healthMapByCccd.set(cccd, rec);
+        }
+      });
+
+      const updatedHealthRecords: HealthRecord[] = [...currentHealth];
+
+      // 1. Process every Resident in DB Households
+      for (const res of dbResidents) {
+        const normName = (res.full_name || '').toLowerCase().trim();
+        if (!normName) continue;
+
+        const resCccd = (res as any).identity_card || res.cccd || '';
+        const resAddress = (res as any).address || res.permanent_address || '';
+
+        const matchedHh = dbHouseholds.find(h => h.id === res.household_id || h.household_number === res.household_id);
+        const rawGroup = (matchedHh as any)?.self_management_group || (matchedHh as any)?.group_name || resAddress;
+        const officialGroup = normalizeToOfficialGroup(rawGroup);
+        const hhNumber = matchedHh?.household_number || res.household_id || 'HK-CHUA_PHAN_HO';
+        const headName = (matchedHh as any)?.household_head_name || 'Chủ hộ';
+
+        // Check if resident is already in Health Records
+        let existingRec = healthMapByCccd.get(resCccd.trim()) ||
+                          healthMapByName.get(normName);
+
+        if (existingRec) {
+          // Update resident's group, household_number, and note
+          const existingIdx = updatedHealthRecords.findIndex(r => r.id === existingRec!.id);
+          if (existingIdx >= 0) {
+            updatedHealthRecords[existingIdx] = {
+              ...existingRec,
+              household_number: hhNumber,
+              address: `${officialGroup}, TDP Quảng Giao`,
+              health_status_note: `Đã phân bổ chuẩn Hộ ông/bà ${headName} (${officialGroup})`,
+              updated_at: new Date().toISOString()
+            };
+            updatedCount++;
+          }
+        } else {
+          // Add resident to Health Records as member of Household
+          const newHealthRec: HealthRecord = {
+            id: `HR_${resCccd || Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            resident_id: resCccd ? `R_${resCccd}` : `R_${res.id}`,
+            resident_name: res.full_name,
+            dob: res.dob || '1985-01-01',
+            gender: res.gender === 'female' ? 'female' : 'male',
+            household_number: hhNumber,
+            address: `${officialGroup}, TDP Quảng Giao`,
+            phone: res.phone || '',
+            has_bhyt: false,
+            bhyt_number: '',
+            chronic_diseases: [],
+            is_disabled: false,
+            health_status_note: `Tự động phân bổ từ CSDL Hộ gia đình chính thức (${officialGroup}). Hộ: ${headName}`,
+            updated_at: new Date().toISOString()
+          };
+          updatedHealthRecords.push(newHealthRec);
+          newAddedCount++;
+        }
+      }
+
+      // 2. Process existing Health BHYT records and map unlinked records to DB Households
+      for (let i = 0; i < updatedHealthRecords.length; i++) {
+        const rec = updatedHealthRecords[i];
+        const normName = rec.resident_name.toLowerCase().trim();
+        const matchedHh = dbHouseholds.find(h => 
+          h.household_number === rec.household_number || 
+          ((h as any).household_head_name && (h as any).household_head_name.toLowerCase().trim() === normName)
+        );
+
+        if (matchedHh) {
+          const officialGroup = normalizeToOfficialGroup((matchedHh as any).self_management_group || (matchedHh as any).group_name);
+          updatedHealthRecords[i] = {
+            ...rec,
+            household_number: matchedHh.household_number,
+            address: `${officialGroup}, TDP Quảng Giao`
+          };
+        } else {
+          const officialGroup = normalizeToOfficialGroup(rec.address);
+          updatedHealthRecords[i] = {
+            ...rec,
+            address: `${officialGroup}, TDP Quảng Giao`
+          };
+        }
+      }
+
+
+      // Save all updated health records
+      for (const rec of updatedHealthRecords) {
+        await healthDb.saveHealthRecord(rec);
+      }
+
+      alert(`Đã hoàn tất tự động phân bổ 100% dữ liệu!\n- Cập nhật phân Hộ & Tổ cho: ${updatedCount} nhân khẩu.\n- Phân bổ mới từ CSDL Hộ gia đình: ${newAddedCount} người.\n- Tất cả đã đưa về đúng 7 Cụm/Tổ chính thức của TDP Quảng Giao!`);
+      loadAllData();
+    } catch (err) {
+      console.error('Lỗi tự động phân bổ CSDL:', err);
+      alert('Có lỗi xảy ra trong quá trình đồng bộ phân bổ CSDL.');
+    } finally {
+      setIsProcessingExcel(false);
+    }
+  };
+
+
   // Export Official Household-Structured Excel BHYT File Handler (Chuẩn BHXH Hộ Gia Đình)
   const handleExportExcelBHYT = async () => {
     try {
@@ -994,6 +1114,27 @@ const HealthCare: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {/* SYNC CSDL HOUSEHOLDS WITH BHYT BUTTON */}
+          <button 
+            onClick={handleSyncHouseholdsWithBHYT}
+            className="btn btn-outline" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '10px 16px', 
+              borderRadius: '10px',
+              background: '#fdf4ff',
+              color: '#c026d3',
+              border: '1px solid #d946ef',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+            title="Tự động phân bổ 100% CSDL Hộ gia đình & BHYT theo 7 Cụm/Tổ"
+          >
+            <RefreshCw size={16} className={isProcessingExcel ? 'spin' : ''} /> 🔄 Phân bổ CSDL Hộ Dân & BHYT
+          </button>
+
           {/* EXPORT EXCEL BHYT BUTTON */}
           <button 
             onClick={handleExportExcelBHYT}
@@ -1014,6 +1155,7 @@ const HealthCare: React.FC = () => {
           >
             <Download size={16} /> 📊 Xuất Excel chuẩn BHYT
           </button>
+
 
           {/* IMPORT EXCEL BHYT BUTTON */}
           <label className="btn btn-outline" style={{ 
