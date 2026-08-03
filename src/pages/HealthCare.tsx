@@ -1402,8 +1402,9 @@ const HealthCare: React.FC = () => {
           <div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>Cần Vận động BHYT</div>
             <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#d97706', marginTop: '2px' }}>
-              {bhytStats.missingBhyt} hộ/người
+              {bhytStats.missingBhyt} người
             </div>
+
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted, #94a3b8)' }}>Đang lên danh sách vận động</div>
           </div>
         </div>
