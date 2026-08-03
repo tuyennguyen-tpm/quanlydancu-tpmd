@@ -24,7 +24,9 @@ import {
 } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { healthDb } from '../services/healthDb';
+import { db } from '../services/db';
 import type { HealthRecord, VaccinationCampaign, EpidemicReport, FertilityRecord, EmergencyContact } from '../types';
+
 
 const HealthCare: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bhyt' | 'chronic' | 'prevention' | 'fertility' | 'emergency'>('bhyt');
@@ -327,47 +329,25 @@ const HealthCare: React.FC = () => {
     setShowEmergencyModal(true);
   };
 
-  // Excel Parse & Strict Verification Handler
+  // Excel Parse & Strict Verification Handler with CSDL Household Matching
   const handleExcelFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsProcessingExcel(true);
     try {
+      // Load CSDL Hộ gia đình và Dân cư chính của TDP Quảng Giao
+      let dbHouseholds: any[] = [];
+      let dbResidents: any[] = [];
+      try {
+        [dbHouseholds, dbResidents] = await Promise.all([db.getHouseholds(), db.getResidents()]);
+      } catch (err) {
+        console.warn('Lỗi đọc CSDL hộ dân chính:', err);
+      }
+
       const buffer = await file.arrayBuffer();
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(buffer);
-      const worksheet = workbook.worksheets[0];
-
-      if (!worksheet) {
-        alert('File Excel không có dữ liệu!');
-        setIsProcessingExcel(false);
-        return;
-      }
-
-      let colName = -1;
-      let colBhyt = -1;
-      let colDob = -1;
-      let colAddress = -1;
-      let colExpiry = -1;
-
-      // Find headers in first 5 rows
-      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-        if (rowNumber <= 5 && colName === -1) {
-          row.eachCell((cell, colNumber) => {
-            const val = String(cell.value || '').toLowerCase().trim();
-            if (val.includes('họ') || val.includes('tên') || val.includes('người')) colName = colNumber;
-            if (val.includes('mã') || val.includes('bảo hiểm') || val.includes('bhyt') || val.includes('thẻ')) colBhyt = colNumber;
-            if (val.includes('sinh') || val.includes('tuổi') || val.includes('dob')) colDob = colNumber;
-            if (val.includes('chỉ') || val.includes('tổ') || val.includes('cụm') || val.includes('nhà')) colAddress = colNumber;
-            if (val.includes('hạn') || val.includes('hết')) colExpiry = colNumber;
-          });
-        }
-      });
-
-      // Default fallbacks if header auto-detection missed
-      if (colName === -1) colName = 1;
-      if (colBhyt === -1) colBhyt = 2;
 
       const currentRecords = [...healthRecords];
       const recordsToSave: HealthRecord[] = [];
@@ -376,57 +356,112 @@ const HealthCare: React.FC = () => {
       let matchedCount = 0;
       let newCount = 0;
 
-      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-        if (rowNumber === 1) return; // Skip header row
-        const rawName = String(row.getCell(colName).value || '').trim();
-        const rawBhyt = String(row.getCell(colBhyt).value || '').trim();
+      for (const worksheet of workbook.worksheets) {
+        const sheetName = worksheet.name;
+        let colName = -1;
+        let colBhyt = -1;
+        let colDob = -1;
+        let colAddress = -1;
+        let colCccd = -1;
 
-        if (!rawName || rawName.length < 2 || rawName.toLowerCase().includes('họ và tên')) return;
+        // Find headers in first 5 rows
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+          if (rowNumber <= 5 && colName === -1) {
+            row.eachCell((cell, colNumber) => {
+              const val = String(cell.value || '').toLowerCase().trim();
+              if (val.includes('họ') || val.includes('tên') || val.includes('người')) colName = colNumber;
+              if (val.includes('mã') || val.includes('bảo hiểm') || val.includes('bhyt') || val.includes('thẻ')) colBhyt = colNumber;
+              if (val.includes('sinh') || val.includes('tuổi') || val.includes('dob')) colDob = colNumber;
+              if (val.includes('chỉ') || val.includes('tổ') || val.includes('cụm') || val.includes('thôn')) colAddress = colNumber;
+              if (val.includes('cccd') || val.includes('căn cước') || val.includes('cmnd')) colCccd = colNumber;
+            });
+          }
+        });
 
-        totalRows++;
-        const normName = rawName.toLowerCase();
-        const addressVal = colAddress !== -1 ? String(row.getCell(colAddress).value || '').trim() : 'Quảng Giao';
-        const dobVal = colDob !== -1 ? String(row.getCell(colDob).value || '').trim() : '';
-        const expiryVal = colExpiry !== -1 ? String(row.getCell(colExpiry).value || '').trim() : '2026-12-31';
+        if (colName === -1) colName = 4;
+        if (colBhyt === -1) colBhyt = 5;
 
-        // Strict Matching Strategy (Không sai sót, không đè nhầm)
-        const matchedIdx = currentRecords.findIndex(r => r.resident_name.toLowerCase().trim() === normName);
+        worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+          const rawRowValues = Array.isArray(row.values) ? row.values.slice(1) : Object.values(row.values || {});
+          const rowVals = rawRowValues.map((v: any) => {
+            if (v && typeof v === 'object') {
+              if (v.richText && Array.isArray(v.richText)) return v.richText.map((rt: any) => rt.text).join('');
+              if (v.result !== undefined) return v.result;
+            }
+            return v;
+          });
 
-        if (matchedIdx >= 0) {
-          matchedCount++;
-          const existing = currentRecords[matchedIdx];
-          const updated: HealthRecord = {
-            ...existing,
-            has_bhyt: true,
-            bhyt_number: rawBhyt || existing.bhyt_number || 'GD4380123456789',
-            bhyt_expiry: expiryVal || existing.bhyt_expiry || '2026-12-31',
-            address: addressVal || existing.address,
-            updated_at: new Date().toISOString()
-          };
-          currentRecords[matchedIdx] = updated;
-          recordsToSave.push(updated);
-          logs.push(`✅ [ĐÃ KHỚP] ${rawName} (${addressVal}) -> Cập nhật Mã BHYT: ${updated.bhyt_number}`);
-        } else {
-          newCount++;
-          const newRec: HealthRecord = {
-            id: `HR_EXCEL_${Date.now()}_${rowNumber}`,
-            resident_id: `R_EXCEL_${Date.now()}_${rowNumber}`,
-            resident_name: rawName,
-            dob: dobVal || '1985-01-01',
-            gender: 'female',
-            address: addressVal.includes('Quảng Giao') ? addressVal : `${addressVal}, TDP Quảng Giao`,
-            has_bhyt: true,
-            bhyt_number: rawBhyt || 'GD4380123456789',
-            bhyt_expiry: expiryVal || '2026-12-31',
-            chronic_diseases: [],
-            is_disabled: false,
-            updated_at: new Date().toISOString()
-          };
-          currentRecords.push(newRec);
-          recordsToSave.push(newRec);
-          logs.push(`➕ [THÊM MỚI HỒ SƠ] ${rawName} (${addressVal}) -> Mã BHYT: ${newRec.bhyt_number}`);
-        }
-      });
+
+          const rawName = String(rowVals[colName - 1] || rowVals[3] || '').trim();
+          const rawBhyt = String(rowVals[colBhyt - 1] || rowVals[4] || '').trim();
+          const rawDob = colDob !== -1 ? String(rowVals[colDob - 1] || '').trim() : String(rowVals[5] || '').trim();
+          const rawCccd = colCccd !== -1 ? String(rowVals[colCccd - 1] || '').trim() : String(rowVals[8] || '').trim();
+          const rawAddress = colAddress !== -1 ? String(rowVals[colAddress - 1] || '').trim() : `Tổ/Cụm ${sheetName}`;
+
+          if (!rawName || rawName.length < 2 || rawName.toLowerCase().includes('họ và tên') || rawName.toLowerCase().includes('tên chủ hộ')) return;
+          if (!rawBhyt || !/^\d+$/.test(rawBhyt)) return;
+
+          totalRows++;
+          const normName = rawName.toLowerCase();
+
+          // 1. Đối soát CSDL Dân cư chính (Theo CCCD hoặc Họ tên + Ngày sinh)
+          let matchedDbResident = dbResidents.find(r => 
+            (rawCccd && r.identity_card === rawCccd) || 
+            (r.full_name && r.full_name.toLowerCase().trim() === normName)
+          );
+
+          // 2. Đối soát CSDL Hộ gia đình chính (Theo Tên chủ hộ hoặc Hộ trùng khớp)
+          let matchedDbHousehold = dbHouseholds.find(h => 
+            (h.household_head_name && h.household_head_name.toLowerCase().trim() === normName) ||
+            (matchedDbResident && (h.id === matchedDbResident.household_id || h.household_number === matchedDbResident.household_id))
+          );
+
+          const finalGroup = matchedDbHousehold?.group_name || rawAddress || `Tổ/Cụm ${sheetName}`;
+          const finalAddress = `${finalGroup}, TDP Quảng Giao`;
+          const householdNo = matchedDbHousehold?.household_number || matchedDbResident?.household_id || `HK-${sheetName}`;
+
+          // Strict Matching Strategy
+          const matchedIdx = currentRecords.findIndex(r => r.resident_name.toLowerCase().trim() === normName || (rawBhyt && r.bhyt_number === rawBhyt));
+
+          if (matchedIdx >= 0) {
+            matchedCount++;
+            const existing = currentRecords[matchedIdx];
+            const updated: HealthRecord = {
+              ...existing,
+              has_bhyt: true,
+              bhyt_number: rawBhyt,
+              address: finalAddress,
+              household_number: householdNo,
+              health_status_note: `Đã đối soát khớp CSDL Hộ gia đình: ${matchedDbHousehold?.household_head_name ? 'Chủ hộ ' + matchedDbHousehold.household_head_name : finalGroup}`,
+              updated_at: new Date().toISOString()
+            };
+            currentRecords[matchedIdx] = updated;
+            recordsToSave.push(updated);
+            logs.push(`✅ [ĐÃ KHỚP CSDL HỘ DÂN] ${rawName} (${finalGroup}) -> Mã BHYT: ${rawBhyt}`);
+          } else {
+            newCount++;
+            const newRec: HealthRecord = {
+              id: `HR_${rawBhyt}`,
+              resident_id: rawCccd ? `R_${rawCccd}` : `R_${rawBhxhKey(rawBhyt)}`,
+              resident_name: rawName,
+              dob: rawDob || '1985-01-01',
+              gender: 'female',
+              household_number: householdNo,
+              address: finalAddress,
+              has_bhyt: true,
+              bhyt_number: rawBhyt,
+              bhyt_expiry: '2026-12-31',
+              chronic_diseases: [],
+              is_disabled: false,
+              health_status_note: `Tự động phân bổ vào ${finalGroup}. Thuộc CSDL Hộ gia đình TDP Quảng Giao`,
+              updated_at: new Date().toISOString()
+            };
+            currentRecords.push(newRec);
+            recordsToSave.push(newRec);
+            logs.push(`➕ [PHÂN BỔ MỚI VÀO CỤM/TỔ] ${rawName} -> ${finalAddress} (Mã BHYT: ${rawBhyt})`);
+          }
+        });
+      }
 
       setImportPreview({
         totalRows,
@@ -444,6 +479,9 @@ const HealthCare: React.FC = () => {
       e.target.value = '';
     }
   };
+
+  const rawBhxhKey = (bh: string) => bh || Date.now().toString();
+
 
   const confirmImportExcel = async () => {
     if (!importPreview) return;
