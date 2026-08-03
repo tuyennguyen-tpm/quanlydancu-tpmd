@@ -1613,97 +1613,9 @@ const HealthCare: React.FC = () => {
       {/* TAB 1: BẢO HIỂM Y TẾ (BHYT) */}
       {activeTab === 'bhyt' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
-          {/* BẢNG THỐNG KÊ CHI TIẾT SỐ HỘ, SỐ NHÂN KHẨU VÀ CHƯA CÓ BHYT THEO CỤM/TỔ */}
-          <div style={{ 
-            background: 'var(--card-bg, #ffffff)', 
-            padding: '20px', 
-            borderRadius: '14px', 
-            border: '1px solid var(--border-color, #e2e8f0)',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ShieldCheck size={22} color="#10b981" /> Bảng Thống kê Phủ BHYT Theo Cụm / Tổ TDP Quảng Giao
-              </h3>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', fontWeight: 600 }}>
-                Tổng số {groupStatsList.length} Cụm/Tổ tự quản
-              </span>
-            </div>
-
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-              gap: '12px' 
-            }}>
-              {groupStatsList.map((g, idx) => (
-                <div 
-                  key={idx}
-                  onClick={() => { setGroupFilter(g.groupName); }}
-                  style={{ 
-                    background: groupFilter === g.groupName ? '#f0fdf4' : 'var(--bg-main, #f8fafc)',
-                    border: groupFilter === g.groupName ? '2px solid #10b981' : '1px solid var(--border-color, #e2e8f0)',
-                    padding: '14px',
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: groupFilter === g.groupName ? '0 4px 12px rgba(16, 185, 129, 0.15)' : 'none'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b' }}>
-                      📍 {g.groupName}
-                    </span>
-                    <span style={{ 
-                      background: g.percentage >= 90 ? '#ecfdf5' : '#fef3c7', 
-                      color: g.percentage >= 90 ? '#047857' : '#d97706',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      padding: '2px 8px',
-                      borderRadius: '10px'
-                    }}>
-                      {g.percentage}% Phủ BHYT
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.85rem', marginBottom: '8px' }}>
-                    <div>🏠 Số Hộ: <strong>{g.householdCount} hộ</strong></div>
-                    <div>👥 Nhân khẩu: <strong>{g.totalResidents} người</strong></div>
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    paddingTop: '8px', 
-                    borderTop: '1px dashed #cbd5e1',
-                    fontSize: '0.82rem'
-                  }}>
-                    <span style={{ color: '#10b981', fontWeight: 700 }}>
-                      ✅ Đã có: {g.hasBhytCount}
-                    </span>
-                    <span 
-                      onClick={(e) => { e.stopPropagation(); setGroupFilter(g.groupName); setBhytFilter('missing'); }}
-                      style={{ 
-                        color: g.missingBhytCount > 0 ? '#ef4444' : '#64748b', 
-                        fontWeight: 800,
-                        background: g.missingBhytCount > 0 ? '#fef2f2' : '#f1f5f9',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
-                      title="Bấm để lọc danh sách người CHƯA CÓ BHYT trong Tổ này"
-                    >
-                      ⚠️ Chưa có: {g.missingBhytCount} người
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* DANH SÁCH BHYT: GOM THEO HỘ GIA ĐÌNH HOẶC DẠNG BẢNG PHẲNG */}
           {viewMode === 'household' ? (
+
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {groupedHouseholdRecords.length === 0 ? (
