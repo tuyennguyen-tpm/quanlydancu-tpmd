@@ -476,6 +476,15 @@ const HealthCare: React.FC = () => {
     }
   };
 
+  const handleClearAllHealthRecords = async () => {
+    if (window.confirm('⚠️ CẢNH BÁO NGUY HẠI:\n\nBạn có chắc chắn muốn XÓA TOÀN BỘ DANH SÁCH Bảo hiểm Y tế (BHYT) hiện tại không?\n\nThao tác này sẽ dọn sạch danh sách BHYT trong hệ thống!')) {
+      await healthDb.clearAllHealthRecords();
+      setHealthRecords([]);
+      loadAllData();
+    }
+  };
+
+
   const handleSaveVaccine = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vacForm.campaign_name || !vacForm.vaccine_type) return;
@@ -937,31 +946,57 @@ const HealthCare: React.FC = () => {
           </div>
 
           {activeTab === 'bhyt' && (
-            <div style={{ display: 'flex', gap: '6px', background: 'var(--card-bg, #ffffff)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-color, #cbd5e1)' }}>
-              {[
-                { id: 'all', label: 'Tất cả' },
-                { id: 'has', label: 'Đã có BHYT' },
-                { id: 'missing', label: 'Chưa có BHYT' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setBhytFilter(f.id as any)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: bhytFilter === f.id ? '#10b981' : 'transparent',
-                    color: bhytFilter === f.id ? 'white' : 'var(--text-muted, #64748b)',
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '6px', background: 'var(--card-bg, #ffffff)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-color, #cbd5e1)' }}>
+                {[
+                  { id: 'all', label: 'Tất cả' },
+                  { id: 'has', label: 'Đã có BHYT' },
+                  { id: 'missing', label: 'Chưa có BHYT' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setBhytFilter(f.id as any)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: bhytFilter === f.id ? '#10b981' : 'transparent',
+                      color: bhytFilter === f.id ? 'white' : 'var(--text-muted, #64748b)',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* NÚT XÓA TOÀN BỘ DANH SÁCH BHYT */}
+              <button 
+                onClick={handleClearAllHealthRecords}
+                className="btn btn-danger"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  padding: '9px 16px', 
+                  borderRadius: '10px', 
+                  background: '#fef2f2', 
+                  color: '#ef4444', 
+                  border: '1px solid #fca5a5', 
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.1)'
+                }}
+                title="Xóa toàn bộ danh sách Bảo hiểm Y tế hiện tại"
+              >
+                <Trash2 size={16} /> Xóa toàn bộ danh sách BHYT
+              </button>
             </div>
           )}
+
 
           {activeTab === 'chronic' && (
             <select

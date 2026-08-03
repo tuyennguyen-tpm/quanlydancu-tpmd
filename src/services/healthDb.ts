@@ -5294,6 +5294,18 @@ export const healthDb = {
     }
   },
 
+  clearAllHealthRecords: async (): Promise<void> => {
+    setStoredData(STORAGE_KEYS.HEALTH_RECORDS, []);
+    if (supabase) {
+      try {
+        await supabase.from('health_records').delete().neq('id', 'CLEAR_ALL_STUB');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  },
+
+
   // 2. Vaccinations
   getVaccinations: async (): Promise<VaccinationCampaign[]> => {
     return getStoredData<VaccinationCampaign>(STORAGE_KEYS.VACCINATIONS, seedVaccinations);
