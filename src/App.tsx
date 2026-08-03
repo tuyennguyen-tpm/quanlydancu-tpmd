@@ -27,9 +27,12 @@ import FarmersAssociation from './pages/FarmersAssociation';
 import YouthUnion from './pages/YouthUnion';
 import WardDocuments from './pages/WardDocuments';
 import InvitationTemplates from './pages/InvitationTemplates';
+import HealthCare from './pages/HealthCare';
 import { speakVietnamese, getTingChimeDataUrl } from './utils/tts';
 import { 
+  Activity,
   Users, 
+
   Home, 
   UserCircle, 
   ShieldCheck, 
@@ -2453,8 +2456,11 @@ const App = () => {
         return <Policies />;
       case 'security':
         return <Security />;
+      case 'healthcare':
+        return <HealthCare />;
       case 'complaints':
         return <Complaints />;
+
       case 'environment':
         return <Environment />;
       case 'finance': {
@@ -2569,6 +2575,8 @@ const App = () => {
     { id: 'residents-changes', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
     { id: 'policy', icon: Shield, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
     { id: 'security', icon: ShieldCheck, label: 'An ninh trật tự', group: 'Quản lý dân cư' },
+    { id: 'healthcare', icon: Activity, label: 'Y tế & Sức khỏe', group: 'Quản lý dân cư' },
+
     { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount, badgeColor: '#ef4444' },
     { id: 'meetings-party', icon: Calendar, label: 'Lịch họp Chi bộ', group: 'Tổ chức - Đoàn thể' },
     { id: 'meetings-front', icon: UserPlus, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },

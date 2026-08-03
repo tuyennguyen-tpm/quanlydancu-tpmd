@@ -184,3 +184,80 @@ export interface WardDocument {
   read_by_tdps?: { tdp_name: string; read_at: string }[];
 }
 
+export interface HealthRecord {
+  id: string;
+  resident_id: string;
+  resident_name: string;
+  dob?: string;
+  gender?: string;
+  household_number?: string;
+  address?: string;
+  phone?: string;
+  group_id?: string;
+  
+  // Bảo hiểm y tế
+  has_bhyt: boolean;
+  bhyt_number?: string;
+  bhyt_expiry?: string;
+  
+  // Bệnh nền / Mãn tính & Sức khỏe đặc biệt
+  chronic_diseases: string[]; // e.g. ['Huyết áp cao', 'Tiểu đường', 'Tim mạch']
+  is_disabled: boolean;
+  disability_type?: string;
+  mental_health_issue?: boolean;
+  health_status_note?: string;
+  
+  updated_at: string;
+}
+
+export interface VaccinationCampaign {
+  id: string;
+  campaign_name: string;
+  vaccine_type: string;
+  target_audience: string; // e.g. "Trẻ em 0-5 tuổi", "Người trên 65 tuổi"
+  start_date: string;
+  end_date: string;
+  location: string;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  total_target: number;
+  total_completed: number;
+  notes?: string;
+  created_at: string;
+}
+
+export interface EpidemicReport {
+  id: string;
+  disease_name: string; // e.g. "Sốt xuất huyết", "Tay chân miệng", "COVID-19"
+  area: string; // Cụm/Tổ hoặc số nhà
+  case_count: number;
+  risk_level: 'low' | 'medium' | 'high' | 'danger';
+  actions_taken: string; // e.g. "Phun hóa chất diệt muỗi ngày 10/06"
+  status: 'monitoring' | 'contained' | 'resolved';
+  reported_date: string;
+}
+
+export interface FertilityRecord {
+  id: string;
+  mother_name: string;
+  household_id?: string;
+  address: string;
+  status: 'pregnant' | 'given_birth';
+  expected_due_date?: string;
+  birth_date?: string;
+  child_name?: string;
+  child_gender?: 'male' | 'female';
+  is_third_child_plus: boolean; // Sinh con thứ 3 trở lên
+  notes?: string;
+  created_at: string;
+}
+
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  role: string; // e.g. "Bác sĩ phụ trách TDP", "Trạm Y tế Phường", "Xe cấp cứu"
+  phone: string;
+  address?: string;
+  notes?: string;
+}
+
+
