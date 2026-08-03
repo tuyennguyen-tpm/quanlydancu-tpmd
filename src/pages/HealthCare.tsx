@@ -46,6 +46,23 @@ const formatDateVN = (dateStr?: string): string => {
   return `${day}/${month}/${year}`;
 };
 
+// 7 Cụm / Tổ tự quản chính thức của Tổ dân phố Quảng Giao
+const OFFICIAL_TDP_GROUPS = ['Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+
+const normalizeToOfficialGroup = (rawStr?: string): string => {
+  if (!rawStr) return 'Tổ 4';
+  const str = rawStr.toLowerCase().trim();
+  if (str.includes('việt trung') || str.includes('viet trung') || str.includes('vt') || str.includes('tổ 1') || str.includes('thôn 1') || str.includes('cụm 1')) return 'Việt Trung';
+  if (str.includes('4') || str.includes('tổ 4') || str.includes('thôn 4')) return 'Tổ 4';
+  if (str.includes('5') || str.includes('tổ 5') || str.includes('thôn 5')) return 'Tổ 5';
+  if (str.includes('6') || str.includes('tổ 6') || str.includes('thôn 6')) return 'Tổ 6';
+  if (str.includes('7') || str.includes('tổ 7') || str.includes('thôn 7')) return 'Tổ 7';
+  if (str.includes('8') || str.includes('tổ 8') || str.includes('thôn 8')) return 'Tổ 8';
+  if (str.includes('9') || str.includes('tổ 9') || str.includes('thôn 9')) return 'Tổ 9';
+  return 'Tổ 4';
+};
+
+
 
 
 const HealthCare: React.FC = () => {
@@ -138,21 +155,10 @@ const HealthCare: React.FC = () => {
     return { withChronicCount: withChronic.length, disabledCount };
   }, [healthRecords]);
 
-  // Extract available Sub-groups / Cụm / Tổ from addresses
-  const availableGroups = useMemo(() => {
-    const groups = new Set<string>();
-    healthRecords.forEach(r => {
-      if (r.address) {
-        const match = r.address.match(/(Tổ\/Cụm\s*[\w\d]+|Tổ\s*\d+|Cụm\s*\d+|Thôn\s*\d+|VT)/i);
-        if (match) groups.add(match[0]);
-        else if (r.address.includes(',')) groups.add(r.address.split(',')[0].trim());
-        else groups.add(r.address.trim());
-      }
-    });
-    return Array.from(groups).sort();
-  }, [healthRecords]);
+  // Extract 7 official Sub-groups / Cụm / Tổ
+  const availableGroups = useMemo(() => OFFICIAL_TDP_GROUPS, []);
 
-  // Compute detailed statistics per Sub-group / Cụm / Tổ
+  // Compute detailed statistics per Sub-group / Cụm / Tổ (Đúng 7 Tổ chuẩn)
   const groupStatsList = useMemo(() => {
     const map = new Map<string, {
       groupName: string;
@@ -162,15 +168,19 @@ const HealthCare: React.FC = () => {
       missingBhytCount: number;
     }>();
 
-    healthRecords.forEach(r => {
-      let grp = 'TDP Quảng Giao';
-      if (r.address) {
-        const match = r.address.match(/(Tổ\/Cụm\s*[\w\d]+|Tổ\s*\d+|Cụm\s*\d+|Thôn\s*\d+|VT)/i);
-        if (match) grp = match[0];
-        else if (r.address.includes(',')) grp = r.address.split(',')[0].trim();
-        else grp = r.address.trim();
-      }
+    // Khởi tạo đầy đủ 7 Tổ chính thức
+    OFFICIAL_TDP_GROUPS.forEach(gName => {
+      map.set(gName, {
+        groupName: gName,
+        households: new Set(),
+        totalResidents: 0,
+        hasBhytCount: 0,
+        missingBhytCount: 0
+      });
+    });
 
+    healthRecords.forEach(r => {
+      const grp = normalizeToOfficialGroup(r.address);
       if (!map.has(grp)) {
         map.set(grp, {
           groupName: grp,
@@ -195,8 +205,9 @@ const HealthCare: React.FC = () => {
       hasBhytCount: item.hasBhytCount,
       missingBhytCount: item.missingBhytCount,
       percentage: item.totalResidents > 0 ? Math.round((item.hasBhytCount / item.totalResidents) * 100) : 0
-    })).sort((a, b) => a.groupName.localeCompare(b.groupName, 'vi'));
+    }));
   }, [healthRecords]);
+
 
 
   // Filtered Health Records
@@ -237,13 +248,8 @@ const HealthCare: React.FC = () => {
     filteredHealthRecords.forEach(rec => {
       const hkKey = rec.household_number || rec.address || 'HK-CHUA_PHAN_HO';
       if (!map.has(hkKey)) {
-        let grp = 'TDP Quảng Giao';
-        if (rec.address) {
-          const match = rec.address.match(/(Tổ\/Cụm\s*[\w\d]+|Tổ\s*\d+|Cụm\s*\d+|Thôn\s*\d+|VT)/i);
-          if (match) grp = match[0];
-          else if (rec.address.includes(',')) grp = rec.address.split(',')[0].trim();
-          else grp = rec.address.trim();
-        }
+        let grp = normalizeToOfficialGroup(rec.address);
+
 
         let head = rec.resident_name;
         if (rec.health_status_note && rec.health_status_note.includes('Chủ hộ')) {
