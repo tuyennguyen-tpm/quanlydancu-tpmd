@@ -33,6 +33,20 @@ import { healthDb } from '../services/healthDb';
 import { db } from '../services/db';
 import type { HealthRecord, VaccinationCampaign, EpidemicReport, FertilityRecord, EmergencyContact } from '../types';
 
+// Helper formatting date to DD/MM/YYYY (Chuẩn Việt Nam)
+const formatDateVN = (dateStr?: string): string => {
+  if (!dateStr || dateStr === '---' || dateStr.trim() === '') return '---';
+  const str = dateStr.trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+
 
 const HealthCare: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'bhyt' | 'chronic' | 'prevention' | 'fertility' | 'emergency'>('bhyt');
@@ -1620,7 +1634,7 @@ const HealthCare: React.FC = () => {
                                 )}
                               </td>
                               <td style={{ padding: '10px 16px', color: 'var(--text-muted, #64748b)' }}>
-                                {rec.dob ? new Date(rec.dob).toLocaleDateString('vi-VN') : '---'} ({rec.gender === 'female' ? 'Nữ' : 'Nam'})
+                                {formatDateVN(rec.dob)} ({rec.gender === 'female' ? 'Nữ' : 'Nam'})
                               </td>
                               <td style={{ padding: '10px 16px' }}>
                                 {rec.bhyt_number ? (
@@ -1628,7 +1642,7 @@ const HealthCare: React.FC = () => {
                                     <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#3b82f6' }}>{rec.bhyt_number}</div>
                                     {rec.bhyt_expiry && (
                                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>
-                                        Hạn: {new Date(rec.bhyt_expiry).toLocaleDateString('vi-VN')}
+                                        Hạn: {formatDateVN(rec.bhyt_expiry)}
                                       </div>
                                     )}
                                   </div>
@@ -1636,6 +1650,7 @@ const HealthCare: React.FC = () => {
                                   <span style={{ color: 'var(--text-muted, #cbd5e1)', fontStyle: 'italic' }}>Chưa cập nhật</span>
                                 )}
                               </td>
+
                               <td style={{ padding: '10px 16px' }}>
                                 {rec.has_bhyt ? (
                                   <span style={{ background: '#ecfdf5', color: '#10b981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -1690,11 +1705,12 @@ const HealthCare: React.FC = () => {
                             {rec.resident_name}
                           </td>
                           <td style={{ padding: '14px 16px', color: 'var(--text-muted, #64748b)' }}>
-                            {rec.dob ? new Date(rec.dob).toLocaleDateString('vi-VN') : '---'} 
+                            {formatDateVN(rec.dob)} 
                             <span style={{ marginLeft: '6px', fontSize: '0.85rem' }}>
                               ({rec.gender === 'female' ? 'Nữ' : 'Nam'})
                             </span>
                           </td>
+
                           <td style={{ padding: '14px 16px' }}>
                             <div>{rec.address || 'Quảng Giao'}</div>
                             {rec.phone && <div style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 600 }}>📞 {rec.phone}</div>}
@@ -1736,7 +1752,7 @@ const HealthCare: React.FC = () => {
                                 <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#3b82f6' }}>{rec.bhyt_number}</div>
                                 {rec.bhyt_expiry && (
                                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted, #94a3b8)' }}>
-                                    Hạn: {new Date(rec.bhyt_expiry).toLocaleDateString('vi-VN')}
+                                    Hạn: {formatDateVN(rec.bhyt_expiry)}
                                   </div>
                                 )}
                               </div>
