@@ -15,7 +15,8 @@ import {
   Stethoscope, 
   RefreshCw,
   Heart,
-  UserX
+  UserX,
+  X
 } from 'lucide-react';
 import { healthDb } from '../services/healthDb';
 import type { HealthRecord, VaccinationCampaign, EpidemicReport, FertilityRecord, EmergencyContact } from '../types';
@@ -39,6 +40,10 @@ const HealthCare: React.FC = () => {
   // Modals
   const [showHealthModal, setShowHealthModal] = useState<boolean>(false);
   const [editingRecord, setEditingRecord] = useState<HealthRecord | null>(null);
+
+  const [showVaccineModal, setShowVaccineModal] = useState<boolean>(false);
+  const [showEpidemicModal, setShowEpidemicModal] = useState<boolean>(false);
+  const [showFertilityModal, setShowFertilityModal] = useState<boolean>(false);
 
   // Load Data
   const loadAllData = async () => {
@@ -122,6 +127,42 @@ const HealthCare: React.FC = () => {
 
   const [diseaseInput, setDiseaseInput] = useState<string>('');
 
+  // Form State for Vaccine
+  const [vacForm, setVacForm] = useState<Partial<VaccinationCampaign>>({
+    campaign_name: '',
+    vaccine_type: '',
+    target_audience: '',
+    start_date: new Date().toISOString().slice(0, 10),
+    end_date: new Date().toISOString().slice(0, 10),
+    location: 'Trạm Y tế Phường Nam Sầm Sơn',
+    status: 'upcoming',
+    notes: ''
+  });
+
+  // Form State for Epidemic
+  const [epiForm, setEpiForm] = useState<Partial<EpidemicReport>>({
+    disease_name: 'Sốt xuất huyết',
+    area: 'Tổ dân phố Quảng Giao',
+    case_count: 1,
+    risk_level: 'medium',
+    actions_taken: '',
+    status: 'monitoring',
+    reported_date: new Date().toISOString().slice(0, 10)
+  });
+
+  // Form State for Fertility
+  const [fertForm, setFertForm] = useState<Partial<FertilityRecord>>({
+    mother_name: '',
+    address: 'Nam Sầm Sơn, Thanh Hóa',
+    status: 'pregnant',
+    expected_due_date: '',
+    birth_date: '',
+    child_name: '',
+    child_gender: 'male',
+    is_third_child_plus: false,
+    notes: ''
+  });
+
   const openAddHealthModal = () => {
     setEditingRecord(null);
     setFormData({
@@ -198,6 +239,68 @@ const HealthCare: React.FC = () => {
     setFormData({ ...formData, chronic_diseases: current.filter(t => t !== tag) });
   };
 
+  // Handlers for Vac, Epi, Fert
+  const handleSaveVaccine = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vacForm.campaign_name || !vacForm.vaccine_type) return;
+    const campaignToSave: VaccinationCampaign = {
+      id: `VAC_${Date.now()}`,
+      campaign_name: vacForm.campaign_name,
+      vaccine_type: vacForm.vaccine_type,
+      target_audience: vacForm.target_audience || 'Toàn dân TDP',
+      start_date: vacForm.start_date || new Date().toISOString().slice(0, 10),
+      end_date: vacForm.end_date || new Date().toISOString().slice(0, 10),
+      location: vacForm.location || 'Trạm Y tế Phường Nam Sầm Sơn',
+      status: vacForm.status || 'upcoming',
+      total_target: Number(vacForm.total_target) || 0,
+      total_completed: Number(vacForm.total_completed) || 0,
+      notes: vacForm.notes || '',
+      created_at: new Date().toISOString()
+    };
+    await healthDb.saveVaccination(campaignToSave);
+    setShowVaccineModal(false);
+    loadAllData();
+  };
+
+  const handleSaveEpidemic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!epiForm.disease_name || !epiForm.area) return;
+    const reportToSave: EpidemicReport = {
+      id: `EPI_${Date.now()}`,
+      disease_name: epiForm.disease_name,
+      area: epiForm.area,
+      case_count: Number(epiForm.case_count) || 1,
+      risk_level: epiForm.risk_level || 'medium',
+      actions_taken: epiForm.actions_taken || 'Đã khoanh vùng và phun thuốc diệt muỗi/khử khuẩn.',
+      status: epiForm.status || 'monitoring',
+      reported_date: epiForm.reported_date || new Date().toISOString().slice(0, 10)
+    };
+    await healthDb.saveEpidemicReport(reportToSave);
+    setShowEpidemicModal(false);
+    loadAllData();
+  };
+
+  const handleSaveFertility = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fertForm.mother_name) return;
+    const fertToSave: FertilityRecord = {
+      id: `FER_${Date.now()}`,
+      mother_name: fertForm.mother_name,
+      address: fertForm.address || 'Quảng Giao',
+      status: fertForm.status || 'pregnant',
+      expected_due_date: fertForm.expected_due_date,
+      birth_date: fertForm.birth_date,
+      child_name: fertForm.child_name,
+      child_gender: fertForm.child_gender || 'male',
+      is_third_child_plus: fertForm.is_third_child_plus ?? false,
+      notes: fertForm.notes || '',
+      created_at: new Date().toISOString()
+    };
+    await healthDb.saveFertilityRecord(fertToSave);
+    setShowFertilityModal(false);
+    loadAllData();
+  };
+
   return (
     <div className="healthcare-page fade-in" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
       
@@ -245,24 +348,52 @@ const HealthCare: React.FC = () => {
             <RefreshCw size={16} className={isLoading ? 'spin' : ''} />
             Làm mới
           </button>
-          <button 
-            onClick={openAddHealthModal}
-            className="btn btn-primary"
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              padding: '10px 20px', 
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              border: 'none',
-              fontWeight: 700,
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
-            }}
-          >
-            <Plus size={18} />
-            Thêm Hồ sơ Y tế
-          </button>
+
+          {activeTab === 'prevention' ? (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setShowVaccineModal(true)}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', background: '#10b981', border: 'none', color: 'white', fontWeight: 700 }}
+              >
+                <Plus size={16} /> Thêm Lịch tiêm
+              </button>
+              <button 
+                onClick={() => setShowEpidemicModal(true)}
+                className="btn btn-danger"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}
+              >
+                <Plus size={16} /> Báo Dịch bệnh
+              </button>
+            </div>
+          ) : activeTab === 'fertility' ? (
+            <button 
+              onClick={() => setShowFertilityModal(true)}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#ec4899', border: 'none', color: 'white', fontWeight: 700 }}
+            >
+              <Plus size={18} /> Thêm Hồ sơ Thai sản / Sinh
+            </button>
+          ) : (
+            <button 
+              onClick={openAddHealthModal}
+              className="btn btn-primary"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                padding: '10px 20px', 
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                border: 'none',
+                fontWeight: 700,
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+              }}
+            >
+              <Plus size={18} />
+              Thêm Hồ sơ Y tế
+            </button>
+          )}
         </div>
       </div>
 
@@ -708,6 +839,12 @@ const HealthCare: React.FC = () => {
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Syringe size={20} color="#10b981" /> Lịch Tiêm chủng mở rộng
               </h3>
+              <button 
+                onClick={() => setShowVaccineModal(true)}
+                style={{ background: '#ecfdf5', color: '#10b981', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Plus size={16} /> Thêm Lịch tiêm
+              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -747,6 +884,12 @@ const HealthCare: React.FC = () => {
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertTriangle size={20} color="#ef4444" /> Cảnh báo Ổ dịch & Y tế Dự phòng
               </h3>
+              <button 
+                onClick={() => setShowEpidemicModal(true)}
+                style={{ background: '#fef2f2', color: '#ef4444', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Plus size={16} /> Báo Dịch bệnh
+              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -777,9 +920,17 @@ const HealthCare: React.FC = () => {
       {/* TAB 4: DÂN SỐ & THAI SẢN */}
       {activeTab === 'fertility' && (
         <div className="card-container" style={{ background: 'var(--card-bg, #ffffff)', padding: '20px', borderRadius: '14px', border: '1px solid var(--border-color, #e2e8f0)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Baby size={22} color="#ec4899" /> Hồ sơ Chăm sóc Sức khỏe Sinh sản & Dân số TDP
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Baby size={22} color="#ec4899" /> Hồ sơ Chăm sóc Sức khỏe Sinh sản & Dân số TDP
+            </h3>
+            <button 
+              onClick={() => setShowFertilityModal(true)}
+              style={{ background: '#fce7f3', color: '#ec4899', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Plus size={16} /> Thêm Hồ sơ Thai sản / Sinh
+            </button>
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem' }}>
               <thead>
@@ -882,7 +1033,7 @@ const HealthCare: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: THÊM / SỬA HỒ SƠ Y TẾ */}
+      {/* MODAL 1: THÊM / SỬA HỒ SƠ Y TẾ */}
       {showHealthModal && (
         <div style={{ 
           position: 'fixed', 
@@ -1065,6 +1216,247 @@ const HealthCare: React.FC = () => {
                 <button type="submit" className="btn btn-primary" style={{ padding: '10px 24px', borderRadius: '8px', background: '#10b981', border: 'none', color: 'white', fontWeight: 700 }}>
                   Lưu Hồ sơ
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: THÊM LỊCH TIÊM CHỦNG */}
+      {showVaccineModal && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontWeight: 800, color: '#1e293b' }}>💉 Thêm Đợt Tiêm chủng mở rộng</h3>
+              <button onClick={() => setShowVaccineModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveVaccine} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Tên chiến dịch tiêm chủng *</label>
+                <input 
+                  type="text" required
+                  placeholder="Ví dụ: Tiêm vắc xin Sởi - Rubella Quý 3/2026"
+                  value={vacForm.campaign_name || ''}
+                  onChange={e => setVacForm({ ...vacForm, campaign_name: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Loại Vắc xin *</label>
+                  <input 
+                    type="text" required
+                    placeholder="5 trong 1, OPV, Cúm..."
+                    value={vacForm.vaccine_type || ''}
+                    onChange={e => setVacForm({ ...vacForm, vaccine_type: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Đối tượng tiêm</label>
+                  <input 
+                    type="text"
+                    placeholder="Trẻ từ 2-36 tháng..."
+                    value={vacForm.target_audience || ''}
+                    onChange={e => setVacForm({ ...vacForm, target_audience: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Ngày bắt đầu</label>
+                  <input 
+                    type="date"
+                    value={vacForm.start_date || ''}
+                    onChange={e => setVacForm({ ...vacForm, start_date: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Địa điểm tiêm</label>
+                  <input 
+                    type="text"
+                    value={vacForm.location || ''}
+                    onChange={e => setVacForm({ ...vacForm, location: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Ghi chú / Dặn dò phụ huynh</label>
+                <textarea 
+                  rows={2}
+                  value={vacForm.notes || ''}
+                  onChange={e => setVacForm({ ...vacForm, notes: e.target.value })}
+                  placeholder="Mang theo sổ tiêm cá nhân của trẻ..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setShowVaccineModal(false)} className="btn btn-outline" style={{ padding: '8px 16px' }}>Hủy</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', background: '#10b981', border: 'none', color: 'white', fontWeight: 700 }}>Lưu Lịch Tiêm</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: BÁO CÁO CẢNH BÁO DỊCH BỆNH */}
+      {showEpidemicModal && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontWeight: 800, color: '#ef4444' }}>🚨 Khai báo Cảnh báo Dịch bệnh TDP</h3>
+              <button onClick={() => setShowEpidemicModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveEpidemic} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Tên loại bệnh / Dịch *</label>
+                <input 
+                  type="text" required
+                  placeholder="Ví dụ: Sốt xuất huyết Dengue, Tay chân miệng..."
+                  value={epiForm.disease_name || ''}
+                  onChange={e => setEpiForm({ ...epiForm, disease_name: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Khu vực / Ngõ xuất hiện *</label>
+                  <input 
+                    type="text" required
+                    placeholder="Ngõ 47, Cụm 2..."
+                    value={epiForm.area || ''}
+                    onChange={e => setEpiForm({ ...epiForm, area: e.target.value })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Mức độ rủi ro</label>
+                  <select 
+                    value={epiForm.risk_level || 'medium'}
+                    onChange={e => setEpiForm({ ...epiForm, risk_level: e.target.value as any })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="low">Thấp</option>
+                    <option value="medium">Trung bình</option>
+                    <option value="high">Cao</option>
+                    <option value="danger">Nguy hiểm</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Biện pháp Y tế đã xử lý</label>
+                <textarea 
+                  rows={2}
+                  value={epiForm.actions_taken || ''}
+                  onChange={e => setEpiForm({ ...epiForm, actions_taken: e.target.value })}
+                  placeholder="Đã dọn vệ sinh, phun hóa chất diệt muỗi..."
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setShowEpidemicModal(false)} className="btn btn-outline" style={{ padding: '8px 16px' }}>Hủy</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}>Lưu Cảnh Báo</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: THÊM HỒ SƠ THAI SẢN / DÂN SỐ */}
+      {showFertilityModal && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontWeight: 800, color: '#ec4899' }}>👶 Thêm Hồ sơ Thai sản & Dân số</h3>
+              <button onClick={() => setShowFertilityModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleSaveFertility} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Tên Mẹ / Phụ nữ mang thai *</label>
+                <input 
+                  type="text" required
+                  placeholder="Ví dụ: Nguyễn Thị Hoa"
+                  value={fertForm.mother_name || ''}
+                  onChange={e => setFertForm({ ...fertForm, mother_name: e.target.value })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Trạng thái *</label>
+                  <select 
+                    value={fertForm.status || 'pregnant'}
+                    onChange={e => setFertForm({ ...fertForm, status: e.target.value as any })}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  >
+                    <option value="pregnant">🤰 Đang mang thai</option>
+                    <option value="given_birth">👶 Đã sinh con</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>
+                    {fertForm.status === 'pregnant' ? 'Ngày dự sinh' : 'Ngày sinh của bé'}
+                  </label>
+                  <input 
+                    type="date"
+                    value={fertForm.status === 'pregnant' ? (fertForm.expected_due_date || '') : (fertForm.birth_date || '')}
+                    onChange={e => {
+                      if (fertForm.status === 'pregnant') setFertForm({ ...fertForm, expected_due_date: e.target.value });
+                      else setFertForm({ ...fertForm, birth_date: e.target.value });
+                    }}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+              {fertForm.status === 'given_birth' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Tên của bé</label>
+                    <input 
+                      type="text"
+                      placeholder="Lê Minh An..."
+                      value={fertForm.child_name || ''}
+                      onChange={e => setFertForm({ ...fertForm, child_name: e.target.value })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Giới tính bé</label>
+                    <select 
+                      value={fertForm.child_gender || 'male'}
+                      onChange={e => setFertForm({ ...fertForm, child_gender: e.target.value as any })}
+                      style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                    >
+                      <option value="male">Bé trai</option>
+                      <option value="female">Bé gái</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input 
+                  type="checkbox" id="is_third_child_cb"
+                  checked={fertForm.is_third_child_plus ?? false}
+                  onChange={e => setFertForm({ ...fertForm, is_third_child_plus: e.target.checked })}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <label htmlFor="is_third_child_cb" style={{ fontWeight: 700, cursor: 'pointer', color: '#ef4444' }}>Là trường hợp sinh con thứ 3 trở lên</label>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setShowFertilityModal(false)} className="btn btn-outline" style={{ padding: '8px 16px' }}>Hủy</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', background: '#ec4899', border: 'none', color: 'white', fontWeight: 700 }}>Lưu Hồ Sơ</button>
               </div>
             </form>
           </div>
