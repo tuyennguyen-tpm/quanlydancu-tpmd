@@ -273,6 +273,11 @@ export const healthDb = {
     setStoredData(STORAGE_KEYS.VACCINATIONS, list);
   },
 
+  deleteVaccination: async (id: string): Promise<void> => {
+    const list = getStoredData<VaccinationCampaign>(STORAGE_KEYS.VACCINATIONS, seedVaccinations);
+    setStoredData(STORAGE_KEYS.VACCINATIONS, list.filter(c => c.id !== id));
+  },
+
   // 3. Epidemic Reports
   getEpidemicReports: async (): Promise<EpidemicReport[]> => {
     return getStoredData<EpidemicReport>(STORAGE_KEYS.EPIDEMICS, seedEpidemicReports);
@@ -284,6 +289,11 @@ export const healthDb = {
     if (idx >= 0) list[idx] = report;
     else list.unshift(report);
     setStoredData(STORAGE_KEYS.EPIDEMICS, list);
+  },
+
+  deleteEpidemicReport: async (id: string): Promise<void> => {
+    const list = getStoredData<EpidemicReport>(STORAGE_KEYS.EPIDEMICS, seedEpidemicReports);
+    setStoredData(STORAGE_KEYS.EPIDEMICS, list.filter(e => e.id !== id));
   },
 
   // 4. Fertility Records
@@ -298,6 +308,12 @@ export const healthDb = {
     else list.unshift(record);
     setStoredData(STORAGE_KEYS.FERTILITY, list);
   },
+
+  deleteFertilityRecord: async (id: string): Promise<void> => {
+    const list = getStoredData<FertilityRecord>(STORAGE_KEYS.FERTILITY, seedFertilityRecords);
+    setStoredData(STORAGE_KEYS.FERTILITY, list.filter(f => f.id !== id));
+  },
+
 
   // 5. Emergency Contacts
   getEmergencyContacts: async (): Promise<EmergencyContact[]> => {

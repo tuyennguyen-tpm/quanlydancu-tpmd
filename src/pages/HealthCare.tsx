@@ -37,13 +37,18 @@ const HealthCare: React.FC = () => {
   const [bhytFilter, setBhytFilter] = useState<'all' | 'has' | 'missing'>('all');
   const [diseaseFilter, setDiseaseFilter] = useState<string>('all');
 
-  // Modals
+  // Modals & Editing States
   const [showHealthModal, setShowHealthModal] = useState<boolean>(false);
   const [editingRecord, setEditingRecord] = useState<HealthRecord | null>(null);
 
   const [showVaccineModal, setShowVaccineModal] = useState<boolean>(false);
+  const [editingVaccine, setEditingVaccine] = useState<VaccinationCampaign | null>(null);
+
   const [showEpidemicModal, setShowEpidemicModal] = useState<boolean>(false);
+  const [editingEpidemic, setEditingEpidemic] = useState<EpidemicReport | null>(null);
+
   const [showFertilityModal, setShowFertilityModal] = useState<boolean>(false);
+  const [editingFertility, setEditingFertility] = useState<FertilityRecord | null>(null);
 
   // Load Data
   const loadAllData = async () => {
@@ -163,6 +168,7 @@ const HealthCare: React.FC = () => {
     notes: ''
   });
 
+  // Open Add/Edit Modals
   const openAddHealthModal = () => {
     setEditingRecord(null);
     setFormData({
@@ -190,6 +196,70 @@ const HealthCare: React.FC = () => {
     setShowHealthModal(true);
   };
 
+  const openAddFertilityModal = () => {
+    setEditingFertility(null);
+    setFertForm({
+      mother_name: '',
+      address: 'Nam Sầm Sơn, Thanh Hóa',
+      status: 'pregnant',
+      expected_due_date: '',
+      birth_date: '',
+      child_name: '',
+      child_gender: 'male',
+      is_third_child_plus: false,
+      notes: ''
+    });
+    setShowFertilityModal(true);
+  };
+
+  const openEditFertilityModal = (rec: FertilityRecord) => {
+    setEditingFertility(rec);
+    setFertForm(rec);
+    setShowFertilityModal(true);
+  };
+
+  const openAddVaccineModal = () => {
+    setEditingVaccine(null);
+    setVacForm({
+      campaign_name: '',
+      vaccine_type: '',
+      target_audience: '',
+      start_date: new Date().toISOString().slice(0, 10),
+      end_date: new Date().toISOString().slice(0, 10),
+      location: 'Trạm Y tế Phường Nam Sầm Sơn',
+      status: 'upcoming',
+      notes: ''
+    });
+    setShowVaccineModal(true);
+  };
+
+  const openEditVaccineModal = (vac: VaccinationCampaign) => {
+    setEditingVaccine(vac);
+    setVacForm(vac);
+    setShowVaccineModal(true);
+  };
+
+  const openAddEpidemicModal = () => {
+    setEditingEpidemic(null);
+    setEpiForm({
+      disease_name: 'Sốt xuất huyết',
+      area: 'Tổ dân phố Quảng Giao',
+      case_count: 1,
+      risk_level: 'medium',
+      actions_taken: '',
+      status: 'monitoring',
+      reported_date: new Date().toISOString().slice(0, 10)
+    });
+    setShowEpidemicModal(true);
+  };
+
+  const openEditEpidemicModal = (epi: EpidemicReport) => {
+    setEditingEpidemic(epi);
+    setEpiForm(epi);
+    setShowEpidemicModal(true);
+  };
+
+  // Save & Delete Handlers
   const handleSaveHealthRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.resident_name) return;
@@ -225,26 +295,11 @@ const HealthCare: React.FC = () => {
     }
   };
 
-  const addDiseaseTag = () => {
-    if (!diseaseInput.trim()) return;
-    const current = formData.chronic_diseases || [];
-    if (!current.includes(diseaseInput.trim())) {
-      setFormData({ ...formData, chronic_diseases: [...current, diseaseInput.trim()] });
-    }
-    setDiseaseInput('');
-  };
-
-  const removeDiseaseTag = (tag: string) => {
-    const current = formData.chronic_diseases || [];
-    setFormData({ ...formData, chronic_diseases: current.filter(t => t !== tag) });
-  };
-
-  // Handlers for Vac, Epi, Fert
   const handleSaveVaccine = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vacForm.campaign_name || !vacForm.vaccine_type) return;
     const campaignToSave: VaccinationCampaign = {
-      id: `VAC_${Date.now()}`,
+      id: editingVaccine ? editingVaccine.id : `VAC_${Date.now()}`,
       campaign_name: vacForm.campaign_name,
       vaccine_type: vacForm.vaccine_type,
       target_audience: vacForm.target_audience || 'Toàn dân TDP',
@@ -255,18 +310,25 @@ const HealthCare: React.FC = () => {
       total_target: Number(vacForm.total_target) || 0,
       total_completed: Number(vacForm.total_completed) || 0,
       notes: vacForm.notes || '',
-      created_at: new Date().toISOString()
+      created_at: editingVaccine ? editingVaccine.created_at : new Date().toISOString()
     };
     await healthDb.saveVaccination(campaignToSave);
     setShowVaccineModal(false);
     loadAllData();
   };
 
+  const handleDeleteVaccine = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa đợt tiêm chủng này?')) {
+      await healthDb.deleteVaccination(id);
+      loadAllData();
+    }
+  };
+
   const handleSaveEpidemic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!epiForm.disease_name || !epiForm.area) return;
     const reportToSave: EpidemicReport = {
-      id: `EPI_${Date.now()}`,
+      id: editingEpidemic ? editingEpidemic.id : `EPI_${Date.now()}`,
       disease_name: epiForm.disease_name,
       area: epiForm.area,
       case_count: Number(epiForm.case_count) || 1,
@@ -280,11 +342,18 @@ const HealthCare: React.FC = () => {
     loadAllData();
   };
 
+  const handleDeleteEpidemic = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa cảnh báo dịch bệnh này?')) {
+      await healthDb.deleteEpidemicReport(id);
+      loadAllData();
+    }
+  };
+
   const handleSaveFertility = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fertForm.mother_name) return;
     const fertToSave: FertilityRecord = {
-      id: `FER_${Date.now()}`,
+      id: editingFertility ? editingFertility.id : `FER_${Date.now()}`,
       mother_name: fertForm.mother_name,
       address: fertForm.address || 'Quảng Giao',
       status: fertForm.status || 'pregnant',
@@ -294,11 +363,32 @@ const HealthCare: React.FC = () => {
       child_gender: fertForm.child_gender || 'male',
       is_third_child_plus: fertForm.is_third_child_plus ?? false,
       notes: fertForm.notes || '',
-      created_at: new Date().toISOString()
+      created_at: editingFertility ? editingFertility.created_at : new Date().toISOString()
     };
     await healthDb.saveFertilityRecord(fertToSave);
     setShowFertilityModal(false);
     loadAllData();
+  };
+
+  const handleDeleteFertilityRecord = async (id: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa hồ sơ thai sản/sinh con này?')) {
+      await healthDb.deleteFertilityRecord(id);
+      loadAllData();
+    }
+  };
+
+  const addDiseaseTag = () => {
+    if (!diseaseInput.trim()) return;
+    const current = formData.chronic_diseases || [];
+    if (!current.includes(diseaseInput.trim())) {
+      setFormData({ ...formData, chronic_diseases: [...current, diseaseInput.trim()] });
+    }
+    setDiseaseInput('');
+  };
+
+  const removeDiseaseTag = (tag: string) => {
+    const current = formData.chronic_diseases || [];
+    setFormData({ ...formData, chronic_diseases: current.filter(t => t !== tag) });
   };
 
   return (
@@ -352,14 +442,14 @@ const HealthCare: React.FC = () => {
           {activeTab === 'prevention' ? (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button 
-                onClick={() => setShowVaccineModal(true)}
+                onClick={openAddVaccineModal}
                 className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', background: '#10b981', border: 'none', color: 'white', fontWeight: 700 }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', background: '#8b5cf6', border: 'none', color: 'white', fontWeight: 700 }}
               >
                 <Plus size={16} /> Thêm Lịch tiêm
               </button>
               <button 
-                onClick={() => setShowEpidemicModal(true)}
+                onClick={openAddEpidemicModal}
                 className="btn btn-danger"
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}
               >
@@ -368,7 +458,7 @@ const HealthCare: React.FC = () => {
             </div>
           ) : activeTab === 'fertility' ? (
             <button 
-              onClick={() => setShowFertilityModal(true)}
+              onClick={openAddFertilityModal}
               className="btn btn-primary"
               style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#ec4899', border: 'none', color: 'white', fontWeight: 700 }}
             >
@@ -580,7 +670,6 @@ const HealthCare: React.FC = () => {
           );
         })}
       </div>
-
 
       {/* SEARCH AND FILTER BAR FOR TAB 1 & 2 */}
       {(activeTab === 'bhyt' || activeTab === 'chronic') && (
@@ -866,11 +955,11 @@ const HealthCare: React.FC = () => {
           <div style={{ background: 'var(--card-bg, #ffffff)', padding: '20px', borderRadius: '14px', border: '1px solid var(--border-color, #e2e8f0)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #1e293b)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Syringe size={20} color="#10b981" /> Lịch Tiêm chủng mở rộng
+                <Syringe size={20} color="#8b5cf6" /> Lịch Tiêm chủng mở rộng
               </h3>
               <button 
-                onClick={() => setShowVaccineModal(true)}
-                style={{ background: '#ecfdf5', color: '#10b981', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={openAddVaccineModal}
+                style={{ background: '#f3e8ff', color: '#8b5cf6', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 <Plus size={16} /> Thêm Lịch tiêm
               </button>
@@ -883,16 +972,20 @@ const HealthCare: React.FC = () => {
                     <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main, #1e293b)' }}>
                       {vac.campaign_name}
                     </h4>
-                    <span style={{ 
-                      background: vac.status === 'completed' ? '#ecfdf5' : '#eff6ff', 
-                      color: vac.status === 'completed' ? '#10b981' : '#3b82f6', 
-                      fontSize: '0.75rem', 
-                      padding: '2px 8px', 
-                      borderRadius: '10px', 
-                      fontWeight: 700 
-                    }}>
-                      {vac.status === 'completed' ? 'Đã hoàn thành' : 'Sắp diễn ra'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ 
+                        background: vac.status === 'completed' ? '#ecfdf5' : '#eff6ff', 
+                        color: vac.status === 'completed' ? '#10b981' : '#3b82f6', 
+                        fontSize: '0.75rem', 
+                        padding: '2px 8px', 
+                        borderRadius: '10px', 
+                        fontWeight: 700 
+                      }}>
+                        {vac.status === 'completed' ? 'Đã hoàn thành' : 'Sắp diễn ra'}
+                      </span>
+                      <button onClick={() => openEditVaccineModal(vac)} style={{ border: 'none', background: 'none', color: '#3b82f6', cursor: 'pointer', padding: '2px' }} title="Sửa"><Edit size={16} /></button>
+                      <button onClick={() => handleDeleteVaccine(vac.id)} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }} title="Xóa"><Trash2 size={16} /></button>
+                    </div>
                   </div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: '6px 0' }}>
                     💊 Vắc xin: <strong>{vac.vaccine_type}</strong> ({vac.target_audience})
@@ -914,7 +1007,7 @@ const HealthCare: React.FC = () => {
                 <AlertTriangle size={20} color="#ef4444" /> Cảnh báo Ổ dịch & Y tế Dự phòng
               </h3>
               <button 
-                onClick={() => setShowEpidemicModal(true)}
+                onClick={openAddEpidemicModal}
                 style={{ background: '#fef2f2', color: '#ef4444', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 <Plus size={16} /> Báo Dịch bệnh
@@ -928,9 +1021,13 @@ const HealthCare: React.FC = () => {
                     <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#991b1b' }}>
                       🚨 {epi.disease_name}
                     </h4>
-                    <span style={{ background: '#ef4444', color: 'white', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
-                      Rủi ro: {epi.risk_level.toUpperCase()}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ background: '#ef4444', color: 'white', fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
+                        Rủi ro: {epi.risk_level.toUpperCase()}
+                      </span>
+                      <button onClick={() => openEditEpidemicModal(epi)} style={{ border: 'none', background: 'none', color: '#3b82f6', cursor: 'pointer', padding: '2px' }} title="Sửa"><Edit size={16} /></button>
+                      <button onClick={() => handleDeleteEpidemic(epi.id)} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }} title="Xóa"><Trash2 size={16} /></button>
+                    </div>
                   </div>
                   <div style={{ fontSize: '0.85rem', color: '#7f1d1d', margin: '6px 0', fontWeight: 600 }}>
                     📍 Khu vực: {epi.area} ({epi.case_count} ca ghi nhận)
@@ -954,7 +1051,7 @@ const HealthCare: React.FC = () => {
               <Baby size={22} color="#ec4899" /> Hồ sơ Chăm sóc Sức khỏe Sinh sản & Dân số TDP
             </h3>
             <button 
-              onClick={() => setShowFertilityModal(true)}
+              onClick={openAddFertilityModal}
               style={{ background: '#fce7f3', color: '#ec4899', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Plus size={16} /> Thêm Hồ sơ Thai sản / Sinh
@@ -970,6 +1067,7 @@ const HealthCare: React.FC = () => {
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Dự sinh / Ngày sinh</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Thông tin con</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Con thứ 3+</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700, textAlign: 'right' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -1004,6 +1102,22 @@ const HealthCare: React.FC = () => {
                       ) : (
                         <span style={{ color: '#10b981', fontWeight: 600 }}>Không</span>
                       )}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                      <button 
+                        onClick={() => openEditFertilityModal(f)}
+                        style={{ border: 'none', background: 'transparent', color: '#3b82f6', cursor: 'pointer', padding: '6px' }}
+                        title="Chỉnh sửa hồ sơ thai sản"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteFertilityRecord(f.id)}
+                        style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '6px', marginLeft: '6px' }}
+                        title="Xóa hồ sơ thai sản"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1251,7 +1365,7 @@ const HealthCare: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 2: THÊM LỊCH TIÊM CHỦNG */}
+      {/* MODAL 2: THÊM / SỬA LỊCH TIÊM CHỦNG */}
       {showVaccineModal && (
         <div style={{ 
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
@@ -1259,7 +1373,9 @@ const HealthCare: React.FC = () => {
         }}>
           <div style={{ background: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontWeight: 800, color: '#1e293b' }}>💉 Thêm Đợt Tiêm chủng mở rộng</h3>
+              <h3 style={{ margin: 0, fontWeight: 800, color: '#1e293b' }}>
+                💉 {editingVaccine ? 'Chỉnh sửa Lịch Tiêm chủng' : 'Thêm Đợt Tiêm chủng mở rộng'}
+              </h3>
               <button onClick={() => setShowVaccineModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleSaveVaccine} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1316,6 +1432,18 @@ const HealthCare: React.FC = () => {
                 </div>
               </div>
               <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Trạng thái</label>
+                <select 
+                  value={vacForm.status || 'upcoming'}
+                  onChange={e => setVacForm({ ...vacForm, status: e.target.value as any })}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                >
+                  <option value="upcoming">Sắp diễn ra</option>
+                  <option value="ongoing">Đang diễn ra</option>
+                  <option value="completed">Đã hoàn thành</option>
+                </select>
+              </div>
+              <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px' }}>Ghi chú / Dặn dò phụ huynh</label>
                 <textarea 
                   rows={2}
@@ -1327,14 +1455,16 @@ const HealthCare: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setShowVaccineModal(false)} className="btn btn-outline" style={{ padding: '8px 16px' }}>Hủy</button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', background: '#10b981', border: 'none', color: 'white', fontWeight: 700 }}>Lưu Lịch Tiêm</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '8px 20px', background: '#8b5cf6', border: 'none', color: 'white', fontWeight: 700 }}>
+                  Lưu Lịch Tiêm
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL 3: BÁO CÁO CẢNH BÁO DỊCH BỆNH */}
+      {/* MODAL 3: BÁO CÁO / SỬA CẢNH BÁO DỊCH BỆNH */}
       {showEpidemicModal && (
         <div style={{ 
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
@@ -1342,7 +1472,9 @@ const HealthCare: React.FC = () => {
         }}>
           <div style={{ background: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontWeight: 800, color: '#ef4444' }}>🚨 Khai báo Cảnh báo Dịch bệnh TDP</h3>
+              <h3 style={{ margin: 0, fontWeight: 800, color: '#ef4444' }}>
+                🚨 {editingEpidemic ? 'Chỉnh sửa Cảnh báo Dịch bệnh' : 'Khai báo Cảnh báo Dịch bệnh TDP'}
+              </h3>
               <button onClick={() => setShowEpidemicModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleSaveEpidemic} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1400,7 +1532,7 @@ const HealthCare: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 4: THÊM HỒ SƠ THAI SẢN / DÂN SỐ */}
+      {/* MODAL 4: THÊM / SỬA HỒ SƠ THAI SẢN / DÂN SỐ */}
       {showFertilityModal && (
         <div style={{ 
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
@@ -1408,7 +1540,9 @@ const HealthCare: React.FC = () => {
         }}>
           <div style={{ background: 'white', borderRadius: '16px', maxWidth: '550px', width: '100%', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontWeight: 800, color: '#ec4899' }}>👶 Thêm Hồ sơ Thai sản & Dân số</h3>
+              <h3 style={{ margin: 0, fontWeight: 800, color: '#ec4899' }}>
+                👶 {editingFertility ? 'Chỉnh sửa Hồ sơ Thai sản / Sinh' : 'Thêm Hồ sơ Thai sản & Dân số'}
+              </h3>
               <button onClick={() => setShowFertilityModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleSaveFertility} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
