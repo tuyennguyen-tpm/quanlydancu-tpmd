@@ -1251,12 +1251,28 @@ const HealthCare: React.FC = () => {
                 </div>
 
                 {c.address && <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #64748b)', marginBottom: '4px' }}>📍 {c.address}</div>}
-                {c.notes && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic' }}>ℹ️ {c.notes}</div>}
+                {c.notes && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', fontStyle: 'italic', marginBottom: '12px' }}>ℹ️ {c.notes}</div>}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '10px', borderTop: '1px dashed rgba(239, 68, 68, 0.2)' }}>
+                  <button 
+                    onClick={() => openEditEmergencyModal(c)}
+                    style={{ border: 'none', background: '#eff6ff', color: '#2563eb', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Edit size={14} /> Chỉnh sửa
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteEmergencyContact(c.id)}
+                    style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Trash2 size={14} /> Xóa
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
 
       {/* MODAL 1: THÊM / SỬA HỒ SƠ Y TẾ */}
       {showHealthModal && (
