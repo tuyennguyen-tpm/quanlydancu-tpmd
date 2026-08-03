@@ -472,6 +472,31 @@ const HealthCare: React.FC = () => {
       let matchedCount = 0;
       let newCount = 0;
 
+      // Fast O(1) Hash Map lookup indices
+      const dbResByCccdMap = new Map<string, any>();
+      const dbResByNameMap = new Map<string, any>();
+      dbResidents.forEach(r => {
+        const cccd = (r.identity_card || r.cccd || '').trim();
+        if (cccd) dbResByCccdMap.set(cccd, r);
+        if (r.full_name) dbResByNameMap.set(r.full_name.toLowerCase().trim(), r);
+      });
+
+      const dbHhByIdMap = new Map<string, any>();
+      const dbHhByHeadNameMap = new Map<string, any>();
+      dbHouseholds.forEach(h => {
+        dbHhByIdMap.set(h.id, h);
+        if (h.household_number) dbHhByIdMap.set(h.household_number, h);
+        const head = (h as any).household_head_name;
+        if (head) dbHhByHeadNameMap.set(head.toLowerCase().trim(), h);
+      });
+
+      const currentByBhytMap = new Map<string, number>();
+      const currentByNameMap = new Map<string, number>();
+      currentRecords.forEach((rec, i) => {
+        if (rec.bhyt_number) currentByBhytMap.set(rec.bhyt_number.trim(), i);
+        if (rec.resident_name) currentByNameMap.set(rec.resident_name.toLowerCase().trim(), i);
+      });
+
       for (const worksheet of workbook.worksheets) {
         const sheetName = worksheet.name;
         let colName = -1;
@@ -507,7 +532,6 @@ const HealthCare: React.FC = () => {
             return v;
           });
 
-
           const rawName = String(rowVals[colName - 1] || rowVals[3] || '').trim();
           const rawBhyt = String(rowVals[colBhyt - 1] || rowVals[4] || '').trim();
           const rawDob = colDob !== -1 ? String(rowVals[colDob - 1] || '').trim() : String(rowVals[5] || '').trim();
@@ -518,29 +542,20 @@ const HealthCare: React.FC = () => {
           if (!rawBhyt || !/^\d+$/.test(rawBhyt)) return;
 
           totalRows++;
-          const normName = rawName.toLowerCase();
+          const normName = rawName.toLowerCase().trim();
 
-          // 1. Đối soát CSDL Dân cư chính (Theo CCCD hoặc Họ tên + Ngày sinh)
-          let matchedDbResident = dbResidents.find(r => 
-            (rawCccd && r.identity_card === rawCccd) || 
-            (r.full_name && r.full_name.toLowerCase().trim() === normName)
-          );
+          // Fast O(1) Map Lookups
+          const matchedDbResident = (rawCccd ? dbResByCccdMap.get(rawCccd.trim()) : null) || dbResByNameMap.get(normName);
+          const matchedDbHousehold = dbHhByHeadNameMap.get(normName) || (matchedDbResident ? dbHhByIdMap.get(matchedDbResident.household_id) : null);
 
-          // 2. Đối soát CSDL Hộ gia đình chính (Theo Tên chủ hộ hoặc Hộ trùng khớp)
-          let matchedDbHousehold = dbHouseholds.find(h => 
-            (h.household_head_name && h.household_head_name.toLowerCase().trim() === normName) ||
-            (matchedDbResident && (h.id === matchedDbResident.household_id || h.household_number === matchedDbResident.household_id))
-          );
-
-          const finalGroup = (matchedDbHousehold as any)?.self_management_group || matchedDbHousehold?.group_name || rawAddress || `Tổ/Cụm ${sheetName}`;
+          const finalGroup = normalizeToOfficialGroup((matchedDbHousehold as any)?.self_management_group || matchedDbHousehold?.group_name || rawAddress);
           const finalAddress = `${finalGroup}, TDP Quảng Giao`;
           const householdNo = matchedDbHousehold?.household_number || matchedDbResident?.household_id || `HK-${sheetName}`;
 
+          // Fast O(1) Current Health Records Lookup
+          const matchedIdx = (rawBhyt ? currentByBhytMap.get(rawBhyt.trim()) : undefined) ?? currentByNameMap.get(normName);
 
-          // Strict Matching Strategy
-          const matchedIdx = currentRecords.findIndex(r => r.resident_name.toLowerCase().trim() === normName || (rawBhyt && r.bhyt_number === rawBhyt));
-
-          if (matchedIdx >= 0) {
+          if (matchedIdx !== undefined && matchedIdx >= 0) {
             matchedCount++;
             const existing = currentRecords[matchedIdx];
             const updated: HealthRecord = {
@@ -553,6 +568,7 @@ const HealthCare: React.FC = () => {
               updated_at: new Date().toISOString()
             };
             currentRecords[matchedIdx] = updated;
+
             recordsToSave.push(updated);
             logs.push(`✅ [ĐÃ KHỚP CSDL HỘ DÂN] ${rawName} (${finalGroup}) -> Mã BHYT: ${rawBhyt}`);
           } else {
@@ -1136,7 +1152,8 @@ const HealthCare: React.FC = () => {
               }}
               title="Tự động phân bổ 100% CSDL Hộ gia đình & BHYT theo 7 Cụm/Tổ"
             >
-              <RefreshCw size={16} className={isProcessingExcel ? 'spin' : ''} /> 🔄 Phân bổ CSDL Hộ Dân
+              <RefreshCw size={16} className={isProcessingExcel ? 'spin' : ''} /> Phân bổ CSDL Hộ Dân
+
             </button>
 
             {activeTab === 'prevention' ? (
