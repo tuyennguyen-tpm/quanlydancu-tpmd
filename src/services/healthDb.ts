@@ -192,7 +192,13 @@ const getStoredData = <T>(key: string, fallback: T[]): T[] => {
       localStorage.setItem(key, JSON.stringify(fallback));
       return fallback;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Nếu dữ liệu local lưu cũ bị lỗi phông, tự động reset về fallback UTF8 chuẩn
+    if (raw.includes('áº') || raw.includes('Æ°') || raw.includes('Ã¢')) {
+      localStorage.setItem(key, JSON.stringify(fallback));
+      return fallback;
+    }
+    return parsed;
   } catch (err) {
     console.error(`Lỗi đọc ${key} từ localStorage:`, err);
     return fallback;
