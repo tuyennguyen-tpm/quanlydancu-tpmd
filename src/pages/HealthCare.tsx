@@ -1113,138 +1113,158 @@ const HealthCare: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          {/* SYNC CSDL HOUSEHOLDS WITH BHYT BUTTON */}
-          <button 
-            onClick={handleSyncHouseholdsWithBHYT}
-            className="btn btn-outline" 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              padding: '10px 16px', 
-              borderRadius: '10px',
-              background: '#fdf4ff',
-              color: '#c026d3',
-              border: '1px solid #d946ef',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-            title="Tự động phân bổ 100% CSDL Hộ gia đình & BHYT theo 7 Cụm/Tổ"
-          >
-            <RefreshCw size={16} className={isProcessingExcel ? 'spin' : ''} /> 🔄 Phân bổ CSDL Hộ Dân & BHYT
-          </button>
-
-          {/* EXPORT EXCEL BHYT BUTTON */}
-          <button 
-            onClick={handleExportExcelBHYT}
-            className="btn btn-outline" 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              padding: '10px 16px', 
-              borderRadius: '10px',
-              background: '#eff6ff',
-              color: '#2563eb',
-              border: '1px solid #3b82f6',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-            title="Xuất file Excel danh sách BHYT chuẩn mẫu BHXH"
-          >
-            <Download size={16} /> 📊 Xuất Excel chuẩn BHYT
-          </button>
-
-
-          {/* IMPORT EXCEL BHYT BUTTON */}
-          <label className="btn btn-outline" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '10px 16px', 
-            borderRadius: '10px',
-            background: '#ecfdf5',
-            color: '#10b981',
-            border: '1px solid #10b981',
-            fontWeight: 700,
-            cursor: 'pointer'
-          }}>
-            <Upload size={16} />
-            {isProcessingExcel ? 'Đang đọc Excel...' : '📥 Import BHYT từ Excel'}
-            <input 
-              type="file" 
-              accept=".xlsx, .xls" 
-              onChange={handleExcelFileUpload} 
-              disabled={isProcessingExcel}
-              style={{ display: 'none' }} 
-            />
-          </label>
-
-
-          <button 
-            onClick={loadAllData}
-            className="btn btn-outline"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '10px' }}
-          >
-            <RefreshCw size={16} className={isLoading ? 'spin' : ''} />
-            Làm mới
-          </button>
-
-          {activeTab === 'prevention' ? (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                onClick={openAddVaccineModal}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', background: '#8b5cf6', border: 'none', color: 'white', fontWeight: 700 }}
-              >
-                <Plus size={16} /> Thêm Lịch tiêm
-              </button>
-              <button 
-                onClick={openAddEpidemicModal}
-                className="btn btn-danger"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}
-              >
-                <Plus size={16} /> Báo Dịch bệnh
-              </button>
-            </div>
-          ) : activeTab === 'fertility' ? (
+        {/* RIGHT TOOLBAR: 2-TIER ALIGNED BUTTON GROUP */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
+          {/* TIER 1: MAIN ACTION BUTTONS */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button 
-              onClick={openAddFertilityModal}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#ec4899', border: 'none', color: 'white', fontWeight: 700 }}
-            >
-              <Plus size={18} /> Thêm Hồ sơ Thai sản / Sinh
-            </button>
-          ) : activeTab === 'emergency' ? (
-            <button 
-              onClick={openAddEmergencyModal}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}
-            >
-              <Plus size={18} /> Thêm Hotline Khẩn cấp
-            </button>
-          ) : (
-            <button 
-              onClick={openAddHealthModal}
-              className="btn btn-primary"
+              onClick={handleSyncHouseholdsWithBHYT}
+              className="btn btn-outline" 
               style={{ 
-                display: 'flex', 
+                display: 'inline-flex', 
                 alignItems: 'center', 
                 gap: '8px', 
-                padding: '10px 20px', 
+                padding: '9px 16px', 
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                border: 'none',
+                background: '#fdf4ff',
+                color: '#c026d3',
+                border: '1px solid #e879f9',
                 fontWeight: 700,
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(217, 70, 239, 0.12)'
+              }}
+              title="Tự động phân bổ 100% CSDL Hộ gia đình & BHYT theo 7 Cụm/Tổ"
+            >
+              <RefreshCw size={16} className={isProcessingExcel ? 'spin' : ''} /> 🔄 Phân bổ CSDL Hộ Dân
+            </button>
+
+            {activeTab === 'prevention' ? (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={openAddVaccineModal}
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', background: '#8b5cf6', border: 'none', color: 'white', fontWeight: 700 }}
+                >
+                  <Plus size={16} /> Thêm Lịch tiêm
+                </button>
+                <button 
+                  onClick={openAddEpidemicModal}
+                  className="btn btn-danger"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}
+                >
+                  <Plus size={16} /> Báo Dịch bệnh
+                </button>
+              </div>
+            ) : activeTab === 'fertility' ? (
+              <button 
+                onClick={openAddFertilityModal}
+                className="btn btn-primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 18px', borderRadius: '10px', background: '#ec4899', border: 'none', color: 'white', fontWeight: 700 }}
+              >
+                <Plus size={18} /> Thêm Thai sản
+              </button>
+            ) : activeTab === 'emergency' ? (
+              <button 
+                onClick={openAddEmergencyModal}
+                className="btn btn-primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 18px', borderRadius: '10px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 700 }}
+              >
+                <Plus size={18} /> Thêm Hotline
+              </button>
+            ) : (
+              <button 
+                onClick={openAddHealthModal}
+                className="btn btn-primary"
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  padding: '9px 18px', 
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  border: 'none',
+                  color: 'white',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+                }}
+              >
+                <Plus size={18} /> Thêm Hồ sơ Y tế
+              </button>
+            )}
+          </div>
+
+          {/* TIER 2: EXCEL & UTILITY BUTTONS */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button 
+              onClick={handleExportExcelBHYT}
+              className="btn btn-outline" 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                padding: '7px 14px', 
+                borderRadius: '8px',
+                background: '#eff6ff',
+                color: '#2563eb',
+                border: '1px solid #93c5fd',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+              title="Xuất file Excel danh sách BHYT chuẩn mẫu BHXH"
+            >
+              <Download size={15} /> 📊 Xuất Excel BHYT
+            </button>
+
+            <label className="btn btn-outline" style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              padding: '7px 14px', 
+              borderRadius: '8px',
+              background: '#ecfdf5',
+              color: '#059669',
+              border: '1px solid #6ee7b7',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer'
+            }}>
+              <Upload size={15} />
+              {isProcessingExcel ? 'Đang đọc...' : '📥 Import Excel BHYT'}
+              <input 
+                type="file" 
+                accept=".xlsx, .xls" 
+                onChange={handleExcelFileUpload} 
+                disabled={isProcessingExcel}
+                style={{ display: 'none' }} 
+              />
+            </label>
+
+            <button 
+              onClick={loadAllData}
+              className="btn btn-outline"
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                padding: '7px 14px', 
+                borderRadius: '8px',
+                background: 'var(--card-bg, #ffffff)',
+                color: 'var(--text-main, #475569)',
+                border: '1px solid var(--border-color, #cbd5e1)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                cursor: 'pointer'
               }}
             >
-              <Plus size={18} />
-              Thêm Hồ sơ Y tế
+              <RefreshCw size={15} className={isLoading ? 'spin' : ''} /> Làm mới
             </button>
-          )}
+          </div>
         </div>
+
       </div>
 
       {/* STATS OVERVIEW CARDS */}
