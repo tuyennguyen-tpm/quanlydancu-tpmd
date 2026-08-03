@@ -67,6 +67,26 @@ const normalizeCccd = (str?: string): string => {
   return digits.padStart(12, '0');
 };
 
+const normalizeDob = (dobStr?: string): string => {
+  if (!dobStr) return '';
+  const str = dobStr.trim();
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    const day = m[1].padStart(2, '0');
+    const month = m[2].padStart(2, '0');
+    return `${m[3]}-${month}-${day}`;
+  }
+  return str.slice(0, 10);
+};
+
+const normalizeGender = (g?: string): 'male' | 'female' => {
+  if (!g) return 'male';
+  const str = g.toLowerCase().trim();
+  if (str.includes('nữ') || str.includes('female') || str === 'n') return 'female';
+  return 'male';
+};
+
+
 
 // 7 Cụm / Tổ tự quản chính thức của Tổ dân phố Quảng Giao
 const OFFICIAL_TDP_GROUPS = ['Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
@@ -780,18 +800,35 @@ const HealthCare: React.FC = () => {
         if (hh.household_number) hhHeadInfoMap.set(hh.household_number, info);
       });
 
-      const healthMapByName = new Map<string, HealthRecord>();
+      // 6-Layer Priority Index Maps
       const healthMapByCccd = new Map<string, HealthRecord>();
+      const healthMapByHhNameDob = new Map<string, HealthRecord>();
+      const healthMapByNameDobGenGrp = new Map<string, HealthRecord>();
+      const healthMapByNameGrp = new Map<string, HealthRecord>();
       const healthIdxByIdMap = new Map<string, number>();
 
       currentHealth.forEach((rec, idx) => {
         healthIdxByIdMap.set(rec.id, idx);
-        if (rec.resident_name) {
-          healthMapByName.set(removeAccentsVN(rec.resident_name), rec);
-        }
+
         const cccdFromId = rec.resident_id ? rec.resident_id.replace(/^R_/, '') : '';
         const normCccd = normalizeCccd(cccdFromId || rec.bhyt_number);
         if (normCccd) healthMapByCccd.set(normCccd, rec);
+
+        const normName = removeAccentsVN(rec.resident_name);
+        const normDob = normalizeDob(rec.dob);
+        const normGen = normalizeGender(rec.gender);
+        const normGrp = normalizeToOfficialGroup(rec.address);
+        const hhNum = rec.household_number || '';
+
+        if (hhNum && normName && normDob) {
+          healthMapByHhNameDob.set(`${hhNum}_${normName}_${normDob}`, rec);
+        }
+        if (normName && normDob && normGrp) {
+          healthMapByNameDobGenGrp.set(`${normName}_${normDob}_${normGen}_${normGrp}`, rec);
+        }
+        if (normName && normGrp) {
+          healthMapByNameGrp.set(`${normName}_${normGrp}`, rec);
+        }
       });
 
       const updatedHealthRecords: HealthRecord[] = [...currentHealth];
@@ -802,6 +839,9 @@ const HealthCare: React.FC = () => {
         if (!resAccentsName) continue;
 
         const resCccd = normalizeCccd((res as any).identity_card || res.cccd || '');
+        const resDob = normalizeDob(res.dob);
+        const resGen = normalizeGender(res.gender);
+
         const hhInfo = hhHeadInfoMap.get(res.household_id);
         const matchedHh = hhByIdMap.get(res.household_id);
 
@@ -814,8 +854,17 @@ const HealthCare: React.FC = () => {
           ? `Chủ hộ ${res.full_name} (${officialGroup})` 
           : `Thành viên Hộ ông/bà ${headName} (${officialGroup})`;
 
-        // Check if resident is already in Health Records
-        let existingRec = (resCccd ? healthMapByCccd.get(resCccd) : null) || healthMapByName.get(resAccentsName);
+        // 6-Layer Priority Matching:
+        // Layer 1: Số CCCD
+        // Layer 2: Mã Hộ + Họ tên + Ngày sinh
+        // Layer 3: Họ tên + Ngày sinh + Giới tính + Tổ tự quản
+        // Layer 4: Họ tên + Tổ tự quản
+        let existingRec: HealthRecord | undefined = undefined;
+
+        if (resCccd) existingRec = healthMapByCccd.get(resCccd);
+        if (!existingRec && hhNumber && resAccentsName && resDob) existingRec = healthMapByHhNameDob.get(`${hhNumber}_${resAccentsName}_${resDob}`);
+        if (!existingRec && resAccentsName && resDob && officialGroup) existingRec = healthMapByNameDobGenGrp.get(`${resAccentsName}_${resDob}_${resGen}_${officialGroup}`);
+        if (!existingRec && resAccentsName && officialGroup) existingRec = healthMapByNameGrp.get(`${resAccentsName}_${officialGroup}`);
 
         if (existingRec) {
           const existingIdx = healthIdxByIdMap.get(existingRec.id);
@@ -823,6 +872,8 @@ const HealthCare: React.FC = () => {
             updatedHealthRecords[existingIdx] = {
               ...existingRec,
               resident_name: res.full_name || existingRec.resident_name,
+              dob: res.dob || existingRec.dob,
+              gender: res.gender === 'female' ? 'female' : 'male',
               household_number: hhNumber,
               address: `${officialGroup}, TDP Quảng Giao`,
               health_status_note: noteText,
@@ -830,7 +881,8 @@ const HealthCare: React.FC = () => {
             };
             updatedCount++;
           }
-        } else {
+        }
+ else {
           // Add resident to Health Records as member of Household
           const newHealthRec: HealthRecord = {
             id: `HR_${resCccd || Date.now()}_${Math.floor(Math.random() * 1000)}`,
