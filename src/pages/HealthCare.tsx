@@ -694,7 +694,7 @@ const HealthCare: React.FC = () => {
   };
 
 
-  // Automated Sync: Map CSDL Households & Residents to Health BHYT Records (Chính xác 100%)
+  // Automated Sync: Map CSDL Households & Residents to Health BHYT Records (Chính xác 100% & Siêu Tốc O(1))
   const handleSyncHouseholdsWithBHYT = async () => {
     setIsProcessingExcel(true);
     try {
@@ -703,12 +703,27 @@ const HealthCare: React.FC = () => {
       let updatedCount = 0;
       let newAddedCount = 0;
 
-      // 1. Build Master Lookup Map for Household Heads
+      // Fast Index Maps in O(N)
+      const hhByIdMap = new Map<string, any>();
+      fetchedHouseholds.forEach(hh => {
+        hhByIdMap.set(hh.id, hh);
+        if (hh.household_number) hhByIdMap.set(hh.household_number, hh);
+      });
+
+      const resByHhIdMap = new Map<string, any[]>();
+      fetchedResidents.forEach(r => {
+        const hId = r.household_id;
+        if (hId) {
+          if (!resByHhIdMap.has(hId)) resByHhIdMap.set(hId, []);
+          resByHhIdMap.get(hId)!.push(r);
+        }
+      });
+
+      // 1. Build Master Lookup Map for Household Heads in O(N)
       const hhHeadInfoMap = new Map<string, { headName: string; officialGroup: string; hhNumber: string }>();
       fetchedHouseholds.forEach(hh => {
-        const hhResidents = fetchedResidents.filter(r => r.household_id === hh.id || r.household_id === hh.household_number);
+        const hhResidents = resByHhIdMap.get(hh.id) || resByHhIdMap.get(hh.household_number) || [];
         const headRes = hhResidents.find(r => r.is_head || r.relationship_with_head === 'Chủ hộ' || r.id === hh.head_of_household_id || (r as any).cccd === hh.head_of_household_id) ||
-                        fetchedResidents.find(r => r.id === hh.head_of_household_id || (r as any).cccd === hh.head_of_household_id) ||
                         hhResidents[0];
 
         const headName = headRes?.full_name || (hh as any).household_head_name || 'Chủ hộ';
@@ -723,8 +738,10 @@ const HealthCare: React.FC = () => {
 
       const healthMapByName = new Map<string, HealthRecord>();
       const healthMapByCccd = new Map<string, HealthRecord>();
+      const healthIdxByIdMap = new Map<string, number>();
 
-      currentHealth.forEach(rec => {
+      currentHealth.forEach((rec, idx) => {
+        healthIdxByIdMap.set(rec.id, idx);
         if (rec.resident_name) healthMapByName.set(rec.resident_name.toLowerCase().trim(), rec);
         if (rec.resident_id && rec.resident_id.startsWith('R_')) {
           const cccd = rec.resident_id.replace('R_', '').trim();
@@ -734,14 +751,14 @@ const HealthCare: React.FC = () => {
 
       const updatedHealthRecords: HealthRecord[] = [...currentHealth];
 
-      // 2. Process every Resident in DB Households
+      // 2. Fast O(1) Process every Resident in DB Households
       for (const res of fetchedResidents) {
         const normName = (res.full_name || '').toLowerCase().trim();
         if (!normName) continue;
 
-        const resCccd = (res as any).identity_card || res.cccd || '';
+        const resCccd = ((res as any).identity_card || res.cccd || '').trim();
         const hhInfo = hhHeadInfoMap.get(res.household_id);
-        const matchedHh = fetchedHouseholds.find(h => h.id === res.household_id || h.household_number === res.household_id);
+        const matchedHh = hhByIdMap.get(res.household_id);
 
         const officialGroup = hhInfo?.officialGroup || normalizeToOfficialGroup(matchedHh?.self_management_group || matchedHh?.address || (res as any).permanent_address);
         const hhNumber = hhInfo?.hhNumber || matchedHh?.household_number || res.household_id || 'HK-CHUA_PHAN_HO';
@@ -753,11 +770,11 @@ const HealthCare: React.FC = () => {
           : `Thành viên Hộ ông/bà ${headName} (${officialGroup})`;
 
         // Check if resident is already in Health Records
-        let existingRec = (resCccd ? healthMapByCccd.get(resCccd.trim()) : null) || healthMapByName.get(normName);
+        let existingRec = (resCccd ? healthMapByCccd.get(resCccd) : null) || healthMapByName.get(normName);
 
         if (existingRec) {
-          const existingIdx = updatedHealthRecords.findIndex(r => r.id === existingRec!.id);
-          if (existingIdx >= 0) {
+          const existingIdx = healthIdxByIdMap.get(existingRec.id);
+          if (existingIdx !== undefined && existingIdx >= 0) {
             updatedHealthRecords[existingIdx] = {
               ...existingRec,
               household_number: hhNumber,
@@ -792,6 +809,7 @@ const HealthCare: React.FC = () => {
 
       // Save all updated health records in 1 fast bulk operation
       await healthDb.saveBulkHealthRecords(updatedHealthRecords);
+
 
       alert(`🚀 Nâng cấp & Đồng bộ thành công 100% CSDL Hộ Dân!\n\n- Đã bổ sung đầy đủ ${newAddedCount} thành viên Hộ gia đình còn thiếu.\n- Đã cập nhật phân Hộ & Tổ cho ${updatedCount} nhân khẩu.\n- Toàn bộ các thành viên từng hộ hiện đã hiển thị đầy đủ 100%!`);
       loadAllData();
