@@ -46,6 +46,28 @@ const formatDateVN = (dateStr?: string): string => {
   return `${day}/${month}/${year}`;
 };
 
+// Chuẩn hóa tiếng Việt bỏ dấu & CCCD giúp đối soát CSDL hộ dân chính xác 100%
+const removeAccentsVN = (str?: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const normalizeCccd = (str?: string): string => {
+  if (!str) return '';
+  const digits = String(str).replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 9 || digits.length === 12) return digits;
+  return digits.padStart(12, '0');
+};
+
+
 // 7 Cụm / Tổ tự quản chính thức của Tổ dân phố Quảng Giao
 const OFFICIAL_TDP_GROUPS = ['Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
 
@@ -537,9 +559,9 @@ const HealthCare: React.FC = () => {
       const dbResByCccdMap = new Map<string, any>();
       const dbResByNameMap = new Map<string, any>();
       dbResidents.forEach(r => {
-        const cccd = (r.identity_card || r.cccd || '').trim();
+        const cccd = normalizeCccd(r.identity_card || r.cccd);
         if (cccd) dbResByCccdMap.set(cccd, r);
-        if (r.full_name) dbResByNameMap.set(r.full_name.toLowerCase().trim(), r);
+        if (r.full_name) dbResByNameMap.set(removeAccentsVN(r.full_name), r);
       });
 
       const dbHhByIdMap = new Map<string, any>();
@@ -548,14 +570,14 @@ const HealthCare: React.FC = () => {
         dbHhByIdMap.set(h.id, h);
         if (h.household_number) dbHhByIdMap.set(h.household_number, h);
         const head = (h as any).household_head_name;
-        if (head) dbHhByHeadNameMap.set(head.toLowerCase().trim(), h);
+        if (head) dbHhByHeadNameMap.set(removeAccentsVN(head), h);
       });
 
       const currentByBhytMap = new Map<string, number>();
       const currentByNameMap = new Map<string, number>();
       currentRecords.forEach((rec, i) => {
         if (rec.bhyt_number) currentByBhytMap.set(rec.bhyt_number.trim(), i);
-        if (rec.resident_name) currentByNameMap.set(rec.resident_name.toLowerCase().trim(), i);
+        if (rec.resident_name) currentByNameMap.set(removeAccentsVN(rec.resident_name), i);
       });
 
       for (const worksheet of workbook.worksheets) {
@@ -603,10 +625,11 @@ const HealthCare: React.FC = () => {
           if (!rawBhyt || !/^\d+$/.test(rawBhyt)) return;
 
           totalRows++;
-          const normName = rawName.toLowerCase().trim();
+          const normName = removeAccentsVN(rawName);
+          const normCccd = normalizeCccd(rawCccd);
 
           // Fast O(1) Map Lookups
-          const matchedDbResident = (rawCccd ? dbResByCccdMap.get(rawCccd.trim()) : null) || dbResByNameMap.get(normName);
+          const matchedDbResident = (normCccd ? dbResByCccdMap.get(normCccd) : null) || dbResByNameMap.get(normName);
           const matchedDbHousehold = dbHhByHeadNameMap.get(normName) || (matchedDbResident ? dbHhByIdMap.get(matchedDbResident.household_id) : null);
 
           const finalGroup = normalizeToOfficialGroup((matchedDbHousehold as any)?.self_management_group || matchedDbHousehold?.group_name || rawAddress);
@@ -615,6 +638,7 @@ const HealthCare: React.FC = () => {
 
           // Fast O(1) Current Health Records Lookup
           const matchedIdx = (rawBhyt ? currentByBhytMap.get(rawBhyt.trim()) : undefined) ?? currentByNameMap.get(normName);
+
 
           if (matchedIdx !== undefined && matchedIdx >= 0) {
             matchedCount++;
@@ -742,21 +766,22 @@ const HealthCare: React.FC = () => {
 
       currentHealth.forEach((rec, idx) => {
         healthIdxByIdMap.set(rec.id, idx);
-        if (rec.resident_name) healthMapByName.set(rec.resident_name.toLowerCase().trim(), rec);
-        if (rec.resident_id && rec.resident_id.startsWith('R_')) {
-          const cccd = rec.resident_id.replace('R_', '').trim();
-          if (cccd) healthMapByCccd.set(cccd, rec);
+        if (rec.resident_name) {
+          healthMapByName.set(removeAccentsVN(rec.resident_name), rec);
         }
+        const cccdFromId = rec.resident_id ? rec.resident_id.replace(/^R_/, '') : '';
+        const normCccd = normalizeCccd(cccdFromId || rec.bhyt_number);
+        if (normCccd) healthMapByCccd.set(normCccd, rec);
       });
 
       const updatedHealthRecords: HealthRecord[] = [...currentHealth];
 
       // 2. Fast O(1) Process every Resident in DB Households
       for (const res of fetchedResidents) {
-        const normName = (res.full_name || '').toLowerCase().trim();
-        if (!normName) continue;
+        const resAccentsName = removeAccentsVN(res.full_name);
+        if (!resAccentsName) continue;
 
-        const resCccd = ((res as any).identity_card || res.cccd || '').trim();
+        const resCccd = normalizeCccd((res as any).identity_card || res.cccd || '');
         const hhInfo = hhHeadInfoMap.get(res.household_id);
         const matchedHh = hhByIdMap.get(res.household_id);
 
@@ -764,19 +789,20 @@ const HealthCare: React.FC = () => {
         const hhNumber = hhInfo?.hhNumber || matchedHh?.household_number || res.household_id || 'HK-CHUA_PHAN_HO';
         const headName = hhInfo?.headName || (matchedHh as any)?.household_head_name || (res.is_head || res.relationship_with_head === 'Chủ hộ' ? res.full_name : 'Chủ hộ');
 
-        const isHead = res.is_head || res.relationship_with_head === 'Chủ hộ' || normName === headName.toLowerCase().trim();
+        const isHead = res.is_head || res.relationship_with_head === 'Chủ hộ' || resAccentsName === removeAccentsVN(headName);
         const noteText = isHead 
           ? `Chủ hộ ${res.full_name} (${officialGroup})` 
           : `Thành viên Hộ ông/bà ${headName} (${officialGroup})`;
 
         // Check if resident is already in Health Records
-        let existingRec = (resCccd ? healthMapByCccd.get(resCccd) : null) || healthMapByName.get(normName);
+        let existingRec = (resCccd ? healthMapByCccd.get(resCccd) : null) || healthMapByName.get(resAccentsName);
 
         if (existingRec) {
           const existingIdx = healthIdxByIdMap.get(existingRec.id);
           if (existingIdx !== undefined && existingIdx >= 0) {
             updatedHealthRecords[existingIdx] = {
               ...existingRec,
+              resident_name: res.full_name || existingRec.resident_name,
               household_number: hhNumber,
               address: `${officialGroup}, TDP Quảng Giao`,
               health_status_note: noteText,
@@ -806,6 +832,7 @@ const HealthCare: React.FC = () => {
           newAddedCount++;
         }
       }
+
 
       // Save all updated health records in 1 fast bulk operation
       await healthDb.saveBulkHealthRecords(updatedHealthRecords);
