@@ -671,9 +671,7 @@ const HealthCare: React.FC = () => {
     if (!importPreview) return;
     setIsProcessingExcel(true);
     try {
-      for (const rec of importPreview.recordsToSave) {
-        await healthDb.saveHealthRecord(rec);
-      }
+      await healthDb.saveBulkHealthRecords(importPreview.recordsToSave);
       alert(`Đã cập nhật an toàn 100% thành công ${importPreview.recordsToSave.length} hồ sơ BHYT vào CSDL TDP Quảng Giao!`);
       setShowImportModal(false);
       loadAllData();
@@ -684,6 +682,7 @@ const HealthCare: React.FC = () => {
       setIsProcessingExcel(false);
     }
   };
+
 
   // Automated Sync: Map CSDL Households & Residents to Health BHYT Records (Chính xác 100%)
   const handleSyncHouseholdsWithBHYT = async () => {
@@ -781,13 +780,12 @@ const HealthCare: React.FC = () => {
         }
       }
 
-      // Save all updated health records
-      for (const rec of updatedHealthRecords) {
-        await healthDb.saveHealthRecord(rec);
-      }
+      // Save all updated health records in 1 fast bulk operation
+      await healthDb.saveBulkHealthRecords(updatedHealthRecords);
 
-      alert(`Đã hoàn tất tự động phân bổ chuẩn 100% CSDL!\n- Đồng bộ Chủ Hộ & Thành viên cho: ${updatedCount} nhân khẩu.\n- Thêm mới thành viên Hộ dân: ${newAddedCount} người.\n- Đưa toàn bộ về đúng 7 Cụm/Tổ tự quản của TDP Quảng Giao!`);
+      alert(`🚀 Nâng cấp & Đồng bộ thành công 100% CSDL Hộ Dân!\n\n- Đã bổ sung đầy đủ ${newAddedCount} thành viên Hộ gia đình còn thiếu.\n- Đã cập nhật phân Hộ & Tổ cho ${updatedCount} nhân khẩu.\n- Toàn bộ các thành viên từng hộ hiện đã hiển thị đầy đủ 100%!`);
       loadAllData();
+
     } catch (err) {
       console.error('Lỗi tự động phân bổ CSDL:', err);
       alert('Có lỗi xảy ra trong quá trình đồng bộ phân bổ CSDL.');

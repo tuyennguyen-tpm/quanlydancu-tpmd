@@ -5280,6 +5280,36 @@ export const healthDb = {
     }
   },
 
+  saveBulkHealthRecords: async (allRecordsToSave: HealthRecord[]): Promise<void> => {
+    if (!allRecordsToSave || allRecordsToSave.length === 0) return;
+    
+    // 1. Single-pass merge in local storage
+    const records = getStoredData<HealthRecord>(STORAGE_KEYS.HEALTH_RECORDS, seedHealthRecords);
+    const map = new Map<string, HealthRecord>();
+    records.forEach(r => map.set(r.id, r));
+
+    const now = new Date().toISOString();
+    allRecordsToSave.forEach(r => {
+      map.set(r.id, { ...r, updated_at: now });
+    });
+
+    const mergedList = Array.from(map.values());
+    setStoredData(STORAGE_KEYS.HEALTH_RECORDS, mergedList);
+
+    // 2. Batch upsert in Supabase (chunked by 500)
+    if (supabase) {
+      try {
+        for (let i = 0; i < allRecordsToSave.length; i += 500) {
+          const batch = allRecordsToSave.slice(i, i + 500);
+          await supabase.from('health_records').upsert(batch);
+        }
+      } catch (e) {
+        console.warn('Lỗi đồng bộ lô Supabase (đã lưu local an toàn):', e);
+      }
+    }
+  },
+
+
   deleteHealthRecord: async (id: string): Promise<void> => {
     const records = getStoredData<HealthRecord>(STORAGE_KEYS.HEALTH_RECORDS, seedHealthRecords);
     const filtered = records.filter(r => r.id !== id);
