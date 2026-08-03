@@ -76,14 +76,14 @@ const HealthCare: React.FC = () => {
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Search & Filters
+  // Search & Filters (Debounced 180ms cho trải nghiệm gõ phím siêu mượt 100%)
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
+  const [cardDisplayLimit, setCardDisplayLimit] = useState<number>(60);
   const [bhytFilter, setBhytFilter] = useState<'all' | 'has' | 'missing'>('all');
   const [diseaseFilter, setDiseaseFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'household' | 'flat'>('household');
-
-
 
   // Modals & Editing States
   const [showHealthModal, setShowHealthModal] = useState<boolean>(false);
@@ -147,6 +147,13 @@ const HealthCare: React.FC = () => {
     loadAllData();
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCardDisplayLimit(60);
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Compute BHYT Statistics
   const bhytStats = useMemo(() => {
@@ -177,7 +184,6 @@ const HealthCare: React.FC = () => {
       missingBhytCount: number;
     }>();
 
-    // Khởi tạo đầy đủ 7 Tổ chính thức
     OFFICIAL_TDP_GROUPS.forEach(gName => {
       map.set(gName, {
         groupName: gName,
@@ -218,32 +224,36 @@ const HealthCare: React.FC = () => {
   }, [healthRecords]);
 
 
-
-  // Filtered Health Records
+  // Filtered Health Records (Siêu tốc với Debounce)
   const filteredHealthRecords = useMemo(() => {
+    const term = debouncedSearchTerm.toLowerCase().trim();
+    const grpTerm = groupFilter !== 'all' ? groupFilter.toLowerCase().trim() : '';
+
     return healthRecords.filter(r => {
-      const matchSearch = r.resident_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (r.address && r.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (r.bhyt_number && r.bhyt_number.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      let matchBhyt = true;
-      if (bhytFilter === 'has') matchBhyt = r.has_bhyt;
-      if (bhytFilter === 'missing') matchBhyt = !r.has_bhyt;
+      if (term) {
+        const matchSearch = (r.resident_name && r.resident_name.toLowerCase().includes(term)) ||
+                            (r.address && r.address.toLowerCase().includes(term)) ||
+                            (r.bhyt_number && r.bhyt_number.includes(term)) ||
+                            (r.household_number && r.household_number.toLowerCase().includes(term));
+        if (!matchSearch) return false;
+      }
 
-      let matchDisease = true;
+      if (bhytFilter === 'has' && !r.has_bhyt) return false;
+      if (bhytFilter === 'missing' && r.has_bhyt) return false;
+
       if (diseaseFilter !== 'all') {
-        if (diseaseFilter === 'disabled') matchDisease = r.is_disabled;
-        else matchDisease = r.chronic_diseases && r.chronic_diseases.includes(diseaseFilter);
+        if (diseaseFilter === 'disabled' && !r.is_disabled) return false;
+        if (diseaseFilter !== 'disabled' && (!r.chronic_diseases || !r.chronic_diseases.includes(diseaseFilter))) return false;
       }
 
-      let matchGroup = true;
-      if (groupFilter !== 'all') {
-        matchGroup = r.address ? r.address.toLowerCase().includes(groupFilter.toLowerCase()) : false;
+      if (grpTerm && r.address) {
+        if (!r.address.toLowerCase().includes(grpTerm)) return false;
       }
 
-      return matchSearch && matchBhyt && matchDisease && matchGroup;
+      return true;
     });
-  }, [healthRecords, searchTerm, bhytFilter, diseaseFilter, groupFilter]);
+  }, [healthRecords, debouncedSearchTerm, bhytFilter, diseaseFilter, groupFilter]);
+
 
   // Build Household Head Lookup Map from DB State
   const householdHeadMap = useMemo(() => {
@@ -1695,125 +1705,147 @@ const HealthCare: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* DANH SÁCH BHYT: GOM THEO HỘ GIA ĐÌNH HOẶC DẠNG BẢNG PHẲNG */}
           {viewMode === 'household' ? (
-
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {groupedHouseholdRecords.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px', background: 'var(--card-bg, #ffffff)', borderRadius: '14px', color: 'var(--text-muted, #94a3b8)', border: '1px solid var(--border-color, #e2e8f0)' }}>
                   Không tìm thấy hồ sơ BHYT phù hợp với bộ lọc.
                 </div>
               ) : (
-                groupedHouseholdRecords.map((hh, idx) => (
-                  <div key={idx} style={{ 
-                    background: 'var(--card-bg, #ffffff)', 
-                    borderRadius: '14px', 
-                    border: '1px solid var(--border-color, #e2e8f0)', 
-                    overflow: 'hidden', 
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
-                  }}>
-                    {/* HỘ GIA ĐÌNH BANNER HEADER */}
-                    <div style={{ 
-                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08))', 
-                      padding: '12px 18px', 
-                      borderBottom: '1px solid var(--border-color, #e2e8f0)', 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
-                      flexWrap: 'wrap',
-                      gap: '8px'
+                <>
+                  {groupedHouseholdRecords.slice(0, cardDisplayLimit).map((hh, idx) => (
+                    <div key={idx} style={{ 
+                      background: 'var(--card-bg, #ffffff)', 
+                      borderRadius: '14px', 
+                      border: '1px solid var(--border-color, #e2e8f0)', 
+                      overflow: 'hidden', 
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)' 
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Home size={18} color="#10b981" />
-                        <span style={{ fontWeight: 800, fontSize: '1.02rem', color: 'var(--text-main, #1e293b)' }}>
-                          Hộ ông/bà: <span style={{ color: '#047857' }}>{hh.headName}</span>
-                        </span>
-                        <span style={{ fontSize: '0.82rem', color: '#0369a1', background: '#e0f2fe', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                          📍 {hh.groupName}
-                        </span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #64748b)' }}>
-                          Mã HK: {hh.householdKey.replace('HK-', '')}
-                        </span>
+                      {/* HỘ GIA ĐÌNH BANNER HEADER */}
+                      <div style={{ 
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08))', 
+                        padding: '12px 18px', 
+                        borderBottom: '1px solid var(--border-color, #e2e8f0)', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '8px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <Home size={18} color="#10b981" />
+                          <span style={{ fontWeight: 800, fontSize: '1.02rem', color: 'var(--text-main, #1e293b)' }}>
+                            Hộ ông/bà: <span style={{ color: '#047857' }}>{hh.headName}</span>
+                          </span>
+                          <span style={{ fontSize: '0.82rem', color: '#0369a1', background: '#e0f2fe', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                            📍 {hh.groupName}
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #64748b)' }}>
+                            Mã HK: {hh.householdKey.replace('HK-', '')}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            fontSize: '0.8rem', 
+                            fontWeight: 800, 
+                            color: '#047857', 
+                            background: '#ecfdf5', 
+                            padding: '4px 12px', 
+                            borderRadius: '12px', 
+                            border: '1px solid #a7f3d0' 
+                          }}>
+                            👥 {hh.members.length} thành viên ({hh.members.filter(m => m.has_bhyt).length} đã có BHYT)
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ 
-                          fontSize: '0.8rem', 
-                          fontWeight: 800, 
-                          color: '#047857', 
-                          background: '#ecfdf5', 
-                          padding: '4px 12px', 
-                          borderRadius: '12px', 
-                          border: '1px solid #a7f3d0' 
-                        }}>
-                          👥 {hh.members.length} thành viên ({hh.members.filter(m => m.has_bhyt).length} đã có BHYT)
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* TABLE BẢNG THÀNH VIÊN TRONG HỘ */}
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.92rem' }}>
-                        <thead>
-                          <tr style={{ background: 'var(--table-header-bg, #f8fafc)', borderBottom: '1px solid var(--border-color, #e2e8f0)' }}>
-                            <th style={{ padding: '10px 16px', fontWeight: 700 }}>Họ và tên thành viên</th>
-                            <th style={{ padding: '10px 16px', fontWeight: 700 }}>Ngày sinh / Giới tính</th>
-                            <th style={{ padding: '10px 16px', fontWeight: 700 }}>Mã số & Hạn thẻ BHYT</th>
-                            <th style={{ padding: '10px 16px', fontWeight: 700 }}>Trạng thái BHYT</th>
-                            <th style={{ padding: '10px 16px', fontWeight: 700, textAlign: 'right' }}>Thao tác</th>
+                      {/* TABLE BẢNG THÀNH VIÊN TRONG HỘ */}
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.92rem' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--table-header-bg, #f8fafc)', borderBottom: '1px solid var(--border-color, #e2e8f0)' }}>
+                              <th style={{ padding: '10px 16px', fontWeight: 700 }}>Họ và tên thành viên</th>
+                              <th style={{ padding: '10px 16px', fontWeight: 700 }}>Ngày sinh / Giới tính</th>
+                              <th style={{ padding: '10px 16px', fontWeight: 700 }}>Mã số & Hạn thẻ BHYT</th>
+                              <th style={{ padding: '10px 16px', fontWeight: 700 }}>Trạng thái BHYT</th>
+                              <th style={{ padding: '10px 16px', fontWeight: 700, textAlign: 'right' }}>Thao tác</th>
 
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {hh.members.map(rec => (
-                            <tr key={rec.id} style={{ borderBottom: '1px solid var(--border-color, #f1f5f9)' }}>
-                              <td style={{ padding: '10px 16px', fontWeight: 700, color: 'var(--text-main, #1e293b)' }}>
-                                {rec.resident_name}
-                                {rec.resident_name.toLowerCase().trim() === hh.headName.toLowerCase().trim() && (
-                                  <span style={{ marginLeft: '6px', fontSize: '0.72rem', background: '#dbeafe', color: '#1d4ed8', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                                    CHỦ HỘ
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ padding: '10px 16px', color: 'var(--text-muted, #64748b)' }}>
-                                {formatDateVN(rec.dob)} ({rec.gender === 'female' ? 'Nữ' : 'Nam'})
-                              </td>
-                              <td style={{ padding: '10px 16px' }}>
-                                {rec.bhyt_number ? (
-                                  <div>
-                                    <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#3b82f6' }}>{rec.bhyt_number}</div>
-                                    {rec.bhyt_expiry && (
-                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>
-                                        Hạn: {formatDateVN(rec.bhyt_expiry)}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span style={{ color: 'var(--text-muted, #cbd5e1)', fontStyle: 'italic' }}>Chưa cập nhật</span>
-                                )}
-                              </td>
-
-                              <td style={{ padding: '10px 16px' }}>
-                                {rec.has_bhyt ? (
-                                  <span style={{ background: '#ecfdf5', color: '#10b981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <CheckCircle2 size={13} /> Đã có BHYT
-                                  </span>
-                                ) : (
-                                  <span style={{ background: '#fef2f2', color: '#ef4444', padding: '3px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    <AlertTriangle size={13} /> Cần vận động
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ padding: '10px 16px', textAlign: 'right' }}>
-                                <button onClick={() => openEditHealthModal(rec)} style={{ border: 'none', background: 'transparent', color: '#3b82f6', cursor: 'pointer', padding: '4px' }} title="Sửa hồ sơ"><Edit size={16} /></button>
-                                <button onClick={() => handleDeleteHealthRecord(rec.id)} style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '4px', marginLeft: '4px' }} title="Xóa hồ sơ"><Trash2 size={16} /></button>
-                              </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {hh.members.map(rec => (
+                              <tr key={rec.id} style={{ borderBottom: '1px solid var(--border-color, #f1f5f9)' }}>
+                                <td style={{ padding: '10px 16px', fontWeight: 700, color: 'var(--text-main, #1e293b)' }}>
+                                  {rec.resident_name}
+                                  {rec.resident_name.toLowerCase().trim() === hh.headName.toLowerCase().trim() && (
+                                    <span style={{ marginLeft: '6px', fontSize: '0.72rem', background: '#dbeafe', color: '#1d4ed8', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                      CHỦ HỘ
+                                    </span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 16px', color: 'var(--text-muted, #64748b)' }}>
+                                  {formatDateVN(rec.dob)} ({rec.gender === 'female' ? 'Nữ' : 'Nam'})
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  {rec.bhyt_number ? (
+                                    <div>
+                                      <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#3b82f6' }}>{rec.bhyt_number}</div>
+                                      {rec.bhyt_expiry && (
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #94a3b8)' }}>
+                                          Hạn: {formatDateVN(rec.bhyt_expiry)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: 'var(--text-muted, #cbd5e1)', fontStyle: 'italic' }}>Chưa cập nhật</span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 16px' }}>
+                                  {rec.has_bhyt ? (
+                                    <span style={{ background: '#ecfdf5', color: '#10b981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <CheckCircle2 size={13} /> Đã có BHYT
+                                    </span>
+                                  ) : (
+                                    <span style={{ background: '#fef2f2', color: '#ef4444', padding: '3px 10px', borderRadius: '12px', fontWeight: 700, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <AlertTriangle size={13} /> Cần vận động
+                                    </span>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                                  <button onClick={() => openEditHealthModal(rec)} style={{ border: 'none', background: 'transparent', color: '#3b82f6', cursor: 'pointer', padding: '4px' }} title="Sửa hồ sơ"><Edit size={16} /></button>
+                                  <button onClick={() => handleDeleteHealthRecord(rec.id)} style={{ border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '4px', marginLeft: '4px' }} title="Xóa hồ sơ"><Trash2 size={16} /></button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+
+                  {groupedHouseholdRecords.length > cardDisplayLimit && (
+                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                      <button 
+                        onClick={() => setCardDisplayLimit(prev => prev + 60)}
+                        className="btn btn-outline"
+                        style={{
+                          padding: '12px 28px',
+                          borderRadius: '12px',
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          border: '1px solid #3b82f6',
+                          fontWeight: 800,
+                          fontSize: '0.95rem',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)'
+                        }}
+                      >
+                        🔽 Xem thêm {groupedHouseholdRecords.length - cardDisplayLimit} Hộ gia đình tiếp theo...
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
+
             </div>
           ) : (
             /* BẢNG PHẲNG TOÀN BỘ DANH SÁCH */
