@@ -1295,7 +1295,7 @@ export default function Treasurer() {
                 }
 
                 /* Hide header, navigation, sidebar and non-print controls */
-                header, nav, .sidebar, .no-print {
+                header, nav, aside, footer, .sidebar, .no-print {
                   display: none !important;
                 }
 
@@ -1311,18 +1311,17 @@ export default function Treasurer() {
                   border: none !important;
                 }
 
-                /* Reset modal backdrop & dialog wrapper to static flow at top of page 1 */
+                /* Force modal backdrop to absolute top 0 of page 1 */
                 .modal-backdrop {
-                  position: static !important;
+                  position: absolute !important;
                   top: 0 !important;
                   left: 0 !important;
-                  right: auto !important;
-                  bottom: auto !important;
+                  right: 0 !important;
+                  width: 100% !important;
                   background: none !important;
                   padding: 0 !important;
                   margin: 0 !important;
                   display: block !important;
-                  width: 100% !important;
                   height: auto !important;
                   min-height: 0 !important;
                   max-height: none !important;
