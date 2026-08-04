@@ -231,6 +231,10 @@ const HealthCare: React.FC = () => {
     // 3. Build EXACTLY 1 HealthRecord per Resident in fetchedResidents (5,842 items!)
     const result: HealthRecord[] = [];
 
+    let activeHeadName = 'Chủ hộ';
+    let activeOfficialGroup = 'Tổ 4';
+    let activeHhNumber = '';
+
     for (let i = 0; i < fetchedResidents.length; i++) {
       const res = fetchedResidents[i];
       const resAccentsName = removeAccentsVN(res.full_name);
@@ -243,11 +247,34 @@ const HealthCare: React.FC = () => {
       const hhInfo = hhHeadInfoMap.get(res.household_id) || (res.household_id ? hhHeadInfoMap.get(removeAccentsVN(res.household_id)) : null);
       const matchedHh = hhByIdMap.get(res.household_id) || (res.household_id ? hhByIdMap.get(removeAccentsVN(res.household_id)) : null);
 
-      const officialGroup = hhInfo?.officialGroup || normalizeToOfficialGroup(matchedHh?.self_management_group || matchedHh?.address || (res as any).permanent_address);
-      const hhNumber = hhInfo?.hhNumber || matchedHh?.household_number || res.household_id || 'HK-CHUA_PHAN_HO';
-      const headName = hhInfo?.headName || (matchedHh as any)?.household_head_name || (res.is_head || res.relationship_with_head === 'Chủ hộ' ? res.full_name : 'Chủ hộ');
+      const isHead = res.is_head || res.relationship_with_head === 'Chủ hộ' || (matchedHh && (matchedHh as any)?.household_head_name && resAccentsName === removeAccentsVN((matchedHh as any).household_head_name));
 
-      const isHead = res.is_head || res.relationship_with_head === 'Chủ hộ' || resAccentsName === removeAccentsVN(headName);
+      let officialGroup = '';
+      let hhNumber = '';
+      let headName = '';
+
+      if (hhInfo || matchedHh) {
+        officialGroup = hhInfo?.officialGroup || normalizeToOfficialGroup(matchedHh?.self_management_group || matchedHh?.address || (res as any).permanent_address);
+        hhNumber = hhInfo?.hhNumber || matchedHh?.household_number || res.household_id || '';
+        headName = hhInfo?.headName || (matchedHh as any)?.household_head_name || (isHead ? res.full_name : 'Chủ hộ');
+
+        activeHeadName = headName;
+        activeOfficialGroup = officialGroup;
+        activeHhNumber = hhNumber;
+      } else if (isHead) {
+        officialGroup = normalizeToOfficialGroup((res as any).permanent_address || res.address);
+        headName = res.full_name;
+        hhNumber = res.household_id || `HK-${removeAccentsVN(res.full_name)}-${removeAccentsVN(officialGroup)}`;
+
+        activeHeadName = headName;
+        activeOfficialGroup = officialGroup;
+        activeHhNumber = hhNumber;
+      } else {
+        officialGroup = activeOfficialGroup || normalizeToOfficialGroup((res as any).permanent_address || res.address);
+        headName = activeHeadName;
+        hhNumber = activeHhNumber || `HK-${removeAccentsVN(headName)}-${removeAccentsVN(officialGroup)}`;
+      }
+
       const noteText = isHead 
         ? `Chủ hộ ${res.full_name} (${officialGroup})` 
         : `Thành viên Hộ ông/bà ${headName} (${officialGroup})`;
