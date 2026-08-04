@@ -1363,7 +1363,55 @@ export default function Treasurer() {
                   width: 100% !important;
                   padding: 6mm 10mm !important;
                   box-sizing: border-box !important;
-                               {/* Quốc hiệu tiêu ngữ & TDP Header */}
+                  clear: both !important;
+                  margin: 0 !important;
+                }
+
+                .lien-single-page:first-child {
+                  page-break-before: auto !important;
+                  break-before: auto !important;
+                }
+
+                .lien-divider-line {
+                  display: none !important;
+                }
+
+                @page {
+                  size: A4 portrait;
+                  margin: 6mm 8mm;
+                }
+              }
+            `}</style>
+
+            {/* Printable Voucher Paper Container */}
+            <div
+              id="printable-voucher"
+              contentEditable={true}
+              suppressContentEditableWarning={true}
+              style={{
+                padding: '24px 30px',
+                background: 'white',
+                color: '#000',
+                fontFamily: '"Times New Roman", Times, serif',
+                fontSize: '13.5px',
+                border: '2px double #1e293b',
+                borderRadius: '8px',
+                margin: '0 auto',
+                maxWidth: '720px',
+                boxSizing: 'border-box',
+                outline: 'none'
+              }}
+            >
+              {Array.from({ length: printLienCount }, (_, idx) => idx + 1).map((lienNum) => (
+                <div key={`lien-${lienNum}`} className="lien-single-page" style={{ marginBottom: lienNum < printLienCount ? '28px' : '0' }}>
+                  {lienNum > 1 && (
+                    <div className="lien-break lien-divider-line" style={{ pageBreakBefore: 'always', margin: '24px 0 20px 0', borderTop: '2px dashed #94a3b8', paddingTop: '16px' }}></div>
+                  )}
+
+                  {printDocTemplate === 'handover' ? (
+                    /* BIÊN BẢN BÀN GIAO TIỀN QUỸ */
+                    <div>
+                      {/* Quốc hiệu tiêu ngữ & TDP Header */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                         <div>
                           <div style={{ fontWeight: 'bold', fontSize: '0.92rem', textTransform: 'uppercase' }}>{officialsConfig.tdpName}</div>
@@ -1552,38 +1600,6 @@ export default function Treasurer() {
                           </div>
                           <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
                             {officialsConfig.toTruong.name || 'Nguyễn Viết Châu'}
-                          </div>
-                        </div>
-                      </div>nsform: 'uppercase' }}>NGƯỜI LẬP BIÊN BẢN</div>
-                            <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
-                          </div>
-                          <div style={{ margin: '4px 0' }}>
-                            {officialsConfig.keToan.signatureUrl ? (
-                              <img src={officialsConfig.keToan.signatureUrl} alt="Chữ ký" style={{ maxHeight: '42px', objectFit: 'contain', margin: '0 auto' }} />
-                            ) : (
-                              <div style={{ height: '35px' }}></div>
-                            )}
-                          </div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
-                            {officialsConfig.keToan.name || '(Người lập)'}
-                          </div>
-                        </div>
-
-                        {/* 4. TỔ TRƯỜNG TDP */}
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
-                          <div>
-                            <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>TỔ TRƯỜNG TDP (DUYỆT)</div>
-                            <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, đóng dấu, họ tên)</div>
-                          </div>
-                          <div style={{ margin: '4px 0' }}>
-                            {officialsConfig.toTruong.signatureUrl ? (
-                              <img src={officialsConfig.toTruong.signatureUrl} alt="Chữ ký" style={{ maxHeight: '42px', objectFit: 'contain', margin: '0 auto' }} />
-                            ) : (
-                              <div style={{ height: '35px' }}></div>
-                            )}
-                          </div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
-                            {officialsConfig.toTruong.name || 'Nguyễn Kim Tuyến'}
                           </div>
                         </div>
                       </div>
