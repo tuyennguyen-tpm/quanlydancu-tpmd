@@ -1363,75 +1363,27 @@ export default function Treasurer() {
                   width: 100% !important;
                   padding: 6mm 10mm !important;
                   box-sizing: border-box !important;
-                  clear: both !important;
-                  margin: 0 !important;
-                }
-
-                .lien-single-page:first-child {
-                  page-break-before: auto !important;
-                  break-before: auto !important;
-                }
-
-                .lien-divider-line {
-                  display: none !important;
-                }
-
-                @page {
-                  size: A4 portrait;
-                  margin: 6mm 8mm;
-                }
-              }
-            `}</style>
-
-            {/* Printable Voucher Paper Container */}
-            <div
-              id="printable-voucher"
-              contentEditable={true}
-              suppressContentEditableWarning={true}
-              style={{
-                padding: '24px 30px',
-                background: 'white',
-                color: '#000',
-                fontFamily: '"Times New Roman", Times, serif',
-                fontSize: '13.5px',
-                border: '2px double #1e293b',
-                borderRadius: '8px',
-                margin: '0 auto',
-                maxWidth: '720px',
-                boxSizing: 'border-box',
-                outline: 'none'
-              }}
-            >
-              {Array.from({ length: printLienCount }, (_, idx) => idx + 1).map((lienNum) => (
-                <div key={`lien-${lienNum}`} className="lien-single-page" style={{ marginBottom: lienNum < printLienCount ? '28px' : '0' }}>
-                  {lienNum > 1 && (
-                    <div className="lien-break lien-divider-line" style={{ pageBreakBefore: 'always', margin: '24px 0 20px 0', borderTop: '2px dashed #94a3b8', paddingTop: '16px' }}></div>
-                  )}
-
-                  {printDocTemplate === 'handover' ? (
-                    /* BIÊN BẢN BÀN GIAO TIỀN QUỸ */
-                    <div>
-                      {/* Quốc hiệu tiêu ngữ & TDP Header */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                               {/* Quốc hiệu tiêu ngữ & TDP Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                         <div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.95rem', textTransform: 'uppercase' }}>{officialsConfig.tdpName}</div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>{officialsConfig.wardName}</div>
-                          <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#444' }}>(Ban quản lý Quỹ Tổ dân phố)</div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.92rem', textTransform: 'uppercase' }}>{officialsConfig.tdpName}</div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: '600' }}>{officialsConfig.wardName}</div>
+                          <div style={{ fontSize: '0.75rem', fontStyle: 'italic', color: '#444' }}>(Ban quản lý Quỹ Tổ dân phố)</div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.9rem', textTransform: 'uppercase' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Độc lập - Tự do - Hạnh phúc</div>
-                          <div style={{ fontSize: '0.78rem', marginTop: '2px', color: '#555' }}>- - - - - - - - - - - - - - - -</div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.88rem', textTransform: 'uppercase' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.82rem' }}>Độc lập - Tự do - Hạnh phúc</div>
+                          <div style={{ fontSize: '0.75rem', marginTop: '1px', color: '#555' }}>- - - - - - - - - - - - - - - -</div>
                         </div>
                       </div>
 
                       {/* Title Header */}
-                      <div style={{ textAlign: 'center', margin: '12px 0 14px 0' }}>
-                        <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: '#0f172a' }}>
+                      <div style={{ textAlign: 'center', margin: '6px 0 8px 0' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.45rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', color: '#0f172a' }}>
                           BIÊN BẢN BÀN GIAO TIỀN QUỸ
                         </h2>
                         {printLienCount > 1 && (
-                          <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#1e3a8a', marginTop: '3px' }}>
+                          <div style={{ fontSize: '0.86rem', fontWeight: 'bold', color: '#1e3a8a', marginTop: '2px' }}>
                             {lienNum === 1
                               ? 'Liên 1: Thủ quỹ / TDP lưu trữ'
                               : lienNum === 2
@@ -1439,31 +1391,31 @@ export default function Treasurer() {
                                 : 'Liên 3: Kế toán / Lưu hồ sơ'}
                           </div>
                         )}
-                        <div style={{ fontSize: '0.88rem', fontStyle: 'italic', marginTop: '4px', color: '#334155' }}>
+                        <div style={{ fontSize: '0.82rem', fontStyle: 'italic', marginTop: '2px', color: '#334155' }}>
                           Hôm nay, {formatDateVN(printModalNote.date || printModalNote.created_at)}, tại Ban quản lý {officialsConfig.tdpName}.
                         </div>
                       </div>
 
                       {/* Preamble */}
-                      <div style={{ fontSize: '0.94rem', lineHeight: '1.4', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '0.88rem', lineHeight: '1.3', marginBottom: '6px' }}>
                         Chúng tôi gồm có hai bên tiến hành lập Biên bản bàn giao tiền quỹ với các nội dung cụ thể sau:
                       </div>
 
                       {/* Section 1: Bên Giao */}
-                      <div style={{ marginBottom: '10px', fontSize: '0.94rem', lineHeight: '1.35' }}>
-                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '4px' }}>
+                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: '1.3' }}>
+                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '2px' }}>
                           I. BÊN GIAO TIỀN (BÊN A):
                         </div>
-                        <div style={{ paddingLeft: '12px' }}>
+                        <div style={{ paddingLeft: '10px' }}>
                           <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                            <span style={{ width: '180px', fontWeight: 'bold' }}>Họ và tên người giao:</span>
-                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '1.02rem', paddingLeft: '6px' }}>
+                            <span style={{ width: '160px', fontWeight: 'bold' }}>Họ và tên người giao:</span>
+                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '0.96rem', paddingLeft: '4px' }}>
                               {printModalNote.payer}
                             </span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '3px' }}>
-                            <span style={{ width: '180px', fontWeight: 'bold' }}>Đơn vị / Địa chỉ:</span>
-                            <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '2px' }}>
+                            <span style={{ width: '160px', fontWeight: 'bold' }}>Đơn vị / Địa chỉ:</span>
+                            <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '4px' }}>
                               {officialsConfig.tdpName}, {officialsConfig.wardName}
                             </span>
                           </div>
@@ -1471,20 +1423,20 @@ export default function Treasurer() {
                       </div>
 
                       {/* Section 2: Bên Nhận */}
-                      <div style={{ marginBottom: '10px', fontSize: '0.94rem', lineHeight: '1.35' }}>
-                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '4px' }}>
+                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: '1.3' }}>
+                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '2px' }}>
                           II. BÊN NHẬN TIỀN (BÊN B):
                         </div>
-                        <div style={{ paddingLeft: '12px' }}>
+                        <div style={{ paddingLeft: '10px' }}>
                           <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                            <span style={{ width: '180px', fontWeight: 'bold' }}>Họ và tên người nhận:</span>
-                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '1.02rem', paddingLeft: '6px' }}>
+                            <span style={{ width: '160px', fontWeight: 'bold' }}>Họ và tên người nhận:</span>
+                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '0.96rem', paddingLeft: '4px' }}>
                               {officialsConfig.thuQuy.name || 'Thủ quỹ TDP'}
                             </span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '3px' }}>
-                            <span style={{ width: '180px', fontWeight: 'bold' }}>Chức vụ / Đơn vị:</span>
-                            <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '2px' }}>
+                            <span style={{ width: '160px', fontWeight: 'bold' }}>Chức vụ / Đơn vị:</span>
+                            <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '4px' }}>
                               Thủ quỹ - Ban quản lý {officialsConfig.tdpName}
                             </span>
                           </div>
@@ -1492,26 +1444,26 @@ export default function Treasurer() {
                       </div>
 
                       {/* Section 3: Nội dung bàn giao */}
-                      <div style={{ marginBottom: '10px', fontSize: '0.94rem', lineHeight: '1.35' }}>
-                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '4px' }}>
+                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: '1.3' }}>
+                        <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '2px' }}>
                           III. NỘI DUNG VÀ SỐ TIỀN BÀN GIAO:
                         </div>
-                        <div style={{ paddingLeft: '12px' }}>
+                        <div style={{ paddingLeft: '10px' }}>
                           <div style={{ display: 'flex', alignItems: 'baseline' }}>
-                            <span style={{ width: '180px', fontWeight: 'bold' }}>1. Lý do bàn giao tiền:</span>
-                            <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '6px' }}>
+                            <span style={{ width: '160px', fontWeight: 'bold' }}>1. Lý do bàn giao tiền:</span>
+                            <span style={{ flex: 1, borderBottom: '1px dotted #555', paddingLeft: '4px' }}>
                               {printModalNote.category} {printModalNote.note ? `— ${printModalNote.note}` : ''}
                             </span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '3px' }}>
-                            <span style={{ width: '180px', fontWeight: 'bold' }}>2. Số tiền bàn giao:</span>
-                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '1.08rem', color: '#047857', paddingLeft: '6px' }}>
-                              {formatVND(printModalNote.amount)} <span style={{ fontSize: '0.88rem', fontWeight: 'normal', color: '#444' }}>({printModalNote.method})</span>
+                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '2px' }}>
+                            <span style={{ width: '160px', fontWeight: 'bold' }}>2. Số tiền bàn giao:</span>
+                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontWeight: 'bold', fontSize: '1.02rem', color: '#047857', paddingLeft: '4px' }}>
+                              {formatVND(printModalNote.amount)} <span style={{ fontSize: '0.84rem', fontWeight: 'normal', color: '#444' }}>({printModalNote.method})</span>
                             </span>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '3px' }}>
-                            <span style={{ width: '180px', fontWeight: 'bold' }}>3. Viết bằng chữ:</span>
-                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontStyle: 'italic', fontWeight: 'bold', paddingLeft: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', marginTop: '2px' }}>
+                            <span style={{ width: '160px', fontWeight: 'bold' }}>3. Viết bằng chữ:</span>
+                            <span style={{ flex: 1, borderBottom: '1px dotted #555', fontStyle: 'italic', fontWeight: 'bold', paddingLeft: '4px' }}>
                               {docSoTien(printModalNote.amount)}
                             </span>
                           </div>
@@ -1519,12 +1471,12 @@ export default function Treasurer() {
                       </div>
 
                       {/* Section 4: Cam kết */}
-                      <div style={{ fontSize: '0.88rem', fontStyle: 'italic', lineHeight: '1.35', marginBottom: '10px' }}>
+                      <div style={{ fontSize: '0.82rem', fontStyle: 'italic', lineHeight: '1.3', marginBottom: '6px' }}>
                         Hai bên đã cùng kiểm đếm đầy đủ số tiền nêu trên. Biên bản này được lập thành 02 bản có giá trị pháp lý như nhau, mỗi bên giữ 01 bản làm căn cứ đối soát Sổ quỹ.
                       </div>
 
                       {/* Date Footer */}
-                      <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                      <div style={{ textAlign: 'right', marginTop: '4px', fontSize: '0.85rem', fontStyle: 'italic' }}>
                         {officialsConfig.wardName}, {formatDateVN(printModalNote.date || printModalNote.created_at)}
                       </div>
 
@@ -1532,45 +1484,77 @@ export default function Treasurer() {
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(4, 1fr)',
-                        gap: '6px',
-                        marginTop: '10px',
+                        gap: '4px',
+                        marginTop: '6px',
                         textAlign: 'center',
-                        fontSize: '0.83rem'
+                        fontSize: '0.8rem'
                       }}>
                         {/* 1. BÊN GIAO TIỀN */}
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '85px' }}>
                           <div>
                             <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>BÊN GIAO TIỀN (BÊN A)</div>
-                            <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
+                            <div style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
                           </div>
-                          <div style={{ margin: '4px 0', height: '35px' }}></div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
+                          <div style={{ margin: '2px 0', height: '28px' }}></div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
                             {printModalNote.payer}
                           </div>
                         </div>
 
                         {/* 2. BÊN NHẬN TIỀN */}
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '85px' }}>
                           <div>
                             <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>BÊN NHẬN TIỀN (BÊN B)</div>
-                            <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
+                            <div style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
                           </div>
-                          <div style={{ margin: '4px 0' }}>
+                          <div style={{ margin: '2px 0' }}>
                             {officialsConfig.thuQuy.signatureUrl ? (
-                              <img src={officialsConfig.thuQuy.signatureUrl} alt="Chữ ký" style={{ maxHeight: '42px', objectFit: 'contain', margin: '0 auto' }} />
+                              <img src={officialsConfig.thuQuy.signatureUrl} alt="Chữ ký" style={{ maxHeight: '35px', objectFit: 'contain', margin: '0 auto' }} />
                             ) : (
-                              <div style={{ height: '35px' }}></div>
+                              <div style={{ height: '28px' }}></div>
                             )}
                           </div>
-                          <div style={{ fontWeight: 'bold', fontSize: '0.88rem' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
                             {officialsConfig.thuQuy.name || '(Thủ quỹ)'}
                           </div>
                         </div>
 
                         {/* 3. NGƯỜI LẬP BIÊN BẢN */}
-                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '115px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '85px' }}>
                           <div>
                             <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>NGƯỜI LẬP BIÊN BẢN</div>
+                            <div style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
+                          </div>
+                          <div style={{ margin: '2px 0' }}>
+                            {officialsConfig.keToan.signatureUrl ? (
+                              <img src={officialsConfig.keToan.signatureUrl} alt="Chữ ký" style={{ maxHeight: '35px', objectFit: 'contain', margin: '0 auto' }} />
+                            ) : (
+                              <div style={{ height: '28px' }}></div>
+                            )}
+                          </div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
+                            {officialsConfig.keToan.name || '(Người lập)'}
+                          </div>
+                        </div>
+
+                        {/* 4. TỔ TRƯỜNG TDP */}
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '85px' }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>TỔ TRƯỜNG TDP (DUYỆT)</div>
+                            <div style={{ fontSize: '0.7rem', fontStyle: 'italic', color: '#555' }}>(Ký, đóng dấu, họ tên)</div>
+                          </div>
+                          <div style={{ margin: '2px 0' }}>
+                            {officialsConfig.toTruong.signatureUrl ? (
+                              <img src={officialsConfig.toTruong.signatureUrl} alt="Chữ ký" style={{ maxHeight: '35px', objectFit: 'contain', margin: '0 auto' }} />
+                            ) : (
+                              <div style={{ height: '28px' }}></div>
+                            )}
+                          </div>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
+                            {officialsConfig.toTruong.name || 'Nguyễn Viết Châu'}
+                          </div>
+                        </div>
+                      </div>nsform: 'uppercase' }}>NGƯỜI LẬP BIÊN BẢN</div>
                             <div style={{ fontSize: '0.73rem', fontStyle: 'italic', color: '#555' }}>(Ký, ghi rõ họ tên)</div>
                           </div>
                           <div style={{ margin: '4px 0' }}>
