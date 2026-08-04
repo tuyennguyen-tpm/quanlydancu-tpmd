@@ -1368,7 +1368,7 @@ export default function Treasurer() {
                   display: block !important;
                   position: relative !important;
                   width: 100% !important;
-                  padding: 3mm 6mm 4mm 6mm !important;
+                  padding: 0mm 5mm 3mm 5mm !important;
                   box-sizing: border-box !important;
                   clear: both !important;
                   margin: 0 !important;
@@ -1376,7 +1376,7 @@ export default function Treasurer() {
 
                 .lien-single-page:first-child {
                   margin-top: 0 !important;
-                  padding-top: 3mm !important;
+                  padding-top: 0mm !important;
                 }
 
                 /* Do NOT break page after the last Lien to prevent trailing blank page */
@@ -1391,7 +1391,7 @@ export default function Treasurer() {
 
                 @page {
                   size: A4 portrait;
-                  margin: 4mm 6mm;
+                  margin: 2mm 5mm;
                 }
               }
             `}</style>
