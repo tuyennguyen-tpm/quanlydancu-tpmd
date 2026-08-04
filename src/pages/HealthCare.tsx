@@ -453,21 +453,37 @@ const HealthCare: React.FC = () => {
   }, [healthRecords, debouncedSearchTerm, bhytFilter, diseaseFilter, groupFilter]);
 
 
-  // Build Household Head Lookup Map from DB State
+  // Build Household Head Lookup Map from DB State with comprehensive key resolution
   const householdHeadMap = useMemo(() => {
     const map = new Map<string, string>();
     dbHouseholds.forEach(hh => {
-      const hhResidents = dbResidents.filter(r => r.household_id === hh.id || r.household_id === hh.household_number);
+      const hhResidents = dbResidents.filter(r => r.household_id === hh.id || r.household_id === hh.household_number || (r.household_id && removeAccentsVN(r.household_id) === removeAccentsVN(hh.household_number)));
       const headRes = hhResidents.find(r => r.is_head || r.relationship_with_head === 'Chủ hộ' || r.id === hh.head_of_household_id || (r as any).cccd === hh.head_of_household_id) ||
                       dbResidents.find(r => r.id === hh.head_of_household_id || (r as any).cccd === hh.head_of_household_id) ||
                       hhResidents[0];
 
       const headName = headRes?.full_name || (hh as any).household_head_name;
       if (headName) {
-        if (hh.household_number) map.set(hh.household_number, headName);
-        if (hh.id) map.set(hh.id, headName);
+        if (hh.household_number) {
+          map.set(hh.household_number, headName);
+          map.set(hh.household_number.toLowerCase(), headName);
+          map.set(removeAccentsVN(hh.household_number), headName);
+        }
+        if (hh.id) {
+          map.set(hh.id, headName);
+          map.set(hh.id.toLowerCase(), headName);
+        }
       }
     });
+
+    dbResidents.forEach(r => {
+      if ((r.is_head || r.relationship_with_head === 'Chủ hộ') && r.household_id && r.full_name) {
+        map.set(r.household_id, r.full_name);
+        map.set(r.household_id.toLowerCase(), r.full_name);
+        map.set(removeAccentsVN(r.household_id), r.full_name);
+      }
+    });
+
     return map;
   }, [dbHouseholds, dbResidents]);
 
@@ -480,46 +496,39 @@ const HealthCare: React.FC = () => {
       members: HealthRecord[];
     }>();
 
-    let currentFamilyClusterKey = '';
-    let currentFamilyHeadName = '';
-
     filteredHealthRecords.forEach((rec) => {
-      let hkKey = (rec.household_number || '').trim();
+      let grp = normalizeToOfficialGroup(rec.address);
+      let headName = '';
 
-      // Only if household_number is completely unassigned, derive from health_status_note
-      if (!hkKey || hkKey === 'HK-CHUA_PHAN_HO' || hkKey === 'CHUA_PHAN_HO') {
-        if (rec.health_status_note) {
-          if (rec.health_status_note.includes('Chủ hộ')) {
-            const match = rec.health_status_note.match(/Chủ hộ\s+([^,;(]+)/);
-            if (match && match[1]) hkKey = `HK-${removeAccentsVN(match[1].trim())}`;
-          } else if (rec.health_status_note.includes('Thành viên Hộ ông/bà')) {
-            const match = rec.health_status_note.match(/Thành viên Hộ ông\/bà\s+([^,;(]+)/);
-            if (match && match[1]) hkKey = `HK-${removeAccentsVN(match[1].trim())}`;
-          }
+      // Priority 1: Check note for explicit "Chủ hộ [Tên]" or "Thành viên Hộ ông/bà [Tên]"
+      if (rec.health_status_note) {
+        let match = rec.health_status_note.match(/Chủ hộ\s+([^,;(]+)/);
+        if (!match) match = rec.health_status_note.match(/Thành viên Hộ ông\/bà\s+([^,;(]+)/);
+        if (match && match[1]) {
+          headName = match[1].trim();
         }
       }
 
-      // If still unassigned or generic, group into consecutive family cluster
-      const isUnassigned = !hkKey || hkKey === 'HK-CHUA_PHAN_HO' || hkKey === 'CHUA_PHAN_HO' || hkKey.startsWith('HK-Cụm') || hkKey.startsWith('HK-Tổ');
+      // Priority 2: Check householdHeadMap from dbHouseholds & dbResidents
+      if (!headName && rec.household_number) {
+        const rawHk = rec.household_number.trim();
+        headName = householdHeadMap.get(rawHk) || householdHeadMap.get(rawHk.toLowerCase()) || householdHeadMap.get(removeAccentsVN(rawHk)) || '';
+      }
 
-      if (isUnassigned) {
-        const grp = normalizeToOfficialGroup(rec.address);
-        const birthYear = rec.dob ? parseInt(rec.dob.slice(0, 4), 10) : 1985;
-        const isAdult = birthYear < 1995;
-
-        // If adult or if no active cluster, start a new family household cluster
-        if (isAdult || !currentFamilyClusterKey) {
-          currentFamilyHeadName = rec.resident_name;
-          currentFamilyClusterKey = `HK-FAM-${removeAccentsVN(rec.resident_name)}-${removeAccentsVN(grp)}`;
-        }
-        hkKey = currentFamilyClusterKey;
+      // Priority 3: Compute Canonical Household Grouping Key
+      let hkKey = '';
+      if (headName) {
+        hkKey = `HK-${removeAccentsVN(headName)}-${removeAccentsVN(grp)}`;
+      } else if (rec.household_number && rec.household_number !== 'HK-CHUA_PHAN_HO' && rec.household_number !== 'CHUA_PHAN_HO') {
+        hkKey = `HK-${removeAccentsVN(rec.household_number.trim())}-${removeAccentsVN(grp)}`;
+      } else {
+        hkKey = `HK-${removeAccentsVN(rec.resident_name)}-${removeAccentsVN(grp)}`;
       }
 
       if (!map.has(hkKey)) {
-        let grp = normalizeToOfficialGroup(rec.address);
         map.set(hkKey, {
           householdKey: hkKey,
-          headName: '',
+          headName: headName || rec.resident_name,
           groupName: grp,
           members: []
         });
@@ -529,13 +538,13 @@ const HealthCare: React.FC = () => {
 
     // Resolve accurate Household Head Name for each grouped card
     map.forEach((item) => {
-      let headName = householdHeadMap.get(item.householdKey) || '';
+      let headName = item.headName;
 
-      if (!headName) {
-        // Priority 1: Check if any member has note "Chủ hộ [Tên]"
+      if (!headName || headName === 'Chủ hộ Gia Đình') {
         for (const m of item.members) {
-          if (m.health_status_note && m.health_status_note.includes('Chủ hộ')) {
-            const match = m.health_status_note.match(/Chủ hộ\s+([^,;(]+)/);
+          if (m.health_status_note) {
+            let match = m.health_status_note.match(/Chủ hộ\s+([^,;(]+)/);
+            if (!match) match = m.health_status_note.match(/Thành viên Hộ ông\/bà\s+([^,;(]+)/);
             if (match && match[1]) {
               headName = match[1].trim();
               break;
@@ -545,7 +554,6 @@ const HealthCare: React.FC = () => {
       }
 
       if (!headName && item.members.length > 0) {
-        // Priority 2: Oldest adult resident as Household Head
         const sortedByAge = [...item.members].sort((a, b) => (a.dob || '9999').localeCompare(b.dob || '9999'));
         headName = sortedByAge[0].resident_name;
       }
