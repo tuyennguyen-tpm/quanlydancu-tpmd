@@ -1286,7 +1286,7 @@ export default function Treasurer() {
               <span>✏️ <strong>Sửa trực tiếp:</strong> Bạn có thể nhấp chuột vào bất kỳ chữ/số nào trên Mẫu Phiếu bên dưới (họ tên, lý do, số tiền, chữ viết, ngày tháng...) để tự do gõ sửa trực tiếp trước khi bấm "In Phiếu Ngay"! (Đang chọn: <strong>{printLienCount} Liên</strong>)</span>
             </div>
 
-            {/* Print CSS Injector for Clean A4 Page Separation without Blank Pages or Cutoffs */}
+            {/* Print CSS Injector for Identical A4 Page Alignment for Lien 1 & Lien 2 */}
             <style>{`
               @media print {
                 /* Hide all non-modal children inside page container */
@@ -1299,7 +1299,7 @@ export default function Treasurer() {
                   display: none !important;
                 }
 
-                /* Reset html, body and layout containers to static normal flow */
+                /* Reset html, body and layout containers to static normal flow with zero top offsets */
                 html, body, #root, .layout-container, .page-container {
                   overflow: visible !important;
                   height: auto !important;
@@ -1308,13 +1308,14 @@ export default function Treasurer() {
                   background: white !important;
                   margin: 0 !important;
                   padding: 0 !important;
+                  border: none !important;
                 }
 
                 /* Reset modal backdrop & dialog wrapper to static flow at top of page 1 */
                 .modal-backdrop {
                   position: static !important;
-                  top: auto !important;
-                  left: auto !important;
+                  top: 0 !important;
+                  left: 0 !important;
                   right: auto !important;
                   bottom: auto !important;
                   background: none !important;
@@ -1327,6 +1328,7 @@ export default function Treasurer() {
                   max-height: none !important;
                   overflow: visible !important;
                   box-shadow: none !important;
+                  border: none !important;
                 }
 
                 .modal-backdrop > div {
@@ -1366,10 +1368,15 @@ export default function Treasurer() {
                   display: block !important;
                   position: relative !important;
                   width: 100% !important;
-                  padding: 4mm 6mm !important;
+                  padding: 3mm 6mm 4mm 6mm !important;
                   box-sizing: border-box !important;
                   clear: both !important;
                   margin: 0 !important;
+                }
+
+                .lien-single-page:first-child {
+                  margin-top: 0 !important;
+                  padding-top: 3mm !important;
                 }
 
                 /* Do NOT break page after the last Lien to prevent trailing blank page */
