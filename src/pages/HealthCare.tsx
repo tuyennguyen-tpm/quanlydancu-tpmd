@@ -237,7 +237,8 @@ const HealthCare: React.FC = () => {
 
     const updatedHealthRecords: HealthRecord[] = [...currentHrs];
 
-    for (const res of fetchedResidents) {
+    for (let idx = 0; idx < fetchedResidents.length; idx++) {
+      const res = fetchedResidents[idx];
       const resAccentsName = removeAccentsVN(res.full_name);
       if (!resAccentsName) continue;
 
@@ -284,8 +285,9 @@ const HealthCare: React.FC = () => {
           }
         }
       } else {
+        const uniqueId = `HR_${res.id || (resCccd ? `CCCD_${resCccd}` : `RES_${idx}_${Date.now()}`)}`;
         const newHealthRec: HealthRecord = {
-          id: `HR_${resCccd || Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          id: uniqueId,
           resident_id: resCccd ? `R_${resCccd}` : `R_${res.id}`,
           resident_name: res.full_name,
           dob: res.dob || '1985-01-01',
@@ -301,6 +303,7 @@ const HealthCare: React.FC = () => {
           updated_at: new Date().toISOString()
         };
         updatedHealthRecords.push(newHealthRec);
+        healthIdxByIdMap.set(uniqueId, updatedHealthRecords.length - 1);
         addedCount++;
       }
     }
