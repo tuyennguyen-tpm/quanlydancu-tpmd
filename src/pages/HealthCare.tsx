@@ -286,6 +286,8 @@ const HealthCare: React.FC = () => {
       if (!override && resAccentsName && resDob && officialGroup) override = healthMapByNameDobGenGrp.get(`${resAccentsName}_${resDob}_${resGen}_${officialGroup}`);
 
       const recordId = override?.id || `HR_${res.id || (resCccd ? `CCCD_${resCccd}` : `RES_${i}`)}`;
+      const bhytNum = override?.bhyt_number || (res as any).bhyt_number || (res as any).insurance_number || (res as any).health_insurance_card || '';
+      const hasBhyt = Boolean(override?.has_bhyt || (res as any).has_bhyt || (bhytNum && bhytNum.trim().length > 0));
 
       const rec: HealthRecord = {
         id: recordId,
@@ -296,8 +298,8 @@ const HealthCare: React.FC = () => {
         household_number: hhNumber,
         address: `${officialGroup}, TDP Quảng Giao`,
         phone: res.phone || override?.phone || '',
-        has_bhyt: override ? override.has_bhyt : false,
-        bhyt_number: override?.bhyt_number || '',
+        has_bhyt: hasBhyt,
+        bhyt_number: bhytNum,
         bhyt_expiry: override?.bhyt_expiry || '2026-12-31',
         chronic_diseases: override?.chronic_diseases || [],
         is_disabled: override?.is_disabled || false,
