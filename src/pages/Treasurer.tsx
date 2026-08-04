@@ -1286,19 +1286,60 @@ export default function Treasurer() {
               <span>✏️ <strong>Sửa trực tiếp:</strong> Bạn có thể nhấp chuột vào bất kỳ chữ/số nào trên Mẫu Phiếu bên dưới (họ tên, lý do, số tiền, chữ viết, ngày tháng...) để tự do gõ sửa trực tiếp trước khi bấm "In Phiếu Ngay"! (Đang chọn: <strong>{printLienCount} Liên</strong>)</span>
             </div>
 
-            {/* Print CSS Injector for A4 Page Separation */}
+            {/* Print CSS Injector for Clean A4 Page Separation without Overlap */}
             <style>{`
               @media print {
-                body * {
-                  visibility: hidden !important;
+                /* Reset html, body and app layout wrappers to static flow */
+                html, body, #root, .layout-container, .page-container {
+                  overflow: visible !important;
+                  height: auto !important;
+                  max-height: none !important;
+                  position: static !important;
+                  background: white !important;
                 }
-                #printable-voucher, #printable-voucher * {
-                  visibility: visible !important;
+
+                /* Hide non-printable elements */
+                header, nav, .sidebar, .no-print {
+                  display: none !important;
                 }
+
+                /* Reset modal backdrop & modal box to static layout flow */
+                .modal-backdrop {
+                  position: static !important;
+                  top: auto !important;
+                  left: auto !important;
+                  right: auto !important;
+                  bottom: auto !important;
+                  background: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  display: block !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  min-height: 0 !important;
+                  max-height: none !important;
+                  overflow: visible !important;
+                  box-shadow: none !important;
+                }
+
+                .modal-backdrop > div {
+                  position: static !important;
+                  background: none !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  max-width: 100% !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  max-height: none !important;
+                  overflow: visible !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+
+                /* Printable Voucher Paper Container */
                 #printable-voucher {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
+                  position: static !important;
                   width: 100% !important;
                   max-width: 100% !important;
                   padding: 0 !important;
@@ -1306,27 +1347,38 @@ export default function Treasurer() {
                   border: none !important;
                   box-shadow: none !important;
                   background: white !important;
+                  overflow: visible !important;
                 }
+
+                /* Single Page Lien Wrapper with Page Break */
                 .lien-single-page {
+                  page-break-before: always !important;
+                  break-before: page !important;
                   page-break-after: always !important;
                   break-after: page !important;
                   page-break-inside: avoid !important;
                   break-inside: avoid !important;
-                  padding: 10mm 12mm !important;
+                  display: block !important;
+                  position: relative !important;
+                  width: 100% !important;
+                  padding: 6mm 10mm !important;
                   box-sizing: border-box !important;
-                  min-height: 98vh !important;
-                  margin-bottom: 0 !important;
+                  clear: both !important;
+                  margin: 0 !important;
                 }
-                .lien-single-page:last-child {
-                  page-break-after: auto !important;
-                  break-after: auto !important;
+
+                .lien-single-page:first-child {
+                  page-break-before: auto !important;
+                  break-before: auto !important;
                 }
+
                 .lien-divider-line {
                   display: none !important;
                 }
+
                 @page {
                   size: A4 portrait;
-                  margin: 6mm 10mm;
+                  margin: 6mm 8mm;
                 }
               }
             `}</style>
