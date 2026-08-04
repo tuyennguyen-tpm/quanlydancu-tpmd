@@ -1286,6 +1286,51 @@ export default function Treasurer() {
               <span>✏️ <strong>Sửa trực tiếp:</strong> Bạn có thể nhấp chuột vào bất kỳ chữ/số nào trên Mẫu Phiếu bên dưới (họ tên, lý do, số tiền, chữ viết, ngày tháng...) để tự do gõ sửa trực tiếp trước khi bấm "In Phiếu Ngay"! (Đang chọn: <strong>{printLienCount} Liên</strong>)</span>
             </div>
 
+            {/* Print CSS Injector for A4 Page Separation */}
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-voucher, #printable-voucher * {
+                  visibility: visible !important;
+                }
+                #printable-voucher {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: white !important;
+                }
+                .lien-single-page {
+                  page-break-after: always !important;
+                  break-after: page !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  padding: 10mm 12mm !important;
+                  box-sizing: border-box !important;
+                  min-height: 98vh !important;
+                  margin-bottom: 0 !important;
+                }
+                .lien-single-page:last-child {
+                  page-break-after: auto !important;
+                  break-after: auto !important;
+                }
+                .lien-divider-line {
+                  display: none !important;
+                }
+                @page {
+                  size: A4 portrait;
+                  margin: 6mm 10mm;
+                }
+              }
+            `}</style>
+
             {/* Printable Voucher Paper Container */}
             <div
               id="printable-voucher"
@@ -1306,9 +1351,9 @@ export default function Treasurer() {
               }}
             >
               {Array.from({ length: printLienCount }, (_, idx) => idx + 1).map((lienNum) => (
-                <div key={`lien-${lienNum}`} style={{ marginBottom: lienNum < printLienCount ? '24px' : '0' }}>
+                <div key={`lien-${lienNum}`} className="lien-single-page" style={{ marginBottom: lienNum < printLienCount ? '28px' : '0' }}>
                   {lienNum > 1 && (
-                    <div className="lien-break" style={{ pageBreakBefore: 'always', margin: '24px 0 20px 0', borderTop: '2px dashed #94a3b8', paddingTop: '16px' }}></div>
+                    <div className="lien-break lien-divider-line" style={{ pageBreakBefore: 'always', margin: '24px 0 20px 0', borderTop: '2px dashed #94a3b8', paddingTop: '16px' }}></div>
                   )}
 
                   {printDocTemplate === 'handover' ? (
