@@ -1120,7 +1120,7 @@ export default function Treasurer() {
               </div>
 
               {/* Bottom Row: Actions Toolbar */}
-              <div style={{
+              <div className="no-print" style={{
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
@@ -1271,7 +1271,7 @@ export default function Treasurer() {
             </div>
 
             {/* Direct Edit Hint Banner */}
-            <div style={{
+            <div className="no-print" style={{
               padding: '8px 14px',
               backgroundColor: '#eff6ff',
               border: '1px dashed #3b82f6',
