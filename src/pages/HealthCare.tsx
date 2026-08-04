@@ -521,14 +521,14 @@ const HealthCare: React.FC = () => {
         headName = householdHeadMap.get(rawHk) || householdHeadMap.get(rawHk.toLowerCase()) || householdHeadMap.get(removeAccentsVN(rawHk)) || '';
       }
 
-      // Priority 3: Compute Canonical Household Grouping Key
+      // Priority 3: Compute Unified Canonical Household Grouping Key (Không bị chia tách thẻ do khác biệt địa chỉ)
       let hkKey = '';
-      if (headName) {
-        hkKey = `HK-${removeAccentsVN(headName)}-${removeAccentsVN(grp)}`;
-      } else if (rec.household_number && rec.household_number !== 'HK-CHUA_PHAN_HO' && rec.household_number !== 'CHUA_PHAN_HO') {
-        hkKey = `HK-${removeAccentsVN(rec.household_number.trim())}-${removeAccentsVN(grp)}`;
+      if (rec.household_number && rec.household_number !== 'HK-CHUA_PHAN_HO' && rec.household_number !== 'CHUA_PHAN_HO') {
+        hkKey = rec.household_number.trim();
+      } else if (headName) {
+        hkKey = `HK-${removeAccentsVN(headName)}`;
       } else {
-        hkKey = `HK-${removeAccentsVN(rec.resident_name)}-${removeAccentsVN(grp)}`;
+        hkKey = `HK-${removeAccentsVN(rec.resident_name)}`;
       }
 
       if (!map.has(hkKey)) {
