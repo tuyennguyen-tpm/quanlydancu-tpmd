@@ -1286,24 +1286,67 @@ export default function Treasurer() {
               <span>✏️ <strong>Sửa trực tiếp:</strong> Bạn có thể nhấp chuột vào bất kỳ chữ/số nào trên Mẫu Phiếu bên dưới (họ tên, lý do, số tiền, chữ viết, ngày tháng...) để tự do gõ sửa trực tiếp trước khi bấm "In Phiếu Ngay"! (Đang chọn: <strong>{printLienCount} Liên</strong>)</span>
             </div>
 
-            {/* Print CSS Injector for Clean A4 Page Separation without Blank Pages */}
+            {/* Print CSS Injector for Clean A4 Page Separation without Blank Pages or Cutoffs */}
             <style>{`
               @media print {
-                /* Hide all elements on body during print */
-                body * {
-                  visibility: hidden !important;
+                /* Hide all non-modal children inside page container */
+                .page-container > *:not(.modal-backdrop) {
+                  display: none !important;
                 }
 
-                /* Show ONLY printable voucher paper container and its children */
-                #printable-voucher, #printable-voucher * {
-                  visibility: visible !important;
+                /* Hide header, navigation, sidebar and non-print controls */
+                header, nav, .sidebar, .no-print {
+                  display: none !important;
                 }
 
-                /* Position printable voucher at absolute top-left of page 1 */
+                /* Reset html, body and layout containers to static normal flow */
+                html, body, #root, .layout-container, .page-container {
+                  overflow: visible !important;
+                  height: auto !important;
+                  max-height: none !important;
+                  position: static !important;
+                  background: white !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+
+                /* Reset modal backdrop & dialog wrapper to static flow at top of page 1 */
+                .modal-backdrop {
+                  position: static !important;
+                  top: auto !important;
+                  left: auto !important;
+                  right: auto !important;
+                  bottom: auto !important;
+                  background: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  display: block !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  min-height: 0 !important;
+                  max-height: none !important;
+                  overflow: visible !important;
+                  box-shadow: none !important;
+                }
+
+                .modal-backdrop > div {
+                  position: static !important;
+                  background: none !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  max-width: 100% !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  max-height: none !important;
+                  overflow: visible !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+
+                /* Printable Voucher Paper Container in normal layout flow */
                 #printable-voucher {
-                  position: absolute !important;
-                  left: 0 !important;
-                  top: 0 !important;
+                  position: static !important;
                   width: 100% !important;
                   max-width: 100% !important;
                   padding: 0 !important;
@@ -1311,6 +1354,7 @@ export default function Treasurer() {
                   border: none !important;
                   box-shadow: none !important;
                   background: white !important;
+                  overflow: visible !important;
                 }
 
                 /* Single Page Lien Wrapper with Page Break AFTER each Lien */
