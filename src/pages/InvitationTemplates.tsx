@@ -65,6 +65,38 @@ const InvitationTemplates: React.FC = () => {
   const [showBorder, setShowBorder] = useState(true);
   const [showLeftHeader, setShowLeftHeader] = useState(true);
 
+  // Track printed households for print-resume capability
+  const [printedHhIds, setPrintedHhIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('printed_invitation_hh_ids');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const markHhsAsPrinted = (ids: string[]) => {
+    const next = new Set(printedHhIds);
+    ids.forEach(id => next.add(id));
+    setPrintedHhIds(next);
+    try {
+      localStorage.setItem('printed_invitation_hh_ids', JSON.stringify(Array.from(next)));
+    } catch {}
+  };
+
+  const handleClearPrintedStatus = () => {
+    setPrintedHhIds(new Set());
+    localStorage.removeItem('printed_invitation_hh_ids');
+    showToast('Đã xóa lịch sử danh sách hộ đã in!', 'info');
+  };
+
+  const handleDeselectPrinted = () => {
+    const newSelected = new Set(selectedHhIds);
+    printedHhIds.forEach(id => newSelected.delete(id));
+    setSelectedHhIds(newSelected);
+    showToast(`Đã bỏ chọn ${printedHhIds.size} hộ đã in!`, 'success');
+  };
+
   const [groups, setGroups] = useState<string[]>(() => {
     const saved = localStorage.getItem('tdp_groups_config');
     return saved ? JSON.parse(saved) : ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
@@ -220,6 +252,12 @@ const InvitationTemplates: React.FC = () => {
     const cardsToPrint = getHouseholdsToPrint();
     const isLandscape = orientation === 'landscape';
     const isA4 = paperSize === 'a4_full';
+
+    // Mark selected households as printed for tracking & resuming
+    if (cardsToPrint.length > 0) {
+      markHhsAsPrinted(cardsToPrint.map(h => h.id));
+      showToast(`Đã ghi nhận trạng thái đã in cho ${cardsToPrint.length} hộ!`, 'success');
+    }
 
     // Generate HTML for each invitation card
     let cardsHtml = '';
@@ -877,20 +915,50 @@ const InvitationTemplates: React.FC = () => {
             />
           </div>
 
-          {/* Checklist Select All */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-              <input
-                type="checkbox"
-                checked={filteredHouseholds.length > 0 && filteredHouseholds.every(h => selectedHhIds.has(h.id))}
-                onChange={e => handleSelectAll(e.target.checked)}
-                style={{ cursor: 'pointer' }}
-              />
-              Chọn tất cả
-            </label>
-            <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700 }}>
-              Đã chọn: {selectedHhList.length}
-            </span>
+          {/* Checklist Select All & Print Resume Tools */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: '#475569' }}>
+                <input
+                  type="checkbox"
+                  checked={filteredHouseholds.length > 0 && filteredHouseholds.every(h => selectedHhIds.has(h.id))}
+                  onChange={e => handleSelectAll(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                Chọn tất cả ({filteredHouseholds.length})
+              </label>
+              <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700 }}>
+                Đã chọn: {selectedHhList.length}
+              </span>
+            </div>
+
+            {printedHhIds.size > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px', borderTop: '1px dashed #cbd5e1', fontSize: '11px', flexWrap: 'wrap', gap: '4px' }}>
+                <span style={{ color: '#059669', fontWeight: 700 }}>
+                  ✓ Đã in: {printedHhIds.size} hộ
+                </span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={handleDeselectPrinted}
+                    title="Bỏ chọn những hộ đã in để sẵn sàng in các hộ còn lại khi bị hết giấy"
+                    style={{
+                      background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
+                      padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >🚫 Bỏ chọn đã in</button>
+                  <button
+                    onClick={handleClearPrintedStatus}
+                    title="Xóa mốc lịch sử đã in để bắt đầu đợt in mới"
+                    style={{
+                      background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca',
+                      padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >🔄 Đặt lại mốc</button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Scrollable list */}
@@ -908,9 +976,10 @@ const InvitationTemplates: React.FC = () => {
                 Không tìm thấy hộ dân nào
               </div>
             ) : (
-              filteredHouseholds.map(h => {
+              filteredHouseholds.map((h, idx) => {
                 const isSelected = selectedHhIds.has(h.id);
                 const isPreview = h.id === previewHhId;
+                const isPrinted = printedHhIds.has(h.id);
                 const headName = getHeadName(h);
                 return (
                   <div
@@ -923,8 +992,8 @@ const InvitationTemplates: React.FC = () => {
                       padding: '8px 10px',
                       borderRadius: '8px',
                       border: '1px solid',
-                      borderColor: isPreview ? '#3b82f6' : '#e2e8f0',
-                      background: isPreview ? '#eff6ff' : 'white',
+                      borderColor: isPreview ? '#3b82f6' : (isPrinted ? '#a7f3d0' : '#e2e8f0'),
+                      background: isPreview ? '#eff6ff' : (isPrinted ? '#f0fdf4' : 'white'),
                       cursor: 'pointer',
                       transition: 'all 0.15s ease'
                     }}
@@ -939,8 +1008,14 @@ const InvitationTemplates: React.FC = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }}>
                         <span style={{ fontWeight: 600, fontSize: '13px', color: isPreview ? '#1d4ed8' : '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span style={{ fontSize: '10px', color: '#64748b', marginRight: '4px', background: '#e2e8f0', padding: '1px 4px', borderRadius: '4px' }}>#{idx + 1}</span>
                           {headName}
                         </span>
+                        {isPrinted && (
+                          <span style={{ fontSize: '10px', color: '#047857', background: '#d1fae5', padding: '1px 6px', borderRadius: '10px', fontWeight: 700, flexShrink: 0 }}>
+                            ✓ Đã in
+                          </span>
+                        )}
                         <span style={{ fontSize: '10px', color: '#94a3b8', flexShrink: 0 }}>
                           {h.household_number}
                         </span>
@@ -1180,11 +1255,12 @@ const InvitationTemplates: React.FC = () => {
             </div>
 
             <div style={{ width: '100%', background: '#fffbeb', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#b45309', border: '1px solid #fef3c7', lineHeight: 1.5, boxSizing: 'border-box' }}>
-              <strong>💡 Mẹo in chuẩn đẹp không bị tràn trang:</strong><br />
+              <strong>💡 Mẹo in chuẩn đẹp & Xử lý khi bị hết giấy giữa chừng:</strong><br />
               1. <strong>Chế độ in hiện tại:</strong> {isA4 ? 'Khổ A4 toàn trang (1 giấy mời/tờ A4)' : 'Khổ A5 (Ghép 2 giấy mời/tờ A4)'}.<br />
-              2. Khi cửa sổ in mở ra, chọn đúng hướng giấy (<strong>{orientation === 'portrait' ? 'Dọc (Portrait)' : 'Ngang (Landscape)'}</strong>) và khổ giấy (<strong>A4</strong>).<br />
-              3. Bắt buộc bỏ tích chọn mục <strong>"Tiêu đề đầu trang và chân trang"</strong> (Headers & Footers).<br />
-              4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> hoặc <strong>"Mặc định"</strong> để khung viền xanh in đẹp mắt.
+              2. <strong>Nếu máy in hết giấy:</strong> Mỗi lần bấm in, hệ thống tự động ghi nhận nhãn <strong>✓ Đã in</strong> và đánh STT <strong>#1, #2, #3...</strong> theo đúng thứ tự trang in. Bạn chỉ cần nhấn nút <strong>"🚫 Bỏ chọn đã in"</strong> để lọc ngay các hộ chưa in và nạp giấy in tiếp!<br />
+              3. Khi cửa sổ in mở ra, chọn đúng hướng giấy (<strong>{orientation === 'portrait' ? 'Dọc (Portrait)' : 'Ngang (Landscape)'}</strong>) và khổ giấy (<strong>A4</strong>).<br />
+              4. Bắt buộc bỏ tích chọn mục <strong>"Tiêu đề đầu trang và chân trang"</strong> (Headers & Footers).<br />
+              5. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> hoặc <strong>"Mặc định"</strong> để khung viền xanh in đẹp mắt.
             </div>
           </div>
         </div>
