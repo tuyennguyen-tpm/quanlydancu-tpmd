@@ -2636,12 +2636,15 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                   <select value={educationLevel} onChange={(e) => setEducationLevel(e.target.value)}>
                     <option value="12/12">12/12</option>
                     <option value="9/12">9/12</option>
+                    <option value="Cấp I">Cấp I</option>
+                    <option value="Cấp II">Cấp II</option>
                     <option value="Đại học">Đại học</option>
                     <option value="Cao đẳng">Cao đẳng</option>
                     <option value="Trung cấp">Trung cấp</option>
                     <option value="Thạc sĩ">Thạc sĩ</option>
                     <option value="Tiến sĩ">Tiến sĩ</option>
                     <option value="Chưa đi học">Chưa đi học</option>
+                    <option value="Còn nhỏ">Còn nhỏ</option>
                     <option value="Khác">Khác</option>
                   </select>
                 </div>
