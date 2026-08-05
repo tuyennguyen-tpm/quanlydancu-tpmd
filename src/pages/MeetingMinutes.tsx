@@ -199,7 +199,7 @@ const MeetingMinutes = () => {
   };
 
   const getAttendanceLabel = (type: string) => {
-    if (type === 'party') return 'đảng viên';
+    if (type === 'party') return 'đồng chí';
     if (type === 'front') return 'thành viên';
     if (type === 'women') return 'hội viên phụ nữ';
     if (type === 'veterans') return 'hội viên cựu chiến binh';
@@ -2435,7 +2435,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                     }}
                     className="word-input"
                   />
-                  <span>hộ gia đình.</span>
+                  <span>{getAttendanceLabel(meetingType)}.</span>
                 </div>
               </div>
 
