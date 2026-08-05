@@ -564,7 +564,27 @@ export function formatReceiptAddress(
   }
 
   // Góc nhìn TDP: Ưu tiên Tổ nhỏ + TDP (ví dụ: Tổ Việt Trung, TDP Quảng Giao)
-  const gStr = (groupName || '').trim();
+  let gStr = (groupName || '').trim();
+  
+  // Nếu không có groupName truyền vào, tự tìm trong cấu hình tổ của hệ thống
+  if (!gStr) {
+    try {
+      const groupsStr = localStorage.getItem('tdp_groups') || localStorage.getItem('self_management_groups');
+      if (groupsStr) {
+        const groupsList: string[] = JSON.parse(groupsStr);
+        const addrLower = (rawAddress || '').toLowerCase();
+        for (const g of groupsList) {
+          const gClean = g.trim();
+          if (!gClean) continue;
+          if (addrLower.includes(gClean.toLowerCase())) {
+            gStr = gClean;
+            break;
+          }
+        }
+      }
+    } catch {}
+  }
+
   const formattedGroup = gStr
     ? (gStr.toLowerCase().startsWith('tổ') || gStr.toLowerCase().startsWith('cụm') ? gStr : `Tổ ${gStr}`)
     : '';
@@ -583,6 +603,7 @@ export function formatReceiptAddress(
   }
 
   if (formattedGroup) {
+    // Đảm bảo tên Tổ luôn đứng ở vị trí đầu tiên trước TDP Quảng Giao
     if (!addr.toLowerCase().startsWith(formattedGroup.toLowerCase())) {
       addr = addr.replace(new RegExp(`\\b${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b[\\s,]*`, 'gi'), '');
       addr = `${formattedGroup}, ${addr}`;
