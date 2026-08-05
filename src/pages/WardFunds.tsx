@@ -3276,7 +3276,7 @@ const WardFunds = () => {
               <div class="receipt-org-title" style="margin-top: 0; padding-top: 0; line-height: 1.3;">
                 Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
                 Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
-                Địa chỉ: ${item.address || hhOfRes?.address || tdpNameVal}
+                Địa chỉ: ${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal, wardNameVal, true)}
               </div>
             </td>
             <td style="width: 50%; text-align: right; vertical-align: top;">
@@ -3314,7 +3314,7 @@ const WardFunds = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal)} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
+            <td style="text-align: left;">${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal, wardNameVal, true)} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
@@ -4923,7 +4923,7 @@ const WardFunds = () => {
       receiptHtml = receiptHtml
         .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
         .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
-        .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+        .replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, p2, p3) => {
           let cleaned = p2;
           if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
             cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
@@ -5801,7 +5801,7 @@ const WardFunds = () => {
         receiptBody = receiptBody
           .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
           .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
-          .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+          .replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, p2, p3) => {
             let cleaned = p2;
             if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
               cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');

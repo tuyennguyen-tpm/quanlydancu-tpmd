@@ -520,8 +520,50 @@ export function getCanonicalHouseholdReceiptKey(
 
 /**
  * Chuẩn hóa địa chỉ trên phiếu thu: Tự động ghép tên Tổ, xử lý dấu phẩy thừa, thêm tiền tố TDP trước Quảng Giao.
+ * - Đối với góc nhìn/tài khoản Phường (isWardAccount = true): hiển thị TDP Quảng Giao, Phường Nam Sầm Sơn...
+ * - Đối với góc nhìn TDP: hiển thị Tổ Việt Trung, TDP Quảng Giao...
  */
-export function formatReceiptAddress(groupName?: string | null, rawAddress?: string | null, defaultTdpName: string = 'Quảng Giao'): string {
+export function formatReceiptAddress(
+  groupName?: string | null,
+  rawAddress?: string | null,
+  defaultTdpName: string = 'Quảng Giao',
+  wardName: string = 'Phường Nam Sầm Sơn',
+  isWardAccount: boolean = false
+): string {
+  const tdpFormatted = defaultTdpName.trim().toLowerCase().startsWith('tdp') || defaultTdpName.trim().toLowerCase().startsWith('tổ dân phố')
+    ? defaultTdpName.trim()
+    : `TDP ${defaultTdpName.trim()}`;
+
+  const wardFormatted = wardName.trim().toLowerCase().startsWith('phường') || wardName.trim().toLowerCase().startsWith('xã')
+    ? wardName.trim()
+    : `Phường ${wardName.trim()}`;
+
+  if (isWardAccount) {
+    let addr = (rawAddress || '').trim().replace(/^[\s,]+/, '').replace(/[\s,]+$/, '');
+    
+    // Gỡ tổ nhỏ nếu có để nhường chỗ cho TDP theo chuẩn Cấp Phường
+    const gStr = (groupName || '').trim();
+    if (gStr) {
+      const formattedGroup = gStr.toLowerCase().startsWith('tổ') || gStr.toLowerCase().startsWith('cụm') ? gStr : `Tổ ${gStr}`;
+      addr = addr.replace(new RegExp(`\\b${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b[\\s,]*`, 'gi'), '');
+    }
+
+    // Đảm bảo có tên TDP ở đầu
+    if (!addr.toLowerCase().includes(tdpFormatted.toLowerCase()) && !addr.toLowerCase().includes(defaultTdpName.trim().toLowerCase())) {
+      addr = `${tdpFormatted}, ${addr}`;
+    } else if (!addr.toLowerCase().includes('tdp')) {
+      addr = addr.replace(new RegExp(`\\b${defaultTdpName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), tdpFormatted);
+    }
+
+    // Đảm bảo có tên Phường ở cuối
+    if (!addr.toLowerCase().includes(wardFormatted.toLowerCase())) {
+      addr = `${addr}, ${wardFormatted}`;
+    }
+
+    return addr.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
+  }
+
+  // Góc nhìn TDP: Ưu tiên Tổ nhỏ + TDP (ví dụ: Tổ Việt Trung, TDP Quảng Giao)
   const gStr = (groupName || '').trim();
   const formattedGroup = gStr
     ? (gStr.toLowerCase().startsWith('tổ') || gStr.toLowerCase().startsWith('cụm') ? gStr : `Tổ ${gStr}`)
@@ -529,20 +571,19 @@ export function formatReceiptAddress(groupName?: string | null, rawAddress?: str
 
   let addr = (rawAddress || '').trim().replace(/^[\s,]+/, '').replace(/[\s,]+$/, '');
   if (!addr) {
-    addr = defaultTdpName;
+    addr = tdpFormatted;
   }
 
-  // Đảm bảo có chữ "TDP " trước "Quảng Giao" không bị tạo thêm dấu phẩy
-  if (!/TDP\s+Quảng\s*Giao/i.test(addr)) {
-    addr = addr.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
+  if (!/TDP\s+/i.test(addr) && !/Tổ\s+dân\s+phố/i.test(addr)) {
+    if (new RegExp(`\\b${defaultTdpName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi').test(addr)) {
+      addr = addr.replace(new RegExp(`\\b${defaultTdpName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), tdpFormatted);
+    } else {
+      addr = `${addr}, ${tdpFormatted}`;
+    }
   }
-
-  // Làm sạch dấu phẩy liên tiếp hoặc đứng liền nhau
-  addr = addr.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').trim();
 
   if (formattedGroup) {
     if (!addr.toLowerCase().startsWith(formattedGroup.toLowerCase())) {
-      // Loại bỏ formattedGroup nếu bị trùng ở vị trí khác trong chuỗi
       addr = addr.replace(new RegExp(`\\b${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b[\\s,]*`, 'gi'), '');
       addr = `${formattedGroup}, ${addr}`;
     }
@@ -652,7 +693,7 @@ export function generateUnifiedHouseholdReceiptHtml(
               <div class="receipt-org-title" style="margin-top: 0; padding-top: 0; line-height: 1.3;">
                 Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
                 Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
-                Địa chỉ: ${summary.address || tdpNameVal}
+                Địa chỉ: ${formatReceiptAddress(summary.groupName, summary.address, tdpNameVal, wardNameVal, printMode === 'ward_only')}
               </div>
             </td>
             <td style="width: 50%; text-align: right; vertical-align: top;">
@@ -690,7 +731,7 @@ export function generateUnifiedHouseholdReceiptHtml(
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${formatReceiptAddress(summary.groupName, summary.address, tdpNameVal)}</td>
+            <td style="text-align: left;">${formatReceiptAddress(summary.groupName, summary.address, tdpNameVal, wardNameVal, printMode === 'ward_only')}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Mã số hộ | Nhân khẩu LĐ:</td>

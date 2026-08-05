@@ -1503,7 +1503,7 @@ const Finance = () => {
       receiptHtml = receiptHtml
         .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
         .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
-        .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+        .replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, p2, p3) => {
           let cleaned = p2;
           if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
             cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
@@ -3118,7 +3118,7 @@ const Finance = () => {
               <div class="receipt-org-title" style="margin-top: 0; padding-top: 0; line-height: 1.3;">
                 Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
                 Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
-                Địa chỉ: ${hh.address || tdpNameVal}
+                Địa chỉ: ${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal, wardNameVal, false)}
               </div>
             </td>
             <td style="width: 50%; text-align: right; vertical-align: top;">
@@ -3153,7 +3153,7 @@ const Finance = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal)} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
+            <td style="text-align: left;">${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal, wardNameVal, false)} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
@@ -3372,7 +3372,7 @@ const Finance = () => {
         receiptBody = receiptBody
           .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
           .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
-          .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+          .replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, p2, p3) => {
             let cleaned = p2;
             if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
               cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
