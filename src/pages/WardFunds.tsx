@@ -4920,6 +4920,12 @@ const WardFunds = () => {
     const hasSavedVersion = Boolean(savedReceiptHtml);
     let receiptHtml = savedReceiptHtml || freshReceiptHtml;
 
+    if (receiptHtml) {
+      receiptHtml = receiptHtml
+        .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
+        .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+    }
+
     // Tự động kiểm tra và bổ sung tên Tổ nếu bản lưu cũ chưa có
     const hhGroupStr = (household as any).self_management_group || (activeMembers?.[0] as any)?.self_management_group || '';
     if (savedReceiptHtml && hhGroupStr) {
@@ -4956,6 +4962,9 @@ const WardFunds = () => {
             body {
               padding-top: 0 !important;
               margin-top: 0 !important;
+            }
+            .receipt-lien-wrapper {
+              page-break-inside: avoid !important;
             }
           }
           body {
@@ -5763,7 +5772,7 @@ const WardFunds = () => {
           customHtml = await (db as any).getReceiptCustomization(key);
         }
       } catch {}
-      const receiptBody = customHtml || generateHouseholdReceiptHtml(
+      let receiptBody = customHtml || generateHouseholdReceiptHtml(
         item.household,
         item.members,
         item.memberWardRecords,
@@ -5774,6 +5783,11 @@ const WardFunds = () => {
         leaderName,
         leaderSigUrl
       );
+      if (receiptBody) {
+        receiptBody = receiptBody
+          .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
+          .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+      }
       const isLast = idx === listToPrint.length - 1;
       return `
         <div class="receipt-bulk-item" style="${isLast ? '' : 'page-break-after: always;'}">
@@ -5803,6 +5817,9 @@ const WardFunds = () => {
               padding: 0;
             }
             .receipt-bulk-item {
+              page-break-inside: auto !important;
+            }
+            .receipt-lien-wrapper {
               page-break-inside: avoid !important;
             }
           }

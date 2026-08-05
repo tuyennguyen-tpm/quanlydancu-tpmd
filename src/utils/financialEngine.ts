@@ -579,12 +579,12 @@ export function generateUnifiedHouseholdReceiptHtml(
 
   const rowsHtml = receiptRows.map((r, idx) => `
     <tr data-fund-type="${r.fundType}">
-      <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${idx + 1}</td>
-      <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.name}</td>
-      <td style="text-align: center; border: 1px solid #000; padding: 4px 6px;">${r.type}</td>
-      <td style="text-align: right; border: 1px solid #000; padding: 4px 6px;">${r.rate}</td>
-      <td class="receipt-amount-cell" style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 4px 6px;">${r.amount.toLocaleString('vi-VN')} đ</td>
-      <td style="text-align: left; border: 1px solid #000; padding: 4px 6px;">${r.note}</td>
+      <td style="text-align: center; border: 1px solid #000; padding: 3px 5px;">${idx + 1}</td>
+      <td style="font-weight: bold; text-align: left; border: 1px solid #000; padding: 3px 5px;">${r.name}</td>
+      <td style="text-align: center; border: 1px solid #000; padding: 3px 5px;">${r.type}</td>
+      <td style="text-align: right; border: 1px solid #000; padding: 3px 5px;">${r.rate}</td>
+      <td class="receipt-amount-cell" style="text-align: right; font-weight: bold; border: 1px solid #000; padding: 3px 5px;">${r.amount.toLocaleString('vi-VN')} đ</td>
+      <td style="text-align: left; border: 1px solid #000; padding: 3px 5px;">${r.note}</td>
     </tr>
   `).join('');
 
@@ -612,7 +612,7 @@ export function generateUnifiedHouseholdReceiptHtml(
       : (printMode === 'tdp_only' ? 'PHIẾU THU QUỸ TỔ DÂN PHỐ' : 'PHIẾU THU TỔNG HỢP');
 
     return `
-      <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px dashed #777;">
+      <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
         <table class="receipt-header-table">
           <tr>
             <td style="width: 50%;">
@@ -642,8 +642,8 @@ export function generateUnifiedHouseholdReceiptHtml(
           </tr>
         </table>
 
-        <div class="receipt-title-container">
-          <h1 class="receipt-title">${titleText}</h1>
+        <div class="receipt-title-container" style="margin-top: 4px; margin-bottom: 4px;">
+          <h1 class="receipt-title" style="margin: 2px 0;">${titleText}</h1>
           <p class="receipt-subtitle" style="margin-top: 2px; font-weight: bold; color: #1e3a8a;">${lienName}</p>
           <p class="receipt-subtitle">${dateText}</p>
         </div>
@@ -669,30 +669,30 @@ export function generateUnifiedHouseholdReceiptHtml(
           </tr>
         </table>
 
-        <table class="receipt-details-table" style="width:100%; border-collapse:collapse; margin-top:5px;">
+        <table class="receipt-details-table" style="width:100%; border-collapse:collapse; margin-top:4px; margin-bottom:4px;">
           <thead>
             <tr>
-              <th style="width: 40px; text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">STT</th>
-              <th style="text-align: left; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Nội dung đóng góp</th>
-              <th style="width: 90px; text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Đối tượng</th>
-              <th style="width: 110px; text-align: right; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Định mức</th>
-              <th style="width: 120px; text-align: right; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Số tiền nộp</th>
-              <th style="text-align: left; border: 1px solid #000; padding: 4px 6px; background-color: #f2f2f2;">Ghi chú</th>
+              <th style="width: 40px; text-align: center; border: 1px solid #000; padding: 3px 5px; background-color: #f2f2f2;">STT</th>
+              <th style="text-align: left; border: 1px solid #000; padding: 3px 5px; background-color: #f2f2f2;">Nội dung đóng góp</th>
+              <th style="width: 90px; text-align: center; border: 1px solid #000; padding: 3px 5px; background-color: #f2f2f2;">Đối tượng</th>
+              <th style="width: 110px; text-align: right; border: 1px solid #000; padding: 3px 5px; background-color: #f2f2f2;">Định mức</th>
+              <th style="width: 120px; text-align: right; border: 1px solid #000; padding: 3px 5px; background-color: #f2f2f2;">Số tiền nộp</th>
+              <th style="text-align: left; border: 1px solid #000; padding: 3px 5px; background-color: #f2f2f2;">Ghi chú</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666; border: 1px solid #000; padding: 4px 6px;">Chưa nộp khoản đóng góp nào.</td></tr>'}
+            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="6" style="text-align: center; font-style: italic; color: #666; border: 1px solid #000; padding: 3px 5px;">Chưa nộp khoản đóng góp nào.</td></tr>'}
              <tr class="receipt-total-row" style="font-weight: bold;">
-               <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 4px 6px; background-color: #f9fbe7;">
+               <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 3px 5px; background-color: #f9fbe7;">
                  TỔNG CỘNG THỰC THU ${_totalLabelText}
                </td>
-               <td style="text-align: right; color: #15803d; font-size: 11pt; border: 1px solid #000; padding: 4px 6px; background-color: #f9fbe7;">${_grandTotal.toLocaleString('vi-VN')} đ</td>
-               <td style="border: 1px solid #000; padding: 4px 6px; background-color: #f9fbe7;"></td>
+               <td style="text-align: right; color: #15803d; font-size: 11pt; border: 1px solid #000; padding: 3px 5px; background-color: #f9fbe7;">${_grandTotal.toLocaleString('vi-VN')} đ</td>
+               <td style="border: 1px solid #000; padding: 3px 5px; background-color: #f9fbe7;"></td>
              </tr>
           </tbody>
         </table>
 
-        <div class="receipt-amount-words" style="font-size: 9.5pt; font-style: italic; margin-bottom: 6px; text-align: left;">
+        <div class="receipt-amount-words" style="font-size: 9.5pt; font-style: italic; margin-top: 3px; margin-bottom: 4px; text-align: left;">
           Số tiền bằng chữ: <strong>${_textAmountWords}</strong>
         </div>
 
@@ -718,19 +718,19 @@ export function generateUnifiedHouseholdReceiptHtml(
             <td>(Ký, họ tên)</td>
           </tr>
           <tr style="text-align: center;">
-            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+            <td style="vertical-align: bottom; height: 36px; padding-top: 1px;">
               <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
                 ${leaderSigUrl ? `<img src="${leaderSigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
               </div>
               <strong>${leaderName}</strong>
             </td>
-            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+            <td style="vertical-align: bottom; height: 36px; padding-top: 1px;">
               <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
                 ${keToanSigUrl ? `<img src="${keToanSigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
               </div>
               <strong>${keToanName}</strong>
             </td>
-            <td style="vertical-align: bottom; height: 42px; padding-top: 2px;">
+            <td style="vertical-align: bottom; height: 36px; padding-top: 1px;">
               <div style="height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 1px;">
                 ${thuQuySigUrl ? `<img src="${thuQuySigUrl}" alt="Chữ ký" style="height: 32px; max-height: 32px; max-width: 90px; object-fit: contain;" />` : ''}
               </div>
@@ -741,7 +741,7 @@ export function generateUnifiedHouseholdReceiptHtml(
           </tr>
         </table>
         
-        <div style="margin-top: 6px; font-size: 7.5pt; color: #777; font-style: italic; text-align: right; display: flex; justify-content: space-between;">
+        <div style="margin-top: 4px; font-size: 7.5pt; color: #777; font-style: italic; text-align: right; display: flex; justify-content: space-between;">
           <span>Phần mềm CSDL Quản lý Dân cư TDP Quảng Giao</span>
           <span>Mã đối soát bảo mật: <strong>${verificationCode}</strong></span>
         </div>
@@ -750,9 +750,12 @@ export function generateUnifiedHouseholdReceiptHtml(
   };
 
   return `
-    ${generateSingleReceipt('Liên 1: TDP lưu trữ')}
-    <div style="page-break-before: always; margin-top: 20px;"></div>
-    ${generateSingleReceipt('Liên 2: Giao cho người nộp tiền')}
+    <div class="receipt-lien-wrapper" style="page-break-inside: avoid; page-break-after: always;">
+      ${generateSingleReceipt('Liên 1: TDP lưu trữ')}
+    </div>
+    <div class="receipt-lien-wrapper" style="page-break-inside: avoid;">
+      ${generateSingleReceipt('Liên 2: Giao cho người nộp tiền')}
+    </div>
   `;
 }
 
