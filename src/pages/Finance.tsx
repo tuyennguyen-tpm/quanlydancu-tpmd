@@ -25,7 +25,7 @@ import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml, docSoTien, getCanonicalHouseholdReceiptKey } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml, docSoTien, getCanonicalHouseholdReceiptKey, formatReceiptAddress } from '../utils/financialEngine';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -1502,7 +1502,14 @@ const Finance = () => {
     if (receiptHtml) {
       receiptHtml = receiptHtml
         .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
-        .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+        .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
+        .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+          let cleaned = p2.replace(/,\s*,+/g, ', ');
+          if (!cleaned.toLowerCase().includes('tdp')) {
+            cleaned = cleaned.replace(/(^|[\s,]+)(Quảng Giao)/gi, '$1TDP $2');
+          }
+          return `${p1}${cleaned.replace(/,\s*,+/g, ', ')}${p3}`;
+        });
     }
 
     const hhGroupStr = (household as any).self_management_group || '';
@@ -3145,7 +3152,7 @@ const Finance = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${hh.self_management_group ? `${hh.self_management_group.trim().toLowerCase().startsWith('tổ') || hh.self_management_group.trim().toLowerCase().startsWith('cụm') ? hh.self_management_group.trim() : `Tổ ${hh.self_management_group.trim()}`}, ` : ''}${hh.address || tdpNameVal} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
+            <td style="text-align: left;">${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal)} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
@@ -3363,7 +3370,14 @@ const Finance = () => {
       if (receiptBody) {
         receiptBody = receiptBody
           .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
-          .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+          .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
+          .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+            let cleaned = p2.replace(/,\s*,+/g, ', ');
+            if (!cleaned.toLowerCase().includes('tdp')) {
+              cleaned = cleaned.replace(/(^|[\s,]+)(Quảng Giao)/gi, '$1TDP $2');
+            }
+            return `${p1}${cleaned.replace(/,\s*,+/g, ', ')}${p3}`;
+          });
       }
       const isLast = idx === sortedList.length - 1;
       return `

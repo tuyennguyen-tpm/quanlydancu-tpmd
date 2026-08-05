@@ -518,6 +518,41 @@ export function getCanonicalHouseholdReceiptKey(
   return `receipt_html_${cleanId}_${year}_${printMode}`;
 }
 
+/**
+ * Chuẩn hóa địa chỉ trên phiếu thu: Tự động ghép tên Tổ, xử lý dấu phẩy thừa, thêm tiền tố TDP trước Quảng Giao.
+ */
+export function formatReceiptAddress(groupName?: string | null, rawAddress?: string | null, defaultTdpName: string = 'Quảng Giao'): string {
+  const gStr = (groupName || '').trim();
+  const formattedGroup = gStr
+    ? (gStr.toLowerCase().startsWith('tổ') || gStr.toLowerCase().startsWith('cụm') ? gStr : `Tổ ${gStr}`)
+    : '';
+
+  let addr = (rawAddress || '').trim().replace(/^[\s,]+/, '').replace(/[\s,]+$/, '');
+  if (!addr) {
+    addr = defaultTdpName;
+  }
+
+  // Đảm bảo có chữ "TDP " trước "Quảng Giao"
+  if (!addr.toLowerCase().startsWith('tổ') && !addr.toLowerCase().startsWith('tdp')) {
+    if (/^quảng\s*giao$/i.test(addr)) {
+      addr = `TDP ${addr}`;
+    } else {
+      addr = addr.replace(/(^|[\s,]+)(Quảng Giao)$/i, '$1TDP $2');
+    }
+  }
+
+  // Làm sạch dấu phẩy kép hoặc dấu phẩy thừa
+  addr = addr.replace(/,\s*,+/g, ',').trim();
+
+  if (formattedGroup) {
+    if (!addr.toLowerCase().startsWith(formattedGroup.toLowerCase())) {
+      addr = `${formattedGroup}, ${addr}`;
+    }
+  }
+
+  return addr.replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
+}
+
 
 /**
  * Xuất HTML Phiếu Thu 2 Liên (Mẫu 01-TT theo Thông tư 200/2014/TT-BTC) chuẩn hóa 100%.
@@ -657,7 +692,7 @@ export function generateUnifiedHouseholdReceiptHtml(
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${summary.groupName ? `${summary.groupName.trim().toLowerCase().startsWith('tổ') || summary.groupName.trim().toLowerCase().startsWith('cụm') ? summary.groupName.trim() : `Tổ ${summary.groupName.trim()}`}, ` : ''}${summary.address || tdpNameVal}</td>
+            <td style="text-align: left;">${formatReceiptAddress(summary.groupName, summary.address, tdpNameVal)}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Mã số hộ | Nhân khẩu LĐ:</td>

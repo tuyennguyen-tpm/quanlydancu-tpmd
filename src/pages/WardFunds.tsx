@@ -25,7 +25,7 @@ import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData, getCanonicalHouseholdReceiptKey } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData, getCanonicalHouseholdReceiptKey, formatReceiptAddress } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -3314,7 +3314,7 @@ const WardFunds = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${groupName ? `${groupName.trim().toLowerCase().startsWith('tổ') || groupName.trim().toLowerCase().startsWith('cụm') ? groupName.trim() : `Tổ ${groupName.trim()}`}, ` : ''}${item.address || hhOfRes?.address || tdpNameVal} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
+            <td style="text-align: left;">${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal)} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
@@ -4922,7 +4922,14 @@ const WardFunds = () => {
     if (receiptHtml) {
       receiptHtml = receiptHtml
         .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
-        .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+        .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
+        .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+          let cleaned = p2.replace(/,\s*,+/g, ', ');
+          if (!cleaned.toLowerCase().includes('tdp')) {
+            cleaned = cleaned.replace(/(^|[\s,]+)(Quảng Giao)/gi, '$1TDP $2');
+          }
+          return `${p1}${cleaned.replace(/,\s*,+/g, ', ')}${p3}`;
+        });
     }
 
     // Tự động kiểm tra và đảm bảo tên Tổ đứng trước địa chỉ
@@ -5792,7 +5799,14 @@ const WardFunds = () => {
       if (receiptBody) {
         receiptBody = receiptBody
           .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
-          .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+          .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
+          .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
+            let cleaned = p2.replace(/,\s*,+/g, ', ');
+            if (!cleaned.toLowerCase().includes('tdp')) {
+              cleaned = cleaned.replace(/(^|[\s,]+)(Quảng Giao)/gi, '$1TDP $2');
+            }
+            return `${p1}${cleaned.replace(/,\s*,+/g, ', ')}${p3}`;
+          });
       }
       const isLast = idx === listToPrint.length - 1;
       return `
