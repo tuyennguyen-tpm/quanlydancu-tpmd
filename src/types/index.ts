@@ -49,7 +49,7 @@ export interface Resident {
   is_head: boolean;
   relationship_with_head: string;
   is_senior: boolean; // Tự động tính toán dựa trên năm sinh
-  status: 'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay';
+  status: 'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay' | 'moved_out';
   pob?: string; // Nơi sinh
   notes?: string; // Ghi chú
   death_date?: string;

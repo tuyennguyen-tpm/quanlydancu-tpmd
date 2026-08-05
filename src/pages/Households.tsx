@@ -147,7 +147,7 @@ const Households = () => {
   const [mPhone, setMPhone] = useState('');
   const [mOccupation, setMOccupation] = useState('');
   const [mRelationship, setMRelationship] = useState('Con');
-  const [mStatus, setMStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay'>('resident');
+  const [mStatus, setMStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay' | 'moved_out'>('resident');
   const [mPob, setMPob] = useState('');
   const [mNotes, setMNotes] = useState('');
 
@@ -348,7 +348,7 @@ const Households = () => {
 
   const getHouseholdMembers = (hId: string) => {
     return residents
-      .filter(r => r.household_id === hId)
+      .filter(r => r.household_id === hId && r.status !== 'moved_out' && (r.relationship_with_head || '').trim().toLowerCase() !== 'thành viên chuyển đi')
       .sort((a, b) => {
         // Chủ hộ luôn lên đầu
         if (a.is_head && !b.is_head) return -1;
@@ -671,7 +671,7 @@ const Households = () => {
           household_id: '', // Clear household_id so they disappear from this household list
           is_head: false,
           relationship_with_head: 'Thành viên chuyển đi',
-          status: 'temporary_absent', // Mark as temporary absent
+          status: 'moved_out', // Mark as moved out (transferred away)
           notes: updatedNotes
         };
       }
@@ -1473,11 +1473,11 @@ const Households = () => {
         status: 'moved_out'
       });
 
-      // 3. Cập nhật trạng thái các thành viên thành 'temporary_absent' (tạm vắng) và quan hệ 'Thành viên chuyển đi'
+      // 3. Cập nhật trạng thái các thành viên thành 'moved_out' (đã chuyển đi) và quan hệ 'Thành viên chuyển đi'
       for (const member of members) {
         await db.saveResident({
           ...member,
-          status: 'temporary_absent',
+          status: 'moved_out',
           relationship_with_head: 'Thành viên chuyển đi'
         });
       }
@@ -1541,7 +1541,7 @@ const Households = () => {
   const stats = useMemo(() => {
     const totalH = filteredHouseholds.length;
     const hhIds = new Set(filteredHouseholds.map(h => h.id));
-    const activeResidents = residents.filter(r => hhIds.has(r.household_id) && r.status !== 'deceased');
+    const activeResidents = residents.filter(r => hhIds.has(r.household_id) && r.status !== 'deceased' && r.status !== 'moved_out' && (r.relationship_with_head || '').trim().toLowerCase() !== 'thành viên chuyển đi');
     const totalR = activeResidents.length;
     return {
       totalHouseholds: totalH,

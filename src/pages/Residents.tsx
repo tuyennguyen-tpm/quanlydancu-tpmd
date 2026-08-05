@@ -277,6 +277,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military' | 'longevity'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
   const [showDeceased, setShowDeceased] = useState(false);
+  const [showMovedOut, setShowMovedOut] = useState(false);
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
   const [groups, setGroups] = useState<string[]>(() => {
@@ -289,7 +290,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, householdFilter, showDeceased, groupFilter, longevityYear]);
+  }, [searchTerm, categoryFilter, householdFilter, showDeceased, showMovedOut, groupFilter, longevityYear]);
 
   useEffect(() => {
     // Reset filters when switching tabs (viewMode changes)
@@ -297,6 +298,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     setCategoryFilter('all');
     setHouseholdFilter('all');
     setShowDeceased(false);
+    setShowMovedOut(false);
     setGroupFilter('all');
     setCurrentPage(1);
   }, [viewMode]);
@@ -349,7 +351,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   const [temporaryAddress, setTemporaryAddress] = useState('');
   const [relationshipWithHead, setRelationshipWithHead] = useState('Thành viên');
   const [isHead, setIsHead] = useState(false);
-  const [status, setStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay'>('resident');
+  const [status, setStatus] = useState<'resident' | 'temporary_absent' | 'temporary_resident' | 'deceased' | 'stay' | 'moved_out'>('resident');
   const [householdId, setHouseholdId] = useState('');
   const [pob, setPob] = useState('');
   const [notes, setNotes] = useState('');
@@ -1856,13 +1858,22 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       matchesHousehold = r.household_id === householdFilter;
     }
 
+    // Moved out filter matches (Nếu không bật showMovedOut thì mặc định loại trừ người đã chuyển đi khỏi danh sách nhân khẩu chính)
+    const isMovedOut = r.status === 'moved_out' || (r.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi';
+    let matchesMovedOut = true;
+    if (showMovedOut) {
+      matchesMovedOut = isMovedOut;
+    } else if (viewMode !== 'changes') {
+      matchesMovedOut = !isMovedOut;
+    }
+
     // Deceased filter matches (Bật checkbox showDeceased sẽ CHỈ hiện người đã mất)
     let matchesDeceased = true;
     if (showDeceased) {
       matchesDeceased = r.status === 'deceased';
     } else {
       // Nếu không chọn "Chỉ hiện người đã mất":
-      // - Nếu có từ khóa tìm kiếm hoặc lọc theo hộ gia đình cụ thể, cho phép hiển thị cả người đã mất
+      // - Nếu có từ khóa tìm kiếm hoặc lọc theo hộ gia đình cụ thể, cho phép hiển thị cả người đã mất (nếu không phải là moved_out)
       // - Ngược lại (mặc định), ẩn người đã mất khỏi bảng tổng nhân khẩu
       if (searchTerm.trim() !== '' || householdFilter !== 'all') {
         matchesDeceased = true;
@@ -1918,7 +1929,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       }
     }
 
-    return matchesSearch && matchesCategory && matchesHousehold && matchesDeceased && matchesGroup;
+    return matchesSearch && matchesCategory && matchesHousehold && matchesMovedOut && matchesDeceased && matchesGroup;
   }).sort((a, b) => {
     // Nhóm theo hộ gia đình (sắp xếp cùng hộ ở cạnh nhau)
     if (a.household_id !== b.household_id) {
@@ -1961,12 +1972,16 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     return `Chủ hộ: ${headName} (${shortAddress})`;
   };
 
-  const getStatusText = (statusVal: string) => {
+  const getStatusText = (statusVal: string, relVal?: string) => {
+    if (statusVal === 'moved_out' || (relVal || '').trim().toLowerCase() === 'thành viên chuyển đi') {
+      return 'Đã chuyển đi';
+    }
     switch (statusVal) {
       case 'resident': return 'Thường trú';
       case 'temporary_resident': return 'Tạm trú';
       case 'temporary_absent': return 'Tạm vắng';
       case 'stay': return 'Lưu trú';
+      case 'moved_out': return 'Đã chuyển đi';
       default: return 'Đã mất';
     }
   };
@@ -2107,6 +2122,37 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             </label>
           </div>
 
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            padding: '8px 14px', 
+            backgroundColor: '#f1f5f9', 
+            borderRadius: '12px', 
+            border: '1px solid #e2e8f0', 
+            cursor: 'pointer',
+            height: '42px',
+            boxSizing: 'border-box'
+          }}>
+            <input 
+              type="checkbox" 
+              id="show-movedout-checkbox"
+              checked={showMovedOut} 
+              onChange={(e) => {
+                setShowMovedOut(e.target.checked);
+                if (e.target.checked) setShowDeceased(false);
+              }}
+              style={{ cursor: 'pointer', width: '16px', height: '16px', margin: 0 }}
+            />
+            <label htmlFor="show-movedout-checkbox" style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600', cursor: 'pointer', userSelect: 'none', margin: 0 }}>
+              🚪 Hiện người đã chuyển đi {residents.filter(r => r.status === 'moved_out' || (r.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi').length > 0 && (
+                <span style={{ backgroundColor: '#64748b', color: 'white', borderRadius: '10px', padding: '1px 7px', fontSize: '0.75rem', marginLeft: '4px' }}>
+                  {formatNumber(residents.filter(r => r.status === 'moved_out' || (r.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi').length)}
+                </span>
+              )}
+            </label>
+          </div>
+
           <div className="filter-btns">
             <button 
               className={`filter-btn filter-btn-all ${categoryFilter === 'all' ? 'active' : ''}`}
@@ -2240,6 +2286,14 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           bgGradient = 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)';
           borderColor = '#cbd5e1';
           iconBg = '#475569';
+          titleColor = '#334155';
+        } else if (showMovedOut) {
+          icon = '🚪';
+          title = 'THỐNG KÊ DANH SÁCH NHÂN KHẨU ĐÃ CHUYỂN ĐI';
+          subtitle = 'Danh sách các nhân khẩu đã báo chuyển đi / cắt khẩu khỏi địa bàn Tổ dân phố.';
+          bgGradient = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+          borderColor = '#cbd5e1';
+          iconBg = '#64748b';
           titleColor = '#334155';
         } else if (groupFilter !== 'all') {
           icon = '🏢';
@@ -2396,8 +2450,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     })()}
                   </td>
                   <td>
-                    <span className={`status-dot ${resident.status === 'resident' ? 'green' : resident.status === 'temporary_resident' ? 'blue' : resident.status === 'stay' ? 'pink' : 'orange'}`}></span>
-                    {getStatusText(resident.status)}
+                    <span className={`status-dot ${resident.status === 'resident' ? 'green' : resident.status === 'temporary_resident' ? 'blue' : resident.status === 'stay' ? 'pink' : resident.status === 'moved_out' || (resident.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi' ? 'gray' : 'orange'}`}></span>
+                    {getStatusText(resident.status, resident.relationship_with_head)}
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -2727,6 +2781,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     <option value="temporary_resident">Tạm trú</option>
                     <option value="temporary_absent">Tạm vắng (Có đăng ký)</option>
                     <option value="stay">Lưu trú (Khách vãng lai)</option>
+                    <option value="moved_out">Đã chuyển đi (Cắt hộ / Chuyển khỏi TDP)</option>
                     <option value="deceased">Đã qua đời</option>
                   </select>
                 </div>

@@ -178,10 +178,11 @@ const Dashboard = () => {
         db.getDocuments()
       ]);
 
-      const activeResidents = residents.filter(r => r.status !== 'deceased');
+      const activeResidents = residents.filter(r => r.status !== 'deceased' && r.status !== 'moved_out' && (r.relationship_with_head || '').trim().toLowerCase() !== 'thành viên chuyển đi');
       const deceasedResidents = residents.filter(r => r.status === 'deceased');
 
-      const totalH = households.length || 1;
+      const activeHouseholds = households.filter(h => h.status !== 'moved_out');
+      const totalH = activeHouseholds.length || 1;
       const totalR = activeResidents.length || 1;
       const maleR = activeResidents.filter(r => r.gender === 'male').length;
       const femaleR = activeResidents.filter(r => r.gender === 'female').length;

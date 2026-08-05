@@ -1709,8 +1709,8 @@ const App = () => {
         db.getHouseholds(),
         partyDb.getPartyMembers()
       ]);
-      setResidentCount(resList.filter((r: any) => r.status !== 'deceased').length);
-      setHouseholdCount(hhList.length);
+      setResidentCount(resList.filter((r: any) => r.status !== 'deceased' && r.status !== 'moved_out' && (r.relationship_with_head || '').trim().toLowerCase() !== 'thành viên chuyển đi').length);
+      setHouseholdCount(hhList.filter((h: any) => h.status !== 'moved_out').length);
       setTemporaryResidentCount(resList.filter((r: any) => r.status === 'temporary_resident' || r.status === 'temporary_absent').length);
       setPartyMemberCount(pmList.length);
       
