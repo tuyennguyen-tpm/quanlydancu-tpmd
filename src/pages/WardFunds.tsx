@@ -3443,7 +3443,10 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 6mm 10mm;
+              margin-top: 10mm;
+              margin-bottom: 10mm;
+              margin-left: 10mm;
+              margin-right: 10mm;
             }
             html, body {
               margin: 0;
@@ -3453,7 +3456,8 @@ const WardFunds = () => {
               display: none !important;
             }
             body {
-              padding-top: 5px !important;
+              padding-top: 0 !important;
+              margin-top: 0 !important;
             }
           }
           body {
@@ -3462,7 +3466,7 @@ const WardFunds = () => {
             line-height: 1.3;
             color: #000;
             padding: 5px;
-            padding-top: 55px;
+            padding-top: 0;
           }
           .receipt-container {
             width: 100%;
@@ -4217,11 +4221,14 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0;
+              margin-top: 10mm;
+              margin-bottom: 10mm;
+              margin-left: 15mm;
+              margin-right: 15mm;
             }
             body {
               margin: 0;
-              padding: 12mm 15mm;
+              padding: 0;
             }
             .page {
               page-break-after: always;
@@ -4437,11 +4444,14 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0;
+              margin-top: 10mm;
+              margin-bottom: 10mm;
+              margin-left: 15mm;
+              margin-right: 15mm;
             }
             body {
               margin: 0;
-              padding: 12mm 15mm;
+              padding: 0;
             }
             .receipt-container {
               width: 100% !important;
@@ -4639,11 +4649,14 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A5 landscape;
-              margin: 0;
+              margin-top: 10mm;
+              margin-bottom: 10mm;
+              margin-left: 10mm;
+              margin-right: 10mm;
             }
             body {
               margin: 0;
-              padding: 8mm 10mm;
+              padding: 0;
             }
             .receipt-container {
               page-break-after: always;
@@ -4928,7 +4941,10 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 8mm 12mm;
+              margin-top: 10mm;
+              margin-bottom: 10mm;
+              margin-left: 12mm;
+              margin-right: 12mm;
             }
             html, body {
               margin: 0;
@@ -4938,7 +4954,8 @@ const WardFunds = () => {
               display: none !important;
             }
             body {
-              padding-top: 5px !important;
+              padding-top: 0 !important;
+              margin-top: 0 !important;
             }
           }
           body {
@@ -4947,7 +4964,7 @@ const WardFunds = () => {
             line-height: 1.35;
             color: #000;
             padding: 5px;
-            padding-top: 55px;
+            padding-top: 0;
           }
           .receipt-container {
             width: 100%;
@@ -5776,7 +5793,10 @@ const WardFunds = () => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 8mm 12mm;
+              margin-top: 10mm;
+              margin-bottom: 10mm;
+              margin-left: 12mm;
+              margin-right: 12mm;
             }
             html, body {
               margin: 0;
@@ -5791,7 +5811,8 @@ const WardFunds = () => {
             font-size: 10pt;
             line-height: 1.35;
             color: #000;
-            padding: 5px;
+            padding: 0;
+            margin: 0;
           }
           .receipt-container {
             width: 100%;
