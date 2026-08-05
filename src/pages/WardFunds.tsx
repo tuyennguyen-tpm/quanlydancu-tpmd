@@ -3276,7 +3276,7 @@ const WardFunds = () => {
               <div class="receipt-org-title" style="margin-top: 0; padding-top: 0; line-height: 1.3;">
                 Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
                 Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
-                Địa chỉ: ${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal, wardNameVal, true)}
+                Địa chỉ: ${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal, wardNameVal)}
               </div>
             </td>
             <td style="width: 50%; text-align: right; vertical-align: top;">
@@ -3314,7 +3314,7 @@ const WardFunds = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal, wardNameVal, true)} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
+            <td style="text-align: left;">${formatReceiptAddress(groupName, item.address || hhOfRes?.address, tdpNameVal, wardNameVal)} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
@@ -4925,8 +4925,7 @@ const WardFunds = () => {
         hhGroupStr,
         household.address || (headResident as any)?.address,
         tdpNameVal,
-        wardNameVal,
-        true
+        wardNameVal
       );
     }
 
@@ -5788,8 +5787,7 @@ const WardFunds = () => {
           hhGroupStr,
           item.household.address || (item.members?.[0] as any)?.address,
           tdpNameVal,
-          wardNameVal,
-          true
+          wardNameVal
         );
       }
       const isLast = idx === listToPrint.length - 1;

@@ -1505,8 +1505,7 @@ const Finance = () => {
         hhGroupStr,
         household.address,
         tdpNameVal,
-        wardNameVal,
-        (printMode as string) === 'ward_only'
+        wardNameVal
       );
     }
 
@@ -3103,7 +3102,7 @@ const Finance = () => {
               <div class="receipt-org-title" style="margin-top: 0; padding-top: 0; line-height: 1.3;">
                 Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
                 Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
-                Địa chỉ: ${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal, wardNameVal, false)}
+                Địa chỉ: ${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal, wardNameVal)}
               </div>
             </td>
             <td style="width: 50%; text-align: right; vertical-align: top;">
@@ -3138,7 +3137,7 @@ const Finance = () => {
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal, wardNameVal, false)} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
+            <td style="text-align: left;">${formatReceiptAddress(hh.self_management_group, hh.address, tdpNameVal, wardNameVal)} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
@@ -3360,8 +3359,7 @@ const Finance = () => {
           hhGroupStr,
           item.household.address,
           tdpNameVal,
-          wardNameVal,
-          false
+          wardNameVal
         );
       }
       const isLast = idx === sortedList.length - 1;
