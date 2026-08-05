@@ -759,7 +759,8 @@ export const db = {
       const uId = await getSessionUserId();
       const payload = enrichPayload({ 
         ...fullHousehold, 
-        user_id: uId,
+        user_id: fullHousehold.user_id || uId,
+        ward_id: fullHousehold.ward_id || localStorage.getItem('user_ward_id') || undefined,
         head_of_household_id: fullHousehold.head_of_household_id || null
       });
       const { data, error } = await supabase.from('households').upsert(payload).select().single();
@@ -785,7 +786,14 @@ export const db = {
           throw new Error(`Không thể lưu hộ dân: ${error.message}`);
         }
       }
-      if (data) return data;
+      if (data) {
+        const households = getStorageItem<Household[]>('households', seedHouseholds);
+        const index = households.findIndex(h => h.id === household.id);
+        if (index >= 0) households[index] = data;
+        else households.push(data);
+        setStorageItem('households', households);
+        return data;
+      }
     }
     // Fallback: chỉ lưu localStorage khi không có kết nối Supabase
     const households = getStorageItem<Household[]>('households', seedHouseholds);
@@ -828,9 +836,11 @@ export const db = {
     
     if (supabase) {
       const uId = await getSessionUserId();
+      const wardId = localStorage.getItem('user_ward_id') || undefined;
       const payload = fullHouseholds.map(h => enrichPayload({
         ...h,
-        user_id: uId,
+        user_id: h.user_id || uId,
+        ward_id: h.ward_id || wardId,
         head_of_household_id: h.head_of_household_id || null
       }));
       
@@ -925,7 +935,8 @@ export const db = {
       const uId = await getSessionUserId();
       const { is_senior, ...dbPayload } = enrichPayload({ 
         ...fullResident, 
-        user_id: uId,
+        user_id: fullResident.user_id || uId,
+        ward_id: fullResident.ward_id || localStorage.getItem('user_ward_id') || undefined,
         household_id: fullResident.household_id || null
       });
       const { data, error } = await supabase.from('residents').upsert(dbPayload).select().single();
@@ -934,10 +945,16 @@ export const db = {
         throw new Error(`Không thể lưu nhân khẩu: ${error.message}`);
       }
       if (data) {
-        return {
+        const fullRes = {
           ...data,
           is_senior: fullResident.is_senior
         } as Resident;
+        const residents = getStorageItem<Resident[]>('residents', seedResidents);
+        const index = residents.findIndex(r => r.id === resident.id);
+        if (index >= 0) residents[index] = fullRes;
+        else residents.push(fullRes);
+        setStorageItem('residents', residents);
+        return fullRes;
       }
     }
     // Fallback: chỉ lưu localStorage khi không có kết nối Supabase
@@ -981,11 +998,13 @@ export const db = {
 
     if (supabase) {
       const uId = await getSessionUserId();
+      const wardId = localStorage.getItem('user_ward_id') || undefined;
       const payload = fullResidents.map(r => {
         const { is_senior, ...rest } = r;
         return enrichPayload({
           ...rest,
-          user_id: uId,
+          user_id: r.user_id || uId,
+          ward_id: r.ward_id || wardId,
           household_id: rest.household_id || null
         });
       });

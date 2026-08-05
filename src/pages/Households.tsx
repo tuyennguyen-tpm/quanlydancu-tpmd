@@ -464,6 +464,8 @@ const Households = () => {
         bank_account_holder: policyType === 'martyr_family' ? (bankAccountHolder.trim() || undefined) : undefined,
         bank_account_holder_cccd: policyType === 'martyr_family' ? (bankAccountHolderCccd.trim() || undefined) : undefined,
         martyr_relation: policyType === 'martyr_family' ? (martyrRelation.trim() || undefined) : undefined,
+        user_id: editingHousehold ? editingHousehold.user_id : undefined,
+        ward_id: editingHousehold ? editingHousehold.ward_id : undefined,
         created_at: editingHousehold ? editingHousehold.created_at : new Date().toISOString()
       };
       await db.saveHousehold(payload);
@@ -1389,6 +1391,8 @@ const Households = () => {
       status: mStatus,
       pob: mPob.trim(),
       notes: mNotes.trim(),
+      user_id: editingMember ? editingMember.user_id : targetHouseholdForMember.user_id,
+      ward_id: editingMember ? editingMember.ward_id : targetHouseholdForMember.ward_id,
       created_at: editingMember ? (editingMember.created_at || new Date().toISOString()) : new Date().toISOString()
     };
 

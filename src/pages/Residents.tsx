@@ -657,6 +657,9 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       death_date: dbDeathDate || undefined,
       association_membership: associationMembership,
 
+      user_id: editingResident ? editingResident.user_id : undefined,
+      ward_id: editingResident ? editingResident.ward_id : undefined,
+
       created_at: editingResident ? editingResident.created_at : new Date().toISOString()
     };
 
