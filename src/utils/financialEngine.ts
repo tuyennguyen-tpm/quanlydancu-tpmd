@@ -626,6 +626,9 @@ export function sanitizeReceiptHtmlAddresses(
     .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
     .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
 
+  // Khôi phục lại ô nhãn Địa chỉ: nếu lỡ bị nhồi văn bản lỗi từ trước
+  result = result.replace(/(<td[^>]*class="receipt-info-label"[^>]*>)\s*Địa chỉ:[\s\S]*?(<\/td>)/gi, '$1Địa chỉ:$2');
+
   const gStr = resolveHouseholdGroupName(groupName, rawAddress);
   if (gStr) {
     result = result.replace(
@@ -640,8 +643,8 @@ export function sanitizeReceiptHtmlAddresses(
   });
 
   // 2. Đồng bộ dòng Địa chỉ trong góc Đơn vị (thẻ receipt-org-title ở góc trên)
-  result = result.replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>)/gi, (_m, p1, _p2, p3) => {
-    return `${p1}${formattedAddress}${p3}`;
+  result = result.replace(/(<div[^>]*class="receipt-org-title"[^>]*>[\s\S]*?Địa chỉ:\s*)([^\n<]*)/gi, (_m, p1) => {
+    return `${p1}${formattedAddress}`;
   });
 
   return result;
