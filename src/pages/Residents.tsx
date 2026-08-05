@@ -2124,36 +2124,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             </label>
           </div>
 
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            padding: '8px 14px', 
-            backgroundColor: '#f1f5f9', 
-            borderRadius: '12px', 
-            border: '1px solid #e2e8f0', 
-            cursor: 'pointer',
-            height: '42px',
-            boxSizing: 'border-box'
-          }}>
-            <input 
-              type="checkbox" 
-              id="show-movedout-checkbox"
-              checked={showMovedOut} 
-              onChange={(e) => {
-                setShowMovedOut(e.target.checked);
-                if (e.target.checked) setShowDeceased(false);
-              }}
-              style={{ cursor: 'pointer', width: '16px', height: '16px', margin: 0 }}
-            />
-            <label htmlFor="show-movedout-checkbox" style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600', cursor: 'pointer', userSelect: 'none', margin: 0 }}>
-              🚪 Hiện người đã chuyển đi {residents.filter(r => r.status === 'moved_out' || (r.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi').length > 0 && (
-                <span style={{ backgroundColor: '#64748b', color: 'white', borderRadius: '10px', padding: '1px 7px', fontSize: '0.75rem', marginLeft: '4px' }}>
-                  {formatNumber(residents.filter(r => r.status === 'moved_out' || (r.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi').length)}
-                </span>
-              )}
-            </label>
-          </div>
+
 
           <div className="filter-btns">
             <button 
