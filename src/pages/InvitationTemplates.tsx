@@ -51,6 +51,7 @@ const InvitationTemplates: React.FC = () => {
   const [locationDate, setLocationDate]     = useState(`${wardNameFormatted.replace('Phường ', '')}, ngày ${dd}/${mm}/${yy}`);
   const [activeTab, setActiveTab]           = useState<'leader' | 'party' | 'front'>('leader');
   const [orientation, setOrientation]       = useState<'portrait' | 'landscape'>('portrait');
+  const [paperSize, setPaperSize]           = useState<'a5_half' | 'a4_full'>('a5_half');
   const printRef                            = useRef<HTMLDivElement>(null);
 
   // Database loading states
@@ -218,26 +219,42 @@ const InvitationTemplates: React.FC = () => {
 
     const cardsToPrint = getHouseholdsToPrint();
     const isLandscape = orientation === 'landscape';
+    const isA4 = paperSize === 'a4_full';
 
     // Generate HTML for each invitation card
     let cardsHtml = '';
     
     const renderCardHtml = (recipientName: string) => {
+      const leftOrgFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '11.5pt' : '13.5pt');
+      const docTitleFontSize = isA4 ? (isLandscape ? '14.5pt' : '16.5pt') : (isLandscape ? '13pt' : '15pt');
+      const docSubtitleFontSize = isA4 ? (isLandscape ? '14pt' : '15.5pt') : (isLandscape ? '12.5pt' : '14pt');
+      const titleFontSize = isA4 ? (isLandscape ? '28pt' : '34pt') : (isLandscape ? '22pt' : '26pt');
+      const bodyMarginBottom = isA4 ? '10px' : (isLandscape ? '6px' : '8px');
+      const closingMarginBottom = isA4 ? (isLandscape ? '18px' : '28px') : (isLandscape ? '10px' : '18px');
+      const signatureMarginTop = isA4 ? (isLandscape ? '15px' : '35px') : (isLandscape ? '2px' : '0');
+      const signerTitleFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '12pt' : '13.5pt');
+      const locationDateFontSize = isA4 ? (isLandscape ? '12.5pt' : '13.5pt') : (isLandscape ? '11pt' : '12pt');
+      
+      const borderWidth = isA4 ? (isLandscape ? '7px solid #2d6a2d' : '9px solid #2d6a2d') : (isLandscape ? '5px solid #2d6a2d' : '7px solid #2d6a2d');
+      const borderInset = isA4 ? (isLandscape ? '6px' : '8px') : (isLandscape ? '4px' : '6px');
+      const flowerSize = isA4 ? (isLandscape ? '38px' : '46px') : (isLandscape ? '30px' : '38px');
+      const flowerFontSize = isA4 ? (isLandscape ? '26px' : '32px') : (isLandscape ? '20px' : '26px');
+
       const leftOrgHtml = activeTab === 'party' ? `
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">ĐẢNG BỘ ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">CHI BỘ ${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">ĐẢNG BỘ ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">CHI BỘ ${rawTdpName.toUpperCase()}</p>
       ` : activeTab === 'front' ? `
-        <p style="margin: 0; font-weight: 700; font-size: 12pt;">UBMTTQ VN ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: 12pt;">BAN CÔNG TÁC MẶT TRẬN</p>
-        <p style="margin: 0; font-weight: 700; font-size: 12pt;">${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">UBMTTQ VN ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">BAN CÔNG TÁC MẶT TRẬN</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">${rawTdpName.toUpperCase()}</p>
       ` : `
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">UBND ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '11.5pt' : '13.5pt'};">TỔ DÂN PHỐ ${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">UBND ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">TỔ DÂN PHỐ ${rawTdpName.toUpperCase()}</p>
       `;
 
       const docTitle = activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
       const docSubtitleHtml = activeTab !== 'party' ? `
-        <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '12.5pt' : '14pt'}; text-decoration: underline;">
+        <p style="margin: 0; font-weight: 700; font-size: ${docSubtitleFontSize}; text-decoration: underline;">
           Độc lập – Tự do – Hạnh phúc
         </p>
       ` : '';
@@ -246,12 +263,12 @@ const InvitationTemplates: React.FC = () => {
         <div class="card-body">
           ${showBorder ? `
           <!-- Border Frame -->
-          <div class="border-frame" style="position: absolute; inset: 0; pointer-events: none; border: ${isLandscape ? '5px solid #2d6a2d' : '7px solid #2d6a2d'}; border-radius: 4px; box-sizing: border-box;">
-            <div class="border-frame-inner" style="position: absolute; inset: ${isLandscape ? '4px' : '6px'}; border: 2px solid #2d6a2d; border-radius: 2px; box-sizing: border-box;"></div>
-            <div class="corner-flower" style="position: absolute; top: 0; left: 0; width: ${isLandscape ? '30px' : '38px'}; height: ${isLandscape ? '30px' : '38px'}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${isLandscape ? '20px' : '26px'}; line-height: 1;">✿</div>
-            <div class="corner-flower" style="position: absolute; top: 0; right: 0; width: ${isLandscape ? '30px' : '38px'}; height: ${isLandscape ? '30px' : '38px'}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${isLandscape ? '20px' : '26px'}; line-height: 1;">✿</div>
-            <div class="corner-flower" style="position: absolute; bottom: 0; left: 0; width: ${isLandscape ? '30px' : '38px'}; height: ${isLandscape ? '30px' : '38px'}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${isLandscape ? '20px' : '26px'}; line-height: 1;">✿</div>
-            <div class="corner-flower" style="position: absolute; bottom: 0; right: 0; width: ${isLandscape ? '30px' : '38px'}; height: ${isLandscape ? '30px' : '38px'}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${isLandscape ? '20px' : '26px'}; line-height: 1;">✿</div>
+          <div class="border-frame" style="position: absolute; inset: 0; pointer-events: none; border: ${borderWidth}; border-radius: 4px; box-sizing: border-box;">
+            <div class="border-frame-inner" style="position: absolute; inset: ${borderInset}; border: 2px solid #2d6a2d; border-radius: 2px; box-sizing: border-box;"></div>
+            <div class="corner-flower" style="position: absolute; top: 0; left: 0; width: ${flowerSize}; height: ${flowerSize}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${flowerFontSize}; line-height: 1;">✿</div>
+            <div class="corner-flower" style="position: absolute; top: 0; right: 0; width: ${flowerSize}; height: ${flowerSize}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${flowerFontSize}; line-height: 1;">✿</div>
+            <div class="corner-flower" style="position: absolute; bottom: 0; left: 0; width: ${flowerSize}; height: ${flowerSize}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${flowerFontSize}; line-height: 1;">✿</div>
+            <div class="corner-flower" style="position: absolute; bottom: 0; right: 0; width: ${flowerSize}; height: ${flowerSize}; display: flex; align-items: center; justify-content: center; color: #2d6a2d; font-size: ${flowerFontSize}; line-height: 1;">✿</div>
             <div class="top-center-ornament" style="position: absolute; top: -3px; left: 50%; transform: translateX(-50%); color: #2d6a2d; font-size: 16px;">⬦</div>
             <div class="bottom-center-ornament" style="position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); color: #2d6a2d; font-size: 16px;">⬦</div>
           </div>
@@ -259,107 +276,154 @@ const InvitationTemplates: React.FC = () => {
 
           <!-- Header -->
           ${showLeftHeader ? `
-          <div style="display: flex; justify-content: space-between; margin-bottom: ${isLandscape ? '8px' : '14px'};">
+          <div style="display: flex; justify-content: space-between; margin-bottom: ${isA4 ? (isLandscape ? '14px' : '22px') : (isLandscape ? '8px' : '14px')};">
             <div style="text-align: center; width: 44%;">
               ${leftOrgHtml}
-              <div style="width: 50px; border-bottom: 1px solid #111; margin: 3px auto 4px;"></div>
-              <p style="margin: 0; font-size: 11pt;">Số: ${invitationNumber || '.....'}/GM-TDP</p>
+              <div style="width: 60px; border-bottom: 1px solid #111; margin: 4px auto 6px;"></div>
+              <p style="margin: 0; font-size: ${isA4 ? '12.5pt' : '11pt'};">Số: ${invitationNumber || '.....'}/GM-TDP</p>
             </div>
             <div style="text-align: center; width: 52%;">
-              <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '13pt' : '15pt'};">
+              <p style="margin: 0; font-weight: 700; font-size: ${docTitleFontSize};">
                 ${docTitle}
               </p>
               ${docSubtitleHtml}
-              <div style="width: 120px; border-bottom: 1px solid #111; margin: 4px auto;"></div>
+              <div style="width: 140px; border-bottom: 1px solid #111; margin: 6px auto;"></div>
             </div>
           </div>
           ` : `
-          <div style="text-align: center; margin-bottom: ${isLandscape ? '10px' : '16px'}; width: 100%;">
-            <p style="margin: 0; font-weight: 700; font-size: ${isLandscape ? '13.5pt' : '15.5pt'};">
+          <div style="text-align: center; margin-bottom: ${isA4 ? '20px' : (isLandscape ? '10px' : '16px')}; width: 100%;">
+            <p style="margin: 0; font-weight: 700; font-size: ${docTitleFontSize};">
               ${docTitle}
             </p>
             ${activeTab !== 'party' ? `
-              <p style="margin: 2px 0 0; font-weight: 700; font-size: ${isLandscape ? '12.5pt' : '14.5pt'}; text-decoration: underline;">
+              <p style="margin: 3px 0 0; font-weight: 700; font-size: ${docSubtitleFontSize}; text-decoration: underline;">
                 Độc lập – Tự do – Hạnh phúc
               </p>
             ` : ''}
-            <div style="width: 150px; border-bottom: 1px solid #111; margin: 6px auto 0;"></div>
+            <div style="width: 160px; border-bottom: 1px solid #111; margin: 8px auto 0;"></div>
           </div>
           `}
 
           <!-- Title -->
-          <h1 style="text-align: center; font-weight: 700; font-size: ${isLandscape ? '22pt' : '26pt'}; margin: ${isLandscape ? '4px 0 6px' : '8px 0 10px'}; letter-spacing: 2px;">
+          <h1 style="text-align: center; font-weight: 700; font-size: ${titleFontSize}; margin: ${isA4 ? (isLandscape ? '10px 0 14px' : '16px 0 20px') : (isLandscape ? '4px 0 6px' : '8px 0 10px')}; letter-spacing: 3px;">
             GIẤY MỜI
           </h1>
 
           <!-- Kính gửi -->
-          <p style="margin: ${isLandscape ? '0 0 6px' : '0 0 8px'}; font-weight: 700;">
+          <p style="margin: 0 0 ${bodyMarginBottom}; font-weight: 700;">
             Kính gửi : <span style="text-decoration: underline;">${recipientName}</span>
           </p>
 
           <!-- Body -->
-          <p style="margin: ${isLandscape ? '0 0 6px' : '0 0 8px'}; text-indent: 1.5em; text-align: justify;">
+          <p style="margin: 0 0 ${bodyMarginBottom}; text-indent: 1.5em; text-align: justify;">
             Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp <span style="text-decoration: underline;">${tdpNameFormatted}</span>, <span style="text-decoration: underline;">${wardNameFormatted}</span>
           </p>
 
-          <p style="margin: 0 0 4px;">
+          <p style="margin: 0 0 ${isA4 ? '8px' : '4px'};">
             <span style="text-decoration: underline;">Thời gian</span> <strong>${meetingTime}</strong> ngày <strong>${meetingDay}/${meetingMonth}/${meetingYear}</strong>
           </p>
 
-          <p style="margin: 0 0 4px;">
+          <p style="margin: 0 0 ${isA4 ? '8px' : '4px'};">
             <span style="text-decoration: underline;">Địa điểm</span>: <span style="text-decoration: underline;">${location}</span>
           </p>
 
-          <p style="margin: 0 0 4px;">
+          <p style="margin: 0 0 ${isA4 ? '8px' : '4px'};">
             <span style="text-decoration: underline;">Nội dung</span>: <span style="text-decoration: underline; white-space: pre-wrap;">${content}</span>
           </p>
 
-          <p style="margin: ${isLandscape ? '0 0 10px' : '0 0 18px'}; text-indent: 1.5em; text-align: justify; white-space: pre-wrap;">
+          <p style="margin: 0 0 ${closingMarginBottom}; text-indent: 1.5em; text-align: justify; white-space: pre-wrap;">
             <span style="text-decoration: underline;">${closingNote}</span>
           </p>
 
           <!-- Signature -->
-          <div style="display: flex; justify-content: flex-end; margin-top: ${isLandscape ? '2px' : '0'};">
-            <div style="text-align: center; min-width: 190px;">
-              <p style="margin: 0 0 2px; font-style: italic; font-size: ${isLandscape ? '11pt' : '12pt'};">${locationDate}</p>
-              <p style="margin: 0 0 2px; font-weight: 700; font-size: ${isLandscape ? '12pt' : '13.5pt'};">${signerTitle}</p>
-              <div style="height: ${isLandscape ? '20px' : '30px'};"></div>
-              <p style="margin: 0; font-weight: 700; text-transform: uppercase; font-size: ${isLandscape ? '12pt' : '13.5pt'};">${signerName}</p>
+          <div style="display: flex; justify-content: flex-end; margin-top: ${signatureMarginTop};">
+            <div style="text-align: center; min-width: 220px;">
+              <p style="margin: 0 0 4px; font-style: italic; font-size: ${locationDateFontSize};">${locationDate}</p>
+              <p style="margin: 0 0 4px; font-weight: 700; font-size: ${signerTitleFontSize};">${signerTitle}</p>
+              <div style="height: ${isA4 ? (isLandscape ? '35px' : '50px') : (isLandscape ? '20px' : '30px')};"></div>
+              <p style="margin: 0; font-weight: 700; text-transform: uppercase; font-size: ${signerTitleFontSize};">${signerName}</p>
             </div>
           </div>
         </div>
       `;
     };
 
-    const pairs: { card1: string; card2?: string }[] = [];
-    for (let i = 0; i < cardsToPrint.length; i += 2) {
-      pairs.push({
-        card1: getRecipientName(cardsToPrint[i]),
-        card2: cardsToPrint[i + 1] ? getRecipientName(cardsToPrint[i + 1]) : undefined
-      });
+    if (isA4) {
+      const list = cardsToPrint.length > 0 ? cardsToPrint : [null];
+      cardsHtml = list.map(h => {
+        const name = h ? getRecipientName(h) : recipientTitle;
+        return `
+          <div class="a4-page-wrapper">
+            ${renderCardHtml(name)}
+          </div>
+        `;
+      }).join('');
+    } else {
+      const pairs: { card1: string; card2?: string }[] = [];
+      for (let i = 0; i < cardsToPrint.length; i += 2) {
+        pairs.push({
+          card1: getRecipientName(cardsToPrint[i]),
+          card2: cardsToPrint[i + 1] ? getRecipientName(cardsToPrint[i + 1]) : undefined
+        });
+      }
+
+      if (cardsToPrint.length === 0) {
+        pairs.push({ card1: recipientTitle });
+      }
+
+      cardsHtml = pairs.map(pair => {
+        const secondCardHtml = pair.card2 
+          ? renderCardHtml(pair.card2) 
+          : `<div style="width: ${isLandscape ? '210mm' : '148mm'}; height: ${isLandscape ? '148mm' : '210mm'}; flex-shrink: 0;"></div>`;
+          
+        const secondCardStyled = pair.card2 
+          ? secondCardHtml.replace('class="card-body"', `class="card-body" style="${isLandscape ? 'border-top: 1px dashed #cbd5e1;' : 'border-left: 1px dashed #cbd5e1;'}"`)
+          : secondCardHtml;
+
+        return `
+          <div class="a4-page-wrapper">
+            ${renderCardHtml(pair.card1)}
+            ${secondCardStyled}
+          </div>
+        `;
+      }).join('');
     }
 
-    if (cardsToPrint.length === 0) {
-      pairs.push({ card1: recipientTitle });
-    }
+    const pageCssSize = isA4
+      ? (isLandscape ? 'A4 landscape' : 'A4 portrait')
+      : (isLandscape ? 'A4 portrait' : 'A4 landscape');
 
-    cardsHtml = pairs.map(pair => {
-      const secondCardHtml = pair.card2 
-        ? renderCardHtml(pair.card2) 
-        : `<div style="width: ${isLandscape ? '210mm' : '148mm'}; height: ${isLandscape ? '148mm' : '210mm'}; flex-shrink: 0;"></div>`;
-        
-      // Add dashed cutting line style to the second element in the A4 sheet
-      const secondCardStyled = pair.card2 
-        ? secondCardHtml.replace('class="card-body"', `class="card-body" style="${isLandscape ? 'border-top: 1px dashed #cbd5e1;' : 'border-left: 1px dashed #cbd5e1;'}"`)
-        : secondCardHtml;
+    const wrapperWidth = isA4
+      ? (isLandscape ? '297mm' : '210mm')
+      : (isLandscape ? '210mm' : '297mm');
 
-      return `
-        <div class="a4-page-wrapper">
-          ${renderCardHtml(pair.card1)}
-          ${secondCardStyled}
-        </div>
-      `;
-    }).join('');
+    const wrapperHeight = isA4
+      ? (isLandscape ? '210mm' : '297mm')
+      : (isLandscape ? '297mm' : '210mm');
+
+    const wrapperFlexDirection = isA4
+      ? 'column'
+      : (isLandscape ? 'column' : 'row');
+
+    const cardWidth = isA4
+      ? (isLandscape ? '297mm' : '210mm')
+      : (isLandscape ? '210mm' : '148mm');
+
+    const cardHeight = isA4
+      ? (isLandscape ? '210mm' : '297mm')
+      : (isLandscape ? '148mm' : '210mm');
+
+    const cardPadding = isA4
+      ? (isLandscape ? '14mm 22mm 14mm' : '18mm 25mm 18mm')
+      : (isLandscape ? '8mm 15mm 8mm' : '10mm 15mm 10mm');
+
+    const cardFontSize = isA4
+      ? (isLandscape ? '15pt' : '17pt')
+      : (isLandscape ? '13pt' : '14.5pt');
+
+    const cardLineHeight = isA4
+      ? '1.55'
+      : (isLandscape ? '1.4' : '1.45');
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -369,7 +433,7 @@ const InvitationTemplates: React.FC = () => {
         <meta charset="utf-8" />
         <style>
           @page {
-            size: ${isLandscape ? 'A4 portrait' : 'A4 landscape'};
+            size: ${pageCssSize};
             margin: 0;
           }
           body {
@@ -380,8 +444,8 @@ const InvitationTemplates: React.FC = () => {
             print-color-adjust: exact;
           }
           .a4-page-wrapper {
-            width: ${isLandscape ? '210mm' : '297mm'};
-            height: ${isLandscape ? '297mm' : '210mm'};
+            width: ${wrapperWidth};
+            height: ${wrapperHeight};
             box-sizing: border-box;
             position: relative;
             page-break-after: always;
@@ -390,7 +454,7 @@ const InvitationTemplates: React.FC = () => {
             overflow: hidden;
             background: white;
             display: flex;
-            flex-direction: ${isLandscape ? 'column' : 'row'};
+            flex-direction: ${wrapperFlexDirection};
             gap: 0;
           }
           .a4-page-wrapper:last-child {
@@ -400,12 +464,12 @@ const InvitationTemplates: React.FC = () => {
           /* Card inner styles */
           .card-body {
             position: relative;
-            width: ${isLandscape ? '210mm' : '148mm'};
-            height: ${isLandscape ? '148mm' : '210mm'};
-            padding: ${isLandscape ? '8mm 15mm 8mm' : '10mm 15mm 10mm'};
+            width: ${cardWidth};
+            height: ${cardHeight};
+            padding: ${cardPadding};
             font-family: "Times New Roman", Times, serif;
-            font-size: ${isLandscape ? '13pt' : '14.5pt'};
-            line-height: ${isLandscape ? 1.4 : 1.45};
+            font-size: ${cardFontSize};
+            line-height: ${cardLineHeight};
             color: #111;
             box-sizing: border-box;
             background: white;
@@ -431,161 +495,185 @@ const InvitationTemplates: React.FC = () => {
     printWindow.document.close();
   };
 
-  // A5 dimensions based on orientation
-  const cardW = orientation === 'portrait' ? '148mm' : '210mm';
-  const cardH = orientation === 'portrait' ? '210mm' : '148mm';
-  const cardPad = orientation === 'portrait' ? '10mm 15mm 10mm' : '8mm 15mm 8mm';
+  const isA4 = paperSize === 'a4_full';
   const isLandscape = orientation === 'landscape';
 
+  // Card dimensions based on paper size & orientation
+  const cardW = isA4 
+    ? (isLandscape ? '297mm' : '210mm') 
+    : (isLandscape ? '210mm' : '148mm');
+  const cardH = isA4 
+    ? (isLandscape ? '210mm' : '297mm') 
+    : (isLandscape ? '148mm' : '210mm');
+  const cardPad = isA4 
+    ? (isLandscape ? '14mm 22mm 14mm' : '18mm 25mm 18mm') 
+    : (isLandscape ? '8mm 15mm 8mm' : '10mm 15mm 10mm');
+
   // ── Decorative green border frame ─────────────────────────────────
-  const BorderFrame = () => (
-    <div style={{
-      position: 'absolute', inset: 0, pointerEvents: 'none',
-      border: isLandscape ? '5px solid #2d6a2d' : '7px solid #2d6a2d', 
-      borderRadius: '4px', boxSizing: 'border-box'
-    }}>
+  const BorderFrame = () => {
+    const borderWidth = isA4 ? (isLandscape ? '7px solid #2d6a2d' : '9px solid #2d6a2d') : (isLandscape ? '5px solid #2d6a2d' : '7px solid #2d6a2d');
+    const borderInset = isA4 ? (isLandscape ? '6px' : '8px') : (isLandscape ? '4px' : '6px');
+    const flowerSize = isA4 ? (isLandscape ? 38 : 46) : (isLandscape ? 30 : 38);
+    const flowerFontSize = isA4 ? (isLandscape ? 26 : 32) : (isLandscape ? 20 : 26);
+
+    return (
       <div style={{
-        position: 'absolute', inset: isLandscape ? '4px' : '6px',
-        border: '2px solid #2d6a2d', borderRadius: '2px', boxSizing: 'border-box'
-      }} />
-      {[
-        { top: 0,    left: 0  } as React.CSSProperties,
-        { top: 0,    right: 0 } as React.CSSProperties,
-        { bottom: 0, left: 0  } as React.CSSProperties,
-        { bottom: 0, right: 0 } as React.CSSProperties,
-      ].map((pos, i) => (
-        <div key={i} style={{
-          position: 'absolute', ...pos,
-          width: isLandscape ? 30 : 38, height: isLandscape ? 30 : 38,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#2d6a2d', fontSize: isLandscape ? 20 : 26, lineHeight: 1
-        }}>✿</div>
-      ))}
-      {/* top & bottom center ornament */}
-      <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', color: '#2d6a2d', fontSize: 16 }}>⬦</div>
-      <div style={{ position: 'absolute', bottom: -3, left: '50%', transform: 'translateX(-50%)', color: '#2d6a2d', fontSize: 16 }}>⬦</div>
-    </div>
-  );
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        border: borderWidth, borderRadius: '4px', boxSizing: 'border-box'
+      }}>
+        <div style={{
+          position: 'absolute', inset: borderInset,
+          border: '2px solid #2d6a2d', borderRadius: '2px', boxSizing: 'border-box'
+        }} />
+        {[
+          { top: 0,    left: 0  } as React.CSSProperties,
+          { top: 0,    right: 0 } as React.CSSProperties,
+          { bottom: 0, left: 0  } as React.CSSProperties,
+          { bottom: 0, right: 0 } as React.CSSProperties,
+        ].map((pos, i) => (
+          <div key={i} style={{
+            position: 'absolute', ...pos,
+            width: flowerSize, height: flowerSize,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#2d6a2d', fontSize: flowerFontSize, lineHeight: 1
+          }}>✿</div>
+        ))}
+        {/* top & bottom center ornament */}
+        <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', color: '#2d6a2d', fontSize: isA4 ? 20 : 16 }}>⬦</div>
+        <div style={{ position: 'absolute', bottom: -3, left: '50%', transform: 'translateX(-50%)', color: '#2d6a2d', fontSize: isA4 ? 20 : 16 }}>⬦</div>
+      </div>
+    );
+  };
 
   // ── Left org block (varies by tab) ────────────────────────────────
+  const leftOrgFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '11.5pt' : '13.5pt');
   const leftOrg = activeTab === 'party' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>ĐẢNG BỘ {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>CHI BỘ {tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>ĐẢNG BỘ {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>CHI BỘ {tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : activeTab === 'front' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '12pt' }}>UBMTTQ VN {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '12pt' }}>BAN CÔNG TÁC MẶT TRẬN</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: '12pt' }}>{tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>UBMTTQ VN {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>BAN CÔNG TÁC MẶT TRẬN</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>{tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>UBND {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '11.5pt' : '13.5pt' }}>TỔ DÂN PHỐ {tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>UBND {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>TỔ DÂN PHỐ {tdpNameFormatted.toUpperCase()}</p>
     </>
   );
 
-  // ── A5 card (dimensions depend on orientation) ───────────────────
+  const docTitleFontSize = isA4 ? (isLandscape ? '14.5pt' : '16.5pt') : (isLandscape ? '13pt' : '15pt');
+  const docSubtitleFontSize = isA4 ? (isLandscape ? '14pt' : '15.5pt') : (isLandscape ? '12.5pt' : '14pt');
+  const titleFontSize = isA4 ? (isLandscape ? '28pt' : '34pt') : (isLandscape ? '22pt' : '26pt');
+  const bodyMarginBottom = isA4 ? '10px' : (isLandscape ? '6px' : '6px');
+  const closingMarginBottom = isA4 ? (isLandscape ? '18px' : '28px') : (isLandscape ? '0 0 6px' : '0 0 10px');
+  const signatureMarginTop = isA4 ? (isLandscape ? '15px' : '35px') : (isLandscape ? '2px' : '0');
+  const signerTitleFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '12pt' : '13.5pt');
+  const locationDateFontSize = isA4 ? (isLandscape ? '12.5pt' : '13.5pt') : (isLandscape ? '11pt' : '12pt');
+
+  // ── Invitation Card Component ───────────────────
   const InvitationCard = ({ recipient }: { recipient: string }) => (
     <div style={{
       position: 'relative',
       width: cardW, 
-      height: cardH, // fixed height for printing to prevent overflow
+      height: cardH,
       margin: '0 auto', background: 'white',
       padding: cardPad,
       fontFamily: '"Times New Roman", Times, serif',
-      fontSize: isLandscape ? '13pt' : '14.5pt', 
-      lineHeight: isLandscape ? 1.4 : 1.45,
+      fontSize: isA4 ? (isLandscape ? '15pt' : '17pt') : (isLandscape ? '13pt' : '14.5pt'), 
+      lineHeight: isA4 ? 1.55 : (isLandscape ? 1.4 : 1.45),
       color: '#111', boxSizing: 'border-box',
-      overflow: 'hidden', // hide overflow during print preview
+      overflow: 'hidden',
       flexShrink: 0
     }}>
       {showBorder && <BorderFrame />}
 
       {/* HEADER */}
       {showLeftHeader ? (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isLandscape ? '8px' : '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isA4 ? (isLandscape ? '14px' : '22px') : (isLandscape ? '8px' : '14px') }}>
           <div style={{ textAlign: 'center', width: '44%' }}>
             {leftOrg}
-            <div style={{ width: '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
-            <p style={{ margin: 0, fontSize: '11pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
+            <div style={{ width: isA4 ? '60px' : '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
+            <p style={{ margin: 0, fontSize: isA4 ? '12.5pt' : '11pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
           </div>
           <div style={{ textAlign: 'center', width: '52%' }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '13pt' : '15pt' }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: docTitleFontSize }}>
               {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
             </p>
             {activeTab !== 'party' && (
-              <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '12.5pt' : '14pt', textDecoration: 'underline' }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: docSubtitleFontSize, textDecoration: 'underline' }}>
                 Độc lập – Tự do – <strong>Hạnh phúc</strong>
               </p>
             )}
-            <div style={{ width: '120px', borderBottom: '1px solid #111', margin: '4px auto' }} />
+            <div style={{ width: isA4 ? '140px' : '120px', borderBottom: '1px solid #111', margin: '4px auto' }} />
           </div>
         </div>
       ) : (
-        <div style={{ textAlign: 'center', marginBottom: isLandscape ? '10px' : '16px', width: '100%' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: isLandscape ? '13.5pt' : '15.5pt' }}>
+        <div style={{ textAlign: 'center', marginBottom: isA4 ? '20px' : (isLandscape ? '10px' : '16px'), width: '100%' }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: docTitleFontSize }}>
             {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
           </p>
           {activeTab !== 'party' && (
-            <p style={{ margin: '2px 0 0', fontWeight: 700, fontSize: isLandscape ? '12.5pt' : '14.5pt', textDecoration: 'underline' }}>
+            <p style={{ margin: '2px 0 0', fontWeight: 700, fontSize: docSubtitleFontSize, textDecoration: 'underline' }}>
               Độc lập – Tự do – Hạnh phúc
             </p>
           )}
-          <div style={{ width: '150px', borderBottom: '1px solid #111', margin: '6px auto 0' }} />
+          <div style={{ width: isA4 ? '160px' : '150px', borderBottom: '1px solid #111', margin: '6px auto 0' }} />
         </div>
       )}
 
       {/* TITLE */}
       <h1 style={{ 
         textAlign: 'center', fontWeight: 700, 
-        fontSize: isLandscape ? '22pt' : '26pt', 
-        margin: isLandscape ? '4px 0 6px' : '4px 0 8px', 
-        letterSpacing: '2px' 
+        fontSize: titleFontSize, 
+        margin: isA4 ? (isLandscape ? '10px 0 14px' : '16px 0 20px') : (isLandscape ? '4px 0 6px' : '4px 0 8px'), 
+        letterSpacing: '3px' 
       }}>
         GIẤY MỜI
       </h1>
 
       {/* KÍNH GỬI */}
-      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 6px', fontWeight: 700 }}>
+      <p style={{ margin: 0, marginBottom: bodyMarginBottom, fontWeight: 700 }}>
         Kính gửi :{' '}
         <span style={{ textDecoration: 'underline' }}>{recipient}</span>
       </p>
 
       {/* BODY */}
-      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 6px', textIndent: '1.5em', textAlign: 'justify' }}>
+      <p style={{ margin: 0, marginBottom: bodyMarginBottom, textIndent: '1.5em', textAlign: 'justify' }}>
         Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp{' '}
         <span style={{ textDecoration: 'underline' }}>{tdpNameFormatted}</span>,{' '}
         <span style={{ textDecoration: 'underline' }}>{wardNameFormatted}</span>
       </p>
 
-      <p style={{ margin: '0 0 3px' }}>
+      <p style={{ margin: 0, marginBottom: isA4 ? '8px' : '3px' }}>
         <span style={{ textDecoration: 'underline' }}>Thời gian</span>{' '}
         <strong>{meetingTime}</strong> ngày <strong>{meetingDay}/{meetingMonth}/{meetingYear}</strong>
       </p>
 
-      <p style={{ margin: '0 0 3px' }}>
+      <p style={{ margin: 0, marginBottom: isA4 ? '8px' : '3px' }}>
         <span style={{ textDecoration: 'underline' }}>Địa điểm</span>:{' '}
         <span style={{ textDecoration: 'underline' }}>{location}</span>
       </p>
 
-      <p style={{ margin: '0 0 3px' }}>
+      <p style={{ margin: 0, marginBottom: isA4 ? '8px' : '3px' }}>
         <span style={{ textDecoration: 'underline' }}>Nội dung</span>:{' '}
         <span style={{ textDecoration: 'underline', whiteSpace: 'pre-wrap' }}>{content}</span>
       </p>
 
-      <p style={{ margin: isLandscape ? '0 0 6px' : '0 0 10px', textIndent: '1.5em', textAlign: 'justify', whiteSpace: 'pre-wrap' }}>
+      <p style={{ margin: 0, marginBottom: closingMarginBottom, textIndent: '1.5em', textAlign: 'justify', whiteSpace: 'pre-wrap' }}>
         <span style={{ textDecoration: 'underline' }}>{closingNote}</span>
       </p>
 
       {/* SIGNATURE */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: isLandscape ? '2px' : '0' }}>
-        <div style={{ textAlign: 'center', minWidth: '190px' }}>
-          <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: isLandscape ? '11pt' : '12pt' }}>{locationDate}</p>
-          <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: isLandscape ? '12pt' : '13.5pt' }}>{signerTitle}</p>
-          <div style={{ height: isLandscape ? '20px' : '30px' }} />
-          <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: isLandscape ? '12pt' : '13.5pt' }}>{signerName}</p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: signatureMarginTop }}>
+        <div style={{ textAlign: 'center', minWidth: isA4 ? '220px' : '190px' }}>
+          <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: locationDateFontSize }}>{locationDate}</p>
+          <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: signerTitleFontSize }}>{signerTitle}</p>
+          <div style={{ height: isA4 ? (isLandscape ? '35px' : '50px') : (isLandscape ? '20px' : '30px') }} />
+          <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: signerTitleFontSize }}>{signerName}</p>
         </div>
       </div>
     </div>
@@ -598,16 +686,16 @@ const InvitationTemplates: React.FC = () => {
         @media print {
           body * { visibility: hidden !important; }
           .inv-print-area, .inv-print-area * { visibility: visible !important; }
-          @page { size: A5 ${orientation}; margin: 0; }
+          @page { size: ${isA4 ? `A4 ${orientation}` : `A5 ${orientation}`}; margin: 0; }
           .inv-print-area {
             position: absolute !important;
             top: 0 !important; left: 0 !important;
-            width: ${orientation === 'portrait' ? '148mm' : '210mm'} !important;
+            width: ${cardW} !important;
             display: block !important;
           }
           .print-card-wrapper {
-            width: ${orientation === 'portrait' ? '148mm' : '210mm'} !important;
-            height: ${orientation === 'portrait' ? '210mm' : '148mm'} !important;
+            width: ${cardW} !important;
+            height: ${cardH} !important;
             box-sizing: border-box !important;
             position: relative !important;
             page-break-after: always !important;
@@ -655,8 +743,32 @@ const InvitationTemplates: React.FC = () => {
 
       {/* TOOLBAR */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
-        <h2 style={{ margin: 0, fontSize: '18px' }}>📋 Mẫu Giấy Mời (A5)</h2>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <h2 style={{ margin: 0, fontSize: '18px' }}>📋 Mẫu Giấy Mời {isA4 ? '(Khổ A4 toàn trang)' : '(Khổ A5 - 2 bản/A4)'}</h2>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Paper Size toggle */}
+          <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+            <button
+              onClick={() => setPaperSize('a5_half')}
+              title="Khổ A5 (In 2 giấy mời ghép trên 1 tờ A4)"
+              style={{
+                padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                fontWeight: 600, fontSize: '12px', transition: 'all 0.15s',
+                background: paperSize === 'a5_half' ? '#0d9488' : 'transparent',
+                color: paperSize === 'a5_half' ? 'white' : '#475569',
+              }}
+            >📄 A5 (2 bản/A4)</button>
+            <button
+              onClick={() => setPaperSize('a4_full')}
+              title="Khổ A4 (In 1 giấy mời vừa toàn bộ 1 tờ A4)"
+              style={{
+                padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                fontWeight: 600, fontSize: '12px', transition: 'all 0.15s',
+                background: paperSize === 'a4_full' ? '#0d9488' : 'transparent',
+                color: paperSize === 'a4_full' ? 'white' : '#475569',
+              }}
+            >📜 A4 (1 bản/A4)</button>
+          </div>
+
           {/* Orientation toggle */}
           <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '3px', gap: '2px' }}>
             <button
@@ -692,7 +804,7 @@ const InvitationTemplates: React.FC = () => {
                 boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
                 transition: 'opacity 0.15s'
               }}
-            >🖨️ {selectedHhList.length > 0 ? `In hàng loạt (${selectedHhList.length} bản)` : 'In giấy mời'} ({orientation === 'portrait' ? 'Dọc' : 'Ngang'})</button>
+            >🖨️ {selectedHhList.length > 0 ? `In hàng loạt (${selectedHhList.length} bản)` : 'In giấy mời'} ({isA4 ? 'A4' : 'A5'} {orientation === 'portrait' ? 'Dọc' : 'Ngang'})</button>
           )}
         </div>
       </div>
@@ -1018,7 +1130,7 @@ const InvitationTemplates: React.FC = () => {
               </div>
             </div>
 
-            {/* Screen Preview (Full scale or very large) */}
+            {/* Screen Preview (Full scale or scaled to fit container) */}
             <div className="screen-only" style={{ 
               display: 'flex', 
               justifyContent: 'center', 
@@ -1028,8 +1140,8 @@ const InvitationTemplates: React.FC = () => {
               flexShrink: 0
             }}>
               <div style={{
-                width: isLandscape ? '635px' : '475px',
-                height: isLandscape ? '447px' : '675px',
+                width: isA4 ? (isLandscape ? '635px' : '475px') : (isLandscape ? '635px' : '475px'),
+                height: isA4 ? (isLandscape ? '449px' : '672px') : (isLandscape ? '447px' : '675px'),
                 overflow: 'hidden',
                 position: 'relative',
                 flexShrink: 0,
@@ -1041,10 +1153,12 @@ const InvitationTemplates: React.FC = () => {
                   position: 'absolute',
                   top: 0,
                   left: 0,
-                  transform: isLandscape ? 'scale(0.8)' : 'scale(0.85)',
+                  transform: isA4 
+                    ? (isLandscape ? 'scale(0.57)' : 'scale(0.6)') 
+                    : (isLandscape ? 'scale(0.8)' : 'scale(0.85)'),
                   transformOrigin: 'top left',
-                  width: isLandscape ? '794px' : '559px',
-                  height: isLandscape ? '559px' : '794px'
+                  width: cardW,
+                  height: cardH
                 }}>
                   <InvitationCard recipient={recipientTitle} />
                 </div>
@@ -1067,11 +1181,11 @@ const InvitationTemplates: React.FC = () => {
             </div>
 
             <div style={{ width: '100%', background: '#fffbeb', borderRadius: '10px', padding: '12px', fontSize: '11.5px', color: '#b45309', border: '1px solid #fef3c7', lineHeight: 1.5, boxSizing: 'border-box' }}>
-              <strong>💡 Mẹo in đẹp không bị tràn trang:</strong><br />
-              1. Khi bảng in hiện ra, chọn đúng khổ giấy <strong>A5</strong>.<br />
-              2. Chọn hướng in phù hợp (<strong>Dọc</strong> hoặc <strong>Ngang</strong>) giống như nút bạn vừa chọn ở trên.<br />
-              3. Tắt mục <strong>"Tiêu đề đầu trang và chân trang"</strong> (Headers & Footers).<br />
-              4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> để viền xanh được in khít trang và không bị nhảy sang trang 2.
+              <strong>💡 Mẹo in chuẩn đẹp không bị tràn trang:</strong><br />
+              1. <strong>Chế độ in hiện tại:</strong> {isA4 ? 'Khổ A4 toàn trang (1 giấy mời/tờ A4)' : 'Khổ A5 (Ghép 2 giấy mời/tờ A4)'}.<br />
+              2. Khi cửa sổ in mở ra, chọn đúng hướng giấy (<strong>{orientation === 'portrait' ? 'Dọc (Portrait)' : 'Ngang (Landscape)'}</strong>) và khổ giấy (<strong>A4</strong>).<br />
+              3. Bắt buộc bỏ tích chọn mục <strong>"Tiêu đề đầu trang và chân trang"</strong> (Headers & Footers).<br />
+              4. Đặt mục <strong>"Lề" (Margins)</strong> thành <strong>"Không có" (None)</strong> hoặc <strong>"Mặc định"</strong> để khung viền xanh in đẹp mắt.
             </div>
           </div>
         </div>
