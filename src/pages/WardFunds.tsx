@@ -25,7 +25,7 @@ import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData, getCanonicalHouseholdReceiptKey, formatReceiptAddress } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData, getCanonicalHouseholdReceiptKey, formatReceiptAddress, sanitizeReceiptHtmlAddresses } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -4918,32 +4918,16 @@ const WardFunds = () => {
 
     const hasSavedVersion = Boolean(savedReceiptHtml);
     let receiptHtml = savedReceiptHtml || freshReceiptHtml;
-
-    if (receiptHtml) {
-      receiptHtml = receiptHtml
-        .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
-        .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
-        .replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, p2, p3) => {
-          let cleaned = p2;
-          if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
-            cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
-          }
-          cleaned = cleaned.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
-          return `${p1}${cleaned}${p3}`;
-        });
-    }
-
-    // Tự động kiểm tra và đảm bảo tên Tổ đứng trước địa chỉ
     const hhGroupStr = (household as any).self_management_group || (activeMembers?.[0] as any)?.self_management_group || '';
-    if (receiptHtml && hhGroupStr) {
-      const formattedGroup = hhGroupStr.trim().toLowerCase().startsWith('tổ') || hhGroupStr.trim().toLowerCase().startsWith('cụm') 
-        ? hhGroupStr.trim() 
-        : `Tổ ${hhGroupStr.trim()}`;
-      // Gỡ tên Tổ khỏi hàng Họ tên nếu có từ bản lưu cũ
-      receiptHtml = receiptHtml.replace(new RegExp(`(Họ và tên người nộp tiền:[\\s\\S]*?<td[^>]*>[\\s\\S]*?)\\s*${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '$1');
-      if (!receiptHtml.includes(formattedGroup)) {
-        receiptHtml = receiptHtml.replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)/i, `$1${formattedGroup}, `);
-      }
+    if (receiptHtml) {
+      receiptHtml = sanitizeReceiptHtmlAddresses(
+        receiptHtml,
+        hhGroupStr,
+        household.address || (headResident as any)?.address,
+        tdpNameVal,
+        wardNameVal,
+        true
+      );
     }
 
     const htmlContent = `
@@ -5797,18 +5781,16 @@ const WardFunds = () => {
         leaderName,
         leaderSigUrl
       );
+      const hhGroupStr = (item.household as any).self_management_group || (item.members?.[0] as any)?.self_management_group || '';
       if (receiptBody) {
-        receiptBody = receiptBody
-          .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
-          .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
-          .replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, p2, p3) => {
-            let cleaned = p2;
-            if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
-              cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
-            }
-            cleaned = cleaned.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
-            return `${p1}${cleaned}${p3}`;
-          });
+        receiptBody = sanitizeReceiptHtmlAddresses(
+          receiptBody,
+          hhGroupStr,
+          item.household.address || (item.members?.[0] as any)?.address,
+          tdpNameVal,
+          wardNameVal,
+          true
+        );
       }
       const isLast = idx === listToPrint.length - 1;
       return `

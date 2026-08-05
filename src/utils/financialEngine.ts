@@ -613,6 +613,42 @@ export function formatReceiptAddress(
   return addr.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Chuẩn hóa và đồng bộ 100% tất cả các dòng Địa chỉ trên chuỗi HTML phiếu thu (kể cả bản chỉnh sửa lưu trong DB/localStorage).
+ */
+export function sanitizeReceiptHtmlAddresses(
+  receiptHtml: string,
+  groupName?: string | null,
+  rawAddress?: string | null,
+  tdpNameVal: string = 'Quảng Giao',
+  wardNameVal: string = 'Phường Nam Sầm Sơn',
+  isWardAccount: boolean = false
+): string {
+  if (!receiptHtml) return receiptHtml;
+
+  const formattedAddress = formatReceiptAddress(groupName, rawAddress, tdpNameVal, wardNameVal, isWardAccount);
+
+  let result = receiptHtml
+    .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
+    .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+
+  const gStr = (groupName || '').trim();
+  if (gStr) {
+    const formattedGroup = gStr.toLowerCase().startsWith('tổ') || gStr.toLowerCase().startsWith('cụm') ? gStr : `Tổ ${gStr}`;
+    result = result.replace(
+      new RegExp(`(Họ và tên người nộp tiền:[\\s\\S]*?<td[^>]*>[\\s\\S]*?)\\s*${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'),
+      '$1'
+    );
+  }
+
+  // Đồng bộ tất cả các dòng "Địa chỉ:" trên phiếu (cả dòng ở góc Đơn vị và dòng ở bảng thông tin người nộp)
+  result = result.replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, _p2, p3) => {
+    return `${p1}${formattedAddress}${p3}`;
+  });
+
+  return result;
+}
+
 
 /**
  * Xuất HTML Phiếu Thu 2 Liên (Mẫu 01-TT theo Thông tư 200/2014/TT-BTC) chuẩn hóa 100%.
