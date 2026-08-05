@@ -225,9 +225,9 @@ const InvitationTemplates: React.FC = () => {
     let cardsHtml = '';
     
     const renderCardHtml = (recipientName: string) => {
-      const leftOrgFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '11.5pt' : '13.5pt');
-      const docTitleFontSize = isA4 ? (isLandscape ? '14.5pt' : '16.5pt') : (isLandscape ? '13pt' : '15pt');
-      const docSubtitleFontSize = isA4 ? (isLandscape ? '14pt' : '15.5pt') : (isLandscape ? '12.5pt' : '14pt');
+      const leftOrgFontSize = isA4 ? (isLandscape ? '12.5pt' : '14pt') : (isLandscape ? '10.5pt' : '11.5pt');
+      const docTitleFontSize = isA4 ? (isLandscape ? '13pt' : '14.5pt') : (isLandscape ? '11pt' : '11.5pt');
+      const docSubtitleFontSize = isA4 ? (isLandscape ? '12.5pt' : '14pt') : (isLandscape ? '10.5pt' : '11.5pt');
       const titleFontSize = isA4 ? (isLandscape ? '28pt' : '34pt') : (isLandscape ? '22pt' : '26pt');
       const bodyMarginBottom = isA4 ? '10px' : (isLandscape ? '6px' : '8px');
       const closingMarginBottom = isA4 ? (isLandscape ? '18px' : '28px') : (isLandscape ? '10px' : '18px');
@@ -241,20 +241,20 @@ const InvitationTemplates: React.FC = () => {
       const flowerFontSize = isA4 ? (isLandscape ? '26px' : '32px') : (isLandscape ? '20px' : '26px');
 
       const leftOrgHtml = activeTab === 'party' ? `
-        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">ĐẢNG BỘ ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">CHI BỘ ${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize}; white-space: nowrap;">ĐẢNG BỘ ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize}; white-space: nowrap;">CHI BỘ ${rawTdpName.toUpperCase()}</p>
       ` : activeTab === 'front' ? `
-        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">UBMTTQ VN ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">BAN CÔNG TÁC MẶT TRẬN</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize}; white-space: nowrap;">UBMTTQ VN ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize}; white-space: nowrap;">BAN CÔNG TÁC MẶT TRẬN</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize}; white-space: nowrap;">${rawTdpName.toUpperCase()}</p>
       ` : `
-        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">UBND ${rawWardName.toUpperCase()}</p>
-        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize};">TỔ DÂN PHỐ ${rawTdpName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize}; white-space: nowrap;">UBND ${rawWardName.toUpperCase()}</p>
+        <p style="margin: 0; font-weight: 700; font-size: ${leftOrgFontSize}; white-space: nowrap;">TỔ DÂN PHỐ ${rawTdpName.toUpperCase()}</p>
       `;
 
       const docTitle = activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
       const docSubtitleHtml = activeTab !== 'party' ? `
-        <p style="margin: 0; font-weight: 700; font-size: ${docSubtitleFontSize}; text-decoration: underline;">
+        <p style="margin: 0; font-weight: 700; font-size: ${docSubtitleFontSize}; text-decoration: underline; white-space: nowrap;">
           Độc lập – Tự do – Hạnh phúc
         </p>
       ` : '';
@@ -276,14 +276,14 @@ const InvitationTemplates: React.FC = () => {
 
           <!-- Header -->
           ${showLeftHeader ? `
-          <div style="display: flex; justify-content: space-between; margin-bottom: ${isA4 ? (isLandscape ? '14px' : '22px') : (isLandscape ? '8px' : '14px')};">
-            <div style="text-align: center; width: 44%;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: ${isA4 ? (isLandscape ? '14px' : '22px') : (isLandscape ? '8px' : '14px')}; flex-wrap: nowrap;">
+            <div style="text-align: center; width: 38%; flex-shrink: 0;">
               ${leftOrgHtml}
               <div style="width: 60px; border-bottom: 1px solid #111; margin: 4px auto 6px;"></div>
-              <p style="margin: 0; font-size: ${isA4 ? '12.5pt' : '11pt'};">Số: ${invitationNumber || '.....'}/GM-TDP</p>
+              <p style="margin: 0; font-size: ${isA4 ? '12.5pt' : '10.5pt'}; white-space: nowrap;">Số: ${invitationNumber || '.....'}/GM-TDP</p>
             </div>
-            <div style="text-align: center; width: 52%;">
-              <p style="margin: 0; font-weight: 700; font-size: ${docTitleFontSize};">
+            <div style="text-align: center; width: 60%; flex-shrink: 0;">
+              <p style="margin: 0; font-weight: 700; font-size: ${docTitleFontSize}; white-space: nowrap;">
                 ${docTitle}
               </p>
               ${docSubtitleHtml}
@@ -292,11 +292,11 @@ const InvitationTemplates: React.FC = () => {
           </div>
           ` : `
           <div style="text-align: center; margin-bottom: ${isA4 ? '20px' : (isLandscape ? '10px' : '16px')}; width: 100%;">
-            <p style="margin: 0; font-weight: 700; font-size: ${docTitleFontSize};">
+            <p style="margin: 0; font-weight: 700; font-size: ${docTitleFontSize}; white-space: nowrap;">
               ${docTitle}
             </p>
             ${activeTab !== 'party' ? `
-              <p style="margin: 3px 0 0; font-weight: 700; font-size: ${docSubtitleFontSize}; text-decoration: underline;">
+              <p style="margin: 3px 0 0; font-weight: 700; font-size: ${docSubtitleFontSize}; text-decoration: underline; white-space: nowrap;">
                 Độc lập – Tự do – Hạnh phúc
               </p>
             ` : ''}
@@ -546,27 +546,27 @@ const InvitationTemplates: React.FC = () => {
   };
 
   // ── Left org block (varies by tab) ────────────────────────────────
-  const leftOrgFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '11.5pt' : '13.5pt');
+  const leftOrgFontSize = isA4 ? (isLandscape ? '12.5pt' : '14pt') : (isLandscape ? '10.5pt' : '11.5pt');
   const leftOrg = activeTab === 'party' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>ĐẢNG BỘ {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>CHI BỘ {tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize, whiteSpace: 'nowrap' }}>ĐẢNG BỘ {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize, whiteSpace: 'nowrap' }}>CHI BỘ {tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : activeTab === 'front' ? (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>UBMTTQ VN {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>BAN CÔNG TÁC MẶT TRẬN</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>{tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize, whiteSpace: 'nowrap' }}>UBMTTQ VN {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize, whiteSpace: 'nowrap' }}>BAN CÔNG TÁC MẶT TRẬN</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize, whiteSpace: 'nowrap' }}>{tdpNameFormatted.toUpperCase()}</p>
     </>
   ) : (
     <>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>UBND {wardNameFormatted.toUpperCase()}</p>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize }}>TỔ DÂN PHỐ {tdpNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize, whiteSpace: 'nowrap' }}>UBND {wardNameFormatted.toUpperCase()}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: leftOrgFontSize, whiteSpace: 'nowrap' }}>TỔ DÂN PHỐ {tdpNameFormatted.toUpperCase()}</p>
     </>
   );
 
-  const docTitleFontSize = isA4 ? (isLandscape ? '14.5pt' : '16.5pt') : (isLandscape ? '13pt' : '15pt');
-  const docSubtitleFontSize = isA4 ? (isLandscape ? '14pt' : '15.5pt') : (isLandscape ? '12.5pt' : '14pt');
+  const docTitleFontSize = isA4 ? (isLandscape ? '13pt' : '14.5pt') : (isLandscape ? '11pt' : '11.5pt');
+  const docSubtitleFontSize = isA4 ? (isLandscape ? '12.5pt' : '14pt') : (isLandscape ? '10.5pt' : '11.5pt');
   const titleFontSize = isA4 ? (isLandscape ? '28pt' : '34pt') : (isLandscape ? '22pt' : '26pt');
   const bodyMarginBottom = isA4 ? '10px' : (isLandscape ? '6px' : '6px');
   const closingMarginBottom = isA4 ? (isLandscape ? '18px' : '28px') : (isLandscape ? '0 0 6px' : '0 0 10px');
@@ -593,18 +593,18 @@ const InvitationTemplates: React.FC = () => {
 
       {/* HEADER */}
       {showLeftHeader ? (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isA4 ? (isLandscape ? '14px' : '22px') : (isLandscape ? '8px' : '14px') }}>
-          <div style={{ textAlign: 'center', width: '44%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isA4 ? (isLandscape ? '14px' : '22px') : (isLandscape ? '8px' : '14px'), flexWrap: 'nowrap' }}>
+          <div style={{ textAlign: 'center', width: '38%', flexShrink: 0 }}>
             {leftOrg}
             <div style={{ width: isA4 ? '60px' : '50px', borderBottom: '1px solid #111', margin: '3px auto 4px' }} />
-            <p style={{ margin: 0, fontSize: isA4 ? '12.5pt' : '11pt' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
+            <p style={{ margin: 0, fontSize: isA4 ? '12.5pt' : '10.5pt', whiteSpace: 'nowrap' }}>Số: {invitationNumber || '.....'}/GM-TDP</p>
           </div>
-          <div style={{ textAlign: 'center', width: '52%' }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: docTitleFontSize }}>
+          <div style={{ textAlign: 'center', width: '60%', flexShrink: 0 }}>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: docTitleFontSize, whiteSpace: 'nowrap' }}>
               {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
             </p>
             {activeTab !== 'party' && (
-              <p style={{ margin: 0, fontWeight: 700, fontSize: docSubtitleFontSize, textDecoration: 'underline' }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: docSubtitleFontSize, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
                 Độc lập – Tự do – <strong>Hạnh phúc</strong>
               </p>
             )}
@@ -613,11 +613,11 @@ const InvitationTemplates: React.FC = () => {
         </div>
       ) : (
         <div style={{ textAlign: 'center', marginBottom: isA4 ? '20px' : (isLandscape ? '10px' : '16px'), width: '100%' }}>
-          <p style={{ margin: 0, fontWeight: 700, fontSize: docTitleFontSize }}>
+          <p style={{ margin: 0, fontWeight: 700, fontSize: docTitleFontSize, whiteSpace: 'nowrap' }}>
             {activeTab === 'party' ? 'ĐẢNG CỘNG SẢN VIỆT NAM' : 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'}
           </p>
           {activeTab !== 'party' && (
-            <p style={{ margin: '2px 0 0', fontWeight: 700, fontSize: docSubtitleFontSize, textDecoration: 'underline' }}>
+            <p style={{ margin: '2px 0 0', fontWeight: 700, fontSize: docSubtitleFontSize, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
               Độc lập – Tự do – Hạnh phúc
             </p>
           )}
