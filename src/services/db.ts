@@ -278,6 +278,10 @@ const enrichPayload = (payload: any) => {
   if (wardId && !payload.ward_id) {
     payload.ward_id = wardId;
   }
+  // Chuyển status 'moved_out' thành 'temporary_absent' cho Supabase nếu database chứa CHECK constraint cũ
+  if (payload.status === 'moved_out') {
+    payload.status = 'temporary_absent';
+  }
   return payload;
 };
 
