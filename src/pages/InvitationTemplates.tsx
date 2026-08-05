@@ -61,7 +61,7 @@ const InvitationTemplates: React.FC = () => {
   const [previewHhId, setPreviewHhId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
-  const [recipientPattern, setRecipientPattern] = useState('Đại diện hộ gia đình ông/bà {ten_chu_ho}');
+  const [recipientPattern, setRecipientPattern] = useState('Đại diện hộ gia đình ông/bà {ten_chu_ho} - {to}');
   const [showBorder, setShowBorder] = useState(true);
   const [showLeftHeader, setShowLeftHeader] = useState(true);
 
@@ -192,7 +192,22 @@ const InvitationTemplates: React.FC = () => {
 
   const getRecipientName = (h: Household) => {
     const name = getHeadName(h);
-    return recipientPattern.replace(/{ten_chu_ho}/g, name);
+    const hhGroupRaw = (h.self_management_group || '').trim();
+    const groupText = hhGroupRaw
+      ? (hhGroupRaw.toLowerCase().startsWith('tổ') || hhGroupRaw.toLowerCase().startsWith('cụm')
+          ? hhGroupRaw
+          : `Tổ ${hhGroupRaw}`)
+      : '';
+
+    let res = recipientPattern
+      .replace(/{ten_chu_ho}/g, name)
+      .replace(/{to}/g, groupText)
+      .replace(/{so_ho}/g, h.household_number || '');
+
+    if (!hhGroupRaw) {
+      res = res.replace(/\s*-\s*$/, '').trim();
+    }
+    return res;
   };
 
   const selectedHhList = useMemo(() => {
@@ -1083,7 +1098,10 @@ const InvitationTemplates: React.FC = () => {
                 <label className="inv-label">Định dạng kính gửi tự động:</label>
                 <input className="inv-input" value={recipientPattern}
                   onChange={e => setRecipientPattern(e.target.value)}
-                  placeholder="Đại diện hộ gia đình ông/bà {ten_chu_ho}" />
+                  placeholder="Đại diện hộ gia đình ông/bà {ten_chu_ho} - {to}" />
+                <div style={{ fontSize: '8pt', color: '#666', marginTop: '2px' }}>
+                  Hỗ trợ các từ khóa: <code>{'{ten_chu_ho}'}</code>, <code>{'{to}'}</code> (Tổ dân cư), <code>{'{so_ho}'}</code>
+                </div>
               </div>
 
               <div style={{ gridColumn: 'span 4' }}>
