@@ -311,28 +311,28 @@ const InvitationTemplates: React.FC = () => {
 
           <!-- Kính gửi -->
           <p style="margin: 0 0 ${bodyMarginBottom}; font-weight: 700;">
-            Kính gửi : <span style="text-decoration: underline;">${recipientName}</span>
+            Kính gửi : <span>${recipientName}</span>
           </p>
 
           <!-- Body -->
           <p style="margin: 0 0 ${bodyMarginBottom}; text-indent: 1.5em; text-align: justify;">
-            Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp <span style="text-decoration: underline;">${tdpNameFormatted}</span>, <span style="text-decoration: underline;">${wardNameFormatted}</span>
+            Trân trọng kính mời đại diện gia đình đến dự hội nghị họp TDP <span>${tdpNameFormatted}</span>, <span>${wardNameFormatted}</span>
           </p>
 
           <p style="margin: 0 0 ${isA4 ? '8px' : '4px'};">
-            <span style="text-decoration: underline;">Thời gian</span> <strong>${meetingTime}</strong> ngày <strong>${meetingDay}/${meetingMonth}/${meetingYear}</strong>
+            <strong>Thời gian:</strong> <strong>${meetingTime}</strong> ngày <strong>${meetingDay}/${meetingMonth}/${meetingYear}</strong>
           </p>
 
           <p style="margin: 0 0 ${isA4 ? '8px' : '4px'};">
-            <span style="text-decoration: underline;">Địa điểm</span>: <span style="text-decoration: underline;">${location}</span>
+            <strong>Địa điểm:</strong> <span>${location}</span>
           </p>
 
           <p style="margin: 0 0 ${isA4 ? '8px' : '4px'};">
-            <span style="text-decoration: underline;">Nội dung</span>: <span style="text-decoration: underline; white-space: pre-wrap;">${content}</span>
+            <strong>Nội dung:</strong> <span style="white-space: pre-wrap;">${content}</span>
           </p>
 
           <p style="margin: 0 0 ${closingMarginBottom}; text-indent: 1.5em; text-align: justify; white-space: pre-wrap;">
-            <span style="text-decoration: underline;">${closingNote}</span>
+            <span>${closingNote}</span>
           </p>
 
           <!-- Signature -->
@@ -637,34 +637,33 @@ const InvitationTemplates: React.FC = () => {
 
       {/* KÍNH GỬI */}
       <p style={{ margin: 0, marginBottom: bodyMarginBottom, fontWeight: 700 }}>
-        Kính gửi :{' '}
-        <span style={{ textDecoration: 'underline' }}>{recipient}</span>
+        Kính gửi : <span>{recipient}</span>
       </p>
 
       {/* BODY */}
       <p style={{ margin: 0, marginBottom: bodyMarginBottom, textIndent: '1.5em', textAlign: 'justify' }}>
-        Trân trọng: kính mời đại diện gia đình ,đến dự hội nghi họp tdp{' '}
-        <span style={{ textDecoration: 'underline' }}>{tdpNameFormatted}</span>,{' '}
-        <span style={{ textDecoration: 'underline' }}>{wardNameFormatted}</span>
+        Trân trọng kính mời đại diện gia đình đến dự hội nghị họp TDP{' '}
+        <span>{tdpNameFormatted}</span>,{' '}
+        <span>{wardNameFormatted}</span>
       </p>
 
       <p style={{ margin: 0, marginBottom: isA4 ? '8px' : '3px' }}>
-        <span style={{ textDecoration: 'underline' }}>Thời gian</span>{' '}
+        <strong>Thời gian:</strong>{' '}
         <strong>{meetingTime}</strong> ngày <strong>{meetingDay}/{meetingMonth}/{meetingYear}</strong>
       </p>
 
       <p style={{ margin: 0, marginBottom: isA4 ? '8px' : '3px' }}>
-        <span style={{ textDecoration: 'underline' }}>Địa điểm</span>:{' '}
-        <span style={{ textDecoration: 'underline' }}>{location}</span>
+        <strong>Địa điểm:</strong>{' '}
+        <span>{location}</span>
       </p>
 
       <p style={{ margin: 0, marginBottom: isA4 ? '8px' : '3px' }}>
-        <span style={{ textDecoration: 'underline' }}>Nội dung</span>:{' '}
-        <span style={{ textDecoration: 'underline', whiteSpace: 'pre-wrap' }}>{content}</span>
+        <strong>Nội dung:</strong>{' '}
+        <span style={{ whiteSpace: 'pre-wrap' }}>{content}</span>
       </p>
 
       <p style={{ margin: 0, marginBottom: closingMarginBottom, textIndent: '1.5em', textAlign: 'justify', whiteSpace: 'pre-wrap' }}>
-        <span style={{ textDecoration: 'underline' }}>{closingNote}</span>
+        <span>{closingNote}</span>
       </p>
 
       {/* SIGNATURE */}
