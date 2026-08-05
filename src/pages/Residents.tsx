@@ -1811,9 +1811,12 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
 
   // Filters calculation
   const filteredResidents = useMemo(() => residents.filter(r => {
-    // Filter by temporary status in temp view mode
+    const isMovedOut = r.status === 'moved_out' || (r.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi';
+
+    // Filter by temporary status or moved out in temp view mode
     if (viewMode === 'temp') {
-      if (r.status !== 'temporary_resident' && r.status !== 'temporary_absent' && r.status !== 'stay') {
+      const isTempOrMovedOut = r.status === 'temporary_resident' || r.status === 'temporary_absent' || r.status === 'stay' || isMovedOut;
+      if (!isTempOrMovedOut) {
         return false;
       }
     }
@@ -1858,12 +1861,11 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       matchesHousehold = r.household_id === householdFilter;
     }
 
-    // Moved out filter matches (Nếu không bật showMovedOut thì mặc định loại trừ người đã chuyển đi khỏi danh sách nhân khẩu chính)
-    const isMovedOut = r.status === 'moved_out' || (r.relationship_with_head || '').trim().toLowerCase() === 'thành viên chuyển đi';
+    // Moved out filter matches (Ẩn người chuyển đi khỏi danh sách nhân khẩu chính viewMode === 'all', trừ khi tick showMovedOut)
     let matchesMovedOut = true;
     if (showMovedOut) {
       matchesMovedOut = isMovedOut;
-    } else if (viewMode !== 'changes') {
+    } else if (viewMode === 'all') {
       matchesMovedOut = !isMovedOut;
     }
 
