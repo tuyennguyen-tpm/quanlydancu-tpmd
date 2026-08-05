@@ -948,29 +948,34 @@ const InvitationTemplates: React.FC = () => {
             </div>
 
             {printedHhIds.size > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px', borderTop: '1px dashed #cbd5e1', fontSize: '11px', flexWrap: 'wrap', gap: '4px' }}>
-                <span style={{ color: '#059669', fontWeight: 700 }}>
-                  ✓ Đã in: {printedHhIds.size} hộ
-                </span>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={handleDeselectPrinted}
-                    title="Bỏ chọn những hộ đã in để sẵn sàng in các hộ còn lại khi bị hết giấy"
-                    style={{
-                      background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
-                      padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >🚫 Bỏ chọn đã in</button>
-                  <button
-                    onClick={handleClearPrintedStatus}
-                    title="Xóa mốc lịch sử đã in để bắt đầu đợt in mới"
-                    style={{
-                      background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca',
-                      padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >🔄 Đặt lại mốc</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '4px', borderTop: '1px dashed #cbd5e1', fontSize: '11px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                  <span style={{ color: '#059669', fontWeight: 700 }}>
+                    ✓ Đã ghi nhận đã in: {printedHhIds.size} hộ
+                  </span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={handleDeselectPrinted}
+                      title="Bỏ chọn những hộ đã in để sẵn sàng in các hộ còn lại khi bị hết giấy hoặc mất điện"
+                      style={{
+                        background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
+                        padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700,
+                        cursor: 'pointer', boxShadow: '0 1px 3px rgba(4,120,87,0.15)'
+                      }}
+                    >🚫 Bỏ chọn đã in (In nối tiếp)</button>
+                    <button
+                      onClick={handleClearPrintedStatus}
+                      title="Xóa mốc lịch sử đã in để bắt đầu đợt in mới từ đầu"
+                      style={{
+                        background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca',
+                        padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >🔄 Đặt lại mốc</button>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10.5px', color: '#047857', background: '#f0fdf4', padding: '4px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', marginTop: '2px' }}>
+                  💡 <strong>Hệ thống đã tự ghi nhớ!</strong> Nếu bị sự cố mất điện/hết giấy, bấm <strong>🚫 Bỏ chọn đã in</strong> để tự động bỏ qua các hộ đã in và chỉ tiếp tục in các hộ còn lại.
                 </div>
               </div>
             )}
@@ -978,7 +983,7 @@ const InvitationTemplates: React.FC = () => {
 
           {/* Scrollable list */}
           <div style={{
-            maxHeight: '160px',
+            maxHeight: '320px',
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
