@@ -532,25 +532,23 @@ export function formatReceiptAddress(groupName?: string | null, rawAddress?: str
     addr = defaultTdpName;
   }
 
-  // Đảm bảo có chữ "TDP " trước "Quảng Giao"
-  if (!addr.toLowerCase().startsWith('tổ') && !addr.toLowerCase().startsWith('tdp')) {
-    if (/^quảng\s*giao$/i.test(addr)) {
-      addr = `TDP ${addr}`;
-    } else {
-      addr = addr.replace(/(^|[\s,]+)(Quảng Giao)$/i, '$1TDP $2');
-    }
+  // Đảm bảo có chữ "TDP " trước "Quảng Giao" không bị tạo thêm dấu phẩy
+  if (!/TDP\s+Quảng\s*Giao/i.test(addr)) {
+    addr = addr.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
   }
 
-  // Làm sạch dấu phẩy kép hoặc dấu phẩy thừa
-  addr = addr.replace(/,\s*,+/g, ',').trim();
+  // Làm sạch dấu phẩy liên tiếp hoặc đứng liền nhau
+  addr = addr.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').trim();
 
   if (formattedGroup) {
     if (!addr.toLowerCase().startsWith(formattedGroup.toLowerCase())) {
+      // Loại bỏ formattedGroup nếu bị trùng ở vị trí khác trong chuỗi
+      addr = addr.replace(new RegExp(`\\b${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b[\\s,]*`, 'gi'), '');
       addr = `${formattedGroup}, ${addr}`;
     }
   }
 
-  return addr.replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
+  return addr.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
 }
 
 

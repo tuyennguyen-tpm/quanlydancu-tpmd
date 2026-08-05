@@ -1504,11 +1504,12 @@ const Finance = () => {
         .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
         .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
         .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
-          let cleaned = p2.replace(/,\s*,+/g, ', ');
-          if (!cleaned.toLowerCase().includes('tdp')) {
-            cleaned = cleaned.replace(/(^|[\s,]+)(Quảng Giao)/gi, '$1TDP $2');
+          let cleaned = p2;
+          if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
+            cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
           }
-          return `${p1}${cleaned.replace(/,\s*,+/g, ', ')}${p3}`;
+          cleaned = cleaned.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
+          return `${p1}${cleaned}${p3}`;
         });
     }
 
@@ -3372,11 +3373,12 @@ const Finance = () => {
           .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
           .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
           .replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, p2, p3) => {
-            let cleaned = p2.replace(/,\s*,+/g, ', ');
-            if (!cleaned.toLowerCase().includes('tdp')) {
-              cleaned = cleaned.replace(/(^|[\s,]+)(Quảng Giao)/gi, '$1TDP $2');
+            let cleaned = p2;
+            if (!/TDP\s+Quảng\s*Giao/i.test(cleaned)) {
+              cleaned = cleaned.replace(/\bQuảng\s*Giao\b/gi, 'TDP Quảng Giao');
             }
-            return `${p1}${cleaned.replace(/,\s*,+/g, ', ')}${p3}`;
+            cleaned = cleaned.replace(/,\s*(?=,)/g, '').replace(/,\s*,+/g, ', ').replace(/\s+/g, ' ').trim();
+            return `${p1}${cleaned}${p3}`;
           });
       }
       const isLast = idx === sortedList.length - 1;
