@@ -634,8 +634,13 @@ export function sanitizeReceiptHtmlAddresses(
     );
   }
 
-  // Đồng bộ tất cả các dòng "Địa chỉ:" trên phiếu (cả dòng ở góc Đơn vị và dòng ở bảng thông tin người nộp)
-  result = result.replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>|<\/td>)/gi, (_m, p1, _p2, p3) => {
+  // 1. Đồng bộ ô giá trị Địa chỉ trong bảng thông tin người nộp (ô <td> thứ 2 sau label)
+  result = result.replace(/(<td[^>]*class="receipt-info-label"[^>]*>\s*Địa chỉ:\s*<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>)/gi, (_m, p1, _p2, p3) => {
+    return `${p1}${formattedAddress}${p3}`;
+  });
+
+  // 2. Đồng bộ dòng Địa chỉ trong góc Đơn vị (thẻ receipt-org-title ở góc trên)
+  result = result.replace(/(Địa chỉ:\s*)([\s\S]*?)(<\/div>|<br\s*\/?>)/gi, (_m, p1, _p2, p3) => {
     return `${p1}${formattedAddress}${p3}`;
   });
 
