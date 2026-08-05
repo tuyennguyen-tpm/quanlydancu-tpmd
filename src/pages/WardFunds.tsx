@@ -3310,12 +3310,11 @@ const WardFunds = () => {
             <td style="text-align: left;">
               <strong>${item.full_name}</strong>
               ${headName && headName !== item.full_name ? ` - (Hộ ông/bà: ${headName})` : ''}
-              ${groupName ? ` ${groupName.trim().toLowerCase().startsWith('tổ') || groupName.trim().toLowerCase().startsWith('cụm') ? groupName.trim() : `Tổ ${groupName.trim()}`}` : ''}
             </td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${item.address || hhOfRes?.address || tdpNameVal} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
+            <td style="text-align: left;">${groupName ? `${groupName.trim().toLowerCase().startsWith('tổ') || groupName.trim().toLowerCase().startsWith('cụm') ? groupName.trim() : `Tổ ${groupName.trim()}`}, ` : ''}${item.address || hhOfRes?.address || tdpNameVal} ${item.dob ? `(Ngày sinh: ${item.dob})` : ''}</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
@@ -4926,14 +4925,16 @@ const WardFunds = () => {
         .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
     }
 
-    // Tự động kiểm tra và bổ sung tên Tổ nếu bản lưu cũ chưa có
+    // Tự động kiểm tra và đảm bảo tên Tổ đứng trước địa chỉ
     const hhGroupStr = (household as any).self_management_group || (activeMembers?.[0] as any)?.self_management_group || '';
-    if (savedReceiptHtml && hhGroupStr) {
+    if (receiptHtml && hhGroupStr) {
       const formattedGroup = hhGroupStr.trim().toLowerCase().startsWith('tổ') || hhGroupStr.trim().toLowerCase().startsWith('cụm') 
         ? hhGroupStr.trim() 
         : `Tổ ${hhGroupStr.trim()}`;
-      if (!savedReceiptHtml.includes(formattedGroup)) {
-        receiptHtml = savedReceiptHtml.replace(/(Họ và tên người nộp tiền:\s*<\/td>\s*<td[^>]*>\s*<strong>[^<]+<\/strong>\s*(?:\([^)]+\))?)/i, `$1 ${formattedGroup}`);
+      // Gỡ tên Tổ khỏi hàng Họ tên nếu có từ bản lưu cũ
+      receiptHtml = receiptHtml.replace(new RegExp(`(Họ và tên người nộp tiền:[\\s\\S]*?<td[^>]*>[\\s\\S]*?)\\s*${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '$1');
+      if (!receiptHtml.includes(formattedGroup)) {
+        receiptHtml = receiptHtml.replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)/i, `$1${formattedGroup}, `);
       }
     }
 

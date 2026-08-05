@@ -1506,12 +1506,14 @@ const Finance = () => {
     }
 
     const hhGroupStr = (household as any).self_management_group || '';
-    if (savedReceiptHtml && hhGroupStr) {
+    if (receiptHtml && hhGroupStr) {
       const formattedGroup = hhGroupStr.trim().toLowerCase().startsWith('tổ') || hhGroupStr.trim().toLowerCase().startsWith('cụm') 
         ? hhGroupStr.trim() 
         : `Tổ ${hhGroupStr.trim()}`;
-      if (!savedReceiptHtml.includes(formattedGroup)) {
-        receiptHtml = savedReceiptHtml.replace(/(Họ và tên người nộp tiền:\s*<\/td>\s*<td[^>]*>\s*<strong>[^<]+<\/strong>\s*(?:\([^)]+\))?)/i, `$1 ${formattedGroup}`);
+      // Gỡ tên Tổ khỏi hàng Họ tên nếu có từ bản lưu cũ
+      receiptHtml = receiptHtml.replace(new RegExp(`(Họ và tên người nộp tiền:[\\s\\S]*?<td[^>]*>[\\s\\S]*?)\\s*${formattedGroup.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'gi'), '$1');
+      if (!receiptHtml.includes(formattedGroup)) {
+        receiptHtml = receiptHtml.replace(/(Địa chỉ:\s*<\/td>\s*<td[^>]*>)/i, `$1${formattedGroup}, `);
       }
     }
 
@@ -3139,11 +3141,11 @@ const Finance = () => {
         <table class="receipt-info-table">
           <tr>
             <td class="receipt-info-label" style="width: 170px; font-weight: bold; text-align: left;">Họ và tên người nộp tiền:</td>
-            <td style="text-align: left;"><strong>${headName}</strong> (Đại diện Hộ gia đình)${hh.self_management_group ? ` ${hh.self_management_group.trim().toLowerCase().startsWith('tổ') || hh.self_management_group.trim().toLowerCase().startsWith('cụm') ? hh.self_management_group.trim() : `Tổ ${hh.self_management_group.trim()}`}` : ''}</td>
+            <td style="text-align: left;"><strong>${headName}</strong> (Đại diện Hộ gia đình)</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Địa chỉ:</td>
-            <td style="text-align: left;">${hh.address || tdpNameVal} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
+            <td style="text-align: left;">${hh.self_management_group ? `${hh.self_management_group.trim().toLowerCase().startsWith('tổ') || hh.self_management_group.trim().toLowerCase().startsWith('cụm') ? hh.self_management_group.trim() : `Tổ ${hh.self_management_group.trim()}`}, ` : ''}${hh.address || tdpNameVal} (Sổ hộ khẩu số: ${hh.household_number || '—'})</td>
           </tr>
           <tr>
             <td class="receipt-info-label" style="font-weight: bold; text-align: left;">Lý do nộp:</td>
