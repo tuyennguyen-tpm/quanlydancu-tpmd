@@ -615,8 +615,8 @@ export function generateUnifiedHouseholdReceiptHtml(
       <div class="receipt-container" style="page-break-inside: avoid; margin-bottom: 0; padding-bottom: 0; border-bottom: none;">
         <table class="receipt-header-table">
           <tr>
-            <td style="width: 50%;">
-              <div class="receipt-org-title">
+            <td style="width: 50%; vertical-align: top;">
+              <div class="receipt-org-title" style="margin-top: 0; padding-top: 0; line-height: 1.3;">
                 Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
                 Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
                 Địa chỉ: ${summary.address || tdpNameVal}

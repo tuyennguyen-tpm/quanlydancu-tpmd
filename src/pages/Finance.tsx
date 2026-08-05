@@ -1557,6 +1557,11 @@ const Finance = () => {
             width: 100%;
             border-collapse: collapse;
           }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top !important;
+          }
           .receipt-org-title {
             font-weight: bold;
             font-size: 10pt !important;
@@ -3099,8 +3104,8 @@ const Finance = () => {
       <div class="receipt-container">
         <table class="receipt-header-table">
           <tr>
-            <td style="width: 50%;">
-              <div class="receipt-org-title">
+            <td style="width: 50%; vertical-align: top;">
+              <div class="receipt-org-title" style="margin-top: 0; padding-top: 0; line-height: 1.3;">
                 Đơn vị: UBND ${wardNameVal.toUpperCase()}<br/>
                 Tổ dân phố: ${tdpNameVal.toUpperCase()}<br/>
                 Địa chỉ: ${hh.address || tdpNameVal}
@@ -3408,7 +3413,7 @@ const Finance = () => {
           .receipt-header-table td {
             border: none;
             padding: 0;
-            vertical-align: top;
+            vertical-align: top !important;
           }
           .receipt-org-title {
             font-weight: bold;
@@ -3729,7 +3734,7 @@ const Finance = () => {
           .receipt-header-table td {
             border: none;
             padding: 0;
-            vertical-align: top;
+            vertical-align: top !important;
           }
           .receipt-org-title {
             font-weight: bold;
