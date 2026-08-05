@@ -231,7 +231,7 @@ const InvitationTemplates: React.FC = () => {
       const titleFontSize = isA4 ? (isLandscape ? '28pt' : '34pt') : (isLandscape ? '22pt' : '26pt');
       const bodyMarginBottom = isA4 ? '10px' : (isLandscape ? '6px' : '8px');
       const closingMarginBottom = isA4 ? (isLandscape ? '18px' : '28px') : (isLandscape ? '10px' : '18px');
-      const signatureMarginTop = isA4 ? (isLandscape ? '15px' : '35px') : (isLandscape ? '2px' : '0');
+      const signatureMarginTop = isA4 ? (isLandscape ? '25px' : '45px') : (isLandscape ? '10px' : '18px');
       const signerTitleFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '12pt' : '13.5pt');
       const locationDateFontSize = isA4 ? (isLandscape ? '12.5pt' : '13.5pt') : (isLandscape ? '11pt' : '12pt');
       
@@ -340,7 +340,7 @@ const InvitationTemplates: React.FC = () => {
             <div style="text-align: center; min-width: 220px;">
               <p style="margin: 0 0 4px; font-style: italic; font-size: ${locationDateFontSize};">${locationDate}</p>
               <p style="margin: 0 0 4px; font-weight: 700; font-size: ${signerTitleFontSize};">${signerTitle}</p>
-              <div style="height: ${isA4 ? (isLandscape ? '35px' : '50px') : (isLandscape ? '20px' : '30px')};"></div>
+              <div style="height: ${isA4 ? (isLandscape ? '55px' : '75px') : (isLandscape ? '35px' : '55px')};"></div>
               <p style="margin: 0; font-weight: 700; text-transform: uppercase; font-size: ${signerTitleFontSize};">${signerName}</p>
             </div>
           </div>
@@ -570,7 +570,7 @@ const InvitationTemplates: React.FC = () => {
   const titleFontSize = isA4 ? (isLandscape ? '28pt' : '34pt') : (isLandscape ? '22pt' : '26pt');
   const bodyMarginBottom = isA4 ? '10px' : (isLandscape ? '6px' : '6px');
   const closingMarginBottom = isA4 ? (isLandscape ? '18px' : '28px') : (isLandscape ? '0 0 6px' : '0 0 10px');
-  const signatureMarginTop = isA4 ? (isLandscape ? '15px' : '35px') : (isLandscape ? '2px' : '0');
+  const signatureMarginTop = isA4 ? (isLandscape ? '25px' : '45px') : (isLandscape ? '10px' : '18px');
   const signerTitleFontSize = isA4 ? (isLandscape ? '13.5pt' : '15pt') : (isLandscape ? '12pt' : '13.5pt');
   const locationDateFontSize = isA4 ? (isLandscape ? '12.5pt' : '13.5pt') : (isLandscape ? '11pt' : '12pt');
 
@@ -671,7 +671,7 @@ const InvitationTemplates: React.FC = () => {
         <div style={{ textAlign: 'center', minWidth: isA4 ? '220px' : '190px' }}>
           <p style={{ margin: '0 0 2px', fontStyle: 'italic', fontSize: locationDateFontSize }}>{locationDate}</p>
           <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: signerTitleFontSize }}>{signerTitle}</p>
-          <div style={{ height: isA4 ? (isLandscape ? '35px' : '50px') : (isLandscape ? '20px' : '30px') }} />
+          <div style={{ height: isA4 ? (isLandscape ? '55px' : '75px') : (isLandscape ? '35px' : '55px') }} />
           <p style={{ margin: 0, fontWeight: 700, textTransform: 'uppercase', fontSize: signerTitleFontSize }}>{signerName}</p>
         </div>
       </div>
