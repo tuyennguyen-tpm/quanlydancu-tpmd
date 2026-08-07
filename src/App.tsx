@@ -1621,8 +1621,23 @@ const App = () => {
 
     window.addEventListener('db-changed', handleLocalDbChanged);
 
+    // Tự động phát sinh sự kiện db-changed khi chuyển quay lại cửa sổ ứng dụng
+    const handleWindowFocus = () => {
+      window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true } }));
+    };
+    window.addEventListener('focus', handleWindowFocus);
+
+    // Quét ngầm tự động mỗi 10 giây để đảm bảo 100% đồng bộ dữ liệu tức thời ngay cả khi mất mạng tạm thời
+    const autoSyncInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true } }));
+      }
+    }, 10000);
+
     return () => {
       if (toastTimer) clearTimeout(toastTimer);
+      clearInterval(autoSyncInterval);
+      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('db-changed', handleLocalDbChanged);
       if (supabase) {
         supabase.removeChannel(realtimeChannel);
