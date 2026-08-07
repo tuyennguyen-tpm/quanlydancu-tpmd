@@ -1562,39 +1562,68 @@ const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Lắng nghe thay đổi dữ liệu thời gian thực (Realtime Sync) từ các máy tính khác
+  // Lắng nghe thay đổi dữ liệu thời gian thực (Realtime Sync & Broadcast 0ms) giữa tất cả các máy tính ở mọi nơi
   useEffect(() => {
     if (!supabase) return;
 
     let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const realtimeChannel = supabase
-      .channel('global-db-realtime-sync')
+    const realtimeChannel = supabase.channel('global-db-realtime-sync', {
+      config: { broadcast: { self: false } }
+    });
+
+    const triggerSyncToUI = (sourceText: string, payload?: any) => {
+      window.dispatchEvent(new CustomEvent('db-changed', { detail: { payload, fromRemote: true } }));
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        const actionText = payload?.eventType === 'INSERT' ? 'thêm mới' : payload?.eventType === 'DELETE' ? 'xóa' : 'cập nhật';
+        window.dispatchEvent(new CustomEvent('show-toast', {
+          detail: { message: `⚡ Dữ liệu vừa được ${actionText} từ máy khác! Đã tự động đồng bộ.`, type: 'info' }
+        }));
+      }, 500);
+    };
+
+    realtimeChannel
       .on(
         'postgres_changes',
         { event: '*', schema: 'public' },
         (payload) => {
-          // Tự động phát CustomEvent db-changed để các trang (WardFunds, Residents, Households, Finance,...) tự reload dữ liệu
-          window.dispatchEvent(new CustomEvent('db-changed', { detail: payload }));
-
-          // Throttling thông báo toast để không gây phiền khi nhập liệu liên tục
-          if (toastTimer) clearTimeout(toastTimer);
-          toastTimer = setTimeout(() => {
-            const actionText = payload.eventType === 'INSERT' ? 'thêm mới' : payload.eventType === 'DELETE' ? 'xóa' : 'cập nhật';
-            window.dispatchEvent(new CustomEvent('show-toast', {
-              detail: { message: `⚡ Dữ liệu vừa được ${actionText} từ máy khác! Đã tự động đồng bộ.`, type: 'info' }
-            }));
-          }, 500);
+          triggerSyncToUI('Postgres CDC', payload);
+        }
+      )
+      .on(
+        'broadcast',
+        { event: 'app-db-changed' },
+        (payload) => {
+          triggerSyncToUI('Websocket Broadcast', payload);
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Đã kết nối kênh đồng bộ dữ liệu thời gian thực thành công!');
+          console.log('[Realtime & Broadcast] Đã kết nối kênh đồng bộ 0ms giữa tất cả các máy thành công!');
         }
       });
 
+    // Lắng nghe sự kiện sửa đổi từ máy hiện tại để lập tức phát sóng Websocket cho các máy khác ở mọi nơi
+    const handleLocalDbChanged = (e: Event) => {
+      const customEvt = e as CustomEvent;
+      if (customEvt.detail?.fromRemote) return; // Bỏ qua nếu là sự kiện nhận từ máy khác để tránh lặp vô tận
+
+      if (realtimeChannel) {
+        realtimeChannel.send({
+          type: 'broadcast',
+          event: 'app-db-changed',
+          payload: { timestamp: Date.now() }
+        }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('db-changed', handleLocalDbChanged);
+
     return () => {
       if (toastTimer) clearTimeout(toastTimer);
+      window.removeEventListener('db-changed', handleLocalDbChanged);
       if (supabase) {
         supabase.removeChannel(realtimeChannel);
       }
