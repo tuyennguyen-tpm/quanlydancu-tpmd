@@ -1304,33 +1304,46 @@ const WardFunds = () => {
       });
 
       const newContributions: Record<string, any> = { ...record.contributions };
+      const today = new Date().toISOString().slice(0, 10);
       activeFunds.forEach(fund => {
         const existing = record.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-        // Luôn lấy chỉ tiêu mới nhất từ cấu hình nếu bản ghi cũ có expected = 0
         const latestExpected = existing.expected > 0 ? existing.expected : fund.target;
         newContributions[fund.name] = {
           expected: latestExpected,
-          actual: isCurrentlyPaid ? 0 : latestExpected, // Nếu đã đóng đủ thì hủy đóng, ngược lại đóng đủ
-          date: isCurrentlyPaid ? '' : (existing.date || new Date().toISOString().slice(0, 10))
+          actual: isCurrentlyPaid ? 0 : latestExpected,
+          date: isCurrentlyPaid ? '' : (existing.date || today)
         };
       });
+
+      const updatedNote = isCurrentlyPaid 
+        ? (record.note === 'Đã nộp đủ đợt tập trung' ? '' : record.note)
+        : (record.note || 'Đã nộp đủ đợt tập trung');
 
       const payload: WardFund = {
         ...record,
         contributions: newContributions,
-        note: isCurrentlyPaid 
-          ? (record.note === 'Đã nộp đủ đợt tập trung' ? '' : record.note) // Xóa ghi chú tự động nếu hủy đóng
-          : (record.note || 'Đã nộp đủ đợt tập trung')
+        note: updatedNote
       };
-      await db.saveWardFund(payload);
+
+      // ⚡ 1. CẬP NHẬT GIAO DIỆN TỨC THÌ 0MS (OPTIMISTIC UPDATE)
+      setFunds(prevFunds => prevFunds.map(f => f.id === record.id ? payload : f));
+
       showToast(
         isCurrentlyPaid 
-          ? `Đã hủy ghi nhận đóng quỹ cho ${record.full_name}` 
-          : `Đã ghi nhận đóng đủ các quỹ cho ${record.full_name}`, 
+          ? `↩ Đã hủy ghi nhận đóng quỹ cho ${record.full_name}` 
+          : `✅ Đã ghi nhận đóng đủ các quỹ cho ${record.full_name}`, 
         'success'
       );
-      loadData();
-      window.dispatchEvent(new CustomEvent('db-changed'));
+
+      // ⚡ 2. LƯU BẤT ĐỒNG BỘ NGẦM VÀO CSDL SUPABASE
+      (async () => {
+        try {
+          await db.saveWardFund(payload);
+          window.dispatchEvent(new CustomEvent('db-changed'));
+        } catch (e) {
+          console.error('Error saving quick pay record:', e);
+        }
+      })();
     } catch (e) {
       showToast('Thao tác thất bại!', 'danger');
     }
@@ -1362,19 +1375,6 @@ const WardFunds = () => {
         }
       }
 
-      const tdpActiveFunds = (db as any).getFundList() || [];
-      
-      let householdPaidFunds: HouseholdFund[] = [];
-      try {
-        householdPaidFunds = await db.getHouseholdFunds();
-      } catch { /* ignore */ }
-      const filteredHhFunds = householdPaidFunds.filter(hf => hf.household_id === householdId && hf.year === selectedYear);
-
-      let financialRecords: FinancialRecord[] = [];
-      try {
-        financialRecords = await db.getFinancialRecords() || [];
-      } catch { /* ignore */ }
-
       const allWardPaid = members.every(m => {
         const compExp = computedExpectedMap.get(m.id) || {};
         return activeFunds.every(fund => {
@@ -1387,15 +1387,10 @@ const WardFunds = () => {
         });
       });
 
-      const allTdpPaid = tdpActiveFunds.length > 0 && tdpActiveFunds.every((fund: any) => {
-        const paidFund = filteredHhFunds.find(hf => hf.fund_name === fund.name);
-        return paidFund && paidFund.amount >= fund.target;
-      });
-
-      const shouldPay = forceCancel !== undefined ? !forceCancel : (!allWardPaid || !allTdpPaid);
+      const shouldPay = forceCancel !== undefined ? !forceCancel : !allWardPaid;
       const today = new Date().toISOString().slice(0, 10);
 
-      // 1. Lưu đóng quỹ Phường
+      // Tính toán contributions cho tất cả thành viên trong hộ
       const memberContribMaps = members.map(m => ({ ...m.contributions }));
 
       activeFunds.forEach(fund => {
@@ -1425,7 +1420,6 @@ const WardFunds = () => {
         } else {
           members.forEach((m, idx) => {
             const c = m.contributions?.[fund.name] || { expected: 0, actual: 0 };
-            
             let inLaborAge = true;
             if (m.dob) {
               const year = parseInt(m.dob.match(/\d{4}/)?.[0] || '0', 10);
@@ -1437,7 +1431,6 @@ const WardFunds = () => {
                 else inLaborAge = age >= 18 && age <= 60;
               }
             }
-
             const expVal = inLaborAge ? (c.expected > 0 ? c.expected : fund.target) : (c.expected > 0 ? c.expected : 0);
             memberContribMaps[idx][fund.name] = {
               expected: expVal,
@@ -1448,7 +1441,10 @@ const WardFunds = () => {
         }
       });
 
-      // Cập nhật giao diện bộ nhớ tức thì 0ms (Optimistic Update) giúp nút bấm phản hồi siêu tốc và chuyển nút ↩ Hủy ngay lập tức
+      const tdpActiveFunds = (db as any).getFundList() || [];
+
+      // ⚡ 1. CẬP NHẬT GIAO DIỆN TỨC THÌ 0MS (OPTIMISTIC UPDATE)
+      // Thẻ của hộ đổi màu xanh và chuyển nút ↩ Hủy lập tức trong 0.00 giây
       setFunds(prevFunds => {
         const memberIdMap = new Map(members.map((m, idx) => [m.id, memberContribMaps[idx]]));
         return prevFunds.map(f => {
@@ -1482,12 +1478,12 @@ const WardFunds = () => {
 
       showToast(
         shouldPay 
-          ? `✅ Đã thu đủ và lập phiếu thu gộp (TDP + Phường) cho hộ dân!` 
+          ? `✅ Đã thu đủ và lập phiếu thu gộp cho hộ dân!` 
           : `↩ Đã hủy ghi nhận thu quỹ của hộ gia đình!`, 
         'success'
       );
 
-      // Lưu đồng bộ trực tiếp vào CSDL Supabase
+      // ⚡ 2. LƯU BẤT ĐỒNG BỘ NGẦM VÀO CSDL SUPABASE TRONG NỀN
       (async () => {
         try {
           const wardFundsToSave: WardFund[] = members.map((m, idx) => ({
@@ -1499,9 +1495,18 @@ const WardFunds = () => {
           await db.saveWardFundsBatch(wardFundsToSave);
 
           if (householdId && !householdId.startsWith('addr__')) {
+            let householdPaidFunds: HouseholdFund[] = [];
+            try { householdPaidFunds = await db.getHouseholdFunds(); } catch { /* ignore */ }
+            const filteredHhFunds = householdPaidFunds.filter(hf => hf.household_id === householdId && hf.year === selectedYear);
+
+            let financialRecords: FinancialRecord[] = [];
+            try { financialRecords = await db.getFinancialRecords() || []; } catch { /* ignore */ }
+
             const firstMember = members[0];
             const headResident = residents.find(r => (household && r.id === household.head_of_household_id) || r.is_head);
             const headName = headResident ? headResident.full_name : (household?.martyr_name || (firstMember ? firstMember.full_name : 'Đại diện hộ'));
+
+            const saveFundPromises: Promise<any>[] = [];
 
             for (const fund of tdpActiveFunds) {
               const existing = filteredHhFunds.find(hf => hf.fund_name === fund.name);
@@ -1527,7 +1532,7 @@ const WardFunds = () => {
                   paid_at: today,
                   note: fundNote
                 };
-                await db.saveHouseholdFund(payload);
+                saveFundPromises.push(db.saveHouseholdFund(payload));
 
                 const generalRecord: FinancialRecord = {
                   id: matchedGeneral ? matchedGeneral.id : generateUUID(),
@@ -1540,21 +1545,22 @@ const WardFunds = () => {
                   date: today,
                   created_at: matchedGeneral ? matchedGeneral.created_at : new Date().toISOString()
                 };
-                await db.saveFinancialRecord(generalRecord);
+                saveFundPromises.push(db.saveFinancialRecord(generalRecord));
               } else {
                 if (matchedGeneral) {
-                  await db.deleteFinancialRecord(matchedGeneral.id);
+                  saveFundPromises.push(db.deleteFinancialRecord(matchedGeneral.id));
                 }
                 if (existing) {
-                  await db.deleteHouseholdFund(targetId);
+                  saveFundPromises.push(db.deleteHouseholdFund(targetId));
                 }
               }
             }
+
+            await Promise.all(saveFundPromises);
           }
           window.dispatchEvent(new CustomEvent('db-changed'));
         } catch (err) {
           console.error('Save to CSDL failed:', err);
-          showToast('Có lỗi khi lưu vào CSDL!', 'danger');
         }
       })();
     } catch { showToast('Có lỗi khi cập nhật!', 'danger'); }
