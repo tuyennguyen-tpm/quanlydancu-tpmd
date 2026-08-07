@@ -2245,11 +2245,22 @@ const WardFunds = () => {
               }
             }
 
+            const isRecordMarkedPaid = f.note === 'Đã nộp đủ đợt tập trung' || (f.contributions && Object.values(f.contributions).some((c: any) => c && (c.actual > 0 || c.date)));
             const currentExpected = newContributions[fund.name]?.expected || 0;
-            if (currentExpected !== expected) {
+            const prevActual = newContributions[fund.name]?.actual || 0;
+            const prevDate = newContributions[fund.name]?.date;
+            const isManualExempt = newContributions[fund.name]?.is_manual_exempt;
+            const isManualTarget = newContributions[fund.name]?.is_manual_target;
+
+            const targetActual = isRecordMarkedPaid && expected > 0 ? expected : prevActual;
+
+            if (currentExpected !== expected || (isRecordMarkedPaid && prevActual < expected)) {
               newContributions[fund.name] = {
                 expected,
-                actual: newContributions[fund.name]?.actual || 0
+                actual: targetActual,
+                date: targetActual > 0 ? (prevDate || new Date().toISOString().slice(0, 10)) : prevDate,
+                is_manual_exempt: isManualExempt,
+                is_manual_target: isManualTarget
               };
               updated = true;
             }
@@ -2324,7 +2335,8 @@ const WardFunds = () => {
           const hasThi2 = fName.toLowerCase().includes(' thị ') || fName.toLowerCase().endsWith(' thị');
           fIsFemale = hasThi2;
         }
-        const fIsMale = !fIsFemale;
+
+        const isRecordMarkedPaid2 = f.note === 'Đã nộp đủ đợt tập trung' || (f.contributions && Object.values(f.contributions).some((c: any) => c && (c.actual > 0 || c.date)));
 
         activeFundsList2.forEach((fund2: any) => {
           const isPCTT2 = fund2.name.toLowerCase().includes('thiên tai');
@@ -2339,10 +2351,20 @@ const WardFunds = () => {
             
             const newExpected2 = shouldPay2 ? fund2.target : 0;
             const currentExpected2 = newContributions[fund2.name]?.expected;
-            if (currentExpected2 !== newExpected2) {
+            const prevActual2 = newContributions[fund2.name]?.actual || 0;
+            const prevDate2 = newContributions[fund2.name]?.date;
+            const isManualExempt2 = newContributions[fund2.name]?.is_manual_exempt;
+            const isManualTarget2 = newContributions[fund2.name]?.is_manual_target;
+
+            const targetActual2 = isRecordMarkedPaid2 && newExpected2 > 0 ? newExpected2 : prevActual2;
+
+            if (currentExpected2 !== newExpected2 || (isRecordMarkedPaid2 && prevActual2 < newExpected2)) {
               newContributions[fund2.name] = {
                 expected: newExpected2,
-                actual: newContributions[fund2.name]?.actual || 0
+                actual: targetActual2,
+                date: targetActual2 > 0 ? (prevDate2 || new Date().toISOString().slice(0, 10)) : prevDate2,
+                is_manual_exempt: isManualExempt2,
+                is_manual_target: isManualTarget2
               };
               updated = true;
             }
@@ -2350,10 +2372,20 @@ const WardFunds = () => {
             // Quỹ thu theo đầu người (không phân biệt tuổi lao động)
             const newExpected2 = fAge >= 18 ? fund2.target : 0;
             const currentExpected2 = newContributions[fund2.name]?.expected;
-            if (currentExpected2 !== newExpected2) {
+            const prevActual2 = newContributions[fund2.name]?.actual || 0;
+            const prevDate2 = newContributions[fund2.name]?.date;
+            const isManualExempt2 = newContributions[fund2.name]?.is_manual_exempt;
+            const isManualTarget2 = newContributions[fund2.name]?.is_manual_target;
+
+            const targetActual2 = isRecordMarkedPaid2 && newExpected2 > 0 ? newExpected2 : prevActual2;
+
+            if (currentExpected2 !== newExpected2 || (isRecordMarkedPaid2 && prevActual2 < newExpected2)) {
               newContributions[fund2.name] = {
                 expected: newExpected2,
-                actual: newContributions[fund2.name]?.actual || 0
+                actual: targetActual2,
+                date: targetActual2 > 0 ? (prevDate2 || new Date().toISOString().slice(0, 10)) : prevDate2,
+                is_manual_exempt: isManualExempt2,
+                is_manual_target: isManualTarget2
               };
               updated = true;
             }
@@ -2376,6 +2408,10 @@ const WardFunds = () => {
 
       // Luôn lưu lại toàn bộ (bao gồm cả những record không thay đổi metadata nhưng có thể đã sửa expected)
       await db.saveWardFundsBatch(updatedFunds);
+      
+      // Tự động kích hoạt đối soát khôi phục trạng thái thu đủ từ Thu Chi TDP
+      await handleAutoRepairPaymentData();
+
       if (matchedCount > 0) {
         showToast(`Đồng bộ & tính lại chỉ tiêu thành công! Đã cập nhật ${matchedCount} bản ghi.`, 'success');
       } else {
