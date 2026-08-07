@@ -1602,7 +1602,7 @@ const App = () => {
         'broadcast',
         { event: 'app-db-changed' },
         (payload) => {
-          triggerSyncToUI('Websocket Broadcast', payload);
+          triggerSyncToUI('Websocket Broadcast', payload?.payload || payload);
         }
       )
       .subscribe((status) => {
@@ -1620,7 +1620,7 @@ const App = () => {
         realtimeChannel.send({
           type: 'broadcast',
           event: 'app-db-changed',
-          payload: { timestamp: Date.now() }
+          payload: customEvt.detail || { timestamp: Date.now() }
         }).catch(() => {});
       }
     };

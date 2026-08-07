@@ -347,7 +347,26 @@ const WardFunds = () => {
 
   useEffect(() => {
     loadData(true);
-    const handleSilentReload = () => loadData(false);
+    const handleSilentReload = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      const payload = detail?.payload;
+      if (payload && payload.new && (payload.table === 'ward_funds' || payload.tableName === 'ward_funds')) {
+        const newRecord = payload.new;
+        if (newRecord && Number(newRecord.year) === Number(selectedYear)) {
+          setFunds(prev => {
+            const idx = prev.findIndex(f => f.id === newRecord.id);
+            if (idx >= 0) {
+              const copy = [...prev];
+              copy[idx] = newRecord;
+              return copy;
+            }
+            return [newRecord, ...prev];
+          });
+          return;
+        }
+      }
+      loadData(false);
+    };
     window.addEventListener('db-changed', handleSilentReload);
     return () => window.removeEventListener('db-changed', handleSilentReload);
   }, [selectedYear]);
