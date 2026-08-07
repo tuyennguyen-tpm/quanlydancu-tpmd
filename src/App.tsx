@@ -154,7 +154,13 @@ const App = () => {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=19.7420&longitude=105.9230&current=temperature_2m,weather_code');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const response = await fetch(
+          'https://api.open-meteo.com/v1/forecast?latitude=19.7420&longitude=105.9230&current=temperature_2m,weather_code',
+          { signal: controller.signal }
+        );
+        clearTimeout(timeoutId);
         if (response.ok) {
           const data = await response.json();
           if (data && data.current) {
@@ -167,7 +173,7 @@ const App = () => {
           }
         }
       } catch (err) {
-        console.error('Lỗi khi tải thời tiết:', err);
+        // Im lặng fallback thời tiết mặc định khi timeout
       }
     };
 
@@ -1621,23 +1627,8 @@ const App = () => {
 
     window.addEventListener('db-changed', handleLocalDbChanged);
 
-    // Tự động phát sinh sự kiện db-changed khi chuyển quay lại cửa sổ ứng dụng
-    const handleWindowFocus = () => {
-      window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true } }));
-    };
-    window.addEventListener('focus', handleWindowFocus);
-
-    // Quét ngầm tự động mỗi 10 giây để đảm bảo 100% đồng bộ dữ liệu tức thời ngay cả khi mất mạng tạm thời
-    const autoSyncInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true } }));
-      }
-    }, 10000);
-
     return () => {
       if (toastTimer) clearTimeout(toastTimer);
-      clearInterval(autoSyncInterval);
-      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('db-changed', handleLocalDbChanged);
       if (supabase) {
         supabase.removeChannel(realtimeChannel);
