@@ -7903,7 +7903,7 @@ const WardFunds = () => {
                     
                     const isAnyMemberMarkedPaid = group.members.some(m => (m as any).note === 'Đã nộp đủ đợt tập trung');
                     const allWardPaid = totalExpected > 0 ? (totalActual >= totalExpected) : (totalActual > 0 || isAnyMemberMarkedPaid);
-                    const allPaid = allWardPaid && (tdpActiveFunds.length === 0 || allTdpPaid);
+                    const allPaid = allWardPaid;
                     const hasPartial = (totalActual > 0 || hhTdpFunds.some(f => f.amount > 0)) && !allPaid;
                     const borderColor = allPaid ? '#86efac' : hasPartial ? '#fde68a' : '#e2e8f0';
                     const headerBg = allPaid
