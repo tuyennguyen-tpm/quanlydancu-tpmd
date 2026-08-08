@@ -132,6 +132,15 @@ export default function Treasurer() {
       return 1;
     }
   });
+  const [printFontSize, setPrintFontSize] = useState<string>(() => {
+    try { return localStorage.getItem('treasurer_print_font_size') || '13.5px'; } catch { return '13.5px'; }
+  });
+  const [printLineHeight, setPrintLineHeight] = useState<string>(() => {
+    try { return localStorage.getItem('treasurer_print_line_height') || '1.25'; } catch { return '1.25'; }
+  });
+  const [printMargin, setPrintMargin] = useState<string>(() => {
+    try { return localStorage.getItem('treasurer_print_margin') || '20px 24px'; } catch { return '20px 24px'; }
+  });
 
   const handleDocTemplateChange = (template: 'voucher' | 'handover') => {
     setPrintDocTemplate(template);
@@ -141,6 +150,21 @@ export default function Treasurer() {
   const handleLienCountChange = (count: number) => {
     setPrintLienCount(count);
     localStorage.setItem('treasurer_print_lien_count', count.toString());
+  };
+
+  const handleFontSizeChange = (val: string) => {
+    setPrintFontSize(val);
+    localStorage.setItem('treasurer_print_font_size', val);
+  };
+
+  const handleLineHeightChange = (val: string) => {
+    setPrintLineHeight(val);
+    localStorage.setItem('treasurer_print_line_height', val);
+  };
+
+  const handleMarginChange = (val: string) => {
+    setPrintMargin(val);
+    localStorage.setItem('treasurer_print_margin', val);
   };
 
   // Filters
@@ -1183,6 +1207,82 @@ export default function Treasurer() {
                         <option value={3}>📄📄📄 In 3 Liên (Liên 1 + 2 + 3)</option>
                       </select>
                     </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>📐 Căn lề:</span>
+                      <select
+                        value={printMargin}
+                        onChange={(e) => handleMarginChange(e.target.value)}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #0284c7',
+                          fontSize: '0.88rem',
+                          fontWeight: '700',
+                          color: '#0284c7',
+                          background: '#f0f9ff',
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                        title="Căn lề trên/dưới/trái/phải của tờ phiếu in"
+                      >
+                        <option value="10px 14px">📏 Lề hẹp (10px - Tiết kiệm)</option>
+                        <option value="20px 24px">📐 Lề vừa (20px - Mặc định)</option>
+                        <option value="28px 32px">📄 Lề rộng (28px - Thoáng)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>↕️ Giãn dòng:</span>
+                      <select
+                        value={printLineHeight}
+                        onChange={(e) => handleLineHeightChange(e.target.value)}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #0284c7',
+                          fontSize: '0.88rem',
+                          fontWeight: '700',
+                          color: '#0284c7',
+                          background: '#f0f9ff',
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                        title="Độ giãn khoảng cách giữa các dòng"
+                      >
+                        <option value="1.0">↕️ 1.0 (Giãn chặt)</option>
+                        <option value="1.15">↕️ 1.15 (Giãn vừa)</option>
+                        <option value="1.25">↕️ 1.25 (Chuẩn mặc định)</option>
+                        <option value="1.4">↕️ 1.4 (Giãn rộng)</option>
+                        <option value="1.5">↕️ 1.5 (Thoáng tối đa)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>📝 Cỡ chữ:</span>
+                      <select
+                        value={printFontSize}
+                        onChange={(e) => handleFontSizeChange(e.target.value)}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #0284c7',
+                          fontSize: '0.88rem',
+                          fontWeight: '700',
+                          color: '#0284c7',
+                          background: '#f0f9ff',
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                        title="Kích thước phông chữ phiếu in"
+                      >
+                        <option value="11px">📝 11px (Chữ nhỏ)</option>
+                        <option value="12.5px">📝 12.5px (Vừa)</option>
+                        <option value="13.5px">📝 13.5px (Chuẩn mặc định)</option>
+                        <option value="14.5px">📝 14.5px (Chữ lớn)</option>
+                        <option value="16px">📝 16px (Rất lớn)</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1350,7 +1450,9 @@ export default function Treasurer() {
                   position: static !important;
                   width: 100% !important;
                   max-width: 100% !important;
-                  padding: 0 !important;
+                  padding: ${printMargin} !important;
+                  line-height: ${printLineHeight} !important;
+                  font-size: ${printFontSize} !important;
                   margin: 0 !important;
                   border: none !important;
                   box-shadow: none !important;
@@ -1368,6 +1470,8 @@ export default function Treasurer() {
                   position: relative !important;
                   width: 100% !important;
                   padding: 0mm 5mm 3mm 5mm !important;
+                  line-height: ${printLineHeight} !important;
+                  font-size: ${printFontSize} !important;
                   box-sizing: border-box !important;
                   clear: both !important;
                   margin: 0 !important;
@@ -1401,11 +1505,12 @@ export default function Treasurer() {
               contentEditable={true}
               suppressContentEditableWarning={true}
               style={{
-                padding: '24px 30px',
+                padding: printMargin,
+                lineHeight: printLineHeight,
+                fontSize: printFontSize,
                 background: 'white',
                 color: '#000',
                 fontFamily: '"Times New Roman", Times, serif',
-                fontSize: '13.5px',
                 border: '2px double #1e293b',
                 borderRadius: '8px',
                 margin: '0 auto',
@@ -1457,12 +1562,12 @@ export default function Treasurer() {
                       </div>
 
                       {/* Preamble */}
-                      <div style={{ fontSize: '0.88rem', lineHeight: '1.3', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '0.88rem', lineHeight: printLineHeight, marginBottom: '6px' }}>
                         Chúng tôi gồm có hai bên tiến hành lập Biên bản bàn giao tiền quỹ với các nội dung cụ thể sau:
                       </div>
 
                       {/* Section 1: Bên Giao */}
-                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: '1.3' }}>
+                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: printLineHeight }}>
                         <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '2px' }}>
                           I. BÊN GIAO TIỀN (BÊN A):
                         </div>
@@ -1483,7 +1588,7 @@ export default function Treasurer() {
                       </div>
 
                       {/* Section 2: Bên Nhận */}
-                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: '1.3' }}>
+                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: printLineHeight }}>
                         <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '2px' }}>
                           II. BÊN NHẬN TIỀN (BÊN B):
                         </div>
@@ -1504,7 +1609,7 @@ export default function Treasurer() {
                       </div>
 
                       {/* Section 3: Nội dung bàn giao */}
-                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: '1.3' }}>
+                      <div style={{ marginBottom: '6px', fontSize: '0.88rem', lineHeight: printLineHeight }}>
                         <div style={{ fontWeight: 'bold', textTransform: 'uppercase', color: '#1e293b', marginBottom: '2px' }}>
                           III. NỘI DUNG VÀ SỐ TIỀN BÀN GIAO:
                         </div>
@@ -1531,7 +1636,7 @@ export default function Treasurer() {
                       </div>
 
                       {/* Section 4: Cam kết */}
-                      <div style={{ fontSize: '0.82rem', fontStyle: 'italic', lineHeight: '1.3', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '0.82rem', fontStyle: 'italic', lineHeight: printLineHeight, marginBottom: '6px' }}>
                         Hai bên đã cùng kiểm đếm đầy đủ số tiền nêu trên. Biên bản này được lập thành 02 bản có giá trị pháp lý như nhau, mỗi bên giữ 01 bản làm căn cứ đối soát Sổ quỹ.
                       </div>
 
