@@ -2228,8 +2228,8 @@ const App = () => {
     if (supabase) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const uId = session?.user?.id;
-        if (uId) {
+        const uId = session?.user?.id || (await (db as any).getSessionUserId());
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
           const configItems: { user_id: string; key: string; value: string }[] = [
             { user_id: uId, key: 'tdp_name', value: newName },
             { user_id: uId, key: 'ward_name', value: newWardName },

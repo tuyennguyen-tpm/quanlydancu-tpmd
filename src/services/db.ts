@@ -1869,10 +1869,7 @@ export const db = {
             else if (lowerName.includes('đền ơn')) defTarget = 70000;
 
             const isHh = item.scope ? item.scope === 'household' : (lowerName.includes('hộ gia đình') || lowerName.includes('người cao tuổi') || lowerName.includes('cao tuổi'));
-            let finalTarget = typeof item.target === 'number' && item.target > 0 ? item.target : defTarget;
-            if (finalTarget === 10000 && lowerName.includes('thiên tai')) finalTarget = 15000;
-            if ((finalTarget === 20000 || finalTarget === 10000) && lowerName.includes('đền ơn')) finalTarget = 70000;
-            if ((finalTarget === 20000 || finalTarget === 0 || finalTarget === 10000) && lowerName.includes('cao tuổi')) finalTarget = 50000;
+            const finalTarget = typeof item.target === 'number' && item.target > 0 ? item.target : defTarget;
 
             return {
               ...item,
@@ -1898,18 +1895,11 @@ export const db = {
     localStorage.setItem('ward_fund_list', valueStr);
     if (supabase) {
       try {
-        const uId = (await getSessionUserId()) || 'default_user';
-        const now = new Date().toISOString();
-        await supabase.from('app_config').upsert({
-          user_id: uId,
-          key: 'ward_fund_list',
-          value: valueStr,
-          updated_at: now
-        }, { onConflict: 'user_id,key' });
-
-        if (uId !== 'default_user') {
+        const uId = await getSessionUserId();
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          const now = new Date().toISOString();
           await supabase.from('app_config').upsert({
-            user_id: 'default_user',
+            user_id: uId,
             key: 'ward_fund_list',
             value: valueStr,
             updated_at: now
@@ -1951,18 +1941,11 @@ export const db = {
     localStorage.setItem('official_signatures', valueStr);
     if (supabase) {
       try {
-        const uId = (await getSessionUserId()) || 'default_user';
-        const now = new Date().toISOString();
-        await supabase.from('app_config').upsert({
-          user_id: uId,
-          key: 'official_signatures',
-          value: valueStr,
-          updated_at: now
-        }, { onConflict: 'user_id,key' });
-
-        if (uId !== 'default_user') {
+        const uId = await getSessionUserId();
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          const now = new Date().toISOString();
           await supabase.from('app_config').upsert({
-            user_id: 'default_user',
+            user_id: uId,
             key: 'official_signatures',
             value: valueStr,
             updated_at: now
@@ -1986,18 +1969,11 @@ export const db = {
     localStorage.setItem('tdp_groups', valueStr);
     if (supabase) {
       try {
-        const uId = (await getSessionUserId()) || 'default_user';
-        const now = new Date().toISOString();
-        await supabase.from('app_config').upsert({
-          user_id: uId,
-          key: 'tdp_groups_config',
-          value: valueStr,
-          updated_at: now
-        }, { onConflict: 'user_id,key' });
-
-        if (uId !== 'default_user') {
+        const uId = await getSessionUserId();
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          const now = new Date().toISOString();
           await supabase.from('app_config').upsert({
-            user_id: 'default_user',
+            user_id: uId,
             key: 'tdp_groups_config',
             value: valueStr,
             updated_at: now
@@ -2013,15 +1989,12 @@ export const db = {
     try {
       const uId = await getSessionUserId();
       let query = supabase.from('app_config').select('key, value');
-      if (uId) query = query.eq('user_id', uId);
-
-      let { data, error } = await query;
-      if (error || !data || data.length === 0) {
-        const { data: defaultData } = await supabase.from('app_config').select('key, value').eq('user_id', 'default_user');
-        data = defaultData;
+      if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+        query = query.eq('user_id', uId);
       }
 
-      if (data && data.length > 0) {
+      const { data, error } = await query;
+      if (!error && data && data.length > 0) {
         data.forEach(item => {
           if (item.key && item.value) {
             localStorage.setItem(item.key, item.value);
