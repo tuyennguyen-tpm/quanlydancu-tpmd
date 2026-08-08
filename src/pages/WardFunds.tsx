@@ -853,7 +853,7 @@ const WardFunds = () => {
           inAgeRange = isFemale ? (age >= 18 && age <= 58) : (age >= 18 && age <= 61);
         }
 
-        const storedContrib = f.contributions?.[fund.name];
+        const storedContrib = getContributionData(f.contributions, fund.name);
         const storedExpected = storedContrib?.expected;
         const isManualExempt = storedContrib?.is_manual_exempt === true;
         const isManualTarget = storedContrib?.is_manual_target === true;
@@ -900,7 +900,7 @@ const WardFunds = () => {
         } else {
           const compExp = computedExpectedMap.get(f.id) || {};
           matchesStatus = activeFunds.every(fund => {
-            const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            const contrib = getContributionData(f.contributions, fund.name) || { expected: 0, actual: 0 };
             const expected = compExp[fund.name] ?? (contrib.expected !== undefined ? contrib.expected : 0);
             const actual = contrib.actual || 0;
             if (expected === 0) return true;
@@ -914,7 +914,7 @@ const WardFunds = () => {
           const compExp = computedExpectedMap.get(f.id) || {};
           let hasUnpaid = false;
           for (const fund of activeFunds) {
-            const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            const contrib = getContributionData(f.contributions, fund.name) || { expected: 0, actual: 0 };
             const expected = compExp[fund.name] ?? (contrib.expected !== undefined ? contrib.expected : 0);
             const actual = contrib.actual || 0;
             if (expected > 0 && actual < expected) {

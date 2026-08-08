@@ -1851,27 +1851,47 @@ export const db = {
     }
   },
   getWardFundList: (): { name: string; target: number; scope?: 'person' | 'household'; age_range?: string }[] => {
+    const DEFAULT_FUNDS = [
+      { name: 'Quỹ phòng chống thiên tai', target: 15000, scope: 'person' as const, age_range: 'Nam 18-61, Nữ 18-58 tuổi' },
+      { name: 'Quỹ Đền ơn đáp nghĩa', target: 70000, scope: 'person' as const, age_range: 'Nam 18-61, Nữ 18-58 tuổi' },
+      { name: 'Quỹ Chăm sóc người cao tuổi', target: 50000, scope: 'household' as const, age_range: 'Hộ gia đình' }
+    ];
     const stored = localStorage.getItem('ward_fund_list');
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        return parsed.map((item: any) => ({
-          ...item,
-          scope: item.scope || (item.name.toLowerCase().includes('hộ gia đình') || item.name.toLowerCase().includes('người cao tuổi') || item.name.toLowerCase().includes('cao tuổi') ? 'household' : 'person'),
-          age_range: item.age_range || ''
-        }));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item: any) => {
+            const cleanName = (item.name || '').replace(/^\[.*?\]\s*/, '').trim();
+            const lowerName = cleanName.toLowerCase();
+            let defTarget = 50000;
+            if (lowerName.includes('thiên tai')) defTarget = 15000;
+            else if (lowerName.includes('đền ơn')) defTarget = 70000;
+
+            const isHh = item.scope ? item.scope === 'household' : (lowerName.includes('hộ gia đình') || lowerName.includes('người cao tuổi') || lowerName.includes('cao tuổi'));
+            const finalTarget = typeof item.target === 'number' && item.target > 0 ? item.target : defTarget;
+
+            return {
+              ...item,
+              name: cleanName || item.name,
+              target: finalTarget,
+              scope: isHh ? 'household' : 'person',
+              age_range: item.age_range || ''
+            };
+          });
+        }
       } catch (e) {
         console.error('Failed to parse ward_fund_list, fallback to default', e);
       }
     }
-    return [
-      { name: 'Quỹ phòng chống thiên tai', target: 15000, scope: 'person', age_range: 'Nam 18-61, Nữ 18-58 tuổi' },
-      { name: 'Quỹ Đền ơn đáp nghĩa', target: 70000, scope: 'person', age_range: 'Nam 18-61, Nữ 18-58 tuổi' },
-      { name: 'Quỹ Chăm sóc người cao tuổi', target: 50000, scope: 'household', age_range: 'Hộ gia đình' }
-    ];
+    return DEFAULT_FUNDS;
   },
   saveWardFundList: async (funds: { name: string; target: number; scope?: 'person' | 'household'; age_range?: string }[]): Promise<void> => {
-    const valueStr = JSON.stringify(funds);
+    const cleanedFunds = funds.map(f => ({
+      ...f,
+      name: (f.name || '').replace(/^\[.*?\]\s*/, '').trim() || f.name
+    }));
+    const valueStr = JSON.stringify(cleanedFunds);
     localStorage.setItem('ward_fund_list', valueStr);
     if (supabase) {
       try {
