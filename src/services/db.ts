@@ -210,8 +210,11 @@ const handleDbError = (action: string, error: any) => {
     }
   }
 
-  // Only show the toast warning if it's not a missing table error that has already been flagged
-  if (!isAlreadyFlagged) {
+  const isFetchError = message.includes('Failed to fetch') || fullErrorMessage.includes('ERR_INSUFFICIENT_RESOURCES') || fullErrorMessage.includes('NetworkError');
+  const isReadAction = action.toLowerCase().includes('tải') || action.toLowerCase().includes('lấy') || action.toLowerCase().includes('đọc');
+
+  // Only show the toast warning if it's not a missing table error that has already been flagged and not a background read fetch error
+  if (!isAlreadyFlagged && !(isFetchError && isReadAction)) {
     const ev = new CustomEvent('show-toast', { 
       detail: { 
         message: `Cảnh báo: Lỗi kết nối CSDL khi ${action} (${fullErrorMessage}). Dữ liệu đang ghi tạm cục bộ.`, 

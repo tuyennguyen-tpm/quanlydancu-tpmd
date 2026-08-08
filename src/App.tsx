@@ -1744,9 +1744,13 @@ const App = () => {
   };
 
   useEffect(() => {
+    let debounceTimer: any = null;
     const handleDbChanged = () => {
       if (session || isOfflineMode || isGuestMode) {
-        loadPendingCountAndAlerts();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          loadPendingCountAndAlerts();
+        }, 400);
       }
     };
 
@@ -1755,7 +1759,10 @@ const App = () => {
     }
 
     window.addEventListener('db-changed', handleDbChanged);
-    return () => window.removeEventListener('db-changed', handleDbChanged);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      window.removeEventListener('db-changed', handleDbChanged);
+    };
   }, [session, isOfflineMode, isGuestMode]);
 
   useEffect(() => {
