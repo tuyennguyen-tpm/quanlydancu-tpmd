@@ -1151,85 +1151,90 @@ export default function Treasurer() {
                 background: '#ffffff',
                 padding: '14px 16px',
                 borderRadius: '12px',
-                border: '1.5px solid #e2e8f0',
-                boxShadow: '0 4px 12px -2px rgba(0,0,0,0.05)'
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)'
               }}>
-                {/* Line 1: Main Template, Lien Count & Action Buttons */}
+                {/* Dòng 1: Mẫu in, Số liên & 2 Nút In chính */}
                 <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 170px auto',
                   gap: '12px',
-                  flexWrap: 'wrap'
+                  alignItems: 'end'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', whiteSpace: 'nowrap' }}>📜 Mẫu chứng từ:</span>
-                      <select
-                        value={printDocTemplate}
-                        onChange={(e) => handleDocTemplateChange(e.target.value as 'voucher' | 'handover')}
-                        style={{
-                          padding: '7px 12px',
-                          borderRadius: '8px',
-                          border: '1.5px solid #0284c7',
-                          fontSize: '0.86rem',
-                          fontWeight: '700',
-                          color: '#0369a1',
-                          background: '#f0f9ff',
-                          cursor: 'pointer',
-                          outline: 'none'
-                        }}
-                        title="Chọn mẫu in phiếu thu/chi tiêu chuẩn hoặc Biên bản bàn giao tiền"
-                      >
-                        <option value="voucher">📋 Phiếu Thu/Chi tiêu chuẩn (Mẫu 02-TT)</option>
-                        <option value="handover">🤝 Biên bản bàn giao tiền (Bên A & Bên B)</option>
-                      </select>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', whiteSpace: 'nowrap' }}>📋 Số liên in:</span>
-                      <select
-                        value={printLienCount}
-                        onChange={(e) => handleLienCountChange(parseInt(e.target.value, 10))}
-                        style={{
-                          padding: '7px 12px',
-                          borderRadius: '8px',
-                          border: '1.5px solid #0284c7',
-                          fontSize: '0.86rem',
-                          fontWeight: '700',
-                          color: '#0369a1',
-                          background: '#f0f9ff',
-                          cursor: 'pointer',
-                          outline: 'none'
-                        }}
-                        title="Chọn số liên muốn in cho mỗi phiếu thu/chi"
-                      >
-                        <option value={1}>📄 In 1 Liên (Bản đơn)</option>
-                        <option value={2}>📄📄 In 2 Liên (Liên 1 + Liên 2)</option>
-                        <option value={3}>📄📄📄 In 3 Liên (Liên 1 + 2 + 3)</option>
-                      </select>
-                    </div>
+                  {/* Ô 1: Mẫu chứng từ */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155' }}>
+                      📜 Mẫu chứng từ in:
+                    </label>
+                    <select
+                      value={printDocTemplate}
+                      onChange={(e) => handleDocTemplateChange(e.target.value as 'voucher' | 'handover')}
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #0284c7',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        color: '#0369a1',
+                        background: '#f0f9ff',
+                        cursor: 'pointer',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="voucher">📋 Phiếu Thu/Chi (Mẫu 02-TT)</option>
+                      <option value="handover">🤝 Biên bản bàn giao tiền</option>
+                    </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {/* Ô 2: Số liên in */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155' }}>
+                      📋 Số liên in:
+                    </label>
+                    <select
+                      value={printLienCount}
+                      onChange={(e) => handleLienCountChange(parseInt(e.target.value, 10))}
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #0284c7',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        color: '#0369a1',
+                        background: '#f0f9ff',
+                        cursor: 'pointer',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value={1}>📄 1 Liên (Đơn)</option>
+                      <option value={2}>📄📄 2 Liên (1 + 2)</option>
+                      <option value={3}>📄📄📄 3 Liên (1 + 2 + 3)</option>
+                    </select>
+                  </div>
+
+                  {/* Nút thao tác */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
                       type="button"
                       onClick={() => setShow3DCalculator(true)}
                       style={{
-                        display: 'flex',
+                        display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px',
+                        gap: '5px',
                         background: '#0284c7',
                         border: 'none',
-                        padding: '8px 14px',
+                        padding: '8px 12px',
                         borderRadius: '8px',
                         color: 'white',
                         fontWeight: '700',
-                        fontSize: '0.85rem',
+                        fontSize: '0.84rem',
                         whiteSpace: 'nowrap',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        height: '35px'
                       }}
-                      title="Mở máy tính 3D cầm tay để tính số tiền"
+                      title="Mở máy tính 3D"
                     >
                       <Calculator size={15} /> Máy tính 3D
                     </button>
@@ -1239,19 +1244,20 @@ export default function Treasurer() {
                       onClick={() => window.print()}
                       className="btn btn-primary"
                       style={{
-                        display: 'flex',
+                        display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
                         background: printModalNote.type === 'expense' ? '#dc2626' : '#16a34a',
                         border: 'none',
-                        padding: '8px 18px',
+                        padding: '8px 16px',
                         borderRadius: '8px',
                         color: 'white',
                         fontWeight: '700',
-                        fontSize: '0.86rem',
+                        fontSize: '0.85rem',
                         whiteSpace: 'nowrap',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                        height: '35px'
                       }}
                     >
                       <Printer size={16} /> In Phiếu Ngay ({printLienCount} liên)
@@ -1259,59 +1265,63 @@ export default function Treasurer() {
                   </div>
                 </div>
 
-                {/* Line 2: 3 Layout Controls evenly spaced in a 3-Column Grid */}
+                {/* Dòng 2: Grid 3 ô Bố cục (Căn lề - Giãn dòng - Cỡ chữ) */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
                   gap: '12px',
                   background: '#f8fafc',
                   padding: '10px 12px',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   border: '1px solid #e2e8f0'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>📐 Căn lề:</span>
+                  {/* Căn lề */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#475569' }}>
+                      📐 Căn lề:
+                    </label>
                     <select
                       value={printMargin}
                       onChange={(e) => handleMarginChange(e.target.value)}
                       style={{
-                        flex: 1,
-                        padding: '6px 10px',
+                        width: '100%',
+                        padding: '6px 8px',
                         borderRadius: '6px',
                         border: '1.5px solid #cbd5e1',
-                        fontSize: '0.84rem',
-                        fontWeight: '700',
+                        fontSize: '0.83rem',
+                        fontWeight: '600',
                         color: '#0f172a',
                         background: '#ffffff',
                         cursor: 'pointer',
                         outline: 'none'
                       }}
-                      title="Căn lề trên/dưới/trái/phải của tờ phiếu in"
                     >
-                      <option value="10px 14px">📏 Lề hẹp (10px - Tiết kiệm)</option>
-                      <option value="20px 24px">📐 Lề vừa (20px - Mặc định)</option>
-                      <option value="28px 32px">📄 Lề rộng (28px - Thoáng)</option>
+                      <option value="10px 14px">📏 Hẹp (10px - Tiết kiệm)</option>
+                      <option value="20px 24px">📐 Vừa (20px - Mặc định)</option>
+                      <option value="28px 32px">📄 Rộng (28px - Thoáng)</option>
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>↕️ Giãn dòng:</span>
+                  {/* Giãn dòng */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#475569' }}>
+                      ↕️ Giãn dòng:
+                    </label>
                     <select
                       value={printLineHeight}
                       onChange={(e) => handleLineHeightChange(e.target.value)}
                       style={{
-                        flex: 1,
-                        padding: '6px 10px',
+                        width: '100%',
+                        padding: '6px 8px',
                         borderRadius: '6px',
                         border: '1.5px solid #cbd5e1',
-                        fontSize: '0.84rem',
-                        fontWeight: '700',
+                        fontSize: '0.83rem',
+                        fontWeight: '600',
                         color: '#0f172a',
                         background: '#ffffff',
                         cursor: 'pointer',
                         outline: 'none'
                       }}
-                      title="Độ giãn khoảng cách giữa các dòng"
                     >
                       <option value="1.0">↕️ 1.0 (Giãn chặt)</option>
                       <option value="1.15">↕️ 1.15 (Giãn vừa)</option>
@@ -1321,45 +1331,46 @@ export default function Treasurer() {
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>📝 Cỡ chữ:</span>
+                  {/* Cỡ chữ */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#475569' }}>
+                      📝 Cỡ phông chữ:
+                    </label>
                     <select
                       value={printFontSize}
                       onChange={(e) => handleFontSizeChange(e.target.value)}
                       style={{
-                        flex: 1,
-                        padding: '6px 10px',
+                        width: '100%',
+                        padding: '6px 8px',
                         borderRadius: '6px',
                         border: '1.5px solid #cbd5e1',
-                        fontSize: '0.84rem',
-                        fontWeight: '700',
+                        fontSize: '0.83rem',
+                        fontWeight: '600',
                         color: '#0f172a',
                         background: '#ffffff',
                         cursor: 'pointer',
                         outline: 'none'
                       }}
-                      title="Kích thước phông chữ phiếu in"
                     >
-                      <option value="11px">📝 11px (Chữ nhỏ)</option>
+                      <option value="11px">📝 11px (Nhỏ)</option>
                       <option value="12.5px">📝 12.5px (Vừa)</option>
                       <option value="13.5px">📝 13.5px (Chuẩn mặc định)</option>
-                      <option value="14.5px">📝 14.5px (Chữ lớn)</option>
+                      <option value="14.5px">📝 14.5px (Lớn)</option>
                       <option value="16px">📝 16px (Rất lớn)</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Quick Edit Person A Name Field */}
+                {/* Dòng 3: Sửa nhanh tên Người giao / nộp tiền */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  paddingTop: '8px',
-                  borderTop: '1px dashed #cbd5e1',
-                  marginTop: '2px'
+                  paddingTop: '6px',
+                  borderTop: '1px dashed #e2e8f0'
                 }}>
-                  <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap' }}>
-                    👤 Tên Bên A (Người giao tiền):
+                  <span style={{ fontSize: '0.83rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap' }}>
+                    👤 Tên Bên A (Người giao/nộp tiền):
                   </span>
                   <input
                     type="text"
@@ -1371,17 +1382,13 @@ export default function Treasurer() {
                       padding: '6px 12px',
                       borderRadius: '6px',
                       border: '1.5px solid #3b82f6',
-                      fontSize: '0.88rem',
+                      fontSize: '0.86rem',
                       fontWeight: '700',
                       color: '#1d4ed8',
                       background: '#eff6ff',
                       outline: 'none'
                     }}
-                    title="Gõ thay đổi tên Bên A ở đây, tên trên tờ in sẽ lập tức cập nhật theo!"
                   />
-                  <span style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#64748b', whiteSpace: 'nowrap' }}>
-                    (Gõ sửa ở ô này sẽ tự động cập nhật ngay lên bản in)
-                  </span>
                 </div>
               </div>
             </div>
