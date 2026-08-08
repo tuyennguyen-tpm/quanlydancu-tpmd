@@ -1135,6 +1135,23 @@ const App = () => {
     return DEFAULT_OFFICIALS;
   });
 
+  useEffect(() => {
+    const handleSigChange = () => {
+      const saved = localStorage.getItem('official_signatures');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setOfficialSignatures(DEFAULT_OFFICIALS.map(def => {
+            const found = parsed.find((p: any) => p.id === def.id);
+            return found ? { ...def, ...found } : def;
+          }));
+        } catch {}
+      }
+    };
+    window.addEventListener('official-signatures-changed', handleSigChange);
+    return () => window.removeEventListener('official-signatures-changed', handleSigChange);
+  }, []);
+
   // Password change states
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -1337,37 +1354,8 @@ const App = () => {
         }
       }
 
-      // Đồng bộ chỉ tiêu đóng quỹ từ cấp Phường (ward_admin) xuống các Tổ dân phố (nếu TDP chưa tùy chỉnh riêng)
-      const myWardId = localStorage.getItem('user_ward_id');
-      const currentUserRole = localStorage.getItem('user_role');
-      const hasCustomWardFunds = !!localStorage.getItem('ward_fund_list');
-      if (myWardId && currentUserRole !== 'ward_admin' && !hasCustomWardFunds) {
-        try {
-          const { data: wardAdmins } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('role', 'ward_admin')
-            .eq('ward_id', myWardId)
-            .limit(1);
-          if (wardAdmins && wardAdmins.length > 0) {
-            const wardAdminUid = wardAdmins[0].id;
-            const { data: wardConfig } = await supabase
-              .from('app_config')
-              .select('value')
-              .eq('user_id', wardAdminUid)
-              .eq('key', 'ward_fund_list')
-              .maybeSingle();
-            if (wardConfig && wardConfig.value) {
-              localStorage.setItem('ward_fund_list', wardConfig.value);
-              window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
-            }
-          }
-        } catch (err) {
-          console.error('Lỗi tự động đồng bộ danh sách quỹ Phường:', err);
-        }
-      } else {
-        window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
-      }
+      // Đồng bộ toàn bộ cấu hình từ Supabase (quỹ, chữ ký, tổ tự quản)
+      await (db as any).syncAppConfigsFromSupabase();
     } catch (e) {
       console.error('Failed to load system config from Supabase:', e);
     }
@@ -2180,11 +2168,11 @@ const App = () => {
       }));
       return;
     }
-    localStorage.setItem('tdp_groups_config', JSON.stringify(cleanedGroups));
+    await (db as any).saveTdpGroupsConfig(cleanedGroups);
     window.dispatchEvent(new CustomEvent('tdp-groups-changed'));
 
     // Lưu chữ ký & tên cán bộ
-    localStorage.setItem('official_signatures', JSON.stringify(officialSignatures));
+    await (db as any).saveOfficialSignatures(officialSignatures);
     window.dispatchEvent(new CustomEvent('official-signatures-changed'));
     
     // Lưu phiên bản mới nhất

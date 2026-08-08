@@ -901,7 +901,7 @@ const WardFunds = () => {
           const compExp = computedExpectedMap.get(f.id) || {};
           matchesStatus = activeFunds.every(fund => {
             const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
-            const expected = compExp[fund.name] ?? (contrib.expected || fund.target);
+            const expected = compExp[fund.name] ?? (contrib.expected !== undefined ? contrib.expected : 0);
             const actual = contrib.actual || 0;
             if (expected === 0) return true;
             return actual >= expected;
@@ -915,7 +915,7 @@ const WardFunds = () => {
           let hasUnpaid = false;
           for (const fund of activeFunds) {
             const contrib = f.contributions?.[fund.name] || { expected: 0, actual: 0 };
-            const expected = compExp[fund.name] ?? (contrib.expected || fund.target);
+            const expected = compExp[fund.name] ?? (contrib.expected !== undefined ? contrib.expected : 0);
             const actual = contrib.actual || 0;
             if (expected > 0 && actual < expected) {
               hasUnpaid = true;
@@ -1318,8 +1318,11 @@ const WardFunds = () => {
     try {
       // Kiểm tra xem hiện tại đã đóng đủ chưa
       const isCurrentlyPaid = activeFunds.every(fund => {
-        const contrib = record.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
-        return contrib.actual >= contrib.expected && contrib.expected > 0;
+        const compExp = computedExpectedMap.get(record.id) || {};
+        const contrib = record.contributions?.[fund.name] || { expected: 0, actual: 0 };
+        const expected = compExp[fund.name] ?? (contrib.expected || 0);
+        if (expected === 0) return true;
+        return contrib.actual >= expected;
       });
 
       const newContributions: Record<string, any> = { ...record.contributions };
@@ -1394,19 +1397,42 @@ const WardFunds = () => {
         }
       }
 
-      const allWardPaid = members.every(m => {
-        const compExp = computedExpectedMap.get(m.id) || {};
-        return activeFunds.every(fund => {
-          const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
-          if (isHouseholdScope) return true;
-          const exp = compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected || 0);
-          const act = m.contributions?.[fund.name]?.actual || 0;
-          if (exp === 0) return true;
-          return act >= exp;
-        });
+      const allWardPaid = activeFunds.every(fund => {
+        const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
+        if (isHouseholdScope) {
+          let totalFundExp = 0;
+          let totalFundAct = 0;
+          members.forEach(m => {
+            const compExp = computedExpectedMap.get(m.id) || {};
+            const exp = compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected || 0);
+            const act = m.contributions?.[fund.name]?.actual || 0;
+            totalFundExp += exp;
+            totalFundAct += act;
+          });
+          if (totalFundExp === 0) totalFundExp = fund.target;
+          return totalFundAct >= totalFundExp;
+        } else {
+          return members.every(m => {
+            const compExp = computedExpectedMap.get(m.id) || {};
+            const exp = compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected || 0);
+            const act = m.contributions?.[fund.name]?.actual || 0;
+            if (exp === 0) return true;
+            return act >= exp;
+          });
+        }
       });
 
-      const shouldPay = forceCancel !== undefined ? !forceCancel : !allWardPaid;
+      const tdpActiveFunds = (db as any).getFundList() || [];
+      let householdPaidFunds: HouseholdFund[] = [];
+      try { householdPaidFunds = await db.getHouseholdFunds(); } catch { /* ignore */ }
+      const filteredHhFunds = householdPaidFunds.filter(hf => hf.household_id === householdId && hf.year === selectedYear);
+
+      const allTdpPaid = tdpActiveFunds.length === 0 || tdpActiveFunds.every((fund: any) => {
+        const paidFund = filteredHhFunds.find(hf => hf.fund_name === fund.name);
+        return paidFund && paidFund.amount >= fund.target;
+      });
+
+      const shouldPay = forceCancel !== undefined ? !forceCancel : (!allWardPaid || !allTdpPaid);
       const today = new Date().toISOString().slice(0, 10);
 
       // Tính toán contributions cho tất cả thành viên trong hộ
@@ -1459,8 +1485,6 @@ const WardFunds = () => {
           });
         }
       });
-
-      const tdpActiveFunds = (db as any).getFundList() || [];
 
       // ⚡ 1. CẬP NHẬT GIAO DIỆN TỨC THÌ 0MS (OPTIMISTIC UPDATE)
       // Thẻ của hộ đổi màu xanh và chuyển nút ↩ Hủy lập tức trong 0.00 giây

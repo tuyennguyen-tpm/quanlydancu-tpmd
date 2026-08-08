@@ -1875,18 +1875,142 @@ export const db = {
     localStorage.setItem('ward_fund_list', valueStr);
     if (supabase) {
       try {
-        const uId = await getSessionUserId();
-        if (uId) {
+        const uId = (await getSessionUserId()) || 'default_user';
+        const now = new Date().toISOString();
+        await supabase.from('app_config').upsert({
+          user_id: uId,
+          key: 'ward_fund_list',
+          value: valueStr,
+          updated_at: now
+        }, { onConflict: 'user_id,key' });
+
+        if (uId !== 'default_user') {
           await supabase.from('app_config').upsert({
-            user_id: uId,
+            user_id: 'default_user',
             key: 'ward_fund_list',
             value: valueStr,
-            updated_at: new Date().toISOString()
-          });
+            updated_at: now
+          }, { onConflict: 'user_id,key' });
         }
       } catch (err) {
         console.error('Failed to sync ward_fund_list to Supabase:', err);
       }
+    }
+  },
+  getOfficialSignatures: (): { id: string; title: string; name: string; signatureUrl: string }[] => {
+    const DEFAULT_OFFICIALS = [
+      { id: 'to_truong', title: 'Tổ trưởng Tổ dân phố', name: '', signatureUrl: '' },
+      { id: 'to_pho', title: 'Tổ phó Tổ dân phố', name: '', signatureUrl: '' },
+      { id: 'bi_thu', title: 'Bí thư Chi bộ', name: '', signatureUrl: '' },
+      { id: 'mat_tran', title: 'Trưởng ban Công tác Mặt trận', name: '', signatureUrl: '' },
+      { id: 'thu_quy', title: 'Thủ quỹ', name: '', signatureUrl: '' },
+      { id: 'thu_ky', title: 'Thư ký', name: '', signatureUrl: '' },
+      { id: 'thu_ky2', title: 'Thư ký (2)', name: '', signatureUrl: '' },
+      { id: 'women', title: 'Chi hội trưởng Phụ nữ', name: '', signatureUrl: '' },
+      { id: 'veterans', title: 'Chi hội trưởng Cựu chiến binh', name: '', signatureUrl: '' },
+      { id: 'seniors', title: 'Chi hội trưởng Người cao tuổi', name: '', signatureUrl: '' },
+      { id: 'youth', title: 'Bí thư Chi đoàn', name: '', signatureUrl: '' },
+    ];
+    const stored = localStorage.getItem('official_signatures');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        return DEFAULT_OFFICIALS.map(def => {
+          const found = parsed.find((p: any) => p.id === def.id);
+          return found ? { ...def, ...found } : def;
+        });
+      } catch { return DEFAULT_OFFICIALS; }
+    }
+    return DEFAULT_OFFICIALS;
+  },
+  saveOfficialSignatures: async (signatures: { id: string; title: string; name: string; signatureUrl: string }[]): Promise<void> => {
+    const valueStr = JSON.stringify(signatures);
+    localStorage.setItem('official_signatures', valueStr);
+    if (supabase) {
+      try {
+        const uId = (await getSessionUserId()) || 'default_user';
+        const now = new Date().toISOString();
+        await supabase.from('app_config').upsert({
+          user_id: uId,
+          key: 'official_signatures',
+          value: valueStr,
+          updated_at: now
+        }, { onConflict: 'user_id,key' });
+
+        if (uId !== 'default_user') {
+          await supabase.from('app_config').upsert({
+            user_id: 'default_user',
+            key: 'official_signatures',
+            value: valueStr,
+            updated_at: now
+          }, { onConflict: 'user_id,key' });
+        }
+      } catch (err) {
+        console.error('Failed to sync official_signatures to Supabase:', err);
+      }
+    }
+  },
+  getTdpGroupsConfig: (): string[] => {
+    const stored = localStorage.getItem('tdp_groups_config') || localStorage.getItem('tdp_groups');
+    if (stored) {
+      try { return JSON.parse(stored); } catch {}
+    }
+    return ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9'];
+  },
+  saveTdpGroupsConfig: async (groups: string[]): Promise<void> => {
+    const valueStr = JSON.stringify(groups);
+    localStorage.setItem('tdp_groups_config', valueStr);
+    localStorage.setItem('tdp_groups', valueStr);
+    if (supabase) {
+      try {
+        const uId = (await getSessionUserId()) || 'default_user';
+        const now = new Date().toISOString();
+        await supabase.from('app_config').upsert({
+          user_id: uId,
+          key: 'tdp_groups_config',
+          value: valueStr,
+          updated_at: now
+        }, { onConflict: 'user_id,key' });
+
+        if (uId !== 'default_user') {
+          await supabase.from('app_config').upsert({
+            user_id: 'default_user',
+            key: 'tdp_groups_config',
+            value: valueStr,
+            updated_at: now
+          }, { onConflict: 'user_id,key' });
+        }
+      } catch (err) {
+        console.error('Failed to sync tdp_groups_config to Supabase:', err);
+      }
+    }
+  },
+  syncAppConfigsFromSupabase: async (): Promise<void> => {
+    if (!supabase) return;
+    try {
+      const uId = await getSessionUserId();
+      let query = supabase.from('app_config').select('key, value');
+      if (uId) query = query.eq('user_id', uId);
+
+      let { data, error } = await query;
+      if (error || !data || data.length === 0) {
+        const { data: defaultData } = await supabase.from('app_config').select('key, value').eq('user_id', 'default_user');
+        data = defaultData;
+      }
+
+      if (data && data.length > 0) {
+        data.forEach(item => {
+          if (item.key && item.value) {
+            localStorage.setItem(item.key, item.value);
+          }
+        });
+        window.dispatchEvent(new CustomEvent('ward-fund-targets-changed'));
+        window.dispatchEvent(new CustomEvent('fund-targets-changed'));
+        window.dispatchEvent(new CustomEvent('official-signatures-changed'));
+        window.dispatchEvent(new CustomEvent('tdp-groups-changed'));
+      }
+    } catch (e) {
+      console.error('Lỗi đồng bộ app_config từ Supabase:', e);
     }
   },
   getWardFunds: async (year: number): Promise<WardFund[]> => {
