@@ -1869,7 +1869,10 @@ export const db = {
             else if (lowerName.includes('đền ơn')) defTarget = 70000;
 
             const isHh = item.scope ? item.scope === 'household' : (lowerName.includes('hộ gia đình') || lowerName.includes('người cao tuổi') || lowerName.includes('cao tuổi'));
-            const finalTarget = typeof item.target === 'number' && item.target > 0 ? item.target : defTarget;
+            let finalTarget = typeof item.target === 'number' && item.target > 0 ? item.target : defTarget;
+            if (finalTarget === 10000 && lowerName.includes('thiên tai')) finalTarget = 15000;
+            if ((finalTarget === 20000 || finalTarget === 10000) && lowerName.includes('đền ơn')) finalTarget = 70000;
+            if ((finalTarget === 20000 || finalTarget === 0 || finalTarget === 10000) && lowerName.includes('cao tuổi')) finalTarget = 50000;
 
             return {
               ...item,

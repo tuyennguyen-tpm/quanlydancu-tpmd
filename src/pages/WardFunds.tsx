@@ -6236,9 +6236,9 @@ const WardFunds = () => {
     // Quỹ Phường từ CSDL hoặc mẫu mặc định
     const wardFundsList = (db as any).getWardFundList() || [];
     const defaultWardItems = [
-      { name: 'Quỹ phòng chống thiên tai', target: 10000, scope: 'person', text: '10.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
-      { name: 'Đền ơn đáp nghĩa', target: 20000, scope: 'person', text: '20.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
-      { name: 'Chăm sóc người cao tuổi', target: 20000, scope: 'household', text: '20.000đ / hộ / năm' }
+      { name: 'Quỹ phòng chống thiên tai', target: 15000, scope: 'person', text: '15.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
+      { name: 'Đền ơn đáp nghĩa', target: 70000, scope: 'person', text: '70.000đ / khẩu / năm (Ở độ tuổi lao động – Có danh sách kèm theo)' },
+      { name: 'Chăm sóc người cao tuổi', target: 50000, scope: 'household', text: '50.000đ / hộ / năm' }
     ];
 
     let wardHouseholdTotal = 0;
