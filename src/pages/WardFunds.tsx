@@ -3761,7 +3761,7 @@ const WardFunds = () => {
         </div>
 
         <script>
-          const SAVE_KEY = 'receipt_html_ward_indiv_${item.id}_${selectedYear}';
+          const SAVE_KEY = '${SAVE_KEY}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
           const btnSave = document.getElementById('btn-save');
           const btnReset = document.getElementById('btn-reset');
@@ -5265,7 +5265,7 @@ const WardFunds = () => {
         </div>
 
         <script>
-          const SAVE_KEY = 'receipt_html_${householdId}_${selectedYear}_${printMode}';
+          const SAVE_KEY = '${SAVE_KEY}';
           const currentPrintMode = '${printMode}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
           const btnSave = document.getElementById('btn-save');

@@ -3094,12 +3094,14 @@ export const partyDb = {
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        await supabase.from('app_config').upsert({
-          key: `RECEIPT_CUSTOM_${key}`,
-          value: html,
-          user_id: uId,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'key' });
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          await supabase.from('app_config').upsert({
+            key: `RECEIPT_CUSTOM_${key}`,
+            value: html,
+            user_id: uId,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,key' });
+        }
       } catch (e) {
         console.error('saveReceiptCustomization Supabase sync error:', e);
       }
@@ -3120,7 +3122,12 @@ export const partyDb = {
 
     if (supabase) {
       try {
-        const { data } = await supabase.from('app_config').select('value').eq('key', `RECEIPT_CUSTOM_${key}`).maybeSingle();
+        const uId = await getSessionUserId();
+        let query = supabase.from('app_config').select('value').eq('key', `RECEIPT_CUSTOM_${key}`);
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          query = query.eq('user_id', uId);
+        }
+        const { data } = await query.maybeSingle();
         if (data && data.value) {
           try { localStorage.setItem(key, data.value); } catch (e) {}
           return data.value;
@@ -3143,7 +3150,12 @@ export const partyDb = {
 
     if (supabase) {
       try {
-        await supabase.from('app_config').delete().eq('key', `RECEIPT_CUSTOM_${key}`);
+        const uId = await getSessionUserId();
+        let query = supabase.from('app_config').delete().eq('key', `RECEIPT_CUSTOM_${key}`);
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          query = query.eq('user_id', uId);
+        }
+        await query;
       } catch (e) {}
     }
     return true;
