@@ -226,14 +226,14 @@ export function docSoTien(number: number): string {
 export function getContributionData(contributions: Record<string, any> | undefined, fundName: string): { expected?: number; actual?: number; date?: string; is_manual_exempt?: boolean; is_manual_target?: boolean } | undefined {
   if (!contributions) return undefined;
   if (contributions[fundName]) return contributions[fundName];
-  const norm = (s: string) => s.toLowerCase().replace(/^\[.*?\]\s*/, '').replace(/^quỹ\s+/, '').trim();
+  const norm = (s: string) => (s || '').toLowerCase().replace(/^\[.*?\]\s*/, '').replace(/^quỹ\s+/, '').replace(/\s+/g, ' ').trim();
   const target = norm(fundName);
   for (const k of Object.keys(contributions)) {
     if (norm(k) === target) return contributions[k];
   }
   for (const k of Object.keys(contributions)) {
     const nk = norm(k);
-    if (nk.includes(target) || target.includes(nk)) return contributions[k];
+    if (nk && target && (nk.includes(target) || target.includes(nk))) return contributions[k];
   }
   return undefined;
 }

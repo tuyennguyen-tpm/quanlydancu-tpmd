@@ -1442,13 +1442,14 @@ const WardFunds = () => {
         const isHouseholdFund = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('cao tuổi') || fund.name.toLowerCase().includes('người cao tuổi'));
         
         if (isHouseholdFund) {
-          let primaryIndex = members.findIndex(m => (m.contributions?.[fund.name]?.expected || 0) > 0);
+          let primaryIndex = members.findIndex(m => (getContributionData(m.contributions, fund.name)?.expected || 0) > 0);
           if (primaryIndex < 0) primaryIndex = 0;
 
           members.forEach((m, idx) => {
-            const c = m.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            const c = getContributionData(m.contributions, fund.name) || { expected: 0, actual: 0 };
+            const cExp = typeof c.expected === 'number' ? c.expected : 0;
             if (idx === primaryIndex) {
-              const targetExp = c.expected > 0 ? c.expected : fund.target;
+              const targetExp = cExp > 0 ? cExp : fund.target;
               memberContribMaps[idx][fund.name] = {
                 expected: targetExp,
                 actual: shouldPay ? targetExp : 0,
@@ -1456,7 +1457,7 @@ const WardFunds = () => {
               };
             } else {
               memberContribMaps[idx][fund.name] = {
-                expected: c.expected || 0,
+                expected: cExp,
                 actual: 0,
                 date: ''
               };
@@ -1464,7 +1465,8 @@ const WardFunds = () => {
           });
         } else {
           members.forEach((m, idx) => {
-            const c = m.contributions?.[fund.name] || { expected: 0, actual: 0 };
+            const c = getContributionData(m.contributions, fund.name) || { expected: 0, actual: 0 };
+            const cExp = typeof c.expected === 'number' ? c.expected : 0;
             let inLaborAge = true;
             if (m.dob) {
               const year = parseInt(m.dob.match(/\d{4}/)?.[0] || '0', 10);
@@ -1476,7 +1478,7 @@ const WardFunds = () => {
                 else inLaborAge = age >= 18 && age <= 60;
               }
             }
-            const expVal = inLaborAge ? (c.expected > 0 ? c.expected : fund.target) : (c.expected > 0 ? c.expected : 0);
+            const expVal = inLaborAge ? (cExp > 0 ? cExp : fund.target) : (cExp > 0 ? cExp : 0);
             memberContribMaps[idx][fund.name] = {
               expected: expVal,
               actual: (shouldPay && expVal > 0) ? expVal : 0,
