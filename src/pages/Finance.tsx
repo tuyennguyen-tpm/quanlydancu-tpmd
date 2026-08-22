@@ -464,6 +464,7 @@ const Finance = () => {
 
       // 2. Xác định các Hộ thực sự đã nộp đủ theo chuẩn Quỹ Phường
       const paidRealHhIds = new Set<string>();
+      const householdsToCreate: Household[] = [];
 
       wardHhGroups.forEach((members, groupKey) => {
         let totalExp = 0;
@@ -485,20 +486,49 @@ const Finance = () => {
         const isGroupPaid = isMarkedPaid || (totalExp > 0 && totalAct >= totalExp);
         
         if (isGroupPaid) {
-          if (hhMapById.has(groupKey)) {
-            paidRealHhIds.add(groupKey);
-          } else {
-            // Thử khớp lại địa chỉ của nhóm với hộ thật
+          let realHhId = hhMapById.has(groupKey) ? groupKey : undefined;
+          if (!realHhId) {
             const firstM = members[0];
             const addrNorm = removeAccents(firstM?.address || '');
             const matchedHh = realHouseholds.find(h => {
               const hhAddrNorm = removeAccents(h.address || '');
               return hhAddrNorm && (hhAddrNorm === addrNorm || addrNorm.includes(hhAddrNorm) || hhAddrNorm.includes(addrNorm));
             });
-            if (matchedHh) paidRealHhIds.add(matchedHh.id);
+            if (matchedHh) realHhId = matchedHh.id;
           }
+
+          // Nếu hộ này chưa có trong CSDL households, tạo mới một Household hợp lệ với UUID
+          if (!realHhId) {
+            const firstM = members[0];
+            let derivedHeadName = firstM?.full_name || 'Chủ hộ';
+            const hoMatch = firstM?.address?.match(/hộ\s+(?:ông|bà)?\s*([^\s,,-]+(?:\s+[^\s,,-]+)+)/i);
+            if (hoMatch && hoMatch[1]) {
+              derivedHeadName = hoMatch[1].trim();
+            }
+            realHhId = generateUUID();
+            const groupNameFromRecord = (firstM as any)?.group_name || ((firstM?.address || '').match(/tổ\s+(\d+|việt\s+trung)/i)?.[0] || 'Tổ dân phố');
+            const newHh: Household = {
+              id: realHhId,
+              household_number: `HĐ-${realHouseholds.length + householdsToCreate.length + 1}`,
+              address: firstM?.address || `Hộ ${derivedHeadName}`,
+              martyr_name: derivedHeadName,
+              self_management_group: groupNameFromRecord,
+              created_at: new Date().toISOString()
+            } as any;
+            householdsToCreate.push(newHh);
+            realHouseholds.push(newHh);
+            hhMapById.set(realHhId, newHh);
+            headNameForHHMap.set(realHhId, derivedHeadName);
+          }
+
+          paidRealHhIds.add(realHhId);
         }
       });
+
+      // Lưu các hộ gia đình mới tạo vào Supabase (nếu có)
+      if (householdsToCreate.length > 0) {
+        await (db as any).saveHouseholdsBulk(householdsToCreate);
+      }
 
       // 3. XÓA SẠCH toàn bộ household_funds năm hiện tại và các phiếu thu tự động cũ
       if (typeof (db as any).deleteHouseholdFundsByYear === 'function') {
