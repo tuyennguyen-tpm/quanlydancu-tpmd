@@ -274,7 +274,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   }, [residents]);
 
 
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'child' | 'military' | 'longevity'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'senior' | 'senior70' | 'senior75' | 'child' | 'military' | 'longevity'>('all');
   const [householdFilter, setHouseholdFilter] = useState<string>('all');
   const [showDeceased, setShowDeceased] = useState(false);
   const [showMovedOut, setShowMovedOut] = useState(false);
@@ -1071,7 +1071,11 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     let filterSubtitle = 'Toàn tổ dân phố';
 
     if (categoryFilter === 'senior') {
+      docTitleHtml = 'DANH SÁCH NGƯỜI CAO TUỔI (≥ 60 tuổi)';
+    } else if (categoryFilter === 'senior70') {
       docTitleHtml = 'DANH SÁCH NGƯỜI CAO TUỔI (≥ 70 tuổi)';
+    } else if (categoryFilter === 'senior75') {
+      docTitleHtml = 'DANH SÁCH NGƯỜI CAO TUỔI (≥ 75 tuổi)';
     } else if (categoryFilter === 'child') {
       docTitleHtml = 'DANH SÁCH TRẺ EM (< 16 tuổi)';
     } else if (categoryFilter === 'military') {
@@ -1845,6 +1849,10 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     let matchesCategory = true;
     if (categoryFilter === 'senior') {
       matchesCategory = age >= 60;
+    } else if (categoryFilter === 'senior70') {
+      matchesCategory = age >= 70;
+    } else if (categoryFilter === 'senior75') {
+      matchesCategory = age >= 75;
     } else if (categoryFilter === 'child') {
       matchesCategory = age < 16;
     } else if (categoryFilter === 'military') {
@@ -2167,6 +2175,18 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                   <UserCheck size={16} /> Người cao tuổi (≥60)
                 </button>
                 <button 
+                  className={`filter-btn filter-btn-senior70 ${categoryFilter === 'senior70' ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter(categoryFilter === 'senior70' ? 'all' : 'senior70')}
+                >
+                  <UserCheck size={16} /> Người cao tuổi (≥70)
+                </button>
+                <button 
+                  className={`filter-btn filter-btn-senior75 ${categoryFilter === 'senior75' ? 'active' : ''}`}
+                  onClick={() => setCategoryFilter(categoryFilter === 'senior75' ? 'all' : 'senior75')}
+                >
+                  <UserCheck size={16} /> Người cao tuổi (≥75)
+                </button>
+                <button 
                   className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
                   onClick={() => setCategoryFilter(categoryFilter === 'child' ? 'all' : 'child')}
                 >
@@ -2228,6 +2248,24 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           borderColor = '#93c5fd';
           iconBg = '#2563eb';
           titleColor = '#1e40af';
+        } else if (categoryFilter === 'senior70') {
+          icon = '👴';
+          title = 'THỐNG KÊ NGƯỜI CAO TUỔI (Từ 70 tuổi trở lên)';
+          subtitle = 'Danh sách tổng hợp các nhân khẩu có độ tuổi từ 70 trở lên trong địa bàn Tổ dân phố.';
+          bgGradient = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+          borderColor = '#86efac';
+          iconBg = '#16a34a';
+          titleColor = '#166534';
+          badgeUnit = 'người';
+        } else if (categoryFilter === 'senior75') {
+          icon = '👴';
+          title = 'THỐNG KÊ NGƯỜI CAO TUỔI (Từ 75 tuổi trở lên)';
+          subtitle = 'Danh sách tổng hợp các nhân khẩu có độ tuổi từ 75 trở lên trong địa bàn Tổ dân phố.';
+          bgGradient = 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)';
+          borderColor = '#5eead4';
+          iconBg = '#0d9488';
+          titleColor = '#115e59';
+          badgeUnit = 'người';
         } else if (categoryFilter === 'child') {
           icon = '👶';
           title = 'THỐNG KÊ TRẺ EM (Dưới 16 tuổi)';
@@ -3336,6 +3374,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         .filter-btn-all,
         .filter-btn-group,
         .filter-btn-senior,
+        .filter-btn-senior70,
+        .filter-btn-senior75,
         .filter-btn-child,
         .filter-btn-military,
         .filter-btn-longevity {
@@ -3364,6 +3404,20 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           color: #ffffff !important;
           border-color: #16a34a !important;
           box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4) !important;
+        }
+
+        .filter-btn-senior70.active {
+          background-color: #059669 !important;
+          color: #ffffff !important;
+          border-color: #059669 !important;
+          box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4) !important;
+        }
+
+        .filter-btn-senior75.active {
+          background-color: #0d9488 !important;
+          color: #ffffff !important;
+          border-color: #0d9488 !important;
+          box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4) !important;
         }
 
         .filter-btn-child.active {

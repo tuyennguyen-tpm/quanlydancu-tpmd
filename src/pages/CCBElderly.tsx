@@ -27,7 +27,7 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
   const [seniors, setSeniors] = useState<Resident[]>([]);
   const [veterans, setVeterans] = useState<Resident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [subFilter, setSubFilter] = useState<'all' | 'senior70' | 'longevity'>('all');
+  const [subFilter, setSubFilter] = useState<'all' | 'senior60' | 'senior70' | 'senior75' | 'longevity'>('all');
   const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
   const [groupFilter, setGroupFilter] = useState('all');
   const [residentSearchQuery, setResidentSearchQuery] = useState('');
@@ -187,8 +187,12 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
     // Sub-filters for seniors
     if (selectedTab === 'seniors') {
       const age = getAge(m.dob);
-      if (subFilter === 'senior70') {
+      if (subFilter === 'senior60') {
+        if (age < 60) return false;
+      } else if (subFilter === 'senior70') {
         if (age < 70) return false;
+      } else if (subFilter === 'senior75') {
+        if (age < 75) return false;
       } else if (subFilter === 'longevity') {
         const longevityAge = getLongevityAge(m.dob, longevityYear);
         if (!MILESTONE_AGES.includes(longevityAge)) return false;
@@ -928,19 +932,49 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
             Tất cả Người cao tuổi
           </button>
           <button
-            onClick={() => setSubFilter('senior70')}
+            onClick={() => setSubFilter('senior60')}
             style={{
               padding: '6px 12px',
               borderRadius: '6px',
               border: '1px solid var(--border)',
-              background: subFilter === 'senior70' ? '#1d4ed8' : 'white',
-              color: subFilter === 'senior70' ? 'white' : 'var(--text-secondary)',
+              background: subFilter === 'senior60' ? '#16a34a' : 'white',
+              color: subFilter === 'senior60' ? 'white' : 'var(--text-secondary)',
               fontSize: '12px',
               fontWeight: '600',
               cursor: 'pointer'
             }}
           >
             👴 Người cao tuổi (≥60)
+          </button>
+          <button
+            onClick={() => setSubFilter('senior70')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: subFilter === 'senior70' ? '#059669' : 'white',
+              color: subFilter === 'senior70' ? 'white' : 'var(--text-secondary)',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            👴 Người cao tuổi (≥70)
+          </button>
+          <button
+            onClick={() => setSubFilter('senior75')}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--border)',
+              background: subFilter === 'senior75' ? '#0d9488' : 'white',
+              color: subFilter === 'senior75' ? 'white' : 'var(--text-secondary)',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            👴 Người cao tuổi (≥75)
           </button>
           <button
             onClick={() => setSubFilter('longevity')}
