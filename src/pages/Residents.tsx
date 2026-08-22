@@ -2168,24 +2168,46 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             </select>
             {viewMode !== 'temp' && (
               <>
-                <button 
-                  className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter(categoryFilter === 'senior' ? 'all' : 'senior')}
+                <select 
+                  className={`filter-btn filter-btn-senior ${categoryFilter === 'senior' ? 'active' : categoryFilter === 'senior70' ? 'active filter-btn-senior70' : categoryFilter === 'senior75' ? 'active filter-btn-senior75' : ''}`}
+                  value={categoryFilter === 'senior' || categoryFilter === 'senior70' || categoryFilter === 'senior75' ? categoryFilter : ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'senior' || val === 'senior70' || val === 'senior75') {
+                      setCategoryFilter(val);
+                    } else {
+                      setCategoryFilter('all');
+                    }
+                  }}
+                  style={{
+                    paddingRight: '28px',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    background: `url("data:image/svg+xml;utf8,<svg fill='${(categoryFilter === 'senior' || categoryFilter === 'senior70' || categoryFilter === 'senior75') ? '%23ffffff' : '%230369a1'}' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 8px center`,
+                    backgroundSize: '16px',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
                 >
-                  <UserCheck size={16} /> Người cao tuổi (≥60)
-                </button>
-                <button 
-                  className={`filter-btn filter-btn-senior70 ${categoryFilter === 'senior70' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter(categoryFilter === 'senior70' ? 'all' : 'senior70')}
-                >
-                  <UserCheck size={16} /> Người cao tuổi (≥70)
-                </button>
-                <button 
-                  className={`filter-btn filter-btn-senior75 ${categoryFilter === 'senior75' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter(categoryFilter === 'senior75' ? 'all' : 'senior75')}
-                >
-                  <UserCheck size={16} /> Người cao tuổi (≥75)
-                </button>
+                  <option value="" style={{ color: '#64748b', background: 'white' }}>
+                    👴 Người cao tuổi
+                  </option>
+                  <option value="senior" style={{ color: '#1e293b', background: 'white' }}>
+                    👴 Người cao tuổi (≥60 tuổi)
+                  </option>
+                  <option value="senior70" style={{ color: '#1e293b', background: 'white' }}>
+                    👴 Người cao tuổi (≥70 tuổi)
+                  </option>
+                  <option value="senior75" style={{ color: '#1e293b', background: 'white' }}>
+                    👴 Người cao tuổi (≥75 tuổi)
+                  </option>
+                  {(categoryFilter === 'senior' || categoryFilter === 'senior70' || categoryFilter === 'senior75') && (
+                    <option value="all" style={{ color: '#ef4444', background: 'white' }}>
+                      ✖ Bỏ lọc người cao tuổi
+                    </option>
+                  )}
+                </select>
                 <button 
                   className={`filter-btn filter-btn-child ${categoryFilter === 'child' ? 'active' : ''}`}
                   onClick={() => setCategoryFilter(categoryFilter === 'child' ? 'all' : 'child')}

@@ -931,51 +931,53 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
           >
             Tất cả Người cao tuổi
           </button>
-          <button
-            onClick={() => setSubFilter('senior60')}
+          <select
+            value={subFilter === 'senior60' || subFilter === 'senior70' || subFilter === 'senior75' ? subFilter : ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'senior60' || val === 'senior70' || val === 'senior75') {
+                setSubFilter(val);
+              } else {
+                setSubFilter('all');
+              }
+            }}
             style={{
-              padding: '6px 12px',
+              padding: '6px 28px 6px 12px',
               borderRadius: '6px',
               border: '1px solid var(--border)',
-              background: subFilter === 'senior60' ? '#16a34a' : 'white',
-              color: subFilter === 'senior60' ? 'white' : 'var(--text-secondary)',
+              background: subFilter === 'senior60' ? '#16a34a' : subFilter === 'senior70' ? '#059669' : subFilter === 'senior75' ? '#0d9488' : 'white',
+              color: (subFilter === 'senior60' || subFilter === 'senior70' || subFilter === 'senior75') ? 'white' : 'var(--text-secondary)',
               fontSize: '12px',
               fontWeight: '600',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              outline: 'none',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='${(subFilter === 'senior60' || subFilter === 'senior70' || subFilter === 'senior75') ? '%23ffffff' : '%2364748b'}' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 6px center',
+              backgroundSize: '16px'
             }}
           >
-            👴 Người cao tuổi (≥60)
-          </button>
-          <button
-            onClick={() => setSubFilter('senior70')}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid var(--border)',
-              background: subFilter === 'senior70' ? '#059669' : 'white',
-              color: subFilter === 'senior70' ? 'white' : 'var(--text-secondary)',
-              fontSize: '12px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            👴 Người cao tuổi (≥70)
-          </button>
-          <button
-            onClick={() => setSubFilter('senior75')}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid var(--border)',
-              background: subFilter === 'senior75' ? '#0d9488' : 'white',
-              color: subFilter === 'senior75' ? 'white' : 'var(--text-secondary)',
-              fontSize: '12px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            👴 Người cao tuổi (≥75)
-          </button>
+            <option value="" style={{ color: '#64748b', background: 'white' }}>
+              👴 Chọn độ tuổi cao tuổi
+            </option>
+            <option value="senior60" style={{ color: '#1e293b', background: 'white' }}>
+              👴 Người cao tuổi (≥60 tuổi)
+            </option>
+            <option value="senior70" style={{ color: '#1e293b', background: 'white' }}>
+              👴 Người cao tuổi (≥70 tuổi)
+            </option>
+            <option value="senior75" style={{ color: '#1e293b', background: 'white' }}>
+              👴 Người cao tuổi (≥75 tuổi)
+            </option>
+            {(subFilter === 'senior60' || subFilter === 'senior70' || subFilter === 'senior75') && (
+              <option value="all" style={{ color: '#ef4444', background: 'white' }}>
+                ✖ Bỏ lọc độ tuổi
+              </option>
+            )}
+          </select>
           <button
             onClick={() => setSubFilter('longevity')}
             style={{
