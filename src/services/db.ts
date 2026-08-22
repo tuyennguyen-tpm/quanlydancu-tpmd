@@ -1837,6 +1837,22 @@ export const db = {
     setStorageItem('household_funds', filtered);
     return true;
   },
+  deleteHouseholdFundsBatch: async (ids: string[]): Promise<boolean> => {
+    if (!ids || ids.length === 0) return true;
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('household_funds').delete().in('id', ids);
+        if (error) handleDbError('xóa biên lai đóng quỹ hàng loạt', error);
+      } catch (e) {
+        console.error('Supabase deleteHouseholdFundsBatch error, falling back to local storage', e);
+      }
+    }
+    const idSet = new Set(ids);
+    const list = getStorageItem<HouseholdFund[]>('household_funds', []);
+    const filtered = list.filter(f => !idSet.has(f.id));
+    setStorageItem('household_funds', filtered);
+    return true;
+  },
   getFundList: (): { name: string; target: number }[] => {
     const stored = localStorage.getItem('fund_list');
     if (stored) {

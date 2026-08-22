@@ -468,20 +468,21 @@ const Finance = () => {
       wardHhGroups.forEach((members, groupKey) => {
         let totalExp = 0;
         let totalAct = 0;
-        let isMarkedPaid = members.some(m => m.note === 'Đã nộp đủ đợt tập trung');
+        const isMarkedPaid = members.some(m => m.note === 'Đã nộp đủ đợt tập trung');
 
         members.forEach(m => {
           wardActiveFunds.forEach((fund: any) => {
             const isHhScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
             const c = m.contributions?.[fund.name];
-            const exp = (c && typeof c.expected === 'number') ? c.expected : (isHhScope ? 0 : fund.target);
+            const exp = (c && typeof c.expected === 'number') ? c.expected : (isHhScope ? (members.indexOf(m) === 0 ? fund.target : 0) : fund.target);
             const act = c?.actual || 0;
             totalExp += exp;
             totalAct += act;
           });
         });
 
-        const isGroupPaid = isMarkedPaid || (totalExp > 0 && totalAct >= totalExp) || (totalAct > 0 && totalAct >= (totalExp || 50000));
+        // Chỉ chấp nhận hộ ĐÃ NỘP ĐỦ (khớp chuẩn xác 515 hộ của Quỹ Phường)
+        const isGroupPaid = isMarkedPaid || (totalExp > 0 && totalAct >= totalExp);
         
         if (isGroupPaid) {
           if (hhMapById.has(groupKey)) {
@@ -514,7 +515,7 @@ const Finance = () => {
         if (matches) matches.forEach(flag => existingLedgerFlags.add(flag));
       });
 
-      // Xóa các bản ghi quỹ TDP của các hộ KHÔNG thuộc danh sách đã nộp (để dọn dẹp các hộ bị tăng nhầm trước đó)
+      // Xóa các bản ghi quỹ TDP của các hộ KHÔNG thuộc danh sách đã nộp (để dọn dẹp triệt để các hộ bị tăng nhầm trước đó)
       allFunds.forEach(f => {
         if (Number(f.year) === fundYear && !paidRealHhIds.has(f.household_id)) {
           householdFundsToDelete.push(f.id);
@@ -522,8 +523,12 @@ const Finance = () => {
       });
 
       if (householdFundsToDelete.length > 0) {
-        for (const delId of householdFundsToDelete) {
-          await db.deleteHouseholdFund(delId);
+        if (typeof (db as any).deleteHouseholdFundsBatch === 'function') {
+          await (db as any).deleteHouseholdFundsBatch(householdFundsToDelete);
+        } else {
+          for (const delId of householdFundsToDelete) {
+            await db.deleteHouseholdFund(delId);
+          }
         }
       }
 
