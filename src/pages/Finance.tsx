@@ -4256,6 +4256,39 @@ const Finance = () => {
     });
   }, [households, totalPaidLookup, fundSearchTerm, fundYear, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups]);
 
+  // Đếm tổng số hộ, số hộ đã nộp, và số hộ chưa nộp theo phạm vi lọc hiện tại
+  const { totalHhCount, paidHhCount, unpaidHhCount } = useMemo(() => {
+    const listInScope = households.filter(hh => {
+      const headName = getHouseholdHeadName(hh).toLowerCase();
+      const address = (hh.address || '').toLowerCase();
+      const householdNumber = (hh.household_number || '').toLowerCase();
+      const search = fundSearchTerm.toLowerCase();
+      const matchesSearch = headName.includes(search) || address.includes(search) || householdNumber.includes(search);
+      if (!matchesSearch) return false;
+
+      const matchesTdp = !isWardUser || tdpFilter === 'all' || hh.user_id === tdpFilter;
+      const matchesGroup = isWardUser || fundGroupFilter === 'all' || hh.self_management_group === fundGroupFilter;
+      return matchesTdp && matchesGroup;
+    });
+
+    let paid = 0;
+    let unpaid = 0;
+    listInScope.forEach(hh => {
+      const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
+      if (totalPaid > 0) {
+        paid++;
+      } else {
+        unpaid++;
+      }
+    });
+
+    return {
+      totalHhCount: listInScope.length,
+      paidHhCount: paid,
+      unpaidHhCount: unpaid
+    };
+  }, [households, totalPaidLookup, fundSearchTerm, fundYear, fundGroupFilter, tdpFilter, isWardUser, headNameMap]);
+
   // 4. Tối ưu hóa hiệu năng: Tính toán nhanh thông số thống kê cho các thẻ 3D
   const fundStatistics = useMemo(() => {
     const stats: Record<string, { paidCount: number; totalCollected: number }> = {};
@@ -4993,17 +5026,73 @@ const Finance = () => {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>Trạng thái:</label>
-                <select 
-                  value={fundFilterStatus} 
-                  onChange={(e) => setFundFilterStatus(e.target.value as any)}
-                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'white', fontWeight: '600', outline: 'none' }}
+              {/* Các nút bấm lọc trạng thái: Tất cả / Đã nộp / Chưa nộp */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button 
+                  type="button"
+                  onClick={() => setFundFilterStatus('all')}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: fundFilterStatus === 'all' ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                    background: fundFilterStatus === 'all' ? '#2563eb' : '#fff',
+                    color: fundFilterStatus === 'all' ? '#fff' : '#475569',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: fundFilterStatus === 'all' ? '0 4px 10px rgba(37, 99, 235, 0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
                 >
-                  <option value="all">Tất cả các hộ</option>
-                  <option value="paid">Hộ đã nộp</option>
-                  <option value="unpaid">Hộ chưa nộp</option>
-                </select>
+                  👥 Tất cả ({totalHhCount})
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={() => setFundFilterStatus('paid')}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: fundFilterStatus === 'paid' ? '1.5px solid #16a34a' : '1px solid #bbf7d0',
+                    background: fundFilterStatus === 'paid' ? '#16a34a' : '#f0fdf4',
+                    color: fundFilterStatus === 'paid' ? '#fff' : '#166534',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: fundFilterStatus === 'paid' ? '0 4px 10px rgba(22, 163, 74, 0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <CheckCircle size={15} /> Đã nộp ({paidHhCount})
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={() => setFundFilterStatus('unpaid')}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: fundFilterStatus === 'unpaid' ? '1.5px solid #dc2626' : '1px solid #fecaca',
+                    background: fundFilterStatus === 'unpaid' ? '#dc2626' : '#fef2f2',
+                    color: fundFilterStatus === 'unpaid' ? '#fff' : '#b91c1c',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: fundFilterStatus === 'unpaid' ? '0 4px 10px rgba(220, 38, 38, 0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <XCircle size={15} /> Chưa nộp ({unpaidHhCount})
+                </button>
               </div>
               
               {/* Lọc Tổ / TDP tùy theo phân quyền */}
@@ -5240,6 +5329,47 @@ const Finance = () => {
               )}
             </div>
           </div>
+
+          {/* Banner thông báo trạng thái lọc */}
+          {fundFilterStatus !== 'all' && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              marginBottom: '12px',
+              backgroundColor: fundFilterStatus === 'paid' ? '#f0fdf4' : '#fef2f2',
+              border: `1.5px solid ${fundFilterStatus === 'paid' ? '#86efac' : '#fca5a5'}`,
+              color: fundFilterStatus === 'paid' ? '#166534' : '#991b1b',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              animation: 'fadeIn 0.2s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {fundFilterStatus === 'paid' ? <CheckCircle size={18} color="#16a34a" /> : <XCircle size={18} color="#dc2626" />}
+                <span>
+                  Đang lọc danh sách: <strong>{filteredHouseholdsForFunds.length}</strong> hộ <strong>{fundFilterStatus === 'paid' ? 'ĐÃ NỘP QUỸ' : 'CHƯA NỘP QUỸ'}</strong> năm {fundYear}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFundFilterStatus('all')}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: `1px solid ${fundFilterStatus === 'paid' ? '#16a34a' : '#dc2626'}`,
+                  background: 'white',
+                  color: fundFilterStatus === 'paid' ? '#16a34a' : '#dc2626',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕ Bỏ lọc
+              </button>
+            </div>
+          )}
 
           {/* Matrix table */}
           <div className="finance-table-wrapper" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 280px)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
