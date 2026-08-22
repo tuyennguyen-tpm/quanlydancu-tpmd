@@ -567,10 +567,14 @@ const Finance = () => {
         }
       }
 
-      // Lưu bản ghi sổ thu chi mới
+      // Lưu bản ghi sổ thu chi mới theo Batch (tránh quá tải kết nối trình duyệt)
       if (financialRecordsToSave.length > 0) {
-        for (const r of financialRecordsToSave) {
-          await db.saveFinancialRecord(r);
+        if (typeof (db as any).saveFinancialRecordsBatch === 'function') {
+          await (db as any).saveFinancialRecordsBatch(financialRecordsToSave);
+        } else {
+          for (const r of financialRecordsToSave) {
+            await db.saveFinancialRecord(r);
+          }
         }
       }
 

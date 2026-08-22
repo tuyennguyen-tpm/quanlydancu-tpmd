@@ -1813,12 +1813,15 @@ export const db = {
       try {
         const uId = await getSessionUserId();
         const payloads = fullFunds.map(f => enrichPayload({ ...f, user_id: uId }));
-        const { data, error } = await supabase
-          .from('household_funds')
-          .upsert(payloads, { onConflict: 'household_id,year,fund_name' })
-          .select();
-        if (error) handleDbError('lưu biên lai đóng quỹ hộ dân hàng loạt', error);
-        if (!error && data) return data;
+        const CHUNK_SIZE = 150;
+        for (let i = 0; i < payloads.length; i += CHUNK_SIZE) {
+          const chunk = payloads.slice(i, i + CHUNK_SIZE);
+          const { error } = await supabase
+            .from('household_funds')
+            .upsert(chunk, { onConflict: 'household_id,year,fund_name' });
+          if (error) handleDbError('lưu biên lai đóng quỹ hộ dân hàng loạt', error);
+        }
+        return fullFunds;
       } catch (e) {
         console.error('Supabase saveHouseholdFundsBatch error, saving to local storage', e);
       }
@@ -1830,6 +1833,29 @@ export const db = {
     const merged = Array.from(map.values());
     setStorageItem('household_funds', merged);
     return fullFunds;
+  },
+  saveFinancialRecordsBatch: async (records: FinancialRecord[]): Promise<boolean> => {
+    if (!records || records.length === 0) return true;
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        const payloads = records.map(r => enrichPayload({ ...r, user_id: uId }));
+        const CHUNK_SIZE = 150;
+        for (let i = 0; i < payloads.length; i += CHUNK_SIZE) {
+          const chunk = payloads.slice(i, i + CHUNK_SIZE);
+          const { error } = await supabase.from('financial_records').upsert(chunk);
+          if (error) handleDbError('lưu phiếu thu chi hàng loạt', error);
+        }
+        return true;
+      } catch (e) {
+        console.error('Supabase saveFinancialRecordsBatch error, saving to local storage', e);
+      }
+    }
+    const list = getStorageItem<FinancialRecord[]>('financial_records', []);
+    const idSet = new Set(records.map(r => r.id));
+    const kept = list.filter(r => !idSet.has(r.id));
+    setStorageItem('financial_records', [...kept, ...records]);
+    return true;
   },
   deleteHouseholdFund: async (id: string): Promise<boolean> => {
     if (supabase) {
