@@ -660,6 +660,31 @@ const Finance = () => {
         }
       }
 
+      // 6. Dọn dẹp triệt để các bản ghi tự động bị trùng lặp hoặc mồ côi trong Sổ thu chi
+      const currentValidFundIds = new Set(latestFunds.map(f => f.id));
+      const seenLedgerFundIds = new Set<string>();
+      const recordsToDelete: string[] = [];
+
+      allRecords.forEach(r => {
+        if (r.description?.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
+          const match = r.description?.match(/\[QUY_([^\]]+)\]/);
+          if (match && match[1]) {
+            const fId = match[1];
+            if (seenLedgerFundIds.has(fId) || !currentValidFundIds.has(fId)) {
+              recordsToDelete.push(r.id);
+            } else {
+              seenLedgerFundIds.add(fId);
+            }
+          }
+        }
+      });
+
+      if (recordsToDelete.length > 0) {
+        for (const delId of recordsToDelete) {
+          await db.deleteFinancialRecord(delId);
+        }
+      }
+
       await loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
 
@@ -4446,19 +4471,39 @@ const Finance = () => {
     printWindow.document.close();
   };
 
+  // Tự động khử trùng lặp các bản ghi tự động của Quỹ (đảm bảo mỗi biên lai quỹ chỉ tính đúng 1 lần duy nhất)
+  const deduplicatedRecords = useMemo(() => {
+    const seenFundKeys = new Set<string>();
+    const list: FinancialRecord[] = [];
+
+    records.forEach(r => {
+      if (r.description?.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
+        const match = r.description?.match(/\[QUY_([^\]]+)\]/);
+        const fundId = match ? match[1] : `${r.date}_${r.category}_${r.amount}_${r.description}`;
+        if (!seenFundKeys.has(fundId)) {
+          seenFundKeys.add(fundId);
+          list.push(r);
+        }
+      } else {
+        list.push(r);
+      }
+    });
+    return list;
+  }, [records]);
+
   // Calculations
-  const totalIncome = records
+  const totalIncome = deduplicatedRecords
     .filter(r => r.type === 'income')
     .reduce((sum, r) => sum + r.amount, 0);
 
-  const totalExpense = records
+  const totalExpense = deduplicatedRecords
     .filter(r => r.type === 'expense')
     .reduce((sum, r) => sum + r.amount, 0);
 
   const balance = totalIncome - totalExpense;
 
   const sponsorTotal = useMemo(() => {
-    return records
+    return deduplicatedRecords
       .filter(r => r.type === 'income')
       .filter(r => {
         const cat = (r.category || '').toLowerCase();
@@ -4475,7 +4520,7 @@ const Finance = () => {
                desc.includes('quyên góp');
       })
       .reduce((sum, r) => sum + r.amount, 0);
-  }, [records]);
+  }, [deduplicatedRecords]);
 
   const recordedByOptions = useMemo(() => {
     const set = new Set<string>();
