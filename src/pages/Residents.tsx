@@ -722,7 +722,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
 
 
 
-  // Export to Excel/CSV Functionality
+  // Export to Excel/CSV Functionality (Multi-sheet: Tổng hợp + Từng Tổ/Cụm)
   const handleExportCSV = async () => {
     const exportList = showDeceased 
       ? filteredResidents 
@@ -733,7 +733,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       return;
     }
 
-    showToast('Đang khởi tạo file Excel...', 'info');
+    showToast('Đang khởi tạo file Excel nhiều Sheet theo từng tổ...', 'info');
 
     const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
     const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
@@ -752,143 +752,207 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
     ];
 
-    const rows = exportList.map(r => {
-      const hh = households.find(h => h.id === r.household_id);
-      const hhNum = hh ? hh.household_number : '';
-      
-      // Tính tuổi khi mất nếu đã mất và có ngày sinh + ngày mất
-      let ageAtDeath = '';
-      if (r.status === 'deceased' && r.dob && r.death_date) {
-        const birthYear = new Date(r.dob).getFullYear();
-        const deathYear = new Date(r.death_date).getFullYear();
-        if (birthYear > 0 && deathYear > 0) {
-          ageAtDeath = (deathYear - birthYear).toString();
-        }
+    const matchResidentGroup = (r: Resident, groupName: string) => {
+      const hh = householdLookupMap.get(r.household_id);
+      if (!hh || !hh.self_management_group) return false;
+      const smg = hh.self_management_group.trim().toLowerCase();
+      const filterVal = groupName.trim().toLowerCase();
+
+      if (smg === filterVal) return true;
+      if (smg.includes(filterVal) || filterVal.includes(smg)) return true;
+
+      const extractNum = (s: string) => {
+        const m = s.match(/(\d+)\s*$/);
+        return m ? m[1] : null;
+      };
+      const extractName = (s: string) => {
+        const lower = s.toLowerCase();
+        if (lower.includes('việt trung')) return 'việt trung';
+        return null;
+      };
+
+      const numFilter = extractNum(filterVal);
+      const numSmg = extractNum(smg);
+      const nameFilter = extractName(filterVal);
+      const nameSmg = extractName(smg);
+
+      if (nameFilter && nameSmg) {
+        return nameFilter === nameSmg;
+      } else if (nameFilter) {
+        return smg.includes(nameFilter);
+      } else if (numFilter && numSmg) {
+        return numFilter === numSmg;
       }
-
-      const rowData = [
-        hhNum || '',
-        r.full_name,
-        r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
-        r.dob ? formatToDisplayDate(r.dob) : '',
-        r.relationship_with_head,
-        r.cccd || '',
-        r.phone || '',
-        r.occupation || '',
-        hh?.self_management_group || '', // Cụm/Tổ
-        r.permanent_address || '', // Thường trú
-        r.pob || '',
-        r.native_place || '',
-        r.ethnicity || 'Kinh',
-        r.religion || 'Không',
-        r.nationality || 'Việt Nam',
-        r.education_level || '12/12',
-        r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
-        r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
-        r.temporary_residence_expiry ? formatToDisplayDate(r.temporary_residence_expiry) : '',
-        r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : r.status === 'stay' ? 'Lưu trú' : 'Đã mất',
-        r.status === 'deceased' && r.death_date ? formatToDisplayDate(r.death_date) : '',
-        ageAtDeath,
-        r.notes || ''
-      ];
-
-      if (showTdpCol) {
-        rowData.unshift(r.user_id ? (tdpMap[r.user_id] || '—') : '—');
-      }
-
-      return rowData;
-    });
+      return false;
+    };
 
     try {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Danh sách nhân khẩu');
 
-      // Tạo cấu trúc cột
-      worksheet.columns = headers.map(h => ({ header: h, key: h }));
+      const addResidentSheet = (sheetName: string, list: Resident[], headerColorArgb = 'FF0F766E') => {
+        // Tên sheet trong Excel tối đa 31 ký tự, loại bỏ ký tự cấm: \ / ? * : [ ]
+        const cleanName = sheetName.replace(/[\\/?*:[\]]/g, '').trim().slice(0, 31) || 'Sheet';
+        const worksheet = workbook.addWorksheet(cleanName);
 
-      // Thêm các dòng dữ liệu và thiết lập kiểu dáng
-      rows.forEach((row, rowIndex) => {
-        const addedRow = worksheet.addRow(row);
-        const resident = exportList[rowIndex];
+        // Tạo cấu trúc cột
+        worksheet.columns = headers.map(h => ({ header: h, key: h }));
 
-        // Nếu là chủ hộ, tô màu nền xanh lá nhạt và chữ xanh đậm
-        if (resident.is_head) {
-          addedRow.eachCell(cell => {
-            cell.fill = {
-              type: 'pattern',
-              pattern: 'solid',
-              fgColor: { argb: 'FFE6F4EA' } // Xanh lá nhạt #E6F4EA
-            };
-            cell.font = {
-              bold: true,
-              color: { argb: 'FF137333' }, // Xanh lá đậm #137333
-              name: 'Segoe UI',
-              size: 11
-            };
-          });
-        } else {
-          addedRow.eachCell(cell => {
-            cell.font = {
-              name: 'Segoe UI',
-              size: 11
-            };
-          });
-        }
-      });
+        const rows = list.map(r => {
+          const hh = householdLookupMap.get(r.household_id);
+          const hhNum = hh ? hh.household_number : '';
+          
+          let ageAtDeath = '';
+          if (r.status === 'deceased' && r.dob && r.death_date) {
+            const birthYear = new Date(r.dob).getFullYear();
+            const deathYear = new Date(r.death_date).getFullYear();
+            if (birthYear > 0 && deathYear > 0) {
+              ageAtDeath = (deathYear - birthYear).toString();
+            }
+          }
 
-      // Căn chỉnh tiêu đề dòng đầu tiên
-      const headerRow = worksheet.getRow(1);
-      headerRow.height = 26;
-      headerRow.eachCell(cell => {
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FF0F766E' } // Màu Teal tối #0F766E
-        };
-        cell.font = {
-          bold: true,
-          color: { argb: 'FFFFFFFF' }, // Chữ trắng
-          name: 'Segoe UI',
-          size: 11
-        };
-        cell.alignment = {
-          vertical: 'middle',
-          horizontal: 'center',
-          wrapText: true
-        };
-      });
+          const rowData = [
+            hhNum || '',
+            r.full_name,
+            r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
+            r.dob ? formatToDisplayDate(r.dob) : '',
+            r.relationship_with_head,
+            r.cccd || '',
+            r.phone || '',
+            r.occupation || '',
+            hh?.self_management_group || '', // Cụm/Tổ
+            r.permanent_address || '', // Thường trú
+            r.pob || '',
+            r.native_place || '',
+            r.ethnicity || 'Kinh',
+            r.religion || 'Không',
+            r.nationality || 'Việt Nam',
+            r.education_level || '12/12',
+            r.military_service === 'in_age' ? 'Trong độ tuổi quân sự' : r.military_service === 'serving' ? 'Đang tại ngũ' : r.military_service === 'completed' ? 'Đã hoàn thành' : r.military_service === 'exempted' ? 'Tạm hoãn/Miễn' : 'Không',
+            r.has_health_insurance ? (r.health_insurance_number || 'Đã có BHYT') : 'Chưa có BHYT',
+            r.temporary_residence_expiry ? formatToDisplayDate(r.temporary_residence_expiry) : '',
+            r.status === 'resident' ? 'Thường trú' : r.status === 'temporary_resident' ? 'Tạm trú' : r.status === 'temporary_absent' ? 'Tạm vắng' : r.status === 'stay' ? 'Lưu trú' : 'Đã mất',
+            r.status === 'deceased' && r.death_date ? formatToDisplayDate(r.death_date) : '',
+            ageAtDeath,
+            r.notes || ''
+          ];
 
-      // Áp dụng đường viền lưới cho toàn bộ các ô và tự động co giãn độ rộng cột
-      worksheet.eachRow((row, rowNumber) => {
-        row.eachCell(cell => {
-          cell.border = {
-            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+          if (showTdpCol) {
+            rowData.unshift(r.user_id ? (tdpMap[r.user_id] || '—') : '—');
+          }
+
+          return rowData;
+        });
+
+        // Thêm các dòng dữ liệu và thiết lập kiểu dáng
+        rows.forEach((row, rowIndex) => {
+          const addedRow = worksheet.addRow(row);
+          const resident = list[rowIndex];
+
+          // Nếu là chủ hộ, tô màu nền xanh lá nhạt và chữ xanh đậm
+          if (resident.is_head) {
+            addedRow.eachCell(cell => {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE6F4EA' } // Xanh lá nhạt #E6F4EA
+              };
+              cell.font = {
+                bold: true,
+                color: { argb: 'FF137333' }, // Xanh lá đậm #137333
+                name: 'Segoe UI',
+                size: 11
+              };
+            });
+          } else {
+            addedRow.eachCell(cell => {
+              cell.font = {
+                name: 'Segoe UI',
+                size: 11
+              };
+            });
+          }
+        });
+
+        // Căn chỉnh tiêu đề dòng đầu tiên
+        const headerRow = worksheet.getRow(1);
+        headerRow.height = 26;
+        headerRow.eachCell(cell => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: headerColorArgb }
           };
-          if (rowNumber > 1) {
-            cell.alignment = {
-              vertical: 'middle',
-              horizontal: 'left'
+          cell.font = {
+            bold: true,
+            color: { argb: 'FFFFFFFF' },
+            name: 'Segoe UI',
+            size: 11
+          };
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: 'center',
+            wrapText: true
+          };
+        });
+
+        // Áp dụng đường viền lưới cho toàn bộ các ô và tự động căn chỉnh
+        worksheet.eachRow((row, rowNumber) => {
+          row.eachCell((cell, colNumber) => {
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+              right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
             };
-          }
+            if (rowNumber > 1) {
+              const headerKey = headers[colNumber - 1] || '';
+              if (['Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Trạng thái cư trú', 'Số sổ hộ khẩu', 'Tổ dân phố'].includes(headerKey)) {
+                cell.alignment = {
+                  vertical: 'middle',
+                  horizontal: 'center'
+                };
+              } else {
+                cell.alignment = {
+                  vertical: 'middle',
+                  horizontal: 'left'
+                };
+              }
+            }
+          });
         });
+
+        // Tự co giãn độ rộng cột
+        worksheet.columns.forEach(column => {
+          let maxLen = 0;
+          column.values?.forEach(v => {
+            const valStr = v ? v.toString() : '';
+            if (valStr.length > maxLen) {
+              maxLen = valStr.length;
+            }
+          });
+          column.width = Math.min(Math.max(maxLen + 4, 12), 40);
+        });
+      };
+
+      // 1. Sheet 1: Tổng hợp toàn bộ nhân khẩu
+      addResidentSheet('Tổng Hợp Toàn TDP', exportList, 'FF0F766E');
+
+      // 2. Tạo các Sheet theo từng Tổ/Cụm
+      const groupHeaderColors = ['FF1E3A8A', 'FF1E40AF', 'FF1D4ED8', 'FF2563EB', 'FF0284C7', 'FF0369A1', 'FF0D9488', 'FF115E59'];
+
+      groups.forEach((groupName, idx) => {
+        const groupResidents = exportList.filter(r => matchResidentGroup(r, groupName));
+        const color = groupHeaderColors[idx % groupHeaderColors.length];
+        addResidentSheet(groupName, groupResidents, color);
       });
 
-      // Tự co giãn độ rộng cột
-      worksheet.columns.forEach(column => {
-        let maxLen = 0;
-        column.values?.forEach(v => {
-          const valStr = v ? v.toString() : '';
-          if (valStr.length > maxLen) {
-            maxLen = valStr.length;
-          }
-        });
-        column.width = Math.min(Math.max(maxLen + 4, 12), 40); // Giới hạn tối thiểu 12 và tối đa 40 ký tự
-      });
+      // 3. Sheet cho nhân khẩu chưa phân tổ (nếu có)
+      const unassignedResidents = exportList.filter(r => !groups.some(g => matchResidentGroup(r, g)));
+      if (unassignedResidents.length > 0) {
+        addResidentSheet('Chưa Phân Tổ', unassignedResidents, 'FF475569');
+      }
 
-      // Tạo Buffer và tải xuống
+      // Tạo Buffer và tải xuống file Excel
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -904,7 +968,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      showToast('Xuất báo cáo Excel thành công!', 'success');
+      showToast(`Xuất file Excel thành công gồm ${groups.length + 1} Sheet!`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Lỗi khi xuất file Excel!', 'danger');
