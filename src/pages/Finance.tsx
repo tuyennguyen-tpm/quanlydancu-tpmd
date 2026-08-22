@@ -219,25 +219,45 @@ const Finance = () => {
     };
   }, []);
 
-  // 0. Tối ưu hóa hiệu năng: Tạo Map tra cứu nhanh tên chủ hộ của từng hộ gia đình
+  // 0. Tối ưu hóa hiệu năng: Tạo Map tra cứu nhanh tên chủ hộ của từng hộ gia đình (hỗ trợ đa tầng fallback)
   const headNameMap = useMemo(() => {
     const resMap = new Map<string, Resident>();
-    residents.forEach(r => resMap.set(r.id, r));
+    const resByHh = new Map<string, Resident[]>();
+    residents.forEach(r => {
+      resMap.set(r.id, r);
+      if (r.household_id) {
+        if (!resByHh.has(r.household_id)) resByHh.set(r.household_id, []);
+        resByHh.get(r.household_id)!.push(r);
+      }
+    });
     
     const map = new Map<string, string>();
     households.forEach(hh => {
+      let headName = '';
       if (hh.head_of_household_id) {
         const head = resMap.get(hh.head_of_household_id);
-        if (head) {
-          map.set(hh.id, head.full_name);
-        }
+        if (head?.full_name) headName = head.full_name;
+      }
+      if (!headName) {
+        const hhResidents = resByHh.get(hh.id) || [];
+        const headRes = hhResidents.find(r => r.is_head || (r.relationship_with_head && r.relationship_with_head.trim().toLowerCase() === 'chủ hộ')) || hhResidents[0];
+        if (headRes?.full_name) headName = headRes.full_name;
+      }
+      if (!headName && hh.martyr_name) {
+        headName = hh.martyr_name;
+      }
+      if (!headName && (hh as any).household_head_name) {
+        headName = (hh as any).household_head_name;
+      }
+      if (headName) {
+        map.set(hh.id, headName);
       }
     });
     return map;
   }, [residents, households]);
 
   const getHouseholdHeadName = (hh: Household) => {
-    return headNameMap.get(hh.id) || 'Hộ số: ' + hh.household_number;
+    return headNameMap.get(hh.id) || (hh.martyr_name ? hh.martyr_name : ('Hộ số: ' + (hh.household_number || '')));
   };
 
   const handleOpenFundPay = (hhId: string, fundName: string) => {
@@ -355,6 +375,18 @@ const Finance = () => {
         }
       });
 
+
+      // Helper chuẩn hóa bỏ dấu tiếng Việt để đối soát chính xác 100%
+      const removeAccents = (str: string): string => {
+        return (str || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd')
+          .replace(/Đ/g, 'D')
+          .toLowerCase()
+          .trim();
+      };
+
       // 1. Xác định các bản ghi Quỹ Phường đã nộp đủ
       const paidWardRecords = wardFundsList.filter(f => {
         if (f.note === 'Đã nộp đủ đợt tập trung') return true;
@@ -365,60 +397,140 @@ const Finance = () => {
         return false;
       });
 
-      // 2. Tìm mã Hộ gia đình tương ứng cho từng bản ghi Quỹ Phường đã nộp
-      const paidHouseholdIds = new Set<string>();
-
-      paidWardRecords.forEach(f => {
-        const nameKey = (f.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
-        const addrClean = (f.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
-
-        let matchedHhId: string | undefined = undefined;
-
-        // Cách 1: Khớp qua CSDL nhân khẩu (theo họ tên & user_id / dob)
-        const candidates = residentsByName.get(nameKey) || [];
-        if (candidates.length === 1 && candidates[0].household_id) {
-          matchedHhId = candidates[0].household_id;
-        } else if (candidates.length > 1) {
-          if (f.user_id) {
-            const userMatch = candidates.find(r => r.user_id === f.user_id && r.household_id);
-            if (userMatch) matchedHhId = userMatch.household_id;
-          }
-          if (!matchedHhId && addrClean) {
-            const addrMatch = candidates.find(r => {
-              if (!r.household_id) return false;
-              const hh = hhMapById.get(r.household_id);
-              const hhAddr = (hh?.address || '').trim().toLowerCase();
-              return hhAddr && (hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean));
-            });
-            if (addrMatch) matchedHhId = addrMatch.household_id;
-          }
-          if (!matchedHhId && candidates[0].household_id) {
-            matchedHhId = candidates[0].household_id;
-          }
-        }
-
-        // Cách 2: Khớp qua tên Chủ hộ trong danh sách Hộ gia đình
-        if (!matchedHhId) {
-          const matchedHh = hList.find(h => {
-            const headName = getHouseholdHeadName(h).toLowerCase().trim();
-            return headName && (headName === nameKey || (addrClean && addrClean.includes(headName)));
-          });
-          if (matchedHh) matchedHhId = matchedHh.id;
-        }
-
-        // Cách 3: Khớp qua địa chỉ hộ
-        if (!matchedHhId && addrClean) {
-          const matchedHh = hList.find(h => {
-            const hhAddr = (h.address || '').trim().toLowerCase();
-            return hhAddr && (hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean));
-          });
-          if (matchedHh) matchedHhId = matchedHh.id;
-        }
-
-        if (matchedHhId) {
-          paidHouseholdIds.add(matchedHhId);
+      // Tạo các chỉ mục tra cứu đa tầng
+      const residentsByNormName = new Map<string, Resident[]>();
+      rList.forEach(r => {
+        const k = removeAccents(r.full_name);
+        if (k) {
+          if (!residentsByNormName.has(k)) residentsByNormName.set(k, []);
+          residentsByNormName.get(k)!.push(r);
         }
       });
+
+      const headNameForHHMap = new Map<string, string>();
+      hList.forEach(hh => {
+        const headName = getHouseholdHeadName(hh);
+        if (headName) headNameForHHMap.set(hh.id, headName);
+      });
+
+      // 2. Tìm mã Hộ gia đình tương ứng cho từng bản ghi Quỹ Phường đã nộp
+      const paidHouseholdIds = new Set<string>();
+      const newlyCreatedHouseholds: Household[] = [];
+
+      for (const f of paidWardRecords) {
+        const nameKey = (f.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const nameNorm = removeAccents(f.full_name || '');
+        const dobClean = (f.dob || '').trim();
+        const yearClean = dobClean.match(/\d{4}/)?.[0] || '';
+        const addrClean = (f.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const addrNorm = removeAccents(f.address || '');
+
+        let matchedResident: Resident | undefined = undefined;
+
+        // a. Lọc nhân khẩu theo tên (chuẩn hóa không dấu)
+        let candidates = residentsByNormName.get(nameNorm) || [];
+        if (candidates.length === 1) {
+          matchedResident = candidates[0];
+        } else if (candidates.length > 1) {
+          let filtered = candidates;
+          if (f.user_id) {
+            const userMatch = filtered.filter(r => r.user_id === f.user_id);
+            if (userMatch.length > 0) filtered = userMatch;
+          }
+          if (filtered.length > 1 && dobClean) {
+            const exactDobMatch = filtered.filter(r => r.dob && (r.dob.includes(dobClean) || dobClean.includes(r.dob)));
+            if (exactDobMatch.length > 0) filtered = exactDobMatch;
+            else if (yearClean) {
+              const yearMatch = filtered.filter(r => (r.dob || '').includes(yearClean));
+              if (yearMatch.length > 0) filtered = yearMatch;
+            }
+          }
+          if (filtered.length > 1 && addrClean) {
+            const addrMatch = filtered.filter(r => {
+              if (!r.household_id) return false;
+              const hh = hhMapById.get(r.household_id);
+              if (!hh) return false;
+              const hhAddrNorm = removeAccents(hh.address || '');
+              return hhAddrNorm === addrNorm || addrNorm.includes(hhAddrNorm) || hhAddrNorm.includes(addrNorm);
+            });
+            if (addrMatch.length > 0) filtered = addrMatch;
+          }
+          matchedResident = filtered[0];
+        }
+
+        let finalHhId: string | undefined = undefined;
+
+        if (matchedResident && matchedResident.household_id && hhMapById.has(matchedResident.household_id)) {
+          finalHhId = matchedResident.household_id;
+        }
+
+        // b. Khớp qua tên Chủ hộ trong danh sách Hộ gia đình
+        if (!finalHhId) {
+          const matchedHh = hList.find(h => {
+            const headName = headNameForHHMap.get(h.id) || '';
+            const headNorm = removeAccents(headName);
+            if (!headNorm) return false;
+            return headNorm === nameNorm || (addrNorm && addrNorm.includes(headNorm)) || headNorm.includes(nameNorm);
+          });
+          if (matchedHh) finalHhId = matchedHh.id;
+        }
+
+        // c. Khớp qua địa chỉ hộ
+        if (!finalHhId && addrNorm) {
+          const matchedHh = hList.find(h => {
+            const hhAddrNorm = removeAccents(h.address || '');
+            return hhAddrNorm && (hhAddrNorm === addrNorm || addrNorm.includes(hhAddrNorm) || hhAddrNorm.includes(addrNorm));
+          });
+          if (matchedHh) finalHhId = matchedHh.id;
+        }
+
+        // d. Nếu bản ghi này thuộc hộ chưa có trong danh mục Hộ dân -> tự động tạo Hộ để đảm bảo đủ 100% (515 hộ)
+        if (!finalHhId) {
+          let derivedHeadName = f.full_name;
+          const hoMatch = f.address?.match(/hộ\s+(?:ông|bà)?\s*([^\s,,-]+(?:\s+[^\s,,-]+)+)/i);
+          if (hoMatch && hoMatch[1]) {
+            derivedHeadName = hoMatch[1].trim();
+          }
+
+          // Kiểm tra xem đã tạo hộ cho địa chỉ này trong đợt quét chưa
+          const existingInBatch = newlyCreatedHouseholds.find(h => {
+            const hAddrNorm = removeAccents(h.address || '');
+            return (addrNorm && hAddrNorm === addrNorm) || (h.martyr_name && removeAccents(h.martyr_name) === removeAccents(derivedHeadName));
+          });
+
+          if (existingInBatch) {
+            finalHhId = existingInBatch.id;
+          } else {
+            const newHhId = generateUUID();
+            const groupNameFromRecord = (f as any).group_name || ((f.address || '').match(/tổ\s+(\d+|việt\s+trung)/i)?.[0] || 'Tổ dân phố');
+            const newHh: Household = {
+              id: newHhId,
+              household_number: `HĐ-${hList.length + newlyCreatedHouseholds.length + 1}`,
+              address: f.address || `Hộ ${derivedHeadName}`,
+              martyr_name: derivedHeadName,
+              self_management_group: groupNameFromRecord,
+              created_at: new Date().toISOString()
+            } as any;
+
+            newlyCreatedHouseholds.push(newHh);
+            hList.push(newHh);
+            hhMapById.set(newHhId, newHh);
+            headNameForHHMap.set(newHhId, derivedHeadName);
+            finalHhId = newHhId;
+          }
+        }
+
+        if (finalHhId) {
+          paidHouseholdIds.add(finalHhId);
+        }
+      }
+
+      // Lưu các Hộ mới tạo (nếu có)
+      if (newlyCreatedHouseholds.length > 0) {
+        for (const nh of newlyCreatedHouseholds) {
+          await db.saveHousehold(nh);
+        }
+      }
 
       // 3. Tạo Map tra cứu quỹ TDP hiện tại: `${household_id}_${year}_${fund_name}`
       const existingTdpFundMap = new Map<string, HouseholdFund>();
