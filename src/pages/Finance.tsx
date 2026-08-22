@@ -462,12 +462,26 @@ const Finance = () => {
         wardHhGroups.get(groupKey)!.push(f);
       });
 
-      // 2. Xác định các Hộ thực sự đã nộp đủ
+      // 2. Xác định các Hộ thực sự đã nộp đủ theo chuẩn Quỹ Phường
       const paidRealHhIds = new Set<string>();
 
       wardHhGroups.forEach((members, groupKey) => {
-        const isGroupPaid = members.some(m => m.note === 'Đã nộp đủ đợt tập trung') || 
-                            members.some(m => m.contributions && Object.values(m.contributions).some((c: any) => c && (c.actual > 0 || c.date)));
+        let totalExp = 0;
+        let totalAct = 0;
+        let isMarkedPaid = members.some(m => m.note === 'Đã nộp đủ đợt tập trung');
+
+        members.forEach(m => {
+          wardActiveFunds.forEach((fund: any) => {
+            const isHhScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
+            const c = m.contributions?.[fund.name];
+            const exp = (c && typeof c.expected === 'number') ? c.expected : (isHhScope ? 0 : fund.target);
+            const act = c?.actual || 0;
+            totalExp += exp;
+            totalAct += act;
+          });
+        });
+
+        const isGroupPaid = isMarkedPaid || (totalExp > 0 && totalAct >= totalExp) || (totalAct > 0 && totalAct >= (totalExp || 50000));
         
         if (isGroupPaid) {
           if (hhMapById.has(groupKey)) {
@@ -475,7 +489,7 @@ const Finance = () => {
           } else {
             // Thử khớp lại địa chỉ của nhóm với hộ thật
             const firstM = members[0];
-            const addrNorm = removeAccents(firstM.address || '');
+            const addrNorm = removeAccents(firstM?.address || '');
             const matchedHh = realHouseholds.find(h => {
               const hhAddrNorm = removeAccents(h.address || '');
               return hhAddrNorm && (hhAddrNorm === addrNorm || addrNorm.includes(hhAddrNorm) || hhAddrNorm.includes(addrNorm));
@@ -485,13 +499,14 @@ const Finance = () => {
         }
       });
 
-      // 3. Chuẩn bị dữ liệu Quỹ TDP cho các hộ đã nộp
+      // 3. Chuẩn bị dữ liệu Quỹ TDP cho các hộ đã nộp và xóa các khoản nộp của hộ chưa nộp
       const existingTdpFundMap = new Map<string, HouseholdFund>();
       allFunds.forEach(f => {
         existingTdpFundMap.set(`${f.household_id}_${f.year}_${f.fund_name}`, f);
       });
 
       const householdFundsToSave: HouseholdFund[] = [];
+      const householdFundsToDelete: string[] = [];
       const financialRecordsToSave: FinancialRecord[] = [];
       const existingLedgerFlags = new Set<string>();
       allRecords.forEach(r => {
@@ -499,8 +514,18 @@ const Finance = () => {
         if (matches) matches.forEach(flag => existingLedgerFlags.add(flag));
       });
 
-      let newlyAddedFundCount = 0;
-      let newlyAddedLedgerCount = 0;
+      // Xóa các bản ghi quỹ TDP của các hộ KHÔNG thuộc danh sách đã nộp (để dọn dẹp các hộ bị tăng nhầm trước đó)
+      allFunds.forEach(f => {
+        if (Number(f.year) === fundYear && !paidRealHhIds.has(f.household_id)) {
+          householdFundsToDelete.push(f.id);
+        }
+      });
+
+      if (householdFundsToDelete.length > 0) {
+        for (const delId of householdFundsToDelete) {
+          await db.deleteHouseholdFund(delId);
+        }
+      }
 
       for (const hhId of paidRealHhIds) {
         const hh = hhMapById.get(hhId);
@@ -522,7 +547,7 @@ const Finance = () => {
 
           const fundRecordId = existing ? existing.id : generateUUID();
 
-          if (!existing || existing.amount < fundAmount) {
+          if (!existing || existing.amount !== fundAmount) {
             const payload: HouseholdFund = {
               id: fundRecordId,
               household_id: hhId,
@@ -534,7 +559,6 @@ const Finance = () => {
             };
             householdFundsToSave.push(payload);
             existingTdpFundMap.set(key, payload);
-            newlyAddedFundCount++;
           }
 
           if (fundAmount > 0) {
@@ -553,7 +577,6 @@ const Finance = () => {
               };
               financialRecordsToSave.push(generalRecord);
               existingLedgerFlags.add(flagText);
-              newlyAddedLedgerCount++;
             }
           }
         }
