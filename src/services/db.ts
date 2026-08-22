@@ -22,11 +22,20 @@ export interface EnvironmentLog {
 const getSupabaseClient = () => {
   const localUrl = localStorage.getItem('supabase_url');
   const localKey = localStorage.getItem('supabase_anon_key');
-  const url = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://yvtmckpdpinipxyvphdm.supabase.co';
-  const key = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_2Zkgkwp7OmzMUH_j7mUD5w_migssOX8';
+  const rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://yvtmckpdpinipxyvphdm.supabase.co';
+  const rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_2Zkgkwp7OmzMUH_j7mUD5w_migssOX8';
+  const url = (rawUrl || '').trim();
+  const key = (rawKey || '').trim().replace(/[\r\n\t]/g, '');
   if (url && key) {
     try {
-      return createClient(url, key);
+      return createClient(url, key, {
+        auth: { persistSession: false },
+        realtime: {
+          params: {
+            apikey: key
+          }
+        }
+      });
     } catch (e) {
       console.error('Failed to create Supabase client:', e);
     }
