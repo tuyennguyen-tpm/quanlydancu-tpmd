@@ -1905,6 +1905,7 @@ export const db = {
   deleteAutoFinancialRecords: async (): Promise<boolean> => {
     if (supabase) {
       try {
+        await supabase.from('financial_records').delete().ilike('description', '%[QUY_%');
         await supabase.from('financial_records').delete().eq('recorded_by', 'Hệ thống tự động');
       } catch (e) {
         console.error('Supabase deleteAutoFinancialRecords error', e);
