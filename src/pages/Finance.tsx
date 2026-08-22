@@ -471,17 +471,17 @@ const Finance = () => {
         const isMarkedPaid = members.some(m => m.note === 'Đã nộp đủ đợt tập trung');
 
         members.forEach(m => {
-          wardActiveFunds.forEach((fund: any) => {
-            const isHhScope = (fund as any).scope === 'household' || fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi');
-            const c = m.contributions?.[fund.name];
-            const exp = (c && typeof c.expected === 'number') ? c.expected : (isHhScope ? (members.indexOf(m) === 0 ? fund.target : 0) : fund.target);
-            const act = c?.actual || 0;
-            totalExp += exp;
-            totalAct += act;
-          });
+          if (m.contributions) {
+            Object.values(m.contributions).forEach((c: any) => {
+              if (c) {
+                totalExp += (Number(c.expected) || 0);
+                totalAct += (Number(c.actual) || 0);
+              }
+            });
+          }
         });
 
-        // Chỉ chấp nhận hộ ĐÃ NỘP ĐỦ (khớp chuẩn xác 515 hộ của Quỹ Phường)
+        // Hộ được coi là đã nộp nếu có ghi chú nộp đủ hoặc tiền nộp thực tế đủ định mức
         const isGroupPaid = isMarkedPaid || (totalExp > 0 && totalAct >= totalExp);
         
         if (isGroupPaid) {
@@ -500,20 +500,12 @@ const Finance = () => {
         }
       });
 
-      // 3. XÓA SẠCH toàn bộ household_funds năm hiện tại trước khi ghi lại đúng danh sách 515 hộ
-      //    → Đây là cách duy nhất đảm bảo số hộ chính xác bất kể dữ liệu cũ còn lại trong DB
-      const allFundIdsThisYear = allFunds
-        .filter(f => Number(f.year) === fundYear)
-        .map(f => f.id);
-
-      if (allFundIdsThisYear.length > 0) {
-        if (typeof (db as any).deleteHouseholdFundsBatch === 'function') {
-          await (db as any).deleteHouseholdFundsBatch(allFundIdsThisYear);
-        } else {
-          for (const delId of allFundIdsThisYear) {
-            await db.deleteHouseholdFund(delId);
-          }
-        }
+      // 3. XÓA SẠCH toàn bộ household_funds năm hiện tại và các phiếu thu tự động cũ
+      if (typeof (db as any).deleteHouseholdFundsByYear === 'function') {
+        await (db as any).deleteHouseholdFundsByYear(fundYear);
+      }
+      if (typeof (db as any).deleteAutoFinancialRecords === 'function') {
+        await (db as any).deleteAutoFinancialRecords();
       }
 
       const householdFundsToSave: HouseholdFund[] = [];
@@ -572,14 +564,6 @@ const Finance = () => {
           await (db as any).saveHouseholdFundsBatch(householdFundsToSave);
         } else {
           await Promise.all(householdFundsToSave.map(f => db.saveHouseholdFund(f)));
-        }
-      }
-
-      // Xóa TOÀN BỘ bản ghi sổ thu chi tự động cũ trước khi ghi mới
-      const oldAutoRecords = allRecords.filter(r => r.recorded_by === 'Hệ thống tự động' || r.description?.includes('[QUY_'));
-      if (oldAutoRecords.length > 0) {
-        for (const r of oldAutoRecords) {
-          await db.deleteFinancialRecord(r.id);
         }
       }
 

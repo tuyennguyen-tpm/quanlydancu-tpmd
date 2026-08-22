@@ -1853,6 +1853,33 @@ export const db = {
     setStorageItem('household_funds', filtered);
     return true;
   },
+  deleteHouseholdFundsByYear: async (year: number): Promise<boolean> => {
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('household_funds').delete().eq('year', year);
+        if (error) handleDbError('xóa quỹ theo năm', error);
+      } catch (e) {
+        console.error('Supabase deleteHouseholdFundsByYear error', e);
+      }
+    }
+    const list = getStorageItem<HouseholdFund[]>('household_funds', []);
+    const filtered = list.filter(f => Number(f.year) !== year);
+    setStorageItem('household_funds', filtered);
+    return true;
+  },
+  deleteAutoFinancialRecords: async (): Promise<boolean> => {
+    if (supabase) {
+      try {
+        await supabase.from('financial_records').delete().eq('recorded_by', 'Hệ thống tự động');
+      } catch (e) {
+        console.error('Supabase deleteAutoFinancialRecords error', e);
+      }
+    }
+    const list = getStorageItem<FinancialRecord[]>('financial_records', []);
+    const filtered = list.filter(r => r.recorded_by !== 'Hệ thống tự động' && !r.description?.includes('[QUY_'));
+    setStorageItem('financial_records', filtered);
+    return true;
+  },
   getFundList: (): { name: string; target: number }[] => {
     const stored = localStorage.getItem('fund_list');
     if (stored) {
