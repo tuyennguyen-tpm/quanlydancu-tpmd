@@ -1390,7 +1390,26 @@ const WardFunds = () => {
       if (!household && householdId.startsWith('addr__')) {
         const firstM = members[0];
         const addrClean = (firstM?.address || '').trim().toLowerCase();
-        const matchedHh = households.find(h => (h.address || '').trim().toLowerCase() === addrClean);
+        // Thử 1: Khớp theo địa chỉ chính xác
+        let matchedHh = households.find(h => (h.address || '').trim().toLowerCase() === addrClean);
+        // Thử 2: Khớp địa chỉ chứa nhau
+        if (!matchedHh && addrClean) {
+          matchedHh = households.find(h => {
+            const hhAddr = (h.address || '').trim().toLowerCase();
+            return hhAddr && (hhAddr.includes(addrClean) || addrClean.includes(hhAddr));
+          });
+        }
+        // Thử 3: Khớp theo tên thành viên trong CSDL nhân khẩu
+        if (!matchedHh) {
+          for (const m of members) {
+            const mName = (m.full_name || '').trim().toLowerCase();
+            const foundResident = residents.find(r => (r.full_name || '').trim().toLowerCase() === mName);
+            if (foundResident?.household_id) {
+              matchedHh = households.find(h => h.id === foundResident.household_id);
+              if (matchedHh) break;
+            }
+          }
+        }
         if (matchedHh) {
           household = matchedHh;
           householdId = matchedHh.id;
@@ -1539,6 +1558,7 @@ const WardFunds = () => {
           
           await db.saveWardFundsBatch(wardFundsToSave);
 
+          // Lưu quỹ TDP và sổ thu chi nếu tìm được hộ gia đình thực trong CSDL
           if (householdId && !householdId.startsWith('addr__')) {
             let householdPaidFunds: HouseholdFund[] = [];
             try { householdPaidFunds = await db.getHouseholdFunds(); } catch { /* ignore */ }

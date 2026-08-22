@@ -316,6 +316,64 @@ const Finance = () => {
     }
   };
 
+  // Đồng bộ dữ liệu thu quỹ hộ dân sang sổ Thu Chi TDP
+  // Quét tất cả householdFunds có amount > 0 → tạo FinancialRecord nếu chưa có
+  const handleSyncFundsToLedger = async () => {
+    try {
+      const [allFunds, allRecords] = await Promise.all([
+        db.getHouseholdFunds(),
+        db.getFinancialRecords()
+      ]);
+
+      // Tạo Set các flagText [QUY_id] đã tồn tại trong sổ thu chi
+      const existingFlags = new Set<string>();
+      allRecords.forEach(r => {
+        const matches = r.description?.match(/\[QUY_[^\]]+\]/g);
+        if (matches) matches.forEach(flag => existingFlags.add(flag));
+      });
+
+      const activeFundNames = new Set((db as any).getFundList()?.map((f: any) => f.name) || []);
+
+      let addedCount = 0;
+      for (const fund of allFunds) {
+        if (!fund.amount || fund.amount <= 0) continue;
+        // Chỉ đồng bộ quỹ TDP đang hoạt động
+        if (activeFundNames.size > 0 && !activeFundNames.has(fund.fund_name)) continue;
+
+        const flagText = `[QUY_${fund.id}]`;
+        if (existingFlags.has(flagText)) continue; // Đã có rồi, bỏ qua
+
+        // Tìm tên chủ hộ
+        const hh = households.find(h => h.id === fund.household_id);
+        const headName = hh ? getHouseholdHeadName(hh) : 'Hộ dân';
+
+        const generalRecord: FinancialRecord = {
+          id: generateUUID(),
+          group_id: db.getGroupId(),
+          type: 'income',
+          amount: fund.amount,
+          category: fund.fund_name,
+          description: `Thu ${fund.fund_name} - Hộ ${headName} ${flagText}`,
+          recorded_by: 'Hệ thống tự động',
+          date: fund.paid_at || new Date().toISOString().slice(0, 10),
+          created_at: new Date().toISOString()
+        };
+        await db.saveFinancialRecord(generalRecord);
+        addedCount++;
+      }
+
+      if (addedCount === 0) {
+        showToast('✅ Sổ Thu Chi TDP đã đầy đủ, không có khoản nào bị thiếu!', 'success');
+      } else {
+        showToast(`✅ Đã đồng bộ ${addedCount} khoản thu quỹ còn thiếu sang Sổ Thu Chi TDP!`, 'success');
+      }
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (err) {
+      showToast('Có lỗi khi đồng bộ dữ liệu!', 'danger');
+    }
+  };
+
   const loadData = async () => {
     try {
       const [list, hList, rList, fList] = await Promise.all([
@@ -5131,9 +5189,10 @@ const Finance = () => {
                 <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', fontWeight: '600' }}>
                   Tổng thu quỹ địa phương {fundYear}: <strong style={{ color: 'var(--success)' }}>
                     {formatCurrency(
-                      householdFunds
-                        .filter(f => f.year === fundYear)
-                        .reduce((sum, f) => sum + f.amount, 0)
+                      filteredHouseholdsForFunds.reduce((sum, hh) => {
+                        const hhFunds = hhFundsMap.get(hh.id) || [];
+                        return sum + hhFunds.reduce((s, f) => s + f.amount, 0);
+                      }, 0)
                     )}
                   </strong>
                 </span>
@@ -5324,6 +5383,39 @@ const Finance = () => {
                     }}
                   >
                     <Download size={16} style={{ color: '#16a34a' }} /> Xuất Excel
+                  </button>
+
+                  <button 
+                    onClick={handleSyncFundsToLedger}
+                    title="Quét và đồng bộ các khoản thu quỹ hộ dân còn thiếu sang Sổ Thu Chi TDP"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1d4ed8',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                      e.currentTarget.style.borderColor = '#93c5fd';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                      e.currentTarget.style.borderColor = '#bfdbfe';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    🔄 Đồng bộ Sổ Thu Chi
                   </button>
                 </>
               )}
