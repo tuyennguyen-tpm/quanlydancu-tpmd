@@ -1773,7 +1773,11 @@ export const db = {
       try {
         const uId = await getSessionUserId();
         const payload = enrichPayload({ ...fullFund, user_id: uId });
-        const { data, error } = await supabase.from('household_funds').upsert(payload).select().single();
+        const { data, error } = await supabase
+          .from('household_funds')
+          .upsert(payload, { onConflict: 'household_id,year,fund_name' })
+          .select()
+          .single();
         if (error) handleDbError('lưu biên lai đóng quỹ hộ dân', error);
         if (!error && data) return data;
       } catch (e) {
@@ -1789,6 +1793,34 @@ export const db = {
     }
     setStorageItem('household_funds', list);
     return fullFund;
+  },
+  saveHouseholdFundsBatch: async (funds: (Omit<HouseholdFund, 'created_at'> & { created_at?: string })[]): Promise<HouseholdFund[]> => {
+    if (!funds || funds.length === 0) return [];
+    const fullFunds: HouseholdFund[] = funds.map(fund => ({
+      ...fund,
+      created_at: fund.created_at || new Date().toISOString()
+    }));
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        const payloads = fullFunds.map(f => enrichPayload({ ...f, user_id: uId }));
+        const { data, error } = await supabase
+          .from('household_funds')
+          .upsert(payloads, { onConflict: 'household_id,year,fund_name' })
+          .select();
+        if (error) handleDbError('lưu biên lai đóng quỹ hộ dân hàng loạt', error);
+        if (!error && data) return data;
+      } catch (e) {
+        console.error('Supabase saveHouseholdFundsBatch error, saving to local storage', e);
+      }
+    }
+    const list = getStorageItem<HouseholdFund[]>('household_funds', []);
+    const map = new Map<string, HouseholdFund>();
+    list.forEach(f => map.set(`${f.household_id}_${f.year}_${f.fund_name}`, f));
+    fullFunds.forEach(f => map.set(`${f.household_id}_${f.year}_${f.fund_name}`, f));
+    const merged = Array.from(map.values());
+    setStorageItem('household_funds', merged);
+    return fullFunds;
   },
   deleteHouseholdFund: async (id: string): Promise<boolean> => {
     if (supabase) {

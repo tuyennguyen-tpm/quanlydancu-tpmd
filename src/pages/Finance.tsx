@@ -437,6 +437,9 @@ const Finance = () => {
       let newlyAddedFundCount = 0;
       let newlyAddedLedgerCount = 0;
 
+      const householdFundsToSave: HouseholdFund[] = [];
+      const financialRecordsToSave: FinancialRecord[] = [];
+
       // 4. Đồng bộ các hộ đã nộp Quỹ Phường sang Quỹ TDP
       for (const hhId of paidHouseholdIds) {
         const hh = hhMapById.get(hhId);
@@ -473,7 +476,7 @@ const Finance = () => {
               paid_at: existing?.paid_at || today,
               note: existing?.note || fundNote
             };
-            await db.saveHouseholdFund(payload);
+            householdFundsToSave.push(payload);
             existingTdpFundMap.set(key, payload);
             newlyAddedFundCount++;
             hhHadChanges = true;
@@ -494,7 +497,7 @@ const Finance = () => {
                 date: existing?.paid_at || today,
                 created_at: new Date().toISOString()
               };
-              await db.saveFinancialRecord(generalRecord);
+              financialRecordsToSave.push(generalRecord);
               existingLedgerFlags.add(flagText);
               newlyAddedLedgerCount++;
             }
@@ -502,6 +505,22 @@ const Finance = () => {
         }
 
         if (hhHadChanges) newlySyncedHhCount++;
+      }
+
+      // Lưu hàng loạt HouseholdFunds
+      if (householdFundsToSave.length > 0) {
+        if (typeof (db as any).saveHouseholdFundsBatch === 'function') {
+          await (db as any).saveHouseholdFundsBatch(householdFundsToSave);
+        } else {
+          await Promise.all(householdFundsToSave.map(f => db.saveHouseholdFund(f)));
+        }
+      }
+
+      // Lưu các bản ghi Sổ thu chi
+      if (financialRecordsToSave.length > 0) {
+        for (const r of financialRecordsToSave) {
+          await db.saveFinancialRecord(r);
+        }
       }
 
       // 5. Quét thêm toàn bộ HouseholdFunds hiện có để đảm bảo mọi khoản thu đều đã có trong Sổ quỹ
