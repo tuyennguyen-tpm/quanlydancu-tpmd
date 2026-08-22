@@ -500,37 +500,25 @@ const Finance = () => {
         }
       });
 
-      // 3. Chuẩn bị dữ liệu Quỹ TDP cho các hộ đã nộp và xóa các khoản nộp của hộ chưa nộp
-      const existingTdpFundMap = new Map<string, HouseholdFund>();
-      allFunds.forEach(f => {
-        existingTdpFundMap.set(`${f.household_id}_${f.year}_${f.fund_name}`, f);
-      });
+      // 3. XÓA SẠCH toàn bộ household_funds năm hiện tại trước khi ghi lại đúng danh sách 515 hộ
+      //    → Đây là cách duy nhất đảm bảo số hộ chính xác bất kể dữ liệu cũ còn lại trong DB
+      const allFundIdsThisYear = allFunds
+        .filter(f => Number(f.year) === fundYear)
+        .map(f => f.id);
 
-      const householdFundsToSave: HouseholdFund[] = [];
-      const householdFundsToDelete: string[] = [];
-      const financialRecordsToSave: FinancialRecord[] = [];
-      const existingLedgerFlags = new Set<string>();
-      allRecords.forEach(r => {
-        const matches = r.description?.match(/\[QUY_[^\]]+\]/g);
-        if (matches) matches.forEach(flag => existingLedgerFlags.add(flag));
-      });
-
-      // Xóa các bản ghi quỹ TDP của các hộ KHÔNG thuộc danh sách đã nộp (để dọn dẹp triệt để các hộ bị tăng nhầm trước đó)
-      allFunds.forEach(f => {
-        if (Number(f.year) === fundYear && !paidRealHhIds.has(f.household_id)) {
-          householdFundsToDelete.push(f.id);
-        }
-      });
-
-      if (householdFundsToDelete.length > 0) {
+      if (allFundIdsThisYear.length > 0) {
         if (typeof (db as any).deleteHouseholdFundsBatch === 'function') {
-          await (db as any).deleteHouseholdFundsBatch(householdFundsToDelete);
+          await (db as any).deleteHouseholdFundsBatch(allFundIdsThisYear);
         } else {
-          for (const delId of householdFundsToDelete) {
+          for (const delId of allFundIdsThisYear) {
             await db.deleteHouseholdFund(delId);
           }
         }
       }
+
+      const householdFundsToSave: HouseholdFund[] = [];
+      const financialRecordsToSave: FinancialRecord[] = [];
+      const newFundFlagTexts = new Set<string>();
 
       for (const hhId of paidRealHhIds) {
         const hh = hhMapById.get(hhId);
@@ -539,9 +527,6 @@ const Finance = () => {
         const headName = headNameForHHMap.get(hhId) || getHouseholdHeadName(hh);
 
         for (const fund of tdpActiveFunds) {
-          const key = `${hhId}_${fundYear}_${fund.name}`;
-          const existing = existingTdpFundMap.get(key);
-
           const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
           const hhAddr = (hh.address || '').toLowerCase();
           const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || (hh.self_management_group || '').trim() === 'Tổ 8' || (hh.self_management_group || '').trim() === '8';
@@ -549,45 +534,39 @@ const Finance = () => {
 
           const fundAmount = isExemptTdpGroup8 ? 0 : fund.target;
           const fundNote = isExemptTdpGroup8 ? 'Đã thu trước' : 'Đã thu đủ theo thông báo';
+          const fundRecordId = generateUUID();
 
-          const fundRecordId = existing ? existing.id : generateUUID();
-
-          if (!existing || existing.amount !== fundAmount) {
-            const payload: HouseholdFund = {
-              id: fundRecordId,
-              household_id: hhId,
-              year: fundYear,
-              fund_name: fund.name,
-              amount: fundAmount,
-              paid_at: existing?.paid_at || today,
-              note: existing?.note || fundNote
-            };
-            householdFundsToSave.push(payload);
-            existingTdpFundMap.set(key, payload);
-          }
+          const payload: HouseholdFund = {
+            id: fundRecordId,
+            household_id: hhId,
+            year: fundYear,
+            fund_name: fund.name,
+            amount: fundAmount,
+            paid_at: today,
+            note: fundNote
+          };
+          householdFundsToSave.push(payload);
 
           if (fundAmount > 0) {
             const flagText = `[QUY_${fundRecordId}]`;
-            if (!existingLedgerFlags.has(flagText)) {
-              const generalRecord: FinancialRecord = {
-                id: generateUUID(),
-                group_id: db.getGroupId(),
-                type: 'income',
-                amount: fundAmount,
-                category: fund.name,
-                description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
-                recorded_by: 'Hệ thống tự động',
-                date: existing?.paid_at || today,
-                created_at: new Date().toISOString()
-              };
-              financialRecordsToSave.push(generalRecord);
-              existingLedgerFlags.add(flagText);
-            }
+            newFundFlagTexts.add(flagText);
+            const generalRecord: FinancialRecord = {
+              id: generateUUID(),
+              group_id: db.getGroupId(),
+              type: 'income',
+              amount: fundAmount,
+              category: fund.name,
+              description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
+              recorded_by: 'Hệ thống tự động',
+              date: today,
+              created_at: new Date().toISOString()
+            };
+            financialRecordsToSave.push(generalRecord);
           }
         }
       }
 
-      // Lưu hàng loạt HouseholdFunds
+      // Lưu hàng loạt HouseholdFunds mới
       if (householdFundsToSave.length > 0) {
         if (typeof (db as any).saveHouseholdFundsBatch === 'function') {
           await (db as any).saveHouseholdFundsBatch(householdFundsToSave);
@@ -596,36 +575,18 @@ const Finance = () => {
         }
       }
 
-      // Lưu các bản ghi Sổ thu chi
-      if (financialRecordsToSave.length > 0) {
-        for (const r of financialRecordsToSave) {
-          await db.saveFinancialRecord(r);
+      // Xóa TOÀN BỘ bản ghi sổ thu chi tự động cũ trước khi ghi mới
+      const oldAutoRecords = allRecords.filter(r => r.recorded_by === 'Hệ thống tự động' || r.description?.includes('[QUY_'));
+      if (oldAutoRecords.length > 0) {
+        for (const r of oldAutoRecords) {
+          await db.deleteFinancialRecord(r.id);
         }
       }
 
-      // 4. Dọn dẹp triệt để các bản ghi tự động bị trùng lặp hoặc mồ côi trong Sổ thu chi
-      const latestFunds = await db.getHouseholdFunds();
-      const currentValidFundIds = new Set(latestFunds.map(f => f.id));
-      const seenLedgerFundIds = new Set<string>();
-      const recordsToDelete: string[] = [];
-
-      allRecords.forEach(r => {
-        if (r.description?.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
-          const match = r.description?.match(/\[QUY_([^\]]+)\]/);
-          if (match && match[1]) {
-            const fId = match[1];
-            if (seenLedgerFundIds.has(fId) || !currentValidFundIds.has(fId)) {
-              recordsToDelete.push(r.id);
-            } else {
-              seenLedgerFundIds.add(fId);
-            }
-          }
-        }
-      });
-
-      if (recordsToDelete.length > 0) {
-        for (const delId of recordsToDelete) {
-          await db.deleteFinancialRecord(delId);
+      // Lưu bản ghi sổ thu chi mới
+      if (financialRecordsToSave.length > 0) {
+        for (const r of financialRecordsToSave) {
+          await db.saveFinancialRecord(r);
         }
       }
 
