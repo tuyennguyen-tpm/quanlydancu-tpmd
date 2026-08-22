@@ -739,13 +739,13 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
 
     const headers = showTdpCol ? [
-      'Tổ dân phố', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
+      'STT', 'Tổ dân phố', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
       'Nghề nghiệp', 'Cụm/Tổ', 'Thường trú', 
       'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
       'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
       'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
     ] : [
-      'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
+      'STT', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
       'Nghề nghiệp', 'Cụm/Tổ', 'Thường trú', 
       'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
       'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
@@ -797,7 +797,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         // Tạo cấu trúc cột
         worksheet.columns = headers.map(h => ({ header: h, key: h }));
 
-        const rows = list.map(r => {
+        const rows = list.map((r, index) => {
           const hh = householdLookupMap.get(r.household_id);
           const hhNum = hh ? hh.household_number : '';
           
@@ -810,7 +810,8 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             }
           }
 
-          const rowData = [
+          const rowData: any[] = [
+            index + 1, // Cột STT đếm thứ tự từng nhân khẩu
             hhNum || '',
             r.full_name,
             r.gender === 'male' ? 'Nam' : r.gender === 'female' ? 'Nữ' : 'Khác',
@@ -837,7 +838,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           ];
 
           if (showTdpCol) {
-            rowData.unshift(r.user_id ? (tdpMap[r.user_id] || '—') : '—');
+            rowData.splice(1, 0, r.user_id ? (tdpMap[r.user_id] || '—') : '—');
           }
 
           return rowData;
@@ -873,6 +874,37 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
           }
         });
 
+        // Thống kê đếm tổng số nhân khẩu, nam, nữ, số hộ
+        const maleCount = list.filter(r => r.gender === 'male').length;
+        const femaleCount = list.filter(r => r.gender === 'female').length;
+        const uniqueHhIds = new Set(list.map(r => r.household_id).filter(Boolean));
+        const householdCount = uniqueHhIds.size;
+
+        // Dòng tổng kết ở chân bảng
+        const summaryRowData: any[] = [
+          'TỔNG CỘNG',
+          ...(showTdpCol ? [''] : []),
+          `${householdCount} hộ`,
+          `Tổng: ${list.length} nhân khẩu (${maleCount} Nam, ${femaleCount} Nữ)`,
+          ...Array(headers.length - (showTdpCol ? 4 : 3)).fill('')
+        ];
+
+        const summaryRow = worksheet.addRow(summaryRowData);
+        summaryRow.height = 28;
+        summaryRow.eachCell(cell => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFEF3C7' } // Vàng kem nhạt sang trọng #FEF3C7
+          };
+          cell.font = {
+            bold: true,
+            color: { argb: 'FF92400E' }, // Nâu vàng đậm
+            name: 'Segoe UI',
+            size: 11
+          };
+        });
+
         // Căn chỉnh tiêu đề dòng đầu tiên
         const headerRow = worksheet.getRow(1);
         headerRow.height = 26;
@@ -906,7 +938,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             };
             if (rowNumber > 1) {
               const headerKey = headers[colNumber - 1] || '';
-              if (['Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Trạng thái cư trú', 'Số sổ hộ khẩu', 'Tổ dân phố'].includes(headerKey)) {
+              if (['STT', 'Giới tính', 'Ngày sinh', 'CCCD / Định danh', 'SĐT', 'Trạng thái cư trú', 'Số sổ hộ khẩu', 'Tổ dân phố'].includes(headerKey)) {
                 cell.alignment = {
                   vertical: 'middle',
                   horizontal: 'center'
@@ -968,7 +1000,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      showToast(`Xuất file Excel thành công gồm ${groups.length + 1} Sheet!`, 'success');
+      showToast(`Xuất file Excel thành công gồm ${groups.length + 1} Sheet (Tổng cộng: ${exportList.length} nhân khẩu)!`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Lỗi khi xuất file Excel!', 'danger');
