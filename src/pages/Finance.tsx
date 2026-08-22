@@ -316,61 +316,230 @@ const Finance = () => {
     }
   };
 
-  // Đồng bộ dữ liệu thu quỹ hộ dân sang sổ Thu Chi TDP
-  // Quét tất cả householdFunds có amount > 0 → tạo FinancialRecord nếu chưa có
+  // Đồng bộ dữ liệu thu quỹ toàn diện: Quỹ Phường ➔ Quỹ TDP & Sổ Thu Chi TDP
+  // Quét tất cả các hộ đã đóng bên Quỹ Phường (515 hộ) và tự động ghi nhận sang Quỹ TDP & Sổ quỹ nếu chưa có
   const handleSyncFundsToLedger = async () => {
     try {
-      const [allFunds, allRecords] = await Promise.all([
+      showToast('⏳ Đang quét và đồng bộ dữ liệu từ Quỹ Phường sang Quỹ TDP...', 'info');
+      
+      const [allFunds, allRecords, wardFundsList, hList, rList] = await Promise.all([
         db.getHouseholdFunds(),
-        db.getFinancialRecords()
+        db.getFinancialRecords(),
+        db.getWardFunds(fundYear),
+        db.getHouseholds(),
+        db.getResidents()
       ]);
 
-      // Tạo Set các flagText [QUY_id] đã tồn tại trong sổ thu chi
-      const existingFlags = new Set<string>();
-      allRecords.forEach(r => {
-        const matches = r.description?.match(/\[QUY_[^\]]+\]/g);
-        if (matches) matches.forEach(flag => existingFlags.add(flag));
+      const tdpActiveFunds = (db as any).getFundList() || [];
+      const wardActiveFunds = (db as any).getWardFundList() || [];
+      const today = new Date().toISOString().slice(0, 10);
+
+      // Tạo Map tra cứu nhanh
+      const hhMapById = new Map<string, Household>();
+      hList.forEach(h => hhMapById.set(h.id, h));
+
+      const residentsByHhId = new Map<string, Resident[]>();
+      rList.forEach(r => {
+        if (r.household_id) {
+          if (!residentsByHhId.has(r.household_id)) residentsByHhId.set(r.household_id, []);
+          residentsByHhId.get(r.household_id)!.push(r);
+        }
       });
 
-      const activeFundNames = new Set((db as any).getFundList()?.map((f: any) => f.name) || []);
+      const residentsByName = new Map<string, Resident[]>();
+      rList.forEach(r => {
+        const k = (r.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        if (k) {
+          if (!residentsByName.has(k)) residentsByName.set(k, []);
+          residentsByName.get(k)!.push(r);
+        }
+      });
 
-      let addedCount = 0;
-      for (const fund of allFunds) {
+      // 1. Xác định các bản ghi Quỹ Phường đã nộp đủ
+      const paidWardRecords = wardFundsList.filter(f => {
+        if (f.note === 'Đã nộp đủ đợt tập trung') return true;
+        if (f.contributions) {
+          const contribValues = Object.values(f.contributions);
+          if (contribValues.some((c: any) => c && (c.actual > 0 || c.date))) return true;
+        }
+        return false;
+      });
+
+      // 2. Tìm mã Hộ gia đình tương ứng cho từng bản ghi Quỹ Phường đã nộp
+      const paidHouseholdIds = new Set<string>();
+
+      paidWardRecords.forEach(f => {
+        const nameKey = (f.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const addrClean = (f.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+        let matchedHhId: string | undefined = undefined;
+
+        // Cách 1: Khớp qua CSDL nhân khẩu (theo họ tên & user_id / dob)
+        const candidates = residentsByName.get(nameKey) || [];
+        if (candidates.length === 1 && candidates[0].household_id) {
+          matchedHhId = candidates[0].household_id;
+        } else if (candidates.length > 1) {
+          if (f.user_id) {
+            const userMatch = candidates.find(r => r.user_id === f.user_id && r.household_id);
+            if (userMatch) matchedHhId = userMatch.household_id;
+          }
+          if (!matchedHhId && addrClean) {
+            const addrMatch = candidates.find(r => {
+              if (!r.household_id) return false;
+              const hh = hhMapById.get(r.household_id);
+              const hhAddr = (hh?.address || '').trim().toLowerCase();
+              return hhAddr && (hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean));
+            });
+            if (addrMatch) matchedHhId = addrMatch.household_id;
+          }
+          if (!matchedHhId && candidates[0].household_id) {
+            matchedHhId = candidates[0].household_id;
+          }
+        }
+
+        // Cách 2: Khớp qua tên Chủ hộ trong danh sách Hộ gia đình
+        if (!matchedHhId) {
+          const matchedHh = hList.find(h => {
+            const headName = getHouseholdHeadName(h).toLowerCase().trim();
+            return headName && (headName === nameKey || (addrClean && addrClean.includes(headName)));
+          });
+          if (matchedHh) matchedHhId = matchedHh.id;
+        }
+
+        // Cách 3: Khớp qua địa chỉ hộ
+        if (!matchedHhId && addrClean) {
+          const matchedHh = hList.find(h => {
+            const hhAddr = (h.address || '').trim().toLowerCase();
+            return hhAddr && (hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean));
+          });
+          if (matchedHh) matchedHhId = matchedHh.id;
+        }
+
+        if (matchedHhId) {
+          paidHouseholdIds.add(matchedHhId);
+        }
+      });
+
+      // 3. Tạo Map tra cứu quỹ TDP hiện tại: `${household_id}_${year}_${fund_name}`
+      const existingTdpFundMap = new Map<string, HouseholdFund>();
+      allFunds.forEach(f => {
+        existingTdpFundMap.set(`${f.household_id}_${f.year}_${f.fund_name}`, f);
+      });
+
+      // Tạo Set các flagText [QUY_id] đã có trong sổ thu chi
+      const existingLedgerFlags = new Set<string>();
+      allRecords.forEach(r => {
+        const matches = r.description?.match(/\[QUY_[^\]]+\]/g);
+        if (matches) matches.forEach(flag => existingLedgerFlags.add(flag));
+      });
+
+      let newlySyncedHhCount = 0;
+      let newlyAddedFundCount = 0;
+      let newlyAddedLedgerCount = 0;
+
+      // 4. Đồng bộ các hộ đã nộp Quỹ Phường sang Quỹ TDP
+      for (const hhId of paidHouseholdIds) {
+        const hh = hhMapById.get(hhId);
+        if (!hh) continue;
+
+        const members = residentsByHhId.get(hhId) || [];
+        const headResident = members.find(r => r.id === hh.head_of_household_id || r.is_head);
+        const headName = headResident ? headResident.full_name : getHouseholdHeadName(hh);
+
+        let hhHadChanges = false;
+
+        for (const fund of tdpActiveFunds) {
+          const key = `${hhId}_${fundYear}_${fund.name}`;
+          const existing = existingTdpFundMap.get(key);
+
+          const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
+          const hhAddr = ((hh?.address || '') + ' ' + ((hh as any)?.self_management_group || '') + ' ' + ((hh as any)?.group_name || '') + ' ' + (members?.[0]?.permanent_address || '')).toLowerCase();
+          const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || hhAddr.includes('tổ: 8') || ((hh as any)?.self_management_group || '').trim() === 'Tổ 8' || ((hh as any)?.self_management_group || '').trim() === '8';
+          const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(fundYear) === 2026;
+
+          const fundAmount = isExemptTdpGroup8 ? 0 : fund.target;
+          const fundNote = isExemptTdpGroup8 ? 'Đã thu trước' : 'Đã thu đủ theo thông báo';
+
+          let fundRecordId = existing?.id;
+
+          if (!existing || existing.amount < fundAmount) {
+            fundRecordId = existing ? existing.id : generateUUID();
+            const payload: HouseholdFund = {
+              id: fundRecordId,
+              household_id: hhId,
+              year: fundYear,
+              fund_name: fund.name,
+              amount: fundAmount,
+              paid_at: existing?.paid_at || today,
+              note: existing?.note || fundNote
+            };
+            await db.saveHouseholdFund(payload);
+            existingTdpFundMap.set(key, payload);
+            newlyAddedFundCount++;
+            hhHadChanges = true;
+          }
+
+          // Đồng bộ sang Sổ thu chi TDP
+          if (fundRecordId && fundAmount > 0) {
+            const flagText = `[QUY_${fundRecordId}]`;
+            if (!existingLedgerFlags.has(flagText)) {
+              const generalRecord: FinancialRecord = {
+                id: generateUUID(),
+                group_id: db.getGroupId(),
+                type: 'income',
+                amount: fundAmount,
+                category: fund.name,
+                description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
+                recorded_by: 'Hệ thống tự động',
+                date: existing?.paid_at || today,
+                created_at: new Date().toISOString()
+              };
+              await db.saveFinancialRecord(generalRecord);
+              existingLedgerFlags.add(flagText);
+              newlyAddedLedgerCount++;
+            }
+          }
+        }
+
+        if (hhHadChanges) newlySyncedHhCount++;
+      }
+
+      // 5. Quét thêm toàn bộ HouseholdFunds hiện có để đảm bảo mọi khoản thu đều đã có trong Sổ quỹ
+      const latestFunds = await db.getHouseholdFunds();
+      for (const fund of latestFunds) {
         if (!fund.amount || fund.amount <= 0) continue;
-        // Chỉ đồng bộ quỹ TDP đang hoạt động
-        if (activeFundNames.size > 0 && !activeFundNames.has(fund.fund_name)) continue;
-
         const flagText = `[QUY_${fund.id}]`;
-        if (existingFlags.has(flagText)) continue; // Đã có rồi, bỏ qua
-
-        // Tìm tên chủ hộ
-        const hh = households.find(h => h.id === fund.household_id);
-        const headName = hh ? getHouseholdHeadName(hh) : 'Hộ dân';
-
-        const generalRecord: FinancialRecord = {
-          id: generateUUID(),
-          group_id: db.getGroupId(),
-          type: 'income',
-          amount: fund.amount,
-          category: fund.fund_name,
-          description: `Thu ${fund.fund_name} - Hộ ${headName} ${flagText}`,
-          recorded_by: 'Hệ thống tự động',
-          date: fund.paid_at || new Date().toISOString().slice(0, 10),
-          created_at: new Date().toISOString()
-        };
-        await db.saveFinancialRecord(generalRecord);
-        addedCount++;
+        if (!existingLedgerFlags.has(flagText)) {
+          const hh = hhMapById.get(fund.household_id);
+          const headName = hh ? getHouseholdHeadName(hh) : 'Hộ dân';
+          const generalRecord: FinancialRecord = {
+            id: generateUUID(),
+            group_id: db.getGroupId(),
+            type: 'income',
+            amount: fund.amount,
+            category: fund.fund_name,
+            description: `Thu ${fund.fund_name} - Hộ ${headName} ${flagText}`,
+            recorded_by: 'Hệ thống tự động',
+            date: fund.paid_at || today,
+            created_at: new Date().toISOString()
+          };
+          await db.saveFinancialRecord(generalRecord);
+          existingLedgerFlags.add(flagText);
+          newlyAddedLedgerCount++;
+        }
       }
 
-      if (addedCount === 0) {
-        showToast('✅ Sổ Thu Chi TDP đã đầy đủ, không có khoản nào bị thiếu!', 'success');
-      } else {
-        showToast(`✅ Đã đồng bộ ${addedCount} khoản thu quỹ còn thiếu sang Sổ Thu Chi TDP!`, 'success');
-      }
-      loadData();
+      await loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
+
+      if (newlySyncedHhCount > 0 || newlyAddedFundCount > 0 || newlyAddedLedgerCount > 0) {
+        showToast(`🎉 Đồng bộ thành công ${newlySyncedHhCount} hộ từ Quỹ Phường sang Quỹ TDP (${newlyAddedFundCount} khoản quỹ, ${newlyAddedLedgerCount} phiếu thu chi)!`, 'success');
+      } else {
+        showToast('✅ Dữ liệu Quỹ TDP & Sổ thu chi đã đồng bộ khớp hoàn toàn với Quỹ Phường!', 'success');
+      }
     } catch (err) {
-      showToast('Có lỗi khi đồng bộ dữ liệu!', 'danger');
+      console.error('Sync error:', err);
+      showToast('Có lỗi xảy ra trong quá trình đồng bộ dữ liệu!', 'danger');
     }
   };
 
@@ -5387,7 +5556,7 @@ const Finance = () => {
 
                   <button 
                     onClick={handleSyncFundsToLedger}
-                    title="Quét và đồng bộ các khoản thu quỹ hộ dân còn thiếu sang Sổ Thu Chi TDP"
+                    title="Quét toàn bộ 515 hộ đã đóng bên Quỹ Phường và đồng bộ sang Quản lý thu quỹ TDP & Sổ Thu Chi"
                     style={{
                       padding: '8px 16px',
                       borderRadius: '8px',
@@ -5395,27 +5564,28 @@ const Finance = () => {
                       alignItems: 'center',
                       gap: '6px',
                       backgroundColor: '#eff6ff',
-                      border: '1px solid #bfdbfe',
+                      border: '1.5px solid #93c5fd',
                       color: '#1d4ed8',
-                      fontWeight: '600',
+                      fontWeight: '700',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       height: 'auto',
                       minHeight: '36px',
-                      fontSize: '0.85rem'
+                      fontSize: '0.85rem',
+                      boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)'
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.backgroundColor = '#dbeafe';
-                      e.currentTarget.style.borderColor = '#93c5fd';
+                      e.currentTarget.style.borderColor = '#60a5fa';
                       e.currentTarget.style.transform = 'translateY(-1px)';
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.backgroundColor = '#eff6ff';
-                      e.currentTarget.style.borderColor = '#bfdbfe';
+                      e.currentTarget.style.borderColor = '#93c5fd';
                       e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
-                    🔄 Đồng bộ Sổ Thu Chi
+                    🔄 Đồng bộ từ Quỹ Phường ➔ Quỹ TDP
                   </button>
                 </>
               )}
