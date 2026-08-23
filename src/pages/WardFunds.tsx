@@ -825,9 +825,9 @@ const WardFunds = () => {
           } else if (isManualTarget && typeof storedContrib?.expected === 'number') {
             expected[fund.name] = storedContrib.expected;
           } else {
-            // Kiểm tra xem record này có phải hộ trưởng không (thường là record đầu tiên cho địa chỉ đó)
-            const hhFundsForAddr = householdFunds.filter(hf => hf.address === f.address || hf.household_id === matchedRes?.household_id);
-            const isHeadRecord = hhFundsForAddr.length === 0 || funds.filter(wf => wf.address === f.address).indexOf(f) === 0;
+            // Quỹ hộ: record đầu tiên theo địa chỉ (hộ trưởng) mới phải nộp
+            const sameAddrFunds = funds.filter(wf => wf.address === f.address);
+            const isHeadRecord = sameAddrFunds.length === 0 || sameAddrFunds.indexOf(f) === 0;
             expected[fund.name] = isHeadRecord ? (fund.target || 0) : 0;
           }
           return;
