@@ -29,7 +29,7 @@ const getSupabaseClient = () => {
   if (url && key) {
     try {
       return createClient(url, key, {
-        auth: { persistSession: false },
+        auth: { persistSession: true },
         realtime: {
           params: {
             apikey: key
