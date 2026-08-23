@@ -1291,19 +1291,33 @@ const Sponsors = () => {
                   </div>
                 </div>
 
-                {/* Họ tên */}
+                {/* Họ tên / Đơn vị */}
                 <div className="form-group">
                   <label style={{ fontWeight: '600', marginBottom: '6px', display: 'block' }}>
-                    {formType === 'income' ? 'Họ và tên Người ủng hộ / Nhà hảo tâm / Đơn vị *' : 'Người nhận / Đơn vị tiếp nhận chi *'}
+                    {formType === 'income'
+                      ? '👤 Họ tên / Đơn vị ủng hộ *'
+                      : '👤 Người nhận / Đơn vị tiếp nhận *'}
                   </label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder={formType === 'income' ? 'Ví dụ: Ông Nguyễn Văn A, Công ty TNHH Ánh Dương...' : 'Ví dụ: Hộ bà Trần Thị B (khó khăn), Đội sửa chữa...'}
+                    placeholder={
+                      formType === 'income'
+                        ? 'Ví dụ: Nguyễn Kim Tuyến - Cty TNHH TPM'
+                        : 'Ví dụ: Hộ bà Trần Thị B (khó khăn), Đội thi công Nhân Lực...'
+                    }
                     required
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', fontWeight: '500' }}
                   />
+                  {formType === 'income' && (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0', lineHeight: '1.5' }}>
+                      💡 Có thể ghi <strong>tên cá nhân + tên công ty/cơ sở/đơn vị</strong> trên cùng một dòng.
+                      <br />Ví dụ: <em>Nguyễn Kim Tuyến - Cty TNHH TPM</em> &nbsp;|&nbsp;
+                      <em>Hộ KD Ánh Dương</em> &nbsp;|&nbsp;
+                      <em>Trần Văn B - Chi nhánh Vietcombank</em>
+                    </p>
+                  )}
                 </div>
 
                 {/* Số tiền & Ngày */}
