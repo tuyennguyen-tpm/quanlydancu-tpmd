@@ -59,7 +59,11 @@ const DebouncedInput = ({
   );
 };
 
-const Finance = () => {
+interface FinanceProps {
+  initialType?: 'all' | 'income' | 'expense' | 'sponsor';
+}
+
+const Finance = ({ initialType = 'all' }: FinanceProps) => {
   const currentYear = new Date().getFullYear();
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
   
@@ -118,7 +122,13 @@ const Finance = () => {
   const isCanBoChung = isToTruongOrAdmin || isKeToan || currentRole === 'chung' || currentRole === 'all' || currentRole === 'can_bo_chung';
   const canPrintExport = !isThuQuy && (isCanBoChung || isKeToan || isToTruongOrAdmin) && localStorage.getItem('guest_mode') !== 'true';
   const [records, setRecords] = useState<FinancialRecord[]>([]);
-  const [activeType, setActiveType] = useState<'all' | 'income' | 'expense'>('all');
+  const [activeType, setActiveType] = useState<'all' | 'income' | 'expense' | 'sponsor'>(initialType);
+
+  useEffect(() => {
+    if (initialType) {
+      setActiveType(initialType);
+    }
+  }, [initialType]);
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
   const [recordedByFilter, setRecordedByFilter] = useState<string>('all');
@@ -4507,20 +4517,47 @@ const Finance = () => {
     };
   }, [records, recordedByFilter, payerFilter]);
 
-  const filteredRecords = useMemo(() => records.filter(r => {
-    // Ẩn các bản ghi tự động đồng bộ từ việc đóng quỹ của các hộ dân
-    if (r.description.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
-      return false;
-    }
-    const matchesType = activeType === 'all' || r.type === activeType;
-    const matchesSearch = r.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          r.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          r.recorded_by.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (r.payer || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRecordedBy = recordedByFilter === 'all' || (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase();
-    const matchesPayer = payerFilter === 'all' || (r.payer || '').trim().toLowerCase() === payerFilter.trim().toLowerCase();
-    return matchesType && matchesSearch && matchesRecordedBy && matchesPayer;
-  }), [records, activeType, searchTerm, recordedByFilter, payerFilter]);
+  const filteredRecords = useMemo(() => {
+    const normalize = (str: string) => (str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase();
+
+    return records.filter(r => {
+      // Ẩn các bản ghi tự động đồng bộ từ việc đóng quỹ của các hộ dân
+      if (r.description?.includes('[QUY_') || r.recorded_by === 'Hệ thống tự động') {
+        return false;
+      }
+
+      let matchesType = true;
+      if (activeType === 'sponsor') {
+        const text = `${normalize(r.category)} ${normalize(r.description)}`;
+        const isSponsor = r.type === 'income' && (
+          text.includes('manh thuong quan') ||
+          text.includes('tai tro') ||
+          text.includes('ung ho') ||
+          text.includes('quyen gop') ||
+          text.includes('mung') ||
+          text.includes('hao tam') ||
+          text.includes('ho tro') ||
+          text.includes('tang')
+        );
+        if (!isSponsor) matchesType = false;
+      } else if (activeType !== 'all') {
+        matchesType = r.type === activeType;
+      }
+
+      const matchesSearch = r.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            r.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            r.recorded_by.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (r.payer || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRecordedBy = recordedByFilter === 'all' || (r.recorded_by || '').trim().toLowerCase() === recordedByFilter.trim().toLowerCase();
+      const matchesPayer = payerFilter === 'all' || (r.payer || '').trim().toLowerCase() === payerFilter.trim().toLowerCase();
+      return matchesType && matchesSearch && matchesRecordedBy && matchesPayer;
+    });
+  }, [records, activeType, searchTerm, recordedByFilter, payerFilter]);
 
   const formatCurrency = (amt: number) => {
     if (amt === undefined || amt === null || isNaN(amt)) return '0';
@@ -4858,10 +4895,18 @@ const Finance = () => {
                  <h2 className="value text-danger">{formatCurrency(totalExpense)}</h2>
               </div>
             </div>
-            <div className="finance-stat-card sponsor" style={{
-              borderLeft: '4px solid #16a34a',
-              background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)'
-            }}>
+            <div 
+              className="finance-stat-card sponsor" 
+              onClick={() => setActiveType(activeType === 'sponsor' ? 'all' : 'sponsor')}
+              style={{
+                borderLeft: '4px solid #16a34a',
+                background: activeType === 'sponsor' ? '#dcfce7' : 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: activeType === 'sponsor' ? '0 0 0 2px #16a34a' : undefined
+              }}
+              title="Nhấn để lọc các khoản ủng hộ từ Người dân / Mạnh thường quân"
+            >
               <div className="stat-icon" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
                 <HeartHandshake size={24} />
               </div>
@@ -4881,6 +4926,21 @@ const Finance = () => {
               <button className={`tab ${activeType === 'all' ? 'active' : ''}`} onClick={() => setActiveType('all')}>Tất cả</button>
               <button className={`tab ${activeType === 'income' ? 'active' : ''}`} onClick={() => setActiveType('income')}>Khoản thu</button>
               <button className={`tab ${activeType === 'expense' ? 'active' : ''}`} onClick={() => setActiveType('expense')}>Khoản chi</button>
+              <button 
+                className={`tab ${activeType === 'sponsor' ? 'active' : ''}`} 
+                onClick={() => setActiveType('sponsor')}
+                style={{
+                  color: activeType === 'sponsor' ? '#fff' : '#15803d',
+                  backgroundColor: activeType === 'sponsor' ? '#16a34a' : '#f0fdf4',
+                  borderColor: '#86efac',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                🎁 Người dân / Mạnh thường quân
+              </button>
             </div>
             
             {/* Bộ lọc theo người lập phiếu */}

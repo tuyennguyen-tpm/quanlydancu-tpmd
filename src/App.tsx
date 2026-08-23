@@ -72,7 +72,8 @@ import {
   FolderOpen,
   Sprout,
   Zap,
-  Mail
+  Mail,
+  HeartHandshake
 } from 'lucide-react';
 import './App.css';
 
@@ -2529,6 +2530,35 @@ const App = () => {
         }
         return <Finance />;
       }
+      case 'sponsors': {
+        const currentActionRole = localStorage.getItem('current_role') || userRole;
+        const HIDE_FINANCE_FOR_TO_TRUONG = false;
+        if (HIDE_FINANCE_FOR_TO_TRUONG && (currentActionRole === 'to_truong' || userRole === 'to_truong')) {
+          return (
+            <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔒</div>
+              <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Quyền truy cập bị hạn chế</h3>
+              <p style={{ color: 'var(--text-muted)' }}>
+                Tính năng đang tạm ẩn đối với vai trò Tổ trưởng dân phố.
+              </p>
+            </div>
+          );
+        }
+        const isAdminOrToTruong = currentActionRole === 'to_truong' || currentActionRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+        if (!isAdminOrToTruong) {
+          return (
+            <div className="card" style={{ padding: '32px', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔒</div>
+              <h3 style={{ color: '#ef4444', marginBottom: '8px' }}>Quyền truy cập bị hạn chế</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.6' }}>
+                Chỉ có <strong>Tổ trưởng dân phố</strong> và <strong>Quản trị hệ thống (Admin)</strong> mới được phép truy cập.<br />
+                Tất cả các vai trò khác không có quyền truy cập phần này.
+              </p>
+            </div>
+          );
+        }
+        return <Finance initialType="sponsor" />;
+      }
       case 'ward-funds':
         if (userRole === 'demo' || userRole === 'trang_chu') {
           return (
@@ -2630,6 +2660,7 @@ const App = () => {
     { id: 'regulations', icon: Check, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
     { id: 'finance', icon: Wallet, label: 'Thu chi TDP', group: 'Tài chính' },
     { id: 'ward-funds', icon: Wallet, label: 'Quỹ nộp phường', group: 'Tài chính' },
+    { id: 'sponsors', icon: HeartHandshake, label: 'Người dân / Mạnh thường quân', group: 'Tài chính' },
     { id: 'treasurer', icon: Landmark, label: 'Thủ quỹ', group: 'Tài chính' },
     { id: 'complaints', icon: MessageSquare, label: 'Phản ánh kiến nghị', group: 'Tiện ích', badge: pendingCount, badgeColor: '#ef4444' },
     { id: 'ai-assistant', icon: BrainCircuit, label: 'Trợ lý AI', group: 'Tiện ích' },
@@ -2639,14 +2670,14 @@ const App = () => {
       return item.id === 'security';
     }
     if (userRole === 'demo' || userRole === 'trang_chu') {
-      if (item.id === 'finance' || item.id === 'ward-funds' || item.id === 'treasurer') {
+      if (item.id === 'finance' || item.id === 'ward-funds' || item.id === 'treasurer' || item.id === 'sponsors') {
         return false;
       }
     }
     if (isGuestMode) {
-      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'treasurer', 'settings'].includes(item.id);
+      return !['households', 'residents', 'residents-temp', 'residents-changes', 'meetings-party', 'meetings-front', 'party-cell', 'ai-assistant', 'ward-funds', 'treasurer', 'settings', 'sponsors'].includes(item.id);
     }
-    if (item.id === 'finance') {
+    if (item.id === 'finance' || item.id === 'sponsors') {
       const currentActionRole = localStorage.getItem('current_role') || userRole;
       const HIDE_FINANCE_FOR_TO_TRUONG = false;
       if (HIDE_FINANCE_FOR_TO_TRUONG && (currentActionRole === 'to_truong' || userRole === 'to_truong')) {
