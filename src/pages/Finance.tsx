@@ -4432,22 +4432,33 @@ const Finance = () => {
   const balance = totalIncome - totalExpense;
 
   const sponsorTotal = useMemo(() => {
+    const normalize = (str: string) => (str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase();
+
     return deduplicatedRecords
       .filter(r => r.type === 'income')
       .filter(r => {
-        const cat = (r.category || '').toLowerCase();
-        const desc = (r.description || '').toLowerCase();
-        // Chỉ khớp khi category rõ ràng là ủng hộ/tài trợ
-        const catMatch = cat.includes('mạnh thường quân') || 
-               cat.includes('tài trợ') || 
-               cat.includes('ủng hộ') || 
-               cat.includes('quyên góp');
-        // Chỉ khớp desc khi cụm từ đủ rõ nghĩa (tránh bắt nhầm "tiền mừng thọ", v.v.)
-        const descMatch = desc.includes('mạnh thường quân') || 
-               desc.includes('tài trợ') || 
-               (desc.includes('ủng hộ') && !desc.includes('quỹ')) ||
-               desc.includes('quyên góp');
-        return catMatch || descMatch;
+        // Loại trừ các bản ghi tự động đồng bộ từ quỹ hộ dân (tránh cộng nhầm tiền quỹ định kỳ)
+        const isAutoFundRecord = r.recorded_by === 'Hệ thống tự động' || (r.description && r.description.includes('[QUY_'));
+        if (isAutoFundRecord) return false;
+
+        const cat = normalize(r.category || '');
+        const desc = normalize(r.description || '');
+        const text = `${cat} ${desc}`;
+
+        // Nhận diện đầy đủ các khoản thu Mạnh thường quân / Ủng hộ / Tài trợ / Mừng / Quyên góp / Hảo tâm
+        return text.includes('manh thuong quan') ||
+               text.includes('tai tro') ||
+               text.includes('ung ho') ||
+               text.includes('quyen gop') ||
+               text.includes('mung') ||
+               text.includes('hao tam') ||
+               text.includes('ho tro') ||
+               text.includes('tang');
       })
       .reduce((sum, r) => sum + r.amount, 0);
   }, [deduplicatedRecords]);
