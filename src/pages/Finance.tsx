@@ -4437,16 +4437,17 @@ const Finance = () => {
       .filter(r => {
         const cat = (r.category || '').toLowerCase();
         const desc = (r.description || '').toLowerCase();
-        return cat.includes('mạnh thường quân') || 
+        // Chỉ khớp khi category rõ ràng là ủng hộ/tài trợ
+        const catMatch = cat.includes('mạnh thường quân') || 
                cat.includes('tài trợ') || 
                cat.includes('ủng hộ') || 
-               cat.includes('mừng') || 
-               cat.includes('quyên góp') ||
-               desc.includes('mạnh thường quân') || 
+               cat.includes('quyên góp');
+        // Chỉ khớp desc khi cụm từ đủ rõ nghĩa (tránh bắt nhầm "tiền mừng thọ", v.v.)
+        const descMatch = desc.includes('mạnh thường quân') || 
                desc.includes('tài trợ') || 
-               desc.includes('ủng hộ') || 
-               desc.includes('mừng') ||
+               (desc.includes('ủng hộ') && !desc.includes('quỹ')) ||
                desc.includes('quyên góp');
+        return catMatch || descMatch;
       })
       .reduce((sum, r) => sum + r.amount, 0);
   }, [deduplicatedRecords]);
