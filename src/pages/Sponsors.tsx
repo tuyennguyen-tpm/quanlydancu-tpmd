@@ -568,57 +568,306 @@ const Sponsors = () => {
     printWindow.document.close();
   };
 
-  // Xuất Excel Bảng Vàng Danh Dự / Danh Sách Ủng Hộ
+  // Xuất Excel Bảng Vàng Danh Dự / Danh Sách Ủng Hộ Chuẩn Chuyên Nghiệp & Đẹp Mắt
   const handleExportExcel = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Quy_Manh_Thuong_Quan');
+      workbook.creator = 'Hệ thống Quản lý Dân cư TDP';
+      workbook.created = new Date();
 
-      worksheet.columns = [
-        { header: 'STT', key: 'stt', width: 8 },
-        { header: 'Ngày', key: 'date', width: 15 },
-        { header: 'Loại', key: 'type', width: 15 },
-        { header: 'Họ và tên', key: 'full_name', width: 25 },
-        { header: 'Địa chỉ', key: 'address', width: 30 },
-        { header: 'Số điện thoại', key: 'phone', width: 18 },
-        { header: 'Danh mục', key: 'category', width: 25 },
-        { header: 'Số tiền (VNĐ)', key: 'amount', width: 20 },
-        { header: 'Ghi chú / Chi tiết', key: 'note', width: 35 },
-        { header: 'Người lập / Tiếp nhận', key: 'recorded_by', width: 22 }
-      ];
-
-      filteredRecords.forEach((r, idx) => {
-        worksheet.addRow({
-          stt: idx + 1,
-          date: formatDateVN(r.date),
-          type: r.type === 'income' ? 'Thu ủng hộ' : 'Chi từ quỹ',
-          full_name: r.full_name,
-          address: r.address || '',
-          phone: r.phone || '',
-          category: r.category,
-          amount: r.amount,
-          note: r.note || '',
-          recorded_by: r.recorded_by || ''
-        });
+      const worksheet = workbook.addWorksheet('Bang_Vang_Ung_Ho', {
+        pageSetup: {
+          paperSize: 9, // A4
+          orientation: 'landscape',
+          fitToPage: true,
+          fitToWidth: 1,
+          fitToHeight: 0,
+          margins: {
+            left: 0.5,
+            right: 0.5,
+            top: 0.6,
+            bottom: 0.6,
+            header: 0.3,
+            footer: 0.3
+          }
+        },
+        views: [{ showGridLines: true }]
       });
 
-      // Format headers
-      worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
-      worksheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'B45309' }
+      const tdpName = officialsConfig.tdpName;
+      const wardName = officialsConfig.wardName;
+      const leaderName = officialsConfig.toTruong.name;
+      const keToanName = officialsConfig.keToan.name;
+      const thuQuyName = officialsConfig.thuQuy.name;
+
+      // 1. Header (Cơ quan & Quốc hiệu)
+      worksheet.mergeCells('A1:D1');
+      worksheet.getCell('A1').value = wardName.toUpperCase();
+      worksheet.getCell('A1').font = { name: 'Times New Roman', size: 11, bold: false };
+      worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells('A2:D2');
+      worksheet.getCell('A2').value = tdpName.toUpperCase();
+      worksheet.getCell('A2').font = { name: 'Times New Roman', size: 11, bold: true, color: { argb: '9A3412' } };
+      worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells('F1:J1');
+      worksheet.getCell('F1').value = 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM';
+      worksheet.getCell('F1').font = { name: 'Times New Roman', size: 11, bold: true };
+      worksheet.getCell('F1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells('F2:J2');
+      worksheet.getCell('F2').value = 'Độc lập - Tự do - Hạnh phúc';
+      worksheet.getCell('F2').font = { name: 'Times New Roman', size: 11, italic: true, bold: true };
+      worksheet.getCell('F2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // 2. Main Title
+      worksheet.mergeCells('A4:J4');
+      worksheet.getCell('A4').value = 'BẢNG VÀNG TRI ÂN & DANH SÁCH ỦNG HỘ QUỸ MẠNH THƯỜNG QUÂN / NHÂN DÂN';
+      worksheet.getCell('A4').font = { name: 'Times New Roman', size: 15, bold: true, color: { argb: '9A3412' } };
+      worksheet.getCell('A4').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(4).height = 28;
+
+      worksheet.mergeCells('A5:J5');
+      worksheet.getCell('A5').value = `(Thời điểm lập biểu: Ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()} - Đơn vị tính: Đồng Việt Nam)`;
+      worksheet.getCell('A5').font = { name: 'Times New Roman', size: 10.5, italic: true, color: { argb: '475569' } };
+      worksheet.getCell('A5').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getRow(5).height = 20;
+
+      // 3. KPI Summary Box
+      // Thu
+      worksheet.mergeCells('B7:C7');
+      worksheet.getCell('B7').value = 'TỔNG THU ỦNG HỘ';
+      worksheet.getCell('B7').font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: '166534' } };
+      worksheet.getCell('B7').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getCell('B7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'DCFCE7' } };
+
+      worksheet.mergeCells('B8:C8');
+      worksheet.getCell('B8').value = totalIncome;
+      worksheet.getCell('B8').numFmt = '#,##0 "đ"';
+      worksheet.getCell('B8').font = { name: 'Times New Roman', size: 12, bold: true, color: { argb: '15803D' } };
+      worksheet.getCell('B8').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getCell('B8').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F0FDF4' } };
+
+      // Chi
+      worksheet.mergeCells('E7:F7');
+      worksheet.getCell('E7').value = 'TỔNG CHI TỪ QUỸ';
+      worksheet.getCell('E7').font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: '991B1B' } };
+      worksheet.getCell('E7').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getCell('E7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
+
+      worksheet.mergeCells('E8:F8');
+      worksheet.getCell('E8').value = totalExpense;
+      worksheet.getCell('E8').numFmt = '#,##0 "đ"';
+      worksheet.getCell('E8').font = { name: 'Times New Roman', size: 12, bold: true, color: { argb: 'DC2626' } };
+      worksheet.getCell('E8').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getCell('E8').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEF2F2' } };
+
+      // Tồn quỹ
+      worksheet.mergeCells('H7:I7');
+      worksheet.getCell('H7').value = 'TỒN QUỸ HIỆN TẠI';
+      worksheet.getCell('H7').font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: '1E40AF' } };
+      worksheet.getCell('H7').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getCell('H7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'DBEAFE' } };
+
+      worksheet.mergeCells('H8:I8');
+      worksheet.getCell('H8').value = balance;
+      worksheet.getCell('H8').numFmt = '#,##0 "đ"';
+      worksheet.getCell('H8').font = { name: 'Times New Roman', size: 12, bold: true, color: { argb: '2563EB' } };
+      worksheet.getCell('H8').alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.getCell('H8').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EFF6FF' } };
+
+      const thinBorder: Partial<ExcelJS.Borders> = {
+        top: { style: 'thin', color: { argb: 'CBD5E1' } },
+        left: { style: 'thin', color: { argb: 'CBD5E1' } },
+        bottom: { style: 'thin', color: { argb: 'CBD5E1' } },
+        right: { style: 'thin', color: { argb: 'CBD5E1' } }
       };
+
+      ['B7', 'C7', 'B8', 'C8', 'E7', 'F7', 'E8', 'F8', 'H7', 'I7', 'H8', 'I8'].forEach(cellRef => {
+        worksheet.getCell(cellRef).border = thinBorder;
+      });
+
+      // 4. Data Table Header (Row 10)
+      const headerRowIndex = 10;
+      const headers = [
+        'STT',
+        'Ngày',
+        'Phân loại',
+        'Họ và tên Nhà hảo tâm / Đơn vị',
+        'Địa chỉ nơi cư trú',
+        'Số điện thoại',
+        'Danh mục / Mục đích',
+        'Số tiền (VNĐ)',
+        'Ghi chú / Nội dung chi tiết',
+        'Người tiếp nhận'
+      ];
+
+      const headerRow = worksheet.getRow(headerRowIndex);
+      headers.forEach((title, idx) => {
+        const cell = headerRow.getCell(idx + 1);
+        cell.value = title;
+        cell.font = { name: 'Times New Roman', size: 11, bold: true, color: { argb: 'FFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'B45309' } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'medium', color: { argb: '78350F' } },
+          left: { style: 'thin', color: { argb: 'D97706' } },
+          bottom: { style: 'medium', color: { argb: '78350F' } },
+          right: { style: 'thin', color: { argb: 'D97706' } }
+        };
+      });
+      headerRow.height = 30;
+
+      // 5. Data Rows
+      let currentRowIndex = headerRowIndex + 1;
+      filteredRecords.forEach((r, idx) => {
+        const row = worksheet.getRow(currentRowIndex);
+        const isIncome = r.type === 'income';
+        const isZebra = idx % 2 === 1;
+        const rowBgColor = isZebra ? 'FFFDF7' : 'FFFFFF';
+
+        row.getCell(1).value = idx + 1;
+        row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+        row.getCell(2).value = formatDateVN(r.date);
+        row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+
+        row.getCell(3).value = isIncome ? 'Thu ủng hộ' : 'Chi từ quỹ';
+        row.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+        row.getCell(3).font = { name: 'Times New Roman', size: 10.5, bold: true, color: { argb: isIncome ? '166534' : '991B1B' } };
+
+        row.getCell(4).value = r.full_name;
+        row.getCell(4).font = { name: 'Times New Roman', size: 11, bold: true, color: { argb: '0F172A' } };
+        row.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
+
+        row.getCell(5).value = r.address || '—';
+        row.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+
+        row.getCell(6).value = r.phone || '—';
+        row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+
+        row.getCell(7).value = r.category;
+        row.getCell(7).alignment = { horizontal: 'left', vertical: 'middle' };
+
+        row.getCell(8).value = r.amount;
+        row.getCell(8).numFmt = '#,##0 "đ"';
+        row.getCell(8).font = { name: 'Times New Roman', size: 11, bold: true, color: { argb: isIncome ? '15803D' : 'DC2626' } };
+        row.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
+
+        row.getCell(9).value = r.note || '—';
+        row.getCell(9).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+
+        row.getCell(10).value = r.recorded_by || '—';
+        row.getCell(10).alignment = { horizontal: 'center', vertical: 'middle' };
+
+        // Apply borders and zebra background
+        for (let col = 1; col <= 10; col++) {
+          const cell = row.getCell(col);
+          cell.border = thinBorder;
+          if (!cell.font) cell.font = { name: 'Times New Roman', size: 10.5 };
+          if (col !== 3 && col !== 8) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBgColor } };
+          }
+        }
+        row.height = 24;
+        currentRowIndex++;
+      });
+
+      // 6. Summary Row (Dòng Tổng Kết)
+      const summaryRow = worksheet.getRow(currentRowIndex);
+      worksheet.mergeCells(`A${currentRowIndex}:G${currentRowIndex}`);
+      const sumLabelCell = summaryRow.getCell(1);
+      sumLabelCell.value = `TỔNG CỘNG (${filteredRecords.length} BẢN GHI)`;
+      sumLabelCell.font = { name: 'Times New Roman', size: 11, bold: true, color: { argb: '78350F' } };
+      sumLabelCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const sumAmountCell = summaryRow.getCell(8);
+      const filteredSum = filteredRecords.reduce((s, r) => s + (r.type === 'income' ? r.amount : -r.amount), 0);
+      sumAmountCell.value = filteredSum;
+      sumAmountCell.numFmt = '#,##0 "đ"';
+      sumAmountCell.font = { name: 'Times New Roman', size: 12, bold: true, color: { argb: filteredSum >= 0 ? '15803D' : 'DC2626' } };
+      sumAmountCell.alignment = { horizontal: 'right', vertical: 'middle' };
+
+      worksheet.mergeCells(`I${currentRowIndex}:J${currentRowIndex}`);
+
+      for (let col = 1; col <= 10; col++) {
+        const cell = summaryRow.getCell(col);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEF3C7' } };
+        cell.border = {
+          top: { style: 'medium', color: { argb: 'B45309' } },
+          bottom: { style: 'double', color: { argb: 'B45309' } },
+          left: { style: 'thin', color: { argb: 'CBD5E1' } },
+          right: { style: 'thin', color: { argb: 'CBD5E1' } }
+        };
+      }
+      summaryRow.height = 28;
+      currentRowIndex += 2;
+
+      // 7. Signature Block
+      const sigRow1 = worksheet.getRow(currentRowIndex);
+      worksheet.mergeCells(`H${currentRowIndex}:J${currentRowIndex}`);
+      worksheet.getCell(`H${currentRowIndex}`).value = `${wardName}, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}`;
+      worksheet.getCell(`H${currentRowIndex}`).font = { name: 'Times New Roman', size: 11, italic: true };
+      worksheet.getCell(`H${currentRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRowIndex++;
+
+      const sigRow2 = worksheet.getRow(currentRowIndex);
+      worksheet.mergeCells(`A${currentRowIndex}:C${currentRowIndex}`);
+      worksheet.getCell(`A${currentRowIndex}`).value = 'NGƯỜI LẬP BIỂU';
+      worksheet.getCell(`A${currentRowIndex}`).font = { name: 'Times New Roman', size: 11, bold: true };
+      worksheet.getCell(`A${currentRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells(`D${currentRowIndex}:F${currentRowIndex}`);
+      worksheet.getCell(`D${currentRowIndex}`).value = 'THỦ QUỸ';
+      worksheet.getCell(`D${currentRowIndex}`).font = { name: 'Times New Roman', size: 11, bold: true };
+      worksheet.getCell(`D${currentRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells(`H${currentRowIndex}:J${currentRowIndex}`);
+      worksheet.getCell(`H${currentRowIndex}`).value = 'TM. BAN CÁN SỰ TỔ DÂN PHỐ\nTỔ TRƯỞNG';
+      worksheet.getCell(`H${currentRowIndex}`).font = { name: 'Times New Roman', size: 11, bold: true };
+      worksheet.getCell(`H${currentRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      sigRow2.height = 28;
+
+      currentRowIndex += 4; // Khoảng trống ký tên
+
+      const sigRow3 = worksheet.getRow(currentRowIndex);
+      worksheet.mergeCells(`A${currentRowIndex}:C${currentRowIndex}`);
+      worksheet.getCell(`A${currentRowIndex}`).value = (keToanName || 'Kế toán').toUpperCase();
+      worksheet.getCell(`A${currentRowIndex}`).font = { name: 'Times New Roman', size: 11, bold: true };
+      worksheet.getCell(`A${currentRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells(`D${currentRowIndex}:F${currentRowIndex}`);
+      worksheet.getCell(`D${currentRowIndex}`).value = (thuQuyName || 'Thủ quỹ').toUpperCase();
+      worksheet.getCell(`D${currentRowIndex}`).font = { name: 'Times New Roman', size: 11, bold: true };
+      worksheet.getCell(`D${currentRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      worksheet.mergeCells(`H${currentRowIndex}:J${currentRowIndex}`);
+      worksheet.getCell(`H${currentRowIndex}`).value = (leaderName || 'Tổ trưởng').toUpperCase();
+      worksheet.getCell(`H${currentRowIndex}`).font = { name: 'Times New Roman', size: 11, bold: true };
+      worksheet.getCell(`H${currentRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Set Column Widths
+      worksheet.getColumn(1).width = 7;   // STT
+      worksheet.getColumn(2).width = 14;  // Ngày
+      worksheet.getColumn(3).width = 15;  // Loại
+      worksheet.getColumn(4).width = 28;  // Họ tên
+      worksheet.getColumn(5).width = 30;  // Địa chỉ
+      worksheet.getColumn(6).width = 16;  // SĐT
+      worksheet.getColumn(7).width = 24;  // Danh mục
+      worksheet.getColumn(8).width = 20;  // Số tiền
+      worksheet.getColumn(9).width = 32;  // Ghi chú
+      worksheet.getColumn(10).width = 20; // Người tiếp nhận
 
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Danh_Sach_Ung_Ho_Manh_Thuong_Quan_${currentYear}.xlsx`;
+      a.download = `Bang_Vang_Ung_Ho_Manh_Thuong_Quan_${tdpName.replace(/\s+/g, '_')}_${currentYear}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      showToast('Xuất danh sách Excel thành công!', 'success');
+      showToast('Xuất Bảng Vàng Excel thành công!', 'success');
     } catch (err: any) {
       console.error(err);
       showToast('Lỗi khi xuất Excel: ' + err.message, 'danger');
