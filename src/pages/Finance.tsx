@@ -4905,7 +4905,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                 transition: 'all 0.2s ease',
                 boxShadow: activeType === 'sponsor' ? '0 0 0 2px #16a34a' : undefined
               }}
-              title="Nhấn để lọc các khoản ủng hộ từ Người dân / Mạnh thường quân"
+              title="Nhấn để lọc các khoản ủng hộ từ Người dân / Mạnh thường quân ủng hộ"
             >
               <div className="stat-icon" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
                 <HeartHandshake size={24} />
