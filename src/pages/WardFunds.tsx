@@ -789,6 +789,15 @@ const WardFunds = () => {
     };
 
     const resultMap = new Map<string, Record<string, number>>();
+
+    // Gom danh sách quỹ theo Hộ để xác định chính xác người đại diện (chủ hộ) của từng hộ
+    const hhMembersMap = new Map<string, WardFund[]>();
+    funds.forEach(f => {
+      const hhId = fundMetaMap.get(f.id)?.householdId || (f.address ? `addr__${f.address}` : f.id);
+      if (!hhMembersMap.has(hhId)) hhMembersMap.set(hhId, []);
+      hhMembersMap.get(hhId)!.push(f);
+    });
+
     funds.forEach(f => {
       const expected: Record<string, number> = {};
 
@@ -815,8 +824,7 @@ const WardFunds = () => {
       activeFunds.forEach((fund: any) => {
         const isHH = fund.scope ? fund.scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
         if (isHH) {
-          // Quỹ theo hộ: chỉ áp dụng cho hộ trưởng (chỉ member đầu tiên trong fund, tức chính record này)
-          // expected = fund.target cho record này, các record khác trong cùng hộ sẽ không ảnh hưởng
+          // Quỹ theo hộ: chỉ áp dụng cho người đầu tiên đại diện của từng hộ gia đình
           const storedContrib = getContributionData(f.contributions, fund.name);
           const isManualExempt = storedContrib?.is_manual_exempt === true;
           const isManualTarget = storedContrib?.is_manual_target === true;
@@ -825,9 +833,9 @@ const WardFunds = () => {
           } else if (isManualTarget && typeof storedContrib?.expected === 'number') {
             expected[fund.name] = storedContrib.expected;
           } else {
-            // Quỹ hộ: record đầu tiên theo địa chỉ (hộ trưởng) mới phải nộp
-            const sameAddrFunds = funds.filter(wf => wf.address === f.address);
-            const isHeadRecord = sameAddrFunds.length === 0 || sameAddrFunds.indexOf(f) === 0;
+            const hhId = fundMetaMap.get(f.id)?.householdId || (f.address ? `addr__${f.address}` : f.id);
+            const hhMembers = hhMembersMap.get(hhId) || [f];
+            const isHeadRecord = hhMembers.indexOf(f) === 0;
             expected[fund.name] = isHeadRecord ? (fund.target || 0) : 0;
           }
           return;
@@ -894,7 +902,7 @@ const WardFunds = () => {
       resultMap.set(f.id, expected);
     });
     return resultMap;
-  }, [funds, residents, residentsByNameMap, activeFunds, households]);
+  }, [funds, residents, residentsByNameMap, activeFunds, households, fundMetaMap]);
 
   // Filtered List với Tìm kiếm siêu thông minh (Hỗ trợ Không dấu + Tìm theo tên mọi thành viên trong hộ + Địa chỉ + Ghi chú + Tổ)
   const filteredFunds = useMemo(() => {
@@ -1155,7 +1163,7 @@ const WardFunds = () => {
         totalHouseholdsCount: totalHhCount
       };
     });
-  }, [activeFunds, funds, fundMetaMap, households]);
+  }, [activeFunds, funds, fundMetaMap, households, computedExpectedMap]);
 
   const dailyStats = useMemo(() => {
     const targetDateStr = summaryDate;
