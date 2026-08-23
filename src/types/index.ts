@@ -260,4 +260,21 @@ export interface EmergencyContact {
   notes?: string;
 }
 
+export interface SponsorRecord {
+  id: string;
+  type: 'income' | 'expense'; // income = Thu ủng hộ/tài trợ, expense = Chi từ quỹ ủng hộ
+  full_name: string; // Họ tên người dân / Mạnh thường quân / Cơ quan / Mục đích chi
+  amount: number; // Số tiền
+  address?: string; // Địa chỉ
+  phone?: string; // Số điện thoại
+  category: string; // Danh mục: Ủng hộ TDP, Quỹ khuyến học, Tết người nghèo, v.v.
+  date: string; // Ngày ghi nhận
+  note?: string; // Ghi chú chi tiết
+  recorded_by?: string; // Người lập phiếu / Người tiếp nhận
+  created_at?: string;
+  user_id?: string;
+  ward_id?: string;
+}
+
+
 

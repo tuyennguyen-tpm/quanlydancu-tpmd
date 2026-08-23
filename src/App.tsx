@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import AIAssistant from './pages/AIAssistant';
 import CitizenMap from './pages/CitizenMap';
 import Finance from './pages/Finance';
+import Sponsors from './pages/Sponsors';
 import WardFunds from './pages/WardFunds';
 import Treasurer from './pages/Treasurer';
 import Households from './pages/Households';
@@ -2557,7 +2558,7 @@ const App = () => {
             </div>
           );
         }
-        return <Finance initialType="sponsor" />;
+        return <Sponsors />;
       }
       case 'ward-funds':
         if (userRole === 'demo' || userRole === 'trang_chu') {

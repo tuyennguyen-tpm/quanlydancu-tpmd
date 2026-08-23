@@ -1,6 +1,6 @@
 // v2.1 - Su dung bang app_config cho dong bo ma PIN (khong phu thuoc documents)
 import { createClient } from '@supabase/supabase-js';
-import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData, HouseholdFund, WardFund } from '../types';
+import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData, HouseholdFund, WardFund, SponsorRecord } from '../types';
 
 
 // Types for logs not defined in index.ts
@@ -2122,6 +2122,103 @@ export const db = {
     } catch (e) {
       console.error('Lỗi đồng bộ app_config từ Supabase:', e);
     }
+  },
+
+  // --- Quỹ Người dân / Mạnh thường quân (Độc lập, riêng biệt) ---
+  getSponsorRecords: async (): Promise<SponsorRecord[]> => {
+    let list: SponsorRecord[] = [];
+    const local = localStorage.getItem('sponsors_funds_records');
+    if (local) {
+      try { list = JSON.parse(local); } catch {}
+    }
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        let query = supabase.from('app_config').select('value').eq('key', 'sponsors_funds_data');
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          query = query.eq('user_id', uId);
+        }
+        const { data, error } = await query.maybeSingle();
+        if (!error && data?.value) {
+          const remoteList = JSON.parse(data.value);
+          if (Array.isArray(remoteList)) {
+            list = remoteList;
+            localStorage.setItem('sponsors_funds_records', JSON.stringify(list));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load sponsors_funds_data from Supabase:', err);
+      }
+    }
+    return list;
+  },
+
+  saveSponsorRecord: async (record: Omit<SponsorRecord, 'id' | 'created_at'> & { id?: string; created_at?: string }): Promise<SponsorRecord> => {
+    const fullRecord: SponsorRecord = {
+      ...record,
+      id: record.id || generateUUID(),
+      created_at: record.created_at || new Date().toISOString()
+    };
+    let list: SponsorRecord[] = [];
+    const local = localStorage.getItem('sponsors_funds_records');
+    if (local) {
+      try { list = JSON.parse(local); } catch {}
+    }
+    const idx = list.findIndex(r => r.id === fullRecord.id);
+    if (idx >= 0) {
+      list[idx] = fullRecord;
+    } else {
+      list.unshift(fullRecord);
+    }
+    const valStr = JSON.stringify(list);
+    localStorage.setItem('sponsors_funds_records', valStr);
+
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          await supabase.from('app_config').upsert({
+            user_id: uId,
+            key: 'sponsors_funds_data',
+            value: valStr,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,key' });
+        }
+      } catch (err) {
+        console.error('Failed to sync sponsors_funds_data to Supabase:', err);
+      }
+    }
+    window.dispatchEvent(new CustomEvent('db-changed'));
+    return fullRecord;
+  },
+
+  deleteSponsorRecord: async (id: string): Promise<boolean> => {
+    let list: SponsorRecord[] = [];
+    const local = localStorage.getItem('sponsors_funds_records');
+    if (local) {
+      try { list = JSON.parse(local); } catch {}
+    }
+    list = list.filter(r => r.id !== id);
+    const valStr = JSON.stringify(list);
+    localStorage.setItem('sponsors_funds_records', valStr);
+
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          await supabase.from('app_config').upsert({
+            user_id: uId,
+            key: 'sponsors_funds_data',
+            value: valStr,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,key' });
+        }
+      } catch (err) {
+        console.error('Failed to sync delete sponsor record to Supabase:', err);
+      }
+    }
+    window.dispatchEvent(new CustomEvent('db-changed'));
+    return true;
   },
   getWardFunds: async (year: number): Promise<WardFund[]> => {
     if (supabase) {
