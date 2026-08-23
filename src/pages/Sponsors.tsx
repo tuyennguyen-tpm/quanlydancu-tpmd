@@ -51,10 +51,16 @@ const Sponsors = () => {
   const [note, setNote] = useState('');
   const [recordedBy, setRecordedBy] = useState('');
 
-  const currentRole = localStorage.getItem('current_role') || 'mat_tran';
+  const currentRole = localStorage.getItem('current_role') || '';
   const userRole = localStorage.getItem('user_role') || '';
-  const isToTruongOrAdmin = currentRole === 'to_truong' || currentRole === 'admin' || userRole === 'to_truong' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
   const isGuest = localStorage.getItem('guest_mode') === 'true';
+
+  // Chỉ Thủ quỹ, Tổ trưởng dân phố, Admin mới có quyền thêm/sửa/xóa
+  const ALLOWED_ROLES = ['thu_quy', 'to_truong', 'admin', 'super_admin', 'ward_admin'];
+  const canEdit = !isGuest && (
+    ALLOWED_ROLES.includes(currentRole) ||
+    ALLOWED_ROLES.includes(userRole)
+  );
 
   const officialsConfig = useMemo(() => {
     const tdpName = localStorage.getItem('tdp_name') || localStorage.getItem('unit_name') || 'TỔ DÂN PHỐ QUẢNG GIAO';
@@ -199,6 +205,10 @@ const Sponsors = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) {
+      showToast('Bạn không có quyền thực hiện thao tác này! Chỉ Thủ quỹ, Tổ trưởng hoặc Admin mới được phép.', 'warning');
+      return;
+    }
     const cleanAmount = parseInt(amount.replace(/\D/g, ''), 10);
     if (!fullName.trim()) {
       showToast('Vui lòng nhập họ tên người ủng hộ / đơn vị!', 'warning');
@@ -234,8 +244,8 @@ const Sponsors = () => {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (isGuest) {
-      showToast('Tài khoản khách không có quyền xóa!', 'warning');
+    if (!canEdit) {
+      showToast('Bạn không có quyền xóa! Chỉ Thủ quỹ, Tổ trưởng hoặc Admin mới được phép.', 'warning');
       return;
     }
     if (window.confirm(`Bạn có chắc chắn muốn xóa bản ghi của "${name}" không?`)) {
@@ -886,9 +896,24 @@ const Sponsors = () => {
           <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#b45309' }}>
             <HeartHandshake className="text-amber-600" size={32} />
             Người dân / Mạnh thường quân
+            {!canEdit && (
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: '600',
+                padding: '3px 10px',
+                borderRadius: '20px',
+                backgroundColor: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fde68a',
+                letterSpacing: '0.5px'
+              }}>
+                🔒 Chỉ xem
+              </span>
+            )}
           </h1>
           <p className="page-subtitle">
-            Quản lý riêng biệt nguồn tài trợ, ủng hộ tự nguyện của nhân dân & các nhà hảo tâm cùng các khoản chi từ quỹ
+            Quản lý riêng biệt nguồn tài trợ, ủng hộ tự nguyện của nhân dân &amp; các nhà hảo tâm cùng các khoản chi từ quỹ
+            {!canEdit && <span style={{ color: '#b45309', fontStyle: 'italic' }}> — Chỉ Thủ quỹ, Tổ trưởng, Admin mới có quyền thêm/sửa/xóa.</span>}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -919,7 +944,7 @@ const Sponsors = () => {
             <Printer size={18} />
             In sổ quỹ ủng hộ
           </button>
-          {isToTruongOrAdmin && (
+          {canEdit && (
             <>
               <button 
                 type="button" 
@@ -1167,7 +1192,7 @@ const Sponsors = () => {
                             <Award size={16} />
                           </button>
                         )}
-                        {isToTruongOrAdmin && (
+                        {canEdit && (
                           <>
                             <button 
                               type="button" 
