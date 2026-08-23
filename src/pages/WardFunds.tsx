@@ -319,11 +319,18 @@ const WardFunds = () => {
     }
   };
 
+  const rrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     loadActiveFunds();
     loadResidentsAndHouseholds();
     window.addEventListener('ward-fund-targets-changed', loadActiveFunds);
-    window.addEventListener('db-changed', loadResidentsAndHouseholds);
+
+    const handleDebouncedRR = () => {
+      if (rrTimerRef.current) clearTimeout(rrTimerRef.current);
+      rrTimerRef.current = setTimeout(() => { loadResidentsAndHouseholds(); }, 350);
+    };
+    window.addEventListener('db-changed', handleDebouncedRR);
     
     const handleGroupsChange = () => {
       const saved = localStorage.getItem('tdp_groups_config');
@@ -338,8 +345,9 @@ const WardFunds = () => {
     window.addEventListener('click', handleGlobalClick);
 
     return () => {
+      if (rrTimerRef.current) clearTimeout(rrTimerRef.current);
       window.removeEventListener('ward-fund-targets-changed', loadActiveFunds);
-      window.removeEventListener('db-changed', loadResidentsAndHouseholds);
+      window.removeEventListener('db-changed', handleDebouncedRR);
       window.removeEventListener('tdp-groups-changed', handleGroupsChange);
       window.removeEventListener('click', handleGlobalClick);
     };
@@ -807,7 +815,21 @@ const WardFunds = () => {
       activeFunds.forEach((fund: any) => {
         const isHH = fund.scope ? fund.scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
         if (isHH) {
-          expected[fund.name] = 0;
+          // Quỹ theo hộ: chỉ áp dụng cho hộ trưởng (chỉ member đầu tiên trong fund, tức chính record này)
+          // expected = fund.target cho record này, các record khác trong cùng hộ sẽ không ảnh hưởng
+          const storedContrib = getContributionData(f.contributions, fund.name);
+          const isManualExempt = storedContrib?.is_manual_exempt === true;
+          const isManualTarget = storedContrib?.is_manual_target === true;
+          if (isManualExempt) {
+            expected[fund.name] = 0;
+          } else if (isManualTarget && typeof storedContrib?.expected === 'number') {
+            expected[fund.name] = storedContrib.expected;
+          } else {
+            // Kiểm tra xem record này có phải hộ trưởng không (thường là record đầu tiên cho địa chỉ đó)
+            const hhFundsForAddr = householdFunds.filter(hf => hf.address === f.address || hf.household_id === matchedRes?.household_id);
+            const isHeadRecord = hhFundsForAddr.length === 0 || funds.filter(wf => wf.address === f.address).indexOf(f) === 0;
+            expected[fund.name] = isHeadRecord ? (fund.target || 0) : 0;
+          }
           return;
         }
 
@@ -1047,8 +1069,9 @@ const WardFunds = () => {
       members.forEach(m => {
         const compExp = computedExpectedMap.get(m.id) || {};
         activeFunds.forEach(fund => {
-          const exp = compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected || 0);
-          const act = m.contributions?.[fund.name]?.actual || 0;
+          const exp = compExp[fund.name] ?? 0;
+          const contrib = getContributionData(m.contributions, fund.name);
+          const act = Number(contrib?.actual) || 0;
           totalExp += exp;
           totalAct += act;
         });
@@ -1138,8 +1161,10 @@ const WardFunds = () => {
     const targetDateStr = summaryDate;
     let totalAmount = 0;
     const paidHouseholdIds = new Set<string>();
+    const paidWardResidentIds = new Set<string>();
     const byCategory: Record<string, number> = {};
 
+    // Tính từ Quỹ TDP (householdFunds)
     householdFunds.forEach(hf => {
       const pDate = (hf.paid_at || '').slice(0, 10);
       if (pDate === targetDateStr && hf.amount > 0) {
@@ -1149,13 +1174,31 @@ const WardFunds = () => {
       }
     });
 
+    // Tính từ Quỹ Phường (ward_funds / funds)
+    funds.forEach(wf => {
+      if (!wf.contributions) return;
+      activeFunds.forEach((fund: any) => {
+        const contrib = getContributionData(wf.contributions, fund.name);
+        if (!contrib) return;
+        const pDate = (contrib.date || '').slice(0, 10);
+        if (pDate === targetDateStr) {
+          const amt = Number(contrib.actual) || 0;
+          if (amt > 0) {
+            totalAmount += amt;
+            paidWardResidentIds.add(wf.id);
+            byCategory[fund.name] = (byCategory[fund.name] || 0) + amt;
+          }
+        }
+      });
+    });
+
     return {
       date: targetDateStr,
       totalAmount,
-      householdCount: paidHouseholdIds.size,
+      householdCount: paidHouseholdIds.size + paidWardResidentIds.size,
       byCategory
     };
-  }, [householdFunds, summaryDate]);
+  }, [householdFunds, funds, activeFunds, summaryDate]);
 
   // Add new record manually
   const handleAddNewRecord = () => {

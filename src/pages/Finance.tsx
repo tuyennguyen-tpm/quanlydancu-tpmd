@@ -618,6 +618,8 @@ const Finance = () => {
     }
   };
 
+  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const loadData = async () => {
     try {
       const [list, hList, rList, fList] = await Promise.all([
@@ -626,10 +628,10 @@ const Finance = () => {
         db.getResidents(),
         db.getHouseholdFunds()
       ]);
-      setRecords(list);
-      setHouseholds(hList);
-      setResidents(rList);
-      setHouseholdFunds(fList);
+      setRecords(list || []);
+      setHouseholds(hList || []);
+      setResidents(rList || []);
+      setHouseholdFunds(fList || []);
 
       const wardId = localStorage.getItem('user_ward_id');
       if (wardId) {
@@ -642,13 +644,20 @@ const Finance = () => {
         setTdpList(list);
       }
     } catch (e) {
-      showToast('Lỗi tải dữ liệu tài chính!', 'danger');
+      console.error('Lỗi tải dữ liệu tài chính:', e);
     }
+  };
+
+  const handleDebouncedLoad = () => {
+    if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
+    loadTimerRef.current = setTimeout(() => {
+      loadData();
+    }, 300);
   };
 
   useEffect(() => {
     loadData();
-    window.addEventListener('db-changed', loadData);
+    window.addEventListener('db-changed', handleDebouncedLoad);
 
     const handleSaveNoticeMessage = async (event: MessageEvent) => {
       if (!event.data) return;
@@ -678,7 +687,8 @@ const Finance = () => {
     window.addEventListener('message', handleSaveNoticeMessage);
 
     return () => {
-      window.removeEventListener('db-changed', loadData);
+      if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
+      window.removeEventListener('db-changed', handleDebouncedLoad);
       window.removeEventListener('message', handleSaveNoticeMessage);
     };
   }, []);

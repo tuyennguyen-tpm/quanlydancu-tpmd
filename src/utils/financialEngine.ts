@@ -221,21 +221,64 @@ export function docSoTien(number: number): string {
 }
 
 /**
- * Lấy dữ liệu khoản đóng góp từ object contributions với cơ chế khớp tên thông minh (bỏ qua tiền tố Quỹ, [TDP], [NGƯỜI CAO TUỔI PHƯỜNG]...)
+ * Lấy dữ liệu khoản đóng góp từ object contributions với cơ chế khớp tên thông minh & hợp nhất đa khóa (bỏ qua tiền tố Quỹ, [TDP], [NGƯỜI CAO TUỔI PHƯỜNG]...)
  */
 export function getContributionData(contributions: Record<string, any> | undefined, fundName: string): { expected?: number; actual?: number; date?: string; is_manual_exempt?: boolean; is_manual_target?: boolean } | undefined {
   if (!contributions) return undefined;
-  if (contributions[fundName]) return contributions[fundName];
+  
   const norm = (s: string) => (s || '').toLowerCase().replace(/^\[.*?\]\s*/, '').replace(/^quỹ\s+/, '').replace(/\s+/g, ' ').trim();
   const target = norm(fundName);
-  for (const k of Object.keys(contributions)) {
-    if (norm(k) === target) return contributions[k];
-  }
-  for (const k of Object.keys(contributions)) {
+
+  // Thu thập tất cả các key khớp với tên quỹ mục tiêu
+  const matchedEntries: Array<{ expected?: number; actual?: number; date?: string; is_manual_exempt?: boolean; is_manual_target?: boolean }> = [];
+
+  for (const [k, val] of Object.entries(contributions)) {
+    if (!val || typeof val !== 'object') continue;
     const nk = norm(k);
-    if (nk && target && (nk.includes(target) || target.includes(nk))) return contributions[k];
+    if (nk === target || (nk && target && (nk.includes(target) || target.includes(nk)))) {
+      matchedEntries.push(val);
+    }
   }
-  return undefined;
+
+  if (matchedEntries.length === 0) {
+    if (contributions[fundName]) return contributions[fundName];
+    return undefined;
+  }
+
+  if (matchedEntries.length === 1) {
+    return matchedEntries[0];
+  }
+
+  // Hợp nhất nhiều key trùng lặp: lấy actual lớn nhất, date hợp lệ, expected hợp lệ
+  let maxActual = 0;
+  let chosenDate = '';
+  let chosenExpected = 0;
+  let isManualExempt = false;
+  let isManualTarget = false;
+
+  matchedEntries.forEach(entry => {
+    const act = Number(entry.actual) || 0;
+    if (act > maxActual) {
+      maxActual = act;
+    }
+    if (entry.date && (!chosenDate || act > 0)) {
+      chosenDate = entry.date;
+    }
+    const exp = Number(entry.expected) || 0;
+    if (exp > chosenExpected) {
+      chosenExpected = exp;
+    }
+    if (entry.is_manual_exempt) isManualExempt = true;
+    if (entry.is_manual_target) isManualTarget = true;
+  });
+
+  return {
+    expected: chosenExpected,
+    actual: maxActual,
+    date: chosenDate,
+    is_manual_exempt: isManualExempt,
+    is_manual_target: isManualTarget
+  };
 }
 
 /**

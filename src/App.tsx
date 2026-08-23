@@ -1561,13 +1561,19 @@ const App = () => {
     if (!supabase) return;
 
     let toastTimer: ReturnType<typeof setTimeout> | null = null;
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastPayload: any = null;
 
     const realtimeChannel = supabase.channel('global-db-realtime-sync', {
       config: { broadcast: { self: false } }
     });
 
-    const triggerSyncToUI = (sourceText: string, payload?: any) => {
-      window.dispatchEvent(new CustomEvent('db-changed', { detail: { payload, fromRemote: true } }));
+    const triggerSyncToUI = (_sourceText: string, payload?: any) => {
+      lastPayload = payload;
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('db-changed', { detail: { payload: lastPayload, fromRemote: true } }));
+      }, 350);
 
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
@@ -1575,7 +1581,7 @@ const App = () => {
         window.dispatchEvent(new CustomEvent('show-toast', {
           detail: { message: `⚡ Dữ liệu vừa được ${actionText} từ máy khác! Đã tự động đồng bộ.`, type: 'info' }
         }));
-      }, 500);
+      }, 600);
     };
 
     realtimeChannel
@@ -1616,6 +1622,7 @@ const App = () => {
     window.addEventListener('db-changed', handleLocalDbChanged);
 
     return () => {
+      if (syncTimer) clearTimeout(syncTimer);
       if (toastTimer) clearTimeout(toastTimer);
       window.removeEventListener('db-changed', handleLocalDbChanged);
       if (supabase) {
