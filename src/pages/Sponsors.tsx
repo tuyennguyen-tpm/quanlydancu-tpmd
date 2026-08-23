@@ -920,15 +920,26 @@ const Sponsors = () => {
             In sổ quỹ ủng hộ
           </button>
           {isToTruongOrAdmin && (
-            <button 
-              type="button" 
-              className="btn btn-primary" 
-              onClick={() => handleOpenForm()}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#b45309', borderColor: '#b45309' }}
-            >
-              <Plus size={18} />
-              Ghi nhận ủng hộ / Chi quỹ
-            </button>
+            <>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={() => { setFormType('income'); handleOpenForm(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#16a34a', borderColor: '#16a34a' }}
+              >
+                <Plus size={18} />
+                💚 Thu Ủng hộ
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={() => { setFormType('expense'); handleOpenForm(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+              >
+                <Plus size={18} />
+                ❤️ Chi từ Quỹ
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -1319,34 +1330,72 @@ const Sponsors = () => {
                   </div>
                 </div>
 
-                {/* Danh mục & Gợi ý nhanh */}
+                {/* Danh mục & Gợi ý nhanh — Combobox tự gõ */}
                 <div className="form-group">
                   <label style={{ fontWeight: '600', marginBottom: '6px', display: 'block' }}>Danh mục / Mục đích *</label>
                   <input 
                     type="text"
+                    list="category-suggestions"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    placeholder="Nhập danh mục..."
+                    placeholder={formType === 'income' ? 'Ví dụ: Ủng hộ hội trại, Hội làng, Mạnh thường quân ủng hộ...' : 'Ví dụ: Chi thăm hỏi khó khăn, Chi mua sắm...'}
                     required
+                    autoComplete="off"
                     style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
                   />
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center' }}>Gợi ý nhanh:</span>
+                  {/* datalist gợi ý — người dùng vẫn có thể gõ bất kỳ nội dung nào */}
+                  <datalist id="category-suggestions">
                     {formType === 'income' ? (
                       <>
-                        <button type="button" onClick={() => setCategory('Mạnh thường quân ủng hộ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎁 Mạnh thường quân ủng hộ</button>
-                        <button type="button" onClick={() => setCategory('Đóng góp xây dựng TDP')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fed7aa', background: '#fff7ed', color: '#c2410c', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🏗️ Xây dựng TDP</button>
-                        <button type="button" onClick={() => setCategory('Ủng hộ Quỹ Khuyến học')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎓 Quỹ Khuyến học</button>
+                        <option value="Mạnh thường quân ủng hộ" />
+                        <option value="Ủng hộ hội trại" />
+                        <option value="Ủng hộ hội làng" />
+                        <option value="Ủng hộ Lễ hội / Văn hóa" />
+                        <option value="Ủng hộ Quỹ Khuyến học" />
+                        <option value="Ủng hộ Tết vì người nghèo" />
+                        <option value="Đóng góp xây dựng TDP" />
+                        <option value="Ủng hộ xây dựng nông thôn mới" />
+                        <option value="Tài trợ hoạt động thể thao" />
+                        <option value="Ủng hộ Quỹ Phòng chống thiên tai" />
+                        {categoryOptions.map(c => <option key={c} value={c} />)}
+                      </>
+                    ) : (
+                      <>
+                        <option value="Chi quà tặng / Thăm hỏi khó khăn" />
+                        <option value="Chi khen thưởng học sinh giỏi" />
+                        <option value="Chi mua sắm / Tu sửa nhà văn hóa" />
+                        <option value="Chi tổ chức hội trại" />
+                        <option value="Chi tổ chức hội làng / Lễ hội" />
+                        <option value="Chi thể thao / Văn nghệ" />
+                        <option value="Chi hỗ trợ hộ nghèo / đặc biệt khó khăn" />
+                        <option value="Chi mua phần quà Tết" />
+                        <option value="Chi văn phòng phẩm TDP" />
+                        {categoryOptions.map(c => <option key={c} value={c} />)}
+                      </>
+                    )}
+                  </datalist>
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '7px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>Gợi ý nhanh:</span>
+                    {formType === 'income' ? (
+                      <>
+                        <button type="button" onClick={() => setCategory('Mạnh thường quân ủng hộ')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎁 Mạnh thường quân</button>
+                        <button type="button" onClick={() => setCategory('Ủng hộ hội trại')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>⛺ Hội trại</button>
+                        <button type="button" onClick={() => setCategory('Ủng hộ hội làng')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fff1f2', color: '#be123c', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🏮 Hội làng</button>
+                        <button type="button" onClick={() => setCategory('Ủng hộ Quỹ Khuyến học')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎓 Khuyến học</button>
                         <button type="button" onClick={() => setCategory('Ủng hộ Tết vì người nghèo')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fef08a', background: '#fefce8', color: '#a16207', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🧧 Tết người nghèo</button>
+                        <button type="button" onClick={() => setCategory('Đóng góp xây dựng TDP')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fed7aa', background: '#fff7ed', color: '#c2410c', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🏗️ Xây dựng TDP</button>
                       </>
                     ) : (
                       <>
                         <button type="button" onClick={() => setCategory('Chi quà tặng / Thăm hỏi khó khăn')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>❤️ Thăm hỏi khó khăn</button>
+                        <button type="button" onClick={() => setCategory('Chi tổ chức hội trại')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>⛺ Chi hội trại</button>
+                        <button type="button" onClick={() => setCategory('Chi tổ chức hội làng / Lễ hội')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #fca5a5', background: '#fff1f2', color: '#be123c', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🏮 Chi hội làng</button>
                         <button type="button" onClick={() => setCategory('Chi khen thưởng học sinh giỏi')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🎓 Khen thưởng học sinh</button>
                         <button type="button" onClick={() => setCategory('Chi mua sắm / Tu sửa nhà văn hóa')} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #e9d5ff', background: '#faf5ff', color: '#7e22ce', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>🛠️ Tu sửa nhà văn hóa</button>
                       </>
                     )}
                   </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '5px 0 0 0' }}>💡 Bạn có thể gõ tự do hoặc bấm vào gợi ý bên trên. Danh mục bạn đã dùng sẽ tự lưu vào gợi ý.</p>
                 </div>
 
                 {/* Ghi chú */}
