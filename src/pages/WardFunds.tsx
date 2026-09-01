@@ -666,10 +666,12 @@ const WardFunds = () => {
     }
 
     // 2. Nếu không khớp nhân khẩu trong CSDL, thử đối chiếu với Hộ gia đình bằng Tên Chủ hộ có trong địa chỉ
-    if (addrClean) {
+    const isGenericVillageAddr = !addrClean || addrClean === 'tdp quảng giao' || addrClean === 'tdp quang giao' || addrClean === 'tdp quảng giao, nam sầm sơn, thanh hóa' || addrClean === 'tdp quang giao, nam sam son, thanh hoa';
+
+    if (addrClean && !isGenericVillageAddr) {
       const matchedHhByHead = households.find(h => {
         const headName = headNameForHHMap.get(h.id)?.toLowerCase();
-        if (!headName) return false;
+        if (!headName || headName.length < 3) return false;
         return addrClean.includes(headName);
       });
       if (matchedHhByHead) {
@@ -681,10 +683,11 @@ const WardFunds = () => {
         };
       }
 
-      // Thử đối chiếu với Hộ gia đình bằng địa chỉ + user_id
+      // Thử đối chiếu với Hộ gia đình bằng địa chỉ cụ thể + user_id
       const matchedHh = households.find(h => {
         const hhAddr = (h.address || '').trim().toLowerCase();
-        const addrOk = hhAddr === addrClean || addrClean.includes(hhAddr) || hhAddr.includes(addrClean);
+        if (!hhAddr || hhAddr === 'tdp quảng giao' || hhAddr === 'tdp quang giao') return false;
+        const addrOk = hhAddr === addrClean;
         const userOk = f.user_id ? h.user_id === f.user_id : true;
         return addrOk && userOk;
       });
@@ -698,14 +701,13 @@ const WardFunds = () => {
       }
     }
 
-    // 3. Hộ ảo: Nếu dùng chung địa chỉ (vd: "Hộ bà Trương Thị Phương"), gom chung các thành viên vào 1 Hộ
-    const addrKey = addrClean ? addrClean : ('name__' + nameKey);
-    const fallbackId = 'addr__' + addrKey + '__' + (f.user_id || '');
-
+    // 3. Hộ riêng lẻ: Nếu không xác định được Hộ khẩu cụ thể, giữ thẻ riêng cho từng người (hoặc theo tên Chủ hộ ghi trên địa chỉ)
     let derivedHeadName = f.full_name;
     const hoMatch = f.address?.match(/hộ\s+(?:ông|bà)?\s*([^\s,,-]+(?:\s+[^\s,,-]+)+)/i);
-    if (hoMatch && hoMatch[1]) {
+    let fallbackId = `ind__${f.id}`;
+    if (hoMatch && hoMatch[1] && hoMatch[1].trim().length > 2) {
       derivedHeadName = hoMatch[1].trim();
+      fallbackId = `ho__${derivedHeadName.toLowerCase().replace(/\s+/g, '_')}__${f.user_id || ''}`;
     }
 
     return {
@@ -1759,66 +1761,42 @@ const WardFunds = () => {
     }
   };
 
-  // Khôi phục tự động tất cả dữ liệu nộp tiền bị mất (kết hợp đối soát dữ liệu Thu Chi TDP)
+  // Chuẩn hóa và làm sạch dữ liệu ghi nhận nộp quỹ (Xóa nhãn ảo nếu tiền thực thu = 0)
   const handleAutoRepairPaymentData = async () => {
     try {
       setIsLoading(true);
-      let repairedCount = 0;
+      let cleanedCount = 0;
       const wardFundsToSave: WardFund[] = [];
-      const today = new Date().toISOString().slice(0, 10);
-
-      // Lấy danh sách mã hộ gia đình đã nộp quỹ TDP từ Thu Chi TDP
-      const tdpPaidHhIds = new Set(
-        householdFunds
-          .filter(hf => Number(hf.year) === selectedYear && (hf.amount > 0 || !!hf.paid_at || hf.note?.includes('Đã thu') || hf.note?.includes('Đã nộp')))
-          .map(hf => hf.household_id)
-          .filter(Boolean)
-      );
 
       funds.forEach(f => {
-        const hhId = fundMetaMap.get(f.id)?.householdId;
-        const isTdpPaidHH = hhId ? tdpPaidHhIds.has(hhId) : false;
-
-        const isMarkedPaid = isTdpPaidHH || f.note === 'Đã nộp đủ đợt tập trung' || (f.contributions && Object.values(f.contributions).some(c => c && (c.actual > 0 || c.date)));
-        if (isMarkedPaid) {
-          let changed = false;
-          const newContrib = { ...f.contributions };
-          activeFunds.forEach(fund => {
-            const compExp = computedExpectedMap.get(f.id) || {};
-            const contrib = getContributionData(f.contributions, fund.name);
-            const targetExp = compExp[fund.name] ?? (contrib?.expected || fund.target);
-            const currentAct = contrib?.actual || 0;
-            if (targetExp > 0 && currentAct < targetExp) {
-              newContrib[fund.name] = {
-                expected: targetExp,
-                actual: targetExp,
-                date: contrib?.date || today
-              };
-              changed = true;
-            }
+        let totalAct = 0;
+        if (f.contributions) {
+          Object.values(f.contributions).forEach((c: any) => {
+            if (c && c.actual > 0) totalAct += Number(c.actual);
           });
-          if (changed || f.note !== 'Đã nộp đủ đợt tập trung') {
-            repairedCount++;
-            wardFundsToSave.push({
-              ...f,
-              contributions: newContrib,
-              note: 'Đã nộp đủ đợt tập trung'
-            });
-          }
+        }
+
+        // Nếu tiền thực thu = 0 nhưng lại bị gắn nhãn "Đã nộp đủ đợt tập trung" -> Xóa nhãn nhầm
+        if (totalAct === 0 && f.note === 'Đã nộp đủ đợt tập trung') {
+          cleanedCount++;
+          wardFundsToSave.push({
+            ...f,
+            note: ''
+          });
         }
       });
 
       if (wardFundsToSave.length > 0) {
         await db.saveWardFundsBatch(wardFundsToSave);
-        showToast(`✅ Đã đối soát với Thu Chi TDP & khôi phục thành công ${repairedCount} nhân khẩu/hộ nộp đủ vào CSDL!`, 'success');
+        showToast(`✅ Đã làm sạch thành công ${cleanedCount} bản ghi bị gán nhãn nhầm!`, 'success');
         await loadData(true);
         window.dispatchEvent(new CustomEvent('db-changed'));
       } else {
-        showToast('Tất cả dữ liệu Quỹ Phường hiện tại đã đồng bộ chuẩn xác với Thu Chi TDP!', 'info');
+        showToast('Dữ liệu Quỹ Phường hiện tại đã chuẩn xác, không có nhãn nộp ảo!', 'info');
       }
     } catch (err) {
       console.error('Error repairing data:', err);
-      showToast('Lỗi khi khôi phục dữ liệu!', 'danger');
+      showToast('Lỗi khi chuẩn hóa dữ liệu!', 'danger');
     } finally {
       setIsLoading(false);
     }
@@ -2530,9 +2508,6 @@ const WardFunds = () => {
 
       // Luôn lưu lại toàn bộ (bao gồm cả những record không thay đổi metadata nhưng có thể đã sửa expected)
       await db.saveWardFundsBatch(updatedFunds);
-      
-      // Tự động kích hoạt đối soát khôi phục trạng thái thu đủ từ Thu Chi TDP
-      await handleAutoRepairPaymentData();
 
       if (matchedCount > 0) {
         showToast(`Đồng bộ & tính lại chỉ tiêu thành công! Đã cập nhật ${matchedCount} bản ghi.`, 'success');
