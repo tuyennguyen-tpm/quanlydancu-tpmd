@@ -19,7 +19,8 @@ import {
   BookOpen,
   Users,
   HeartHandshake,
-  Calculator
+  Calculator,
+  RefreshCw
 } from 'lucide-react';
 import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID } from '../services/db';
@@ -137,6 +138,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
   const [editingRecord, setEditingRecord] = useState<FinancialRecord | null>(null);
   const [printModalRecord, setPrintModalRecord] = useState<FinancialRecord | null>(null);
   const [show3DCalculator, setShow3DCalculator] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const officialsConfig = useMemo(() => {
     const tdpName = localStorage.getItem('tdp_name') || localStorage.getItem('unit_name') || 'TỔ DÂN PHỐ QUẢNG GIAO';
@@ -346,201 +348,85 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     }
   };
 
-  // Đồng bộ dữ liệu thu quỹ toàn diện: Quỹ Phường ➔ Quỹ TDP & Sổ Thu Chi TDP
-  // Quét tất cả các hộ đã đóng bên Quỹ Phường (515 hộ) và tự động ghi nhận sang Quỹ TDP & Sổ quỹ nếu chưa có
-  const handleSyncFundsToLedger = async () => {
+  // Khôi phục dữ liệu thu về mốc chuẩn 15/08/2026 (Loại bỏ các đợt điền nhầm tự động sau ngày 15/08)
+  const handleRollbackToAug15 = async () => {
+    const confirm = window.confirm(
+      '⚠️ BẠN CÓ CHẮC CHẮN MUỐN KHÔI PHỤC DỮ LIỆU THU VỀ MỐC 15/08/2026?\n\n' +
+      '• Hệ thống sẽ loại bỏ các hộ bị ghi nhận tự động nhầm sau ngày 15/08/2026.\n' +
+      '• Giữ nguyên vẹn 100% các hộ đã thu thực tế từ tháng 7 đến 13/08/2026.\n' +
+      '• Đồng bộ chuẩn xác cả Quỹ Phường và Quỹ TDP cho các hộ hợp lệ này.\n\n' +
+      'Bấm OK để bắt đầu khôi phục ngay.'
+    );
+    if (!confirm) return;
+
     try {
-      showToast('⏳ Đang quét và đồng bộ dữ liệu từ Quỹ Phường sang Quỹ TDP...', 'info');
-      
-      const [allFunds, allRecords, wardFundsList, hList, rList] = await Promise.all([
-        db.getHouseholdFunds(),
-        db.getFinancialRecords(),
+      setIsLoading(true);
+      showToast('⏳ Đang khôi phục dữ liệu thu về mốc chuẩn 15/08/2026...', 'info');
+
+      const [wardFundsList, householdsList, residentsList] = await Promise.all([
         db.getWardFunds(fundYear),
         db.getHouseholds(),
         db.getResidents()
       ]);
 
-      const tdpActiveFunds = (db as any).getFundList() || [];
-      const wardActiveFunds = (db as any).getWardFundList() || [];
-      const today = new Date().toISOString().slice(0, 10);
-
-
-
-      // Helper chuẩn hóa bỏ dấu tiếng Việt để đối soát chính xác 100%
-      const removeAccents = (str: string): string => {
-        return (str || '')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/đ/g, 'd')
-          .replace(/Đ/g, 'D')
-          .toLowerCase()
-          .trim();
-      };
-
-      // Xóa các Hộ ảo / tạm thời đã tạo nhầm trước đó nếu có
-      const realHouseholds = hList.filter(h => !h.household_number?.startsWith('HĐ-') && !h.household_number?.startsWith('ĐB-'));
-      const fakeHouseholds = hList.filter(h => h.household_number?.startsWith('HĐ-') || h.household_number?.startsWith('ĐB-'));
-      if (fakeHouseholds.length > 0) {
-        for (const fh of fakeHouseholds) {
-          await db.deleteHousehold(fh.id);
-        }
-      }
-
-      // Tạo Map tra cứu Hộ gia đình chuẩn
-      const hhMapById = new Map<string, Household>();
-      realHouseholds.forEach(h => hhMapById.set(h.id, h));
-
-      const residentsByNormName = new Map<string, Resident[]>();
-      rList.forEach(r => {
-        const k = removeAccents(r.full_name);
-        if (k) {
-          if (!residentsByNormName.has(k)) residentsByNormName.set(k, []);
-          residentsByNormName.get(k)!.push(r);
-        }
+      const resByName = new Map<string, Resident[]>();
+      residentsList.forEach(r => {
+        const k = (r.full_name || '').trim().toLowerCase();
+        if (!resByName.has(k)) resByName.set(k, []);
+        resByName.get(k)!.push(r);
       });
 
-      const headNameForHHMap = new Map<string, string>();
-      realHouseholds.forEach(hh => {
-        const headName = getHouseholdHeadName(hh);
-        if (headName) headNameForHHMap.set(hh.id, headName);
-      });
+      const hhMap = new Map(householdsList.map(h => [h.id, h]));
 
-      // 1. Gom nhóm danh sách Quỹ Phường thành từng Hộ gia đình (giống hệt logic của Quỹ Phường)
-      const wardHhGroups = new Map<string, WardFund[]>();
+      const updatedWardFunds: WardFund[] = [];
+      const validPaidHhIds = new Set<string>();
+      const validPaidHhDates = new Map<string, string>();
 
-      wardFundsList.forEach(f => {
-        const nameNorm = removeAccents(f.full_name || '');
-        const dobClean = (f.dob || '').trim();
-        const yearClean = dobClean.match(/\d{4}/)?.[0] || '';
-        const addrClean = (f.address || '').trim().toLowerCase().replace(/\s+/g, ' ');
-        const addrNorm = removeAccents(f.address || '');
-
-        let matchedHhId: string | undefined = undefined;
-
-        // a. Khớp nhân khẩu trong CSDL
-        let candidates = residentsByNormName.get(nameNorm) || [];
-        if (candidates.length === 1 && candidates[0].household_id && hhMapById.has(candidates[0].household_id)) {
-          matchedHhId = candidates[0].household_id;
-        } else if (candidates.length > 1) {
-          let filtered = candidates.filter(r => r.household_id && hhMapById.has(r.household_id));
-          if (f.user_id) {
-            const userMatch = filtered.filter(r => r.user_id === f.user_id);
-            if (userMatch.length > 0) filtered = userMatch;
-          }
-          if (filtered.length > 1 && dobClean) {
-            const exactDobMatch = filtered.filter(r => r.dob && (r.dob.includes(dobClean) || dobClean.includes(r.dob)));
-            if (exactDobMatch.length > 0) filtered = exactDobMatch;
-            else if (yearClean) {
-              const yearMatch = filtered.filter(r => (r.dob || '').includes(yearClean));
-              if (yearMatch.length > 0) filtered = yearMatch;
-            }
-          }
-          if (filtered.length > 1 && addrClean) {
-            const addrMatch = filtered.filter(r => {
-              const hh = hhMapById.get(r.household_id);
-              if (!hh) return false;
-              const hhAddrNorm = removeAccents(hh.address || '');
-              return hhAddrNorm === addrNorm || addrNorm.includes(hhAddrNorm) || hhAddrNorm.includes(addrNorm);
-            });
-            if (addrMatch.length > 0) filtered = addrMatch;
-          }
-          if (filtered.length > 0) matchedHhId = filtered[0].household_id;
+      wardFundsList.forEach(wf => {
+        const k = (wf.full_name || '').trim().toLowerCase();
+        const cands = resByName.get(k) || [];
+        let hhId: string | null = null;
+        if (cands.length === 1) hhId = cands[0].household_id;
+        else if (cands.length > 1 && wf.user_id) {
+          const match = cands.find(c => c.user_id === wf.user_id);
+          if (match) hhId = match.household_id;
         }
 
-        // b. Khớp qua Tên chủ hộ trong danh mục Hộ dân
-        if (!matchedHhId) {
-          const matchedHh = realHouseholds.find(h => {
-            const headName = headNameForHHMap.get(h.id) || '';
-            const headNorm = removeAccents(headName);
-            if (!headNorm) return false;
-            return headNorm === nameNorm || (addrNorm && addrNorm.includes(headNorm)) || headNorm.includes(nameNorm);
-          });
-          if (matchedHh) matchedHhId = matchedHh.id;
-        }
+        let hasValidActual = false;
+        const newContrib: Record<string, any> = {};
 
-        // c. Khớp qua Địa chỉ
-        if (!matchedHhId && addrNorm) {
-          const matchedHh = realHouseholds.find(h => {
-            const hhAddrNorm = removeAccents(h.address || '');
-            return hhAddrNorm && (hhAddrNorm === addrNorm || addrNorm.includes(hhAddrNorm) || hhAddrNorm.includes(addrNorm));
-          });
-          if (matchedHh) matchedHhId = matchedHh.id;
-        }
-
-        const groupKey = matchedHhId || (addrNorm ? `addr__${addrNorm}` : `name__${nameNorm}`);
-        if (!wardHhGroups.has(groupKey)) wardHhGroups.set(groupKey, []);
-        wardHhGroups.get(groupKey)!.push(f);
-      });
-
-      // 2. Xác định các Hộ thực sự đã nộp đủ theo chuẩn Quỹ Phường
-      const paidRealHhIds = new Set<string>();
-      const householdsToCreate: Household[] = [];
-
-      wardHhGroups.forEach((members, groupKey) => {
-        let totalExp = 0;
-        let totalAct = 0;
-        const isMarkedPaid = members.some(m => m.note === 'Đã nộp đủ đợt tập trung');
-
-        members.forEach(m => {
-          if (m.contributions) {
-            Object.values(m.contributions).forEach((c: any) => {
-              if (c) {
-                totalExp += (Number(c.expected) || 0);
-                totalAct += (Number(c.actual) || 0);
+        if (wf.contributions) {
+          Object.entries(wf.contributions).forEach(([fundName, c]: [string, any]) => {
+            if (c) {
+              if (c.actual > 0 && c.date && c.date <= '2026-08-15') {
+                newContrib[fundName] = { ...c };
+                hasValidActual = true;
+                if (hhId) {
+                  validPaidHhIds.add(hhId);
+                  if (!validPaidHhDates.has(hhId)) validPaidHhDates.set(hhId, c.date);
+                }
+              } else {
+                newContrib[fundName] = {
+                  expected: c.expected || 0,
+                  actual: 0,
+                  date: ''
+                };
               }
-            });
-          }
-        });
-
-        // Hộ được coi là đã nộp nếu có ghi chú nộp đủ hoặc tiền nộp thực tế đủ định mức
-        const isGroupPaid = isMarkedPaid || (totalExp > 0 && totalAct >= totalExp);
-        
-        if (isGroupPaid) {
-          let realHhId = hhMapById.has(groupKey) ? groupKey : undefined;
-          if (!realHhId) {
-            const firstM = members[0];
-            const addrNorm = removeAccents(firstM?.address || '');
-            const matchedHh = realHouseholds.find(h => {
-              const hhAddrNorm = removeAccents(h.address || '');
-              return hhAddrNorm && (hhAddrNorm === addrNorm || addrNorm.includes(hhAddrNorm) || hhAddrNorm.includes(addrNorm));
-            });
-            if (matchedHh) realHhId = matchedHh.id;
-          }
-
-          // Nếu hộ này chưa có trong CSDL households, tạo mới một Household hợp lệ với UUID
-          if (!realHhId) {
-            const firstM = members[0];
-            let derivedHeadName = firstM?.full_name || 'Chủ hộ';
-            const hoMatch = firstM?.address?.match(/hộ\s+(?:ông|bà)?\s*([^\s,,-]+(?:\s+[^\s,,-]+)+)/i);
-            if (hoMatch && hoMatch[1]) {
-              derivedHeadName = hoMatch[1].trim();
             }
-            realHhId = generateUUID();
-            const groupNameFromRecord = (firstM as any)?.group_name || ((firstM?.address || '').match(/tổ\s+(\d+|việt\s+trung)/i)?.[0] || 'Tổ dân phố');
-            const newHh: Household = {
-              id: realHhId,
-              household_number: `HĐ-${realHouseholds.length + householdsToCreate.length + 1}`,
-              address: firstM?.address || `Hộ ${derivedHeadName}`,
-              martyr_name: derivedHeadName,
-              self_management_group: groupNameFromRecord,
-              created_at: new Date().toISOString()
-            } as any;
-            householdsToCreate.push(newHh);
-            realHouseholds.push(newHh);
-            hhMapById.set(realHhId, newHh);
-            headNameForHHMap.set(realHhId, derivedHeadName);
-          }
-
-          paidRealHhIds.add(realHhId);
+          });
         }
+
+        updatedWardFunds.push({
+          ...wf,
+          contributions: newContrib,
+          note: hasValidActual ? 'Đã nộp đủ đợt tập trung' : ''
+        });
       });
 
-      // Lưu các hộ gia đình mới tạo vào Supabase (nếu có)
-      if (householdsToCreate.length > 0) {
-        await (db as any).saveHouseholdsBulk(householdsToCreate);
-      }
+      // Lưu Quỹ Phường
+      await db.saveWardFundsBatch(updatedWardFunds);
 
-      // 3. XÓA SẠCH toàn bộ household_funds năm hiện tại và các phiếu thu tự động cũ
+      // Xóa các bản ghi household_funds 2026 và sổ quỹ tự động cũ
       if (typeof (db as any).deleteHouseholdFundsByYear === 'function') {
         await (db as any).deleteHouseholdFundsByYear(fundYear);
       }
@@ -548,20 +434,23 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         await (db as any).deleteAutoFinancialRecords();
       }
 
+      // Tạo lại Quỹ TDP & Sổ quỹ cho ĐÚNG các hộ đã thu thực tế trước 15/08
+      const tdpActiveFunds = (db as any).getFundList() || [];
       const householdFundsToSave: HouseholdFund[] = [];
       const financialRecordsToSave: FinancialRecord[] = [];
-      const newFundFlagTexts = new Set<string>();
 
-      for (const hhId of paidRealHhIds) {
-        const hh = hhMapById.get(hhId);
+      for (const hhId of validPaidHhIds) {
+        const hh = hhMap.get(hhId);
         if (!hh) continue;
 
-        const headName = headNameForHHMap.get(hhId) || getHouseholdHeadName(hh);
+        const headName = getHouseholdHeadName(hh);
+        const paidDate = validPaidHhDates.get(hhId) || '2026-08-08';
+
+        const hhAddr = ((hh.address || '') + ' ' + ((hh as any)?.self_management_group || '')).toLowerCase();
+        const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || ((hh as any)?.self_management_group || '').trim() === 'Tổ 8' || ((hh as any)?.self_management_group || '').trim() === '8';
 
         for (const fund of tdpActiveFunds) {
           const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
-          const hhAddr = (hh.address || '').toLowerCase();
-          const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || (hh.self_management_group || '').trim() === 'Tổ 8' || (hh.self_management_group || '').trim() === '8';
           const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(fundYear) === 2026;
 
           const fundAmount = isExemptTdpGroup8 ? 0 : fund.target;
@@ -574,14 +463,13 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             year: fundYear,
             fund_name: fund.name,
             amount: fundAmount,
-            paid_at: today,
+            paid_at: paidDate,
             note: fundNote
           };
           householdFundsToSave.push(payload);
 
           if (fundAmount > 0) {
             const flagText = `[QUY_${fundRecordId}]`;
-            newFundFlagTexts.add(flagText);
             const generalRecord: FinancialRecord = {
               id: generateUUID(),
               group_id: db.getGroupId(),
@@ -590,7 +478,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               category: fund.name,
               description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
               recorded_by: 'Hệ thống tự động',
-              date: today,
+              date: paidDate,
               created_at: new Date().toISOString()
             };
             financialRecordsToSave.push(generalRecord);
@@ -598,7 +486,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         }
       }
 
-      // Lưu hàng loạt HouseholdFunds mới
       if (householdFundsToSave.length > 0) {
         if (typeof (db as any).saveHouseholdFundsBatch === 'function') {
           await (db as any).saveHouseholdFundsBatch(householdFundsToSave);
@@ -607,7 +494,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         }
       }
 
-      // Lưu bản ghi sổ thu chi mới theo Batch (tránh quá tải kết nối trình duyệt)
       if (financialRecordsToSave.length > 0) {
         if (typeof (db as any).saveFinancialRecordsBatch === 'function') {
           await (db as any).saveFinancialRecordsBatch(financialRecordsToSave);
@@ -618,13 +504,14 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         }
       }
 
+      showToast(`✅ Khôi phục thành công! Đã đưa dữ liệu về chuẩn ${validPaidHhIds.size} hộ đã thu thực tế trước ngày 15/08/2026.`, 'success');
       await loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
-
-      showToast(`🎉 Đồng bộ thành công ${paidRealHhIds.size} hộ từ Quỹ Phường sang Quỹ TDP!`, 'success');
     } catch (err) {
-      console.error('Sync error:', err);
-      showToast('Có lỗi xảy ra trong quá trình đồng bộ dữ liệu!', 'danger');
+      console.error('Rollback error:', err);
+      showToast('Có lỗi xảy ra trong quá trình khôi phục dữ liệu!', 'danger');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -5637,6 +5524,40 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     <Printer size={16} /> In Thông báo dự kiến thu (Mẫu chuẩn)
                   </button>
 
+                  <button
+                    onClick={handleRollbackToAug15}
+                    title="Khôi phục dữ liệu thu về mốc chuẩn 15/08/2026 (Loại bỏ các hộ bị ghi nhận tự động nhầm và giữ nguyên các hộ đã thu thực tế trước 15/08)"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#eff6ff',
+                      border: '1.5px solid #93c5fd',
+                      color: '#1d4ed8',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      height: 'auto',
+                      minHeight: '36px',
+                      fontSize: '0.85rem',
+                      boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#dbeafe';
+                      e.currentTarget.style.borderColor = '#60a5fa';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                      e.currentTarget.style.borderColor = '#93c5fd';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <RefreshCw size={16} style={{ color: '#1d4ed8' }} /> Khôi phục về mốc 15/08/2026
+                  </button>
+
                   <button 
                     onClick={handlePrintFundsList}
                     style={{
@@ -5729,40 +5650,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     }}
                   >
                     <Download size={16} style={{ color: '#16a34a' }} /> Xuất Excel
-                  </button>
-
-                  <button 
-                    onClick={handleSyncFundsToLedger}
-                    title="Quét toàn bộ 515 hộ đã đóng bên Quỹ Phường và đồng bộ sang Quản lý thu quỹ TDP & Sổ Thu Chi"
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: '#eff6ff',
-                      border: '1.5px solid #93c5fd',
-                      color: '#1d4ed8',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      height: 'auto',
-                      minHeight: '36px',
-                      fontSize: '0.85rem',
-                      boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dbeafe';
-                      e.currentTarget.style.borderColor = '#60a5fa';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#eff6ff';
-                      e.currentTarget.style.borderColor = '#93c5fd';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    🔄 Đồng bộ từ Quỹ Phường ➔ Quỹ TDP
                   </button>
                 </>
               )}

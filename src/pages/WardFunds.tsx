@@ -1761,42 +1761,169 @@ const WardFunds = () => {
     }
   };
 
-  // Chuẩn hóa và làm sạch dữ liệu ghi nhận nộp quỹ (Xóa nhãn ảo nếu tiền thực thu = 0)
-  const handleAutoRepairPaymentData = async () => {
+  // Khôi phục dữ liệu thu về mốc chuẩn 15/08/2026 (Loại bỏ các đợt điền nhầm tự động sau ngày 15/08)
+  const handleRollbackToAug15 = async () => {
+    const confirm = window.confirm(
+      '⚠️ BẠN CÓ CHẮC CHẮN MUỐN KHÔI PHỤC DỮ LIỆU THU VỀ MỐC 15/08/2026?\n\n' +
+      '• Hệ thống sẽ loại bỏ các hộ bị ghi nhận tự động nhầm sau ngày 15/08/2026.\n' +
+      '• Giữ nguyên vẹn 100% các hộ đã thu thực tế từ tháng 7 đến 13/08/2026.\n' +
+      '• Đồng bộ chuẩn xác cả Quỹ Phường và Quỹ TDP cho các hộ hợp lệ này.\n\n' +
+      'Bấm OK để bắt đầu khôi phục ngay.'
+    );
+    if (!confirm) return;
+
     try {
       setIsLoading(true);
-      let cleanedCount = 0;
-      const wardFundsToSave: WardFund[] = [];
+      showToast('⏳ Đang khôi phục dữ liệu thu về mốc chuẩn 15/08/2026...', 'info');
 
-      funds.forEach(f => {
-        let totalAct = 0;
-        if (f.contributions) {
-          Object.values(f.contributions).forEach((c: any) => {
-            if (c && c.actual > 0) totalAct += Number(c.actual);
-          });
-        }
+      const [wardFundsList, householdsList, residentsList] = await Promise.all([
+        db.getWardFunds(selectedYear),
+        db.getHouseholds(),
+        db.getResidents()
+      ]);
 
-        // Nếu tiền thực thu = 0 nhưng lại bị gắn nhãn "Đã nộp đủ đợt tập trung" -> Xóa nhãn nhầm
-        if (totalAct === 0 && f.note === 'Đã nộp đủ đợt tập trung') {
-          cleanedCount++;
-          wardFundsToSave.push({
-            ...f,
-            note: ''
-          });
-        }
+      const resByName = new Map<string, Resident[]>();
+      residentsList.forEach(r => {
+        const k = (r.full_name || '').trim().toLowerCase();
+        if (!resByName.has(k)) resByName.set(k, []);
+        resByName.get(k)!.push(r);
       });
 
-      if (wardFundsToSave.length > 0) {
-        await db.saveWardFundsBatch(wardFundsToSave);
-        showToast(`✅ Đã làm sạch thành công ${cleanedCount} bản ghi bị gán nhãn nhầm!`, 'success');
-        await loadData(true);
-        window.dispatchEvent(new CustomEvent('db-changed'));
-      } else {
-        showToast('Dữ liệu Quỹ Phường hiện tại đã chuẩn xác, không có nhãn nộp ảo!', 'info');
+      const hhMap = new Map(householdsList.map(h => [h.id, h]));
+
+      const updatedWardFunds: WardFund[] = [];
+      const validPaidHhIds = new Set<string>();
+      const validPaidHhDates = new Map<string, string>();
+
+      wardFundsList.forEach(wf => {
+        const k = (wf.full_name || '').trim().toLowerCase();
+        const cands = resByName.get(k) || [];
+        let hhId: string | null = null;
+        if (cands.length === 1) hhId = cands[0].household_id;
+        else if (cands.length > 1 && wf.user_id) {
+          const match = cands.find(c => c.user_id === wf.user_id);
+          if (match) hhId = match.household_id;
+        }
+
+        let hasValidActual = false;
+        const newContrib: Record<string, any> = {};
+
+        if (wf.contributions) {
+          Object.entries(wf.contributions).forEach(([fundName, c]: [string, any]) => {
+            if (c) {
+              if (c.actual > 0 && c.date && c.date <= '2026-08-15') {
+                newContrib[fundName] = { ...c };
+                hasValidActual = true;
+                if (hhId) {
+                  validPaidHhIds.add(hhId);
+                  if (!validPaidHhDates.has(hhId)) validPaidHhDates.set(hhId, c.date);
+                }
+              } else {
+                newContrib[fundName] = {
+                  expected: c.expected || 0,
+                  actual: 0,
+                  date: ''
+                };
+              }
+            }
+          });
+        }
+
+        updatedWardFunds.push({
+          ...wf,
+          contributions: newContrib,
+          note: hasValidActual ? 'Đã nộp đủ đợt tập trung' : ''
+        });
+      });
+
+      // Lưu Quỹ Phường
+      await db.saveWardFundsBatch(updatedWardFunds);
+
+      // Xóa các bản ghi household_funds năm hiện tại và sổ quỹ tự động cũ
+      if (typeof (db as any).deleteHouseholdFundsByYear === 'function') {
+        await (db as any).deleteHouseholdFundsByYear(selectedYear);
       }
+      if (typeof (db as any).deleteAutoFinancialRecords === 'function') {
+        await (db as any).deleteAutoFinancialRecords();
+      }
+
+      // Tạo lại Quỹ TDP & Sổ quỹ cho ĐÚNG các hộ đã thu thực tế trước 15/08
+      const tdpActiveFunds = (db as any).getFundList() || [];
+      const householdFundsToSave: HouseholdFund[] = [];
+      const financialRecordsToSave: FinancialRecord[] = [];
+
+      for (const hhId of validPaidHhIds) {
+        const hh = hhMap.get(hhId);
+        if (!hh) continue;
+
+        const headResident = residentsList.find(r => r.household_id === hhId && (r.is_head || r.id === hh.head_of_household_id));
+        const headName = headResident ? headResident.full_name : (hh.martyr_name || 'Chủ hộ');
+        const paidDate = validPaidHhDates.get(hhId) || '2026-08-08';
+
+        const hhAddr = ((hh.address || '') + ' ' + ((hh as any)?.self_management_group || '')).toLowerCase();
+        const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || ((hh as any)?.self_management_group || '').trim() === 'Tổ 8' || ((hh as any)?.self_management_group || '').trim() === '8';
+
+        for (const fund of tdpActiveFunds) {
+          const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
+          const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(selectedYear) === 2026;
+
+          const fundAmount = isExemptTdpGroup8 ? 0 : fund.target;
+          const fundNote = isExemptTdpGroup8 ? 'Đã thu trước' : 'Đã thu đủ theo thông báo';
+          const fundRecordId = generateUUID();
+
+          const payload: HouseholdFund = {
+            id: fundRecordId,
+            household_id: hhId,
+            year: selectedYear,
+            fund_name: fund.name,
+            amount: fundAmount,
+            paid_at: paidDate,
+            note: fundNote
+          };
+          householdFundsToSave.push(payload);
+
+          if (fundAmount > 0) {
+            const flagText = `[QUY_${fundRecordId}]`;
+            const generalRecord: FinancialRecord = {
+              id: generateUUID(),
+              group_id: db.getGroupId(),
+              type: 'income',
+              amount: fundAmount,
+              category: fund.name,
+              description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
+              recorded_by: 'Hệ thống tự động',
+              date: paidDate,
+              created_at: new Date().toISOString()
+            };
+            financialRecordsToSave.push(generalRecord);
+          }
+        }
+      }
+
+      if (householdFundsToSave.length > 0) {
+        if (typeof (db as any).saveHouseholdFundsBatch === 'function') {
+          await (db as any).saveHouseholdFundsBatch(householdFundsToSave);
+        } else {
+          await Promise.all(householdFundsToSave.map(f => db.saveHouseholdFund(f)));
+        }
+      }
+
+      if (financialRecordsToSave.length > 0) {
+        if (typeof (db as any).saveFinancialRecordsBatch === 'function') {
+          await (db as any).saveFinancialRecordsBatch(financialRecordsToSave);
+        } else {
+          for (const r of financialRecordsToSave) {
+            await db.saveFinancialRecord(r);
+          }
+        }
+      }
+
+      showToast(`✅ Khôi phục thành công! Đã đưa dữ liệu về chuẩn ${validPaidHhIds.size} hộ đã thu thực tế trước ngày 15/08/2026.`, 'success');
+      await loadData(true);
+      window.dispatchEvent(new CustomEvent('db-changed'));
     } catch (err) {
-      console.error('Error repairing data:', err);
-      showToast('Lỗi khi chuẩn hóa dữ liệu!', 'danger');
+      console.error('Rollback error:', err);
+      showToast('Có lỗi xảy ra trong quá trình khôi phục dữ liệu!', 'danger');
     } finally {
       setIsLoading(false);
     }
@@ -7167,24 +7294,24 @@ const WardFunds = () => {
           </button>
           {!isGuest && (
             <button
-              onClick={handleAutoRepairPaymentData}
-              title="Quét và khôi phục tự động trạng thái nộp đủ cho các hộ gia đình"
+              onClick={handleRollbackToAug15}
+              title="Khôi phục dữ liệu thu về mốc chuẩn 15/08/2026 (Loại bỏ các hộ bị ghi nhận tự động nhầm và giữ nguyên các hộ đã thu thực tế trước 15/08)"
               style={{
                 padding: '8px 14px',
                 borderRadius: '8px',
-                border: '1.5px solid #10b981',
-                backgroundColor: '#ecfdf5',
-                color: '#047857',
+                border: '1.5px solid #2563eb',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
                 fontWeight: '750',
                 fontSize: '0.85rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                boxShadow: '0 2px 4px rgba(16,185,129,0.15)'
+                boxShadow: '0 2px 4px rgba(37,99,235,0.15)'
               }}
             >
-              ⚡ Khôi phục nộp đủ
+              🔄 Khôi phục về mốc 15/08/2026
             </button>
           )}
         </div>
