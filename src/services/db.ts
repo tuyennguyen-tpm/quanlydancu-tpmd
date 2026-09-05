@@ -2716,6 +2716,86 @@ export const db = {
         console.error('Failed to sync treasurer_manual_notes to Supabase:', err);
       }
     }
+  },
+
+  clearCache: async (prefix = ''): Promise<void> => {
+    await appCache.invalidate(prefix);
+  },
+
+  // --- Export Full Backup ---
+  exportFullBackup: async (): Promise<any> => {
+    const currentYear = new Date().getFullYear();
+    const [households, residents, financial_records, household_funds, ward_funds] = await Promise.all([
+      db.getHouseholds(true),
+      db.getResidents(true),
+      db.getFinancialRecords(true),
+      db.getHouseholdFunds(true),
+      db.getWardFunds(currentYear, true)
+    ]);
+
+    return {
+      version: '2.0',
+      exported_at: new Date().toISOString(),
+      tdp_name: localStorage.getItem('tdp_name') || 'TDP',
+      ward_name: localStorage.getItem('ward_name') || 'Phường',
+      counts: {
+        households: households.length,
+        residents: residents.length,
+        financial_records: financial_records.length,
+        household_funds: household_funds.length,
+        ward_funds: ward_funds.length
+      },
+      data: {
+        households,
+        residents,
+        financial_records,
+        household_funds,
+        ward_funds
+      }
+    };
+  },
+
+  // --- Restore Full Backup ---
+  restoreFullBackup: async (backupData: any): Promise<{ success: boolean; message: string }> => {
+    if (!backupData || !backupData.data) {
+      throw new Error('Tệp sao lưu không hợp lệ hoặc thiếu khối dữ liệu (data).');
+    }
+
+    const { households, residents, financial_records, household_funds, ward_funds } = backupData.data;
+
+    // 1. Phục hồi danh sách Hộ dân
+    if (Array.isArray(households) && households.length > 0) {
+      await db.saveHouseholdsBulk(households);
+    }
+
+    // 2. Phục hồi danh sách Nhân khẩu
+    if (Array.isArray(residents) && residents.length > 0) {
+      await db.saveResidentsBulk(residents);
+    }
+
+    // 3. Phục hồi Sổ quỹ thu chi
+    if (Array.isArray(financial_records) && financial_records.length > 0) {
+      await db.saveFinancialRecordsBatch(financial_records);
+    }
+
+    // 4. Phục hồi Quỹ hộ dân
+    if (Array.isArray(household_funds) && household_funds.length > 0) {
+      await db.saveHouseholdFundsBatch(household_funds);
+    }
+
+    // 5. Phục hồi Quỹ phường
+    if (Array.isArray(ward_funds) && ward_funds.length > 0) {
+      await db.saveWardFundsBatch(ward_funds);
+    }
+
+    // Làm mới toàn bộ bộ nhớ đệm
+    await appCache.invalidate('');
+    window.dispatchEvent(new CustomEvent('db-changed'));
+
+    return {
+      success: true,
+      message: `Đã khôi phục thành công: ${households?.length || 0} hộ dân, ${residents?.length || 0} nhân khẩu, ${financial_records?.length || 0} bản ghi thu chi, ${household_funds?.length || 0} biên lai quỹ hộ!`
+    };
   }
 };
 
@@ -3520,81 +3600,5 @@ export const partyDb = {
 
   clearCache: async (prefix = ''): Promise<void> => {
     await appCache.invalidate(prefix);
-  },
-
-  // --- Export Full Backup ---
-  exportFullBackup: async (): Promise<any> => {
-    const currentYear = new Date().getFullYear();
-    const [households, residents, financial_records, household_funds, ward_funds] = await Promise.all([
-      db.getHouseholds(true),
-      db.getResidents(true),
-      db.getFinancialRecords(true),
-      db.getHouseholdFunds(true),
-      db.getWardFunds(currentYear, true)
-    ]);
-
-    return {
-      version: '2.0',
-      exported_at: new Date().toISOString(),
-      tdp_name: localStorage.getItem('tdp_name') || 'TDP',
-      ward_name: localStorage.getItem('ward_name') || 'Phường',
-      counts: {
-        households: households.length,
-        residents: residents.length,
-        financial_records: financial_records.length,
-        household_funds: household_funds.length,
-        ward_funds: ward_funds.length
-      },
-      data: {
-        households,
-        residents,
-        financial_records,
-        household_funds,
-        ward_funds
-      }
-    };
-  },
-
-  // --- Restore Full Backup ---
-  restoreFullBackup: async (backupData: any): Promise<{ success: boolean; message: string }> => {
-    if (!backupData || !backupData.data) {
-      throw new Error('Tệp sao lưu không hợp lệ hoặc thiếu khối dữ liệu (data).');
-    }
-
-    const { households, residents, financial_records, household_funds, ward_funds } = backupData.data;
-
-    // 1. Phục hồi danh sách Hộ dân
-    if (Array.isArray(households) && households.length > 0) {
-      await db.saveHouseholdsBulk(households);
-    }
-
-    // 2. Phục hồi danh sách Nhân khẩu
-    if (Array.isArray(residents) && residents.length > 0) {
-      await db.saveResidentsBulk(residents);
-    }
-
-    // 3. Phục hồi Sổ quỹ thu chi
-    if (Array.isArray(financial_records) && financial_records.length > 0) {
-      await db.saveFinancialRecordsBatch(financial_records);
-    }
-
-    // 4. Phục hồi Quỹ hộ dân
-    if (Array.isArray(household_funds) && household_funds.length > 0) {
-      await db.saveHouseholdFundsBatch(household_funds);
-    }
-
-    // 5. Phục hồi Quỹ phường
-    if (Array.isArray(ward_funds) && ward_funds.length > 0) {
-      await db.saveWardFundsBatch(ward_funds);
-    }
-
-    // Làm mới toàn bộ bộ nhớ đệm
-    await appCache.invalidate('');
-    window.dispatchEvent(new CustomEvent('db-changed'));
-
-    return {
-      success: true,
-      message: `Đã khôi phục thành công: ${households?.length || 0} hộ dân, ${residents?.length || 0} nhân khẩu, ${financial_records?.length || 0} bản ghi thu chi, ${household_funds?.length || 0} biên lai quỹ hộ!`
-    };
   }
 };
