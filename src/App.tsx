@@ -622,27 +622,30 @@ const App = () => {
   };
 
   useEffect(() => {
+    // Migration: ensure clean start for individual role verification if migrating from old auto-grant code
+    if (!localStorage.getItem('role_pin_reset_done_v2')) {
+      // Clear legacy bulk auto-verified flags once so every role strictly requires its 1-time PIN
+      ['admin', 'to_truong', 'bi_thu', 'mat_tran', 'chung', 'chi_hoi_phu_nu', 'ke_toan', 'an_ninh', 'thu_quy'].forEach(r => {
+        localStorage.removeItem(`role_verified_${r}`);
+      });
+      localStorage.setItem('role_pin_reset_done_v2', 'true');
+    }
+
     // Check if the current role is verified on this device
     const initRole = localStorage.getItem('current_role') || 'demo';
     const isVerified = localStorage.getItem(`role_verified_${initRole}`) === 'true';
-    const hasAuth = !!localStorage.getItem('supabase_user_id') || !!localStorage.getItem('user_role');
 
-    // If device is already authenticated with Supabase account, preserve their current role and verification
-    if (hasAuth && initRole !== 'demo') {
-      localStorage.setItem(`role_verified_${initRole}`, 'true');
-      setUserRole(initRole);
-      return;
-    }
-    
-    // demo and mat_tran don't need PIN verification
-    if (!isVerified && initRole !== 'mat_tran' && initRole !== 'demo') {
-      // If it is a privileged role but not verified, fall back to 'demo' (read-only, safe)
-      localStorage.setItem('current_role', 'demo');
-      setUserRole('demo');
-      // Sync child pages immediately after mount
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('role-changed', { detail: 'demo' }));
-      }, 0);
+    // Only allow verified roles to remain active on reload. If not verified (and not demo), fall back to 'demo'
+    if (initRole !== 'demo') {
+      if (isVerified) {
+        setUserRole(initRole);
+      } else {
+        localStorage.setItem('current_role', 'demo');
+        setUserRole('demo');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('role-changed', { detail: 'demo' }));
+        }, 0);
+      }
     }
 
     const syncRolePins = async () => {
@@ -1235,11 +1238,7 @@ const App = () => {
       localStorage.setItem(key, defaults[key]);
     });
     
-    // Clear role verification keys
-    ['admin', 'to_truong', 'bi_thu', 'mat_tran', 'chung', 'chi_hoi_phu_nu', 'ke_toan', 'an_ninh', 'thu_quy'].forEach(role => {
-      localStorage.removeItem(`role_verified_${role}`);
-      localStorage.removeItem(`role_pin_${role}`);
-    });
+    // Keep role_verified keys in localStorage so that once a role PIN is entered, it is remembered permanently on this device!
     localStorage.setItem('current_role', 'demo');
     
     // Update states
@@ -1408,19 +1407,27 @@ const App = () => {
         await checkAndSeedUser(userId);
 
         if (profile.role === 'ward_admin' || profile.role === 'super_admin') {
-          localStorage.setItem('current_role', 'admin');
-          localStorage.setItem('role_verified_admin', 'true');
-          setUserRole('admin');
+          const currentRoleSaved = localStorage.getItem('current_role') || 'admin';
+          if (localStorage.getItem(`role_verified_${currentRoleSaved}`) === 'true') {
+            setUserRole(currentRoleSaved);
+          } else {
+            const isCurrentVerified = localStorage.getItem(`role_verified_${userRole}`) === 'true';
+            if (!isCurrentVerified && userRole !== 'demo') {
+              localStorage.setItem('current_role', 'demo');
+              setUserRole('demo');
+            }
+          }
         } else if (profile.role === 'tdp_leader') {
           localStorage.setItem('tdp_name', profile.tdp_name || 'Tổ dân phố');
-          const currentRoleSaved = localStorage.getItem('current_role');
-          if (!currentRoleSaved || currentRoleSaved === 'demo') {
-            localStorage.setItem('current_role', 'to_truong');
-            localStorage.setItem('role_verified_to_truong', 'true');
-            setUserRole('to_truong');
-          } else {
-            localStorage.setItem(`role_verified_${currentRoleSaved}`, 'true');
+          const currentRoleSaved = localStorage.getItem('current_role') || 'to_truong';
+          if (localStorage.getItem(`role_verified_${currentRoleSaved}`) === 'true') {
             setUserRole(currentRoleSaved);
+          } else {
+            const isCurrentVerified = localStorage.getItem(`role_verified_${userRole}`) === 'true';
+            if (!isCurrentVerified && userRole !== 'demo') {
+              localStorage.setItem('current_role', 'demo');
+              setUserRole('demo');
+            }
           }
         }
 
@@ -2243,16 +2250,6 @@ const App = () => {
       await (db as any).saveRolePin('an_ninh', pinAnNinhToSave);
       await (db as any).saveRolePin('thu_quy', pinThuQuyToSave);
 
-      // Mark as verified on this device since we configured it
-      localStorage.setItem('role_verified_admin', 'true');
-      localStorage.setItem('role_verified_to_truong', 'true');
-      localStorage.setItem('role_verified_bi_thu', 'true');
-      localStorage.setItem('role_verified_mat_tran', 'true');
-      localStorage.setItem('role_verified_chung', 'true');
-      localStorage.setItem('role_verified_chi_hoi_phu_nu', 'true');
-      localStorage.setItem('role_verified_ke_toan', 'true');
-      localStorage.setItem('role_verified_an_ninh', 'true');
-      localStorage.setItem('role_verified_thu_quy', 'true');
 
       window.dispatchEvent(new CustomEvent('show-toast', {
         detail: { message: `✅ Cấu hình và mã PIN phân quyền đã đồng bộ lên Database!`, type: 'success' }
@@ -5321,6 +5318,9 @@ const RolePinModal = ({
               boxSizing: 'border-box'
             }}
           />
+          <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', textAlign: 'center', marginTop: '2px' }}>
+            💡 Nhập mã PIN 1 lần duy nhất trên máy này. Hệ thống sẽ tự động ghi nhớ vai trò này cho những lần sau.
+          </div>
         </div>
 
         {/* Footer */}
