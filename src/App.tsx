@@ -588,6 +588,14 @@ const App = () => {
   const [tdpList, setTdpList] = useState<any[]>([]);
   const [selectedTdpUserId, setSelectedTdpUserId] = useState<string>(localStorage.getItem('selected_tdp_user_id') || 'all');
 
+  // Quyền truy cập Khóa & Điều chuyển Phường: Chỉ dành cho Quản trị Phường / Admin hệ thống
+  // Tuyệt đối KHÔNG hiển thị hoặc cho phép vai trò Tổ trưởng dân phố (to_truong / tdp_leader) truy cập
+  const canAccessKeysAndTransfer = 
+    userRole !== 'to_truong' && 
+    localStorage.getItem('current_role') !== 'to_truong' && 
+    localStorage.getItem('user_role') !== 'tdp_leader' && 
+    (localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin');
+
   useEffect(() => {
     if (activeTab) {
       localStorage.setItem('active_tab', activeTab);
@@ -848,8 +856,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    const role = localStorage.getItem('user_role');
-    if (isSettingsOpen && (role === 'ward_admin' || role === 'super_admin')) {
+    if (isSettingsOpen && canAccessKeysAndTransfer) {
       loadGeneratedKeys();
       loadWardsList();
       setGeneratedKeyResult('');
@@ -859,7 +866,13 @@ const App = () => {
         setAllTdpProfiles(profiles);
       }).catch(console.error);
     }
-  }, [isSettingsOpen]);
+  }, [isSettingsOpen, canAccessKeysAndTransfer]);
+
+  useEffect(() => {
+    if (settingsTab === 'keys' && !canAccessKeysAndTransfer) {
+      setSettingsTab('general');
+    }
+  }, [settingsTab, canAccessKeysAndTransfer]);
 
   useEffect(() => {
     if (isSettingsOpen && settingsTab === 'backup') {
@@ -990,6 +1003,10 @@ const App = () => {
 
   const handleGenerateKey = async () => {
     if (!supabase) return;
+    if (!canAccessKeysAndTransfer) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vai trò Tổ trưởng không có quyền tạo mã kích hoạt!', type: 'danger' } }));
+      return;
+    }
     let targetWardId = '';
     const role = localStorage.getItem('user_role');
     const isSuperAdmin = role === 'super_admin' || (role === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
@@ -1201,6 +1218,10 @@ const App = () => {
   };
 
   const handleTransferTDP = async (tdpUserId: string) => {
+    if (!canAccessKeysAndTransfer) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vai trò Tổ trưởng không có quyền điều chuyển phường!', type: 'danger' } }));
+      return;
+    }
     const targetWardId = transferTargetWards[tdpUserId];
     if (!targetWardId) {
       window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Vui lòng chọn Phường muốn chuyển tới!', type: 'warning' } }));
@@ -2161,6 +2182,7 @@ const App = () => {
   };
 
   const handleOpenSettings = () => {
+    setSettingsTab('general');
     setTdpNameInput(tdpName);
     setWardNameInput(wardName);
     setWardFundPrefixInput(localStorage.getItem('ward_fund_prefix') ?? '');
@@ -3554,7 +3576,7 @@ const App = () => {
                 >
                   💾 Sao lưu & Khôi phục
                 </button>
-                {(localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
+                {canAccessKeysAndTransfer && (
                   <button
                     type="button"
                     onClick={() => setSettingsTab('keys')}
@@ -4298,10 +4320,10 @@ const App = () => {
                 </>
               )}
 
-              {settingsTab === 'keys' && (
+              {settingsTab === 'keys' && canAccessKeysAndTransfer && (
                 <>
                   {/* ─── Phần 1d: Quản lý Mã kích hoạt bản quyền (Hiển thị cho Ward Admin và Super Admin) ─── */}
-              {(localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin') && (
+              {canAccessKeysAndTransfer && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(236,72,153,0.06), rgba(236,72,153,0.02))',
                   border: '1.5px solid rgba(236,72,153,0.18)',
@@ -4682,7 +4704,7 @@ const App = () => {
               )}
 
               {/* ─── Phần 1e: Điều chuyển Tổ dân phố (Chuyển Phường) - Chỉ dành cho Super Admin ─── */}
-              {(localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) && (
+              {canAccessKeysAndTransfer && (localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến')) && (
                 <div style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02))',
                   border: '1.5px solid rgba(16,185,129,0.18)',
