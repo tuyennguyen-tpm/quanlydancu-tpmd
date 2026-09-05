@@ -21,15 +21,28 @@ echo [He thong] Dang su dung Git tai: "!GIT_EXE!"
 echo [He thong] Dang chuan bi day cac file thay doi len...
 echo.
 
-:: Chay cac lenh Git qua duong dan chinh xac
+:: Dong bo code moi nhat tu GitHub ve truoc
+echo [He thong] Dang kiem tra va dong bo cap nhat moi nhat tu GitHub...
+"!GIT_EXE!" pull --rebase origin main
+
+echo.
+echo [He thong] Dang dong goi commit va day len GitHub...
 "!GIT_EXE!" add .
 "!GIT_EXE!" commit -m "update code"
 "!GIT_EXE!" push origin main
 
-echo.
-echo ===================================================
-echo  Da day ma nguon len GitHub thanh cong!
-echo  Trang web tren Vercel dang duoc cap nhat tu dong.
-echo ===================================================
+if !ERRORLEVEL! EQU 0 (
+    echo.
+    echo ===================================================
+    echo  Da day ma nguon len GitHub THANH CONG!
+    echo  Trang web tren Vercel dang duoc cap nhat tu dong.
+    echo ===================================================
+) else (
+    echo.
+    echo ===================================================
+    echo  CO LOI XAY RA KHI DAY LEN GITHUB!
+    echo  Vui long kiem tra lai ket noi hoac thong bao loi tren.
+    echo ===================================================
+)
 echo.
 pause
