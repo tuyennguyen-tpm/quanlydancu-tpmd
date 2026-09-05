@@ -2264,7 +2264,12 @@ export const db = {
             break;
           }
           if (data && data.length > 0) {
-            allData = [...allData, ...data];
+            const normalized = data.map((d: any) => ({
+              ...d,
+              full_name: (d.full_name || d.household_name || '').trim(),
+              household_name: (d.household_name || d.full_name || '').trim()
+            }));
+            allData = [...allData, ...normalized];
             if (data.length < limit) hasMore = false;
             else from += limit;
           } else {

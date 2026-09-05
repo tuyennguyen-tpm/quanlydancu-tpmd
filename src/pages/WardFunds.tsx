@@ -497,17 +497,18 @@ const WardFunds = () => {
     households.forEach(h => {
       if (h.head_of_household_id) {
         const headRes = residentByIdMap.get(h.head_of_household_id);
-        if (headRes) headNames.add(headRes.full_name.trim().toLowerCase());
+        if (headRes && headRes.full_name) headNames.add(headRes.full_name.trim().toLowerCase());
       }
     });
     residents.forEach(r => {
-      if (r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) {
+      if (r.full_name && (r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ'))) {
         headNames.add(r.full_name.trim().toLowerCase());
       }
     });
     funds.forEach(f => {
-      if (f.note && (f.note.includes('Chủ hộ') || f.note.includes('Hộ'))) {
-        headNames.add(f.full_name.trim().toLowerCase());
+      const fName = (f.full_name || (f as any).household_name || '').trim();
+      if (fName && f.note && (f.note.includes('Chủ hộ') || f.note.includes('Hộ'))) {
+        headNames.add(fName.toLowerCase());
       }
     });
     return headNames;
@@ -523,9 +524,11 @@ const WardFunds = () => {
   const residentsByNameMap = useMemo(() => {
     const map = new Map<string, Resident[]>();
     residents.forEach(r => {
-      const k = r.full_name.trim().toLowerCase();
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(r);
+      const k = (r.full_name || '').trim().toLowerCase();
+      if (k) {
+        if (!map.has(k)) map.set(k, []);
+        map.get(k)!.push(r);
+      }
     });
     return map;
   }, [residents]);
@@ -975,7 +978,7 @@ const WardFunds = () => {
       const seenHouseholdIds = new Set<string>();
       const seenNames = new Set<string>();
       filteredByMode = list.filter(f => {
-        const nameKey = f.full_name.trim().toLowerCase();
+        const nameKey = (f.full_name || (f as any).household_name || '').trim().toLowerCase();
         const meta = fundMetaMap.get(f.id);
         const hhId = meta?.householdId;
 
@@ -1018,7 +1021,7 @@ const WardFunds = () => {
         return rankA - rankB;
       }
 
-      return a.full_name.localeCompare(b.full_name, 'vi');
+      return (a.full_name || (a as any).household_name || '').localeCompare((b.full_name || (b as any).household_name || ''), 'vi');
     });
   }, [funds, searchTerm, filterStatus, activeFunds, groupFilter, subTabMode, fundMetaMap, groups, headNamesSet, searchMetaMap]);
 
@@ -1041,10 +1044,10 @@ const WardFunds = () => {
     });
     groupMap.forEach(g => {
       g.members.sort((a, b) => {
-        const aH = headNamesSet.has(a.full_name.trim().toLowerCase());
-        const bH = headNamesSet.has(b.full_name.trim().toLowerCase());
+        const aH = headNamesSet.has((a.full_name || (a as any).household_name || '').trim().toLowerCase());
+        const bH = headNamesSet.has((b.full_name || (b as any).household_name || '').trim().toLowerCase());
         if (aH !== bH) return aH ? -1 : 1;
-        return a.full_name.localeCompare(b.full_name, 'vi');
+        return (a.full_name || (a as any).household_name || '').localeCompare((b.full_name || (b as any).household_name || ''), 'vi');
       });
     });
     return Array.from(groupMap.values()).sort((a, b) => {
