@@ -20,25 +20,11 @@ export interface EnvironmentLog {
 }
 
 const getSupabaseClient = () => {
-  let localUrl = localStorage.getItem('supabase_url');
-  let localKey = localStorage.getItem('supabase_anon_key');
-  
-  // Tự động xóa URL cũ nếu bị lưu trong localStorage trình duyệt
-  if (localUrl && (localUrl.includes('yvtmckpdpinipxyvphdm') || localUrl.includes('zebrotq') || localUrl.includes('pxnvgoqmtydqxljtiyinb'))) {
-    localStorage.removeItem('supabase_url');
-    localStorage.removeItem('supabase_anon_key');
-    localUrl = null;
-    localKey = null;
-  }
+  const localUrl = localStorage.getItem('supabase_url');
+  const localKey = localStorage.getItem('supabase_anon_key');
 
-  let rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://pxnvgoqmtydqxljtyinb.supabase.co';
-  let rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
-
-  // Phòng thủ triệt để: Nếu URL từ Vercel Env hay bất kỳ đâu trỏ vào project cũ bị khóa thì ép dùng project mới
-  if (!rawUrl || rawUrl.includes('yvtmckpdpinipxyvphdm') || rawUrl.includes('zebrotq') || rawUrl.includes('pxnvgoqmtydqxljtiyinb')) {
-    rawUrl = 'https://pxnvgoqmtydqxljtyinb.supabase.co';
-    rawKey = 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
-  }
+  const rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://yvtmckpdpinipxyvphdm.supabase.co';
+  const rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_2Zkgkwp7OmzMUH_j7mUD5w_migssOX8';
 
   const url = (rawUrl || '').trim();
   const key = (rawKey || '').trim().replace(/[\r\n\t]/g, '');
