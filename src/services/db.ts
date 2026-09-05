@@ -1,6 +1,7 @@
 // v2.1 - Su dung bang app_config cho dong bo ma PIN (khong phu thuoc documents)
 import { createClient } from '@supabase/supabase-js';
 import type { Household, Resident, FinancialRecord, Complaint, Meeting, Document, PolicyActivity, MeetingMinutesData, HouseholdFund, WardFund, SponsorRecord } from '../types';
+import { appCache } from './cache';
 
 
 // Types for logs not defined in index.ts
@@ -537,40 +538,42 @@ export const checkAndSeedUser = async (userId: string): Promise<void> => {
 };
 
 
-// === HELPER: Parallel pagination fetch ===
-// Lấy count trước bằng HEAD request, sau đó tải tất cả các trang song song với Promise.all
+// === HELPER: High Speed Parallel pagination fetch ===
+// Tối ưu hóa: Lấy ngay 1000 dòng đầu tiên VÀ tổng count trong cùng 1 request duy nhất!
 const fetchAllParallel = async <T>(
   buildQuery: (selectOpts?: any) => any,
   chunkSize = 1000
 ): Promise<T[]> => {
   if (!supabase) return [];
   try {
-    // Bước 1: Lấy tổng số records bằng HEAD request
-    const countRes = await buildQuery({ count: 'exact', head: true });
-    const count = countRes?.count;
+    const firstRes = await buildQuery({ count: 'exact' }).range(0, chunkSize - 1);
+    if (firstRes.error || !firstRes.data || firstRes.data.length === 0) {
+      return [];
+    }
+    const count = firstRes.count;
+    const allData: T[] = [...firstRes.data];
 
-    if (typeof count === 'number' && count > 0) {
-      // Bước 2: Tạo tất cả chunk queries và chạy song song
+    // Nếu bảng có nhiều hơn 1000 dòng, tải các trang còn lại song song
+    if (typeof count === 'number' && count > chunkSize) {
       const chunks: Promise<any>[] = [];
-      for (let from = 0; from < count; from += chunkSize) {
+      for (let from = chunkSize; from < count; from += chunkSize) {
         const to = Math.min(from + chunkSize - 1, count - 1);
         chunks.push(buildQuery().range(from, to));
       }
 
       const results = await Promise.all(chunks);
-      let allData: T[] = [];
       for (const res of results) {
         if (!res.error && Array.isArray(res.data)) {
           allData.push(...res.data);
         }
       }
-      return allData;
     }
+    return allData;
   } catch (err) {
-    console.warn('[DB] fetchAllParallel count query failed, falling back:', err);
+    console.warn('[DB] fetchAllParallel query failed, falling back:', err);
   }
 
-  // Fallback dự phòng nếu HEAD request không lấy được count
+  // Fallback dự phòng
   try {
     const firstRes = await buildQuery().range(0, chunkSize - 1);
     if (firstRes.error || !firstRes.data || firstRes.data.length === 0) {
@@ -798,27 +801,39 @@ export const db = {
   },
 
   // --- Households ---
-  getHouseholds: async (): Promise<Household[]> => {
-    if (supabase) {
-      try {
-        const tenantFilter = getTenantFilter();
-        const allData = await fetchAllParallel<Household>(
-          (opts) => {
-            let q = supabase!.from('households').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
-            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
-            return q;
-          }
-        );
-        if (allData.length > 0) return allData;
-      } catch (e) {
-        console.error('Supabase getHouseholds error, falling back to local storage', e);
-      }
+  getHouseholds: async (forceRefresh = false): Promise<Household[]> => {
+    const tenantFilter = getTenantFilter();
+    const cacheKey = `households_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
+
+    if (!forceRefresh) {
+      const cached = await appCache.get<Household[]>(cacheKey);
+      if (cached && cached.length > 0) return cached;
     }
-    const list = getStorageItem<Household[]>('households', seedHouseholds);
-    return list.sort((a, b) => {
-      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-      if (diff !== 0) return diff;
-      return a.id.localeCompare(b.id);
+
+    return appCache.dedupe(cacheKey, async () => {
+      if (supabase) {
+        try {
+          const allData = await fetchAllParallel<Household>(
+            (opts) => {
+              let q = supabase!.from('households').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+              if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+              return q;
+            }
+          );
+          if (allData.length > 0) {
+            await appCache.set(cacheKey, allData);
+            return allData;
+          }
+        } catch (e) {
+          console.error('Supabase getHouseholds error, falling back to local storage', e);
+        }
+      }
+      const list = getStorageItem<Household[]>('households', seedHouseholds);
+      return list.sort((a, b) => {
+        const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        if (diff !== 0) return diff;
+        return a.id.localeCompare(b.id);
+      });
     });
   },
   saveHousehold: async (household: Omit<Household, 'created_at'> & { created_at?: string }): Promise<Household> => {
@@ -863,6 +878,7 @@ export const db = {
         if (index >= 0) households[index] = data;
         else households.push(data);
         setStorageItem('households', households);
+        await appCache.invalidate('households');
         return data;
       }
     }
@@ -875,6 +891,7 @@ export const db = {
       households.push(fullHousehold);
     }
     setStorageItem('households', households);
+    await appCache.invalidate('households');
     return fullHousehold;
   },
 
@@ -883,7 +900,11 @@ export const db = {
       try {
         const { error } = await supabase.from('households').delete().eq('id', id);
         if (error) handleDbError('xóa hộ dân', error);
-        if (!error) return true;
+        if (!error) {
+          await appCache.invalidate('households');
+          await appCache.invalidate('residents');
+          return true;
+        }
       } catch (e) {
         console.error('Supabase deleteHousehold error, falling back to local storage', e);
       }
@@ -896,6 +917,8 @@ export const db = {
     const residents = getStorageItem<Resident[]>('residents', seedResidents);
     const filteredResidents = residents.filter(r => r.household_id !== id);
     setStorageItem('residents', filteredResidents);
+    await appCache.invalidate('households');
+    await appCache.invalidate('residents');
     return true;
   },
   saveHouseholdsBulk: async (households: Household[]): Promise<boolean> => {
@@ -936,41 +959,52 @@ export const db = {
       else currentHouseholds.push(h);
     });
     setStorageItem('households', currentHouseholds);
+    await appCache.invalidate('households');
     return true;
   },
 
   // --- Residents ---
-  getResidents: async (): Promise<Resident[]> => {
-    if (supabase) {
-      try {
-        const tenantFilter = getTenantFilter();
-        const allData = await fetchAllParallel<any>(
-          (opts) => {
-            let q = supabase!.from('residents').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
-            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
-            return q;
-          }
-        );
-        if (allData.length > 0) {
-          const currentYear = new Date().getFullYear();
-          const mapped = allData.map((r: any) => {
-            const dobYear = r.dob ? new Date(r.dob).getFullYear() : 0;
-            return {
-              ...r,
-              is_senior: dobYear > 0 ? (currentYear - dobYear) >= 80 : false
-            };
-          });
-          return mapped;
-        }
-      } catch (e) {
-        console.error('Supabase getResidents error, falling back to local storage', e);
-      }
+  getResidents: async (forceRefresh = false): Promise<Resident[]> => {
+    const tenantFilter = getTenantFilter();
+    const cacheKey = `residents_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
+
+    if (!forceRefresh) {
+      const cached = await appCache.get<Resident[]>(cacheKey);
+      if (cached && cached.length > 0) return cached;
     }
-    const list = getStorageItem<Resident[]>('residents', seedResidents);
-    return list.sort((a, b) => {
-      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-      if (diff !== 0) return diff;
-      return a.id.localeCompare(b.id);
+
+    return appCache.dedupe(cacheKey, async () => {
+      if (supabase) {
+        try {
+          const allData = await fetchAllParallel<any>(
+            (opts) => {
+              let q = supabase!.from('residents').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+              if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+              return q;
+            }
+          );
+          if (allData.length > 0) {
+            const currentYear = new Date().getFullYear();
+            const mapped = allData.map((r: any) => {
+              const dobYear = r.dob ? new Date(r.dob).getFullYear() : 0;
+              return {
+                ...r,
+                is_senior: dobYear > 0 ? (currentYear - dobYear) >= 80 : false
+              };
+            });
+            await appCache.set(cacheKey, mapped);
+            return mapped;
+          }
+        } catch (e) {
+          console.error('Supabase getResidents error, falling back to local storage', e);
+        }
+      }
+      const list = getStorageItem<Resident[]>('residents', seedResidents);
+      return list.sort((a, b) => {
+        const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        if (diff !== 0) return diff;
+        return a.id.localeCompare(b.id);
+      });
     });
   },
   saveResident: async (resident: Omit<Resident, 'created_at' | 'is_senior'> & { created_at?: string; is_senior?: boolean }): Promise<Resident> => {
@@ -1006,6 +1040,7 @@ export const db = {
         if (index >= 0) residents[index] = fullRes;
         else residents.push(fullRes);
         setStorageItem('residents', residents);
+        await appCache.invalidate('residents');
         return fullRes;
       }
     }
@@ -1018,6 +1053,7 @@ export const db = {
       residents.push(fullResident);
     }
     setStorageItem('residents', residents);
+    await appCache.invalidate('residents');
     return fullResident;
   },
   deleteResident: async (id: string): Promise<boolean> => {
@@ -1025,7 +1061,10 @@ export const db = {
       try {
         const { error } = await supabase.from('residents').delete().eq('id', id);
         if (error) handleDbError('xóa nhân khẩu', error);
-        if (!error) return true;
+        if (!error) {
+          await appCache.invalidate('residents');
+          return true;
+        }
       } catch (e) {
         console.error('Supabase deleteResident error, falling back to local storage', e);
       }
@@ -1033,6 +1072,7 @@ export const db = {
     const residents = getStorageItem<Resident[]>('residents', seedResidents);
     const filtered = residents.filter(r => r.id !== id);
     setStorageItem('residents', filtered);
+    await appCache.invalidate('residents');
     return true;
   },
   saveResidentsBulk: async (residents: Resident[]): Promise<boolean> => {
@@ -1070,6 +1110,7 @@ export const db = {
           throw new Error(`Không thể lưu nhân khẩu: ${error.message}`);
         }
       }
+      await appCache.invalidate('residents');
       return true;
     }
 
@@ -1080,6 +1121,7 @@ export const db = {
       else currentResidents.push(r);
     });
     setStorageItem('residents', currentResidents);
+    await appCache.invalidate('residents');
     return true;
   },
   deleteAllData: async (): Promise<boolean> => {
@@ -1092,6 +1134,7 @@ export const db = {
         
         const hhDelete = await supabase.from('households').delete().eq('user_id', uId);
         if (hhDelete.error) throw hhDelete.error;
+        await appCache.invalidate('');
         return true;
       } catch (e) {
         console.error('Lỗi khi xóa toàn bộ dữ liệu:', e);
@@ -1100,42 +1143,55 @@ export const db = {
     }
     setStorageItem('residents', []);
     setStorageItem('households', []);
+    await appCache.invalidate('');
     return true;
   },
 
   // --- Financial Records ---
-  getFinancialRecords: async (): Promise<FinancialRecord[]> => {
-    if (supabase) {
-      try {
-        const tenantFilter = getTenantFilter();
-        const allData = await fetchAllParallel<any>(
-          (opts) => {
-            let q = supabase!.from('financial_records').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
-            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
-            return q;
-          }
-        );
-        const localRecords = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
-        const localMap = new Map(localRecords.map(r => [r.id, r]));
-        const mergedData = allData.map((remote: any) => {
-          const local = localMap.get(remote.id);
-          let payerName = remote.payer || local?.payer || '';
-          if (!payerName && remote.description) {
-            const match = remote.description.match(/\[(?:Payer|NguoiNhan|Người nhận|Người nộp):\s*([^\]]+)\]/i);
-            if (match) payerName = match[1].trim();
-          }
-          return { ...remote, payer: payerName };
-        });
-        return mergedData;
-      } catch (e) {
-        console.error('Supabase getFinancialRecords error, falling back to local storage', e);
-      }
+  getFinancialRecords: async (forceRefresh = false): Promise<FinancialRecord[]> => {
+    const tenantFilter = getTenantFilter();
+    const cacheKey = `financial_records_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
+
+    if (!forceRefresh) {
+      const cached = await appCache.get<FinancialRecord[]>(cacheKey);
+      if (cached && cached.length > 0) return cached;
     }
-    const list = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
-    return [...list].sort((a, b) => {
-      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-      if (diff !== 0) return diff;
-      return a.id.localeCompare(b.id);
+
+    return appCache.dedupe(cacheKey, async () => {
+      if (supabase) {
+        try {
+          const allData = await fetchAllParallel<any>(
+            (opts) => {
+              let q = supabase!.from('financial_records').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+              if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+              return q;
+            }
+          );
+          const localRecords = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
+          const localMap = new Map(localRecords.map(r => [r.id, r]));
+          const mergedData = allData.map((remote: any) => {
+            const local = localMap.get(remote.id);
+            let payerName = remote.payer || local?.payer || '';
+            if (!payerName && remote.description) {
+              const match = remote.description.match(/\[(?:Payer|NguoiNhan|Người nhận|Người nộp):\s*([^\]]+)\]/i);
+              if (match) payerName = match[1].trim();
+            }
+            return { ...remote, payer: payerName };
+          });
+          if (mergedData.length > 0) {
+            await appCache.set(cacheKey, mergedData);
+          }
+          return mergedData;
+        } catch (e) {
+          console.error('Supabase getFinancialRecords error, falling back to local storage', e);
+        }
+      }
+      const list = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
+      return [...list].sort((a, b) => {
+        const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        if (diff !== 0) return diff;
+        return a.id.localeCompare(b.id);
+      });
     });
   },
   saveFinancialRecord: async (record: Omit<FinancialRecord, 'created_at'> & { created_at?: string }): Promise<FinancialRecord> => {
@@ -1178,6 +1234,7 @@ export const db = {
             records.push(fullRecord);
           }
           setStorageItem('financial_records', records);
+          await appCache.invalidate('financial_records');
           return {
             ...fullRecord,
             ...data,
@@ -1196,6 +1253,7 @@ export const db = {
       records.push(fullRecord);
     }
     setStorageItem('financial_records', records);
+    await appCache.invalidate('financial_records');
     return fullRecord;
   },
   deleteFinancialRecord: async (id: string): Promise<boolean> => {
@@ -1203,7 +1261,10 @@ export const db = {
       try {
         const { error } = await supabase.from('financial_records').delete().eq('id', id);
         if (error) handleDbError('xóa bản ghi thu chi', error);
-        if (!error) return true;
+        if (!error) {
+          await appCache.invalidate('financial_records');
+          return true;
+        }
       } catch (e) {
         console.error('Supabase deleteFinancialRecord error, falling back to local storage', e);
       }
@@ -1211,6 +1272,7 @@ export const db = {
     const records = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
     const filtered = records.filter(r => r.id !== id);
     setStorageItem('financial_records', filtered);
+    await appCache.invalidate('financial_records');
     return true;
   },
 
@@ -1754,23 +1816,35 @@ export const db = {
   },
 
   // --- Household Funds ---
-  getHouseholdFunds: async (): Promise<HouseholdFund[]> => {
-    if (supabase) {
-      try {
-        const tenantFilter = getTenantFilter();
-        const allData = await fetchAllParallel<HouseholdFund>(
-          (opts) => {
-            let q = supabase!.from('household_funds').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
-            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
-            return q;
-          }
-        );
-        return allData;
-      } catch (e) {
-        console.error('Supabase getHouseholdFunds error, falling back to local storage', e);
-      }
+  getHouseholdFunds: async (forceRefresh = false): Promise<HouseholdFund[]> => {
+    const tenantFilter = getTenantFilter();
+    const cacheKey = `household_funds_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
+
+    if (!forceRefresh) {
+      const cached = await appCache.get<HouseholdFund[]>(cacheKey);
+      if (cached && cached.length > 0) return cached;
     }
-    return getStorageItem<HouseholdFund[]>('household_funds', []);
+
+    return appCache.dedupe(cacheKey, async () => {
+      if (supabase) {
+        try {
+          const allData = await fetchAllParallel<HouseholdFund>(
+            (opts) => {
+              let q = supabase!.from('household_funds').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+              if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+              return q;
+            }
+          );
+          if (allData.length > 0) {
+            await appCache.set(cacheKey, allData);
+          }
+          return allData;
+        } catch (e) {
+          console.error('Supabase getHouseholdFunds error, falling back to local storage', e);
+        }
+      }
+      return getStorageItem<HouseholdFund[]>('household_funds', []);
+    });
   },
   saveHouseholdFund: async (fund: Omit<HouseholdFund, 'created_at'> & { created_at?: string }): Promise<HouseholdFund> => {
     const fullFund: HouseholdFund = {
@@ -1787,7 +1861,10 @@ export const db = {
           .select()
           .single();
         if (error) handleDbError('lưu biên lai đóng quỹ hộ dân', error);
-        if (!error && data) return data;
+        if (!error && data) {
+          await appCache.invalidate('household_funds');
+          return data;
+        }
       } catch (e) {
         console.error('Supabase saveHouseholdFund error, saving to local storage', e);
       }
@@ -1800,6 +1877,7 @@ export const db = {
       list.push(fullFund);
     }
     setStorageItem('household_funds', list);
+    await appCache.invalidate('household_funds');
     return fullFund;
   },
   saveHouseholdFundsBatch: async (funds: (Omit<HouseholdFund, 'created_at'> & { created_at?: string })[]): Promise<HouseholdFund[]> => {
@@ -1820,6 +1898,7 @@ export const db = {
             .upsert(chunk, { onConflict: 'household_id,year,fund_name' });
           if (error) handleDbError('lưu biên lai đóng quỹ hộ dân hàng loạt', error);
         }
+        await appCache.invalidate('household_funds');
         return fullFunds;
       } catch (e) {
         console.error('Supabase saveHouseholdFundsBatch error, saving to local storage', e);
@@ -1831,6 +1910,7 @@ export const db = {
     fullFunds.forEach(f => map.set(`${f.household_id}_${f.year}_${f.fund_name}`, f));
     const merged = Array.from(map.values());
     setStorageItem('household_funds', merged);
+    await appCache.invalidate('household_funds');
     return fullFunds;
   },
   saveFinancialRecordsBatch: async (records: FinancialRecord[]): Promise<boolean> => {
@@ -1845,6 +1925,7 @@ export const db = {
           const { error } = await supabase.from('financial_records').upsert(chunk);
           if (error) handleDbError('lưu phiếu thu chi hàng loạt', error);
         }
+        await appCache.invalidate('financial_records');
         return true;
       } catch (e) {
         console.error('Supabase saveFinancialRecordsBatch error, saving to local storage', e);
@@ -1854,6 +1935,7 @@ export const db = {
     const idSet = new Set(records.map(r => r.id));
     const kept = list.filter(r => !idSet.has(r.id));
     setStorageItem('financial_records', [...kept, ...records]);
+    await appCache.invalidate('financial_records');
     return true;
   },
   deleteHouseholdFund: async (id: string): Promise<boolean> => {
@@ -1861,7 +1943,10 @@ export const db = {
       try {
         const { error } = await supabase.from('household_funds').delete().eq('id', id);
         if (error) handleDbError('xóa biên lai đóng quỹ', error);
-        if (!error) return true;
+        if (!error) {
+          await appCache.invalidate('household_funds');
+          return true;
+        }
       } catch (e) {
         console.error('Supabase deleteHouseholdFund error, falling back to local storage', e);
       }
@@ -1869,6 +1954,7 @@ export const db = {
     const list = getStorageItem<HouseholdFund[]>('household_funds', []);
     const filtered = list.filter(f => f.id !== id);
     setStorageItem('household_funds', filtered);
+    await appCache.invalidate('household_funds');
     return true;
   },
   deleteHouseholdFundsBatch: async (ids: string[]): Promise<boolean> => {
@@ -1877,6 +1963,7 @@ export const db = {
       try {
         const { error } = await supabase.from('household_funds').delete().in('id', ids);
         if (error) handleDbError('xóa biên lai đóng quỹ hàng loạt', error);
+        await appCache.invalidate('household_funds');
       } catch (e) {
         console.error('Supabase deleteHouseholdFundsBatch error, falling back to local storage', e);
       }
@@ -1885,6 +1972,7 @@ export const db = {
     const list = getStorageItem<HouseholdFund[]>('household_funds', []);
     const filtered = list.filter(f => !idSet.has(f.id));
     setStorageItem('household_funds', filtered);
+    await appCache.invalidate('household_funds');
     return true;
   },
   deleteHouseholdFundsByYear: async (year: number): Promise<boolean> => {
@@ -1892,6 +1980,7 @@ export const db = {
       try {
         const { error } = await supabase.from('household_funds').delete().eq('year', year);
         if (error) handleDbError('xóa quỹ theo năm', error);
+        await appCache.invalidate('household_funds');
       } catch (e) {
         console.error('Supabase deleteHouseholdFundsByYear error', e);
       }
@@ -1899,6 +1988,7 @@ export const db = {
     const list = getStorageItem<HouseholdFund[]>('household_funds', []);
     const filtered = list.filter(f => Number(f.year) !== year);
     setStorageItem('household_funds', filtered);
+    await appCache.invalidate('household_funds');
     return true;
   },
   deleteAutoFinancialRecords: async (): Promise<boolean> => {
@@ -1906,6 +1996,7 @@ export const db = {
       try {
         await supabase.from('financial_records').delete().ilike('description', '%[QUY_%');
         await supabase.from('financial_records').delete().eq('recorded_by', 'Hệ thống tự động');
+        await appCache.invalidate('financial_records');
       } catch (e) {
         console.error('Supabase deleteAutoFinancialRecords error', e);
       }
@@ -1913,6 +2004,7 @@ export const db = {
     const list = getStorageItem<FinancialRecord[]>('financial_records', []);
     const filtered = list.filter(r => r.recorded_by !== 'Hệ thống tự động' && !r.description?.includes('[QUY_'));
     setStorageItem('financial_records', filtered);
+    await appCache.invalidate('financial_records');
     return true;
   },
   getFundList: (): { name: string; target: number }[] => {
@@ -2219,32 +2311,45 @@ export const db = {
     window.dispatchEvent(new CustomEvent('db-changed'));
     return true;
   },
-  getWardFunds: async (year: number): Promise<WardFund[]> => {
-    if (supabase) {
-      try {
-        const tenantFilter = getTenantFilter();
-        const allData = await fetchAllParallel<any>(
-          (opts) => {
-            let q = supabase!.from('ward_funds').select('*', opts).eq('year', year).order('created_at', { ascending: true }).order('id', { ascending: true });
-            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
-            return q;
-          }
-        );
-        return allData.map((d: any) => ({
-          ...d,
-          full_name: (d.full_name || d.household_name || '').trim(),
-          household_name: (d.household_name || d.full_name || '').trim()
-        }));
-      } catch (e) {
-        handleDbError('lấy danh sách quỹ phường', e);
-      }
+  getWardFunds: async (year: number, forceRefresh = false): Promise<WardFund[]> => {
+    const tenantFilter = getTenantFilter();
+    const cacheKey = `ward_funds_${year}_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
+
+    if (!forceRefresh) {
+      const cached = await appCache.get<WardFund[]>(cacheKey);
+      if (cached && cached.length > 0) return cached;
     }
-    const list = getStorageItem<WardFund[]>('ward_funds', []);
-    const filtered = list.filter(f => f.year === year);
-    return [...filtered].sort((a, b) => {
-      const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
-      if (diff !== 0) return diff;
-      return a.id.localeCompare(b.id);
+
+    return appCache.dedupe(cacheKey, async () => {
+      if (supabase) {
+        try {
+          const allData = await fetchAllParallel<any>(
+            (opts) => {
+              let q = supabase!.from('ward_funds').select('*', opts).eq('year', year).order('created_at', { ascending: true }).order('id', { ascending: true });
+              if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+              return q;
+            }
+          );
+          const mapped = allData.map((d: any) => ({
+            ...d,
+            full_name: (d.full_name || d.household_name || '').trim(),
+            household_name: (d.household_name || d.full_name || '').trim()
+          }));
+          if (mapped.length > 0) {
+            await appCache.set(cacheKey, mapped);
+          }
+          return mapped;
+        } catch (e) {
+          handleDbError('lấy danh sách quỹ phường', e);
+        }
+      }
+      const list = getStorageItem<WardFund[]>('ward_funds', []);
+      const filtered = list.filter(f => f.year === year);
+      return [...filtered].sort((a, b) => {
+        const diff = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        if (diff !== 0) return diff;
+        return a.id.localeCompare(b.id);
+      });
     });
   },
   saveWardFund: async (fund: Omit<WardFund, 'created_at'> & { created_at?: string }): Promise<WardFund> => {
@@ -2262,6 +2367,7 @@ export const db = {
           .select()
           .single();
         if (error) throw error;
+        await appCache.invalidate('ward_funds');
         return data;
       } catch (e) {
         handleDbError('lưu đóng quỹ phường', e);
@@ -2275,6 +2381,7 @@ export const db = {
       list.push(fullFund);
     }
     setStorageItem('ward_funds', list);
+    await appCache.invalidate('ward_funds');
     return fullFund;
   },
   saveWardFundsBatch: async (funds: WardFund[]): Promise<boolean> => {
@@ -2286,6 +2393,7 @@ export const db = {
           .from('ward_funds')
           .upsert(payload);
         if (error) throw error;
+        await appCache.invalidate('ward_funds');
         return true;
       } catch (e) {
         handleDbError('lưu hàng loạt quỹ phường', e);
@@ -2301,6 +2409,7 @@ export const db = {
       }
     });
     setStorageItem('ward_funds', list);
+    await appCache.invalidate('ward_funds');
     return true;
   },
   deleteWardFund: async (id: string): Promise<boolean> => {
@@ -2311,6 +2420,7 @@ export const db = {
           .delete()
           .eq('id', id);
         if (error) throw error;
+        await appCache.invalidate('ward_funds');
         return true;
       } catch (e) {
         handleDbError('xóa nộp quỹ phường', e);
@@ -2319,6 +2429,7 @@ export const db = {
     const list = getStorageItem<WardFund[]>('ward_funds', []);
     const filtered = list.filter(f => f.id !== id);
     setStorageItem('ward_funds', filtered);
+    await appCache.invalidate('ward_funds');
     return true;
   },
   clearWardFunds: async (year: number): Promise<boolean> => {
@@ -3405,5 +3516,9 @@ export const partyDb = {
       } catch (e) {}
     }
     return { html, fontSize };
+  },
+
+  clearCache: async (prefix = ''): Promise<void> => {
+    await appCache.invalidate(prefix);
   }
 };
