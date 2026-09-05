@@ -20,11 +20,24 @@ export interface EnvironmentLog {
 }
 
 const getSupabaseClient = () => {
-  const localUrl = localStorage.getItem('supabase_url');
-  const localKey = localStorage.getItem('supabase_anon_key');
+  let localUrl = localStorage.getItem('supabase_url');
+  let localKey = localStorage.getItem('supabase_anon_key');
 
-  const rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://yvtmckpdpinipxyvphdm.supabase.co';
-  const rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_2Zkgkwp7OmzMUH_j7mUD5w_migssOX8';
+  // Tự động xóa cache nếu đang lưu URL của project cũ bị quá băng thông
+  if (localUrl && (localUrl.includes('yvtmckpdpinipxyvphdm') || localUrl.includes('zebrotq') || localUrl.includes('pxnvgoqmtydqxljtiyinb'))) {
+    localStorage.removeItem('supabase_url');
+    localStorage.removeItem('supabase_anon_key');
+    localUrl = null;
+    localKey = null;
+  }
+
+  let rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://pxnvgoqmtydqxljtyinb.supabase.co';
+  let rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
+
+  if (!rawUrl || rawUrl.includes('yvtmckpdpinipxyvphdm') || rawUrl.includes('zebrotq') || rawUrl.includes('pxnvgoqmtydqxljtiyinb')) {
+    rawUrl = 'https://pxnvgoqmtydqxljtyinb.supabase.co';
+    rawKey = 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
+  }
 
   const url = (rawUrl || '').trim();
   const key = (rawKey || '').trim().replace(/[\r\n\t]/g, '');
