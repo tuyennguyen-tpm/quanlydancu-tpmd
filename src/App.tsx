@@ -770,7 +770,12 @@ const App = () => {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
-  const [settingsTab, setSettingsTab] = useState<'general' | 'keys'>('general');
+  const [settingsTab, setSettingsTab] = useState<'general' | 'backup' | 'keys'>('general');
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
+  const [backupFileInfo, setBackupFileInfo] = useState<any | null>(null);
+  const [backupFileRaw, setBackupFileRaw] = useState<any | null>(null);
+  const [backupStats, setBackupStats] = useState<{ households: number; residents: number; financial: number; funds: number; wardFunds: number } | null>(null);
   const [allTdpProfiles, setAllTdpProfiles] = useState<any[]>([]);
   const [transferTargetWards, setTransferTargetWards] = useState<Record<string, string>>({});
   const [transferLoading, setTransferLoading] = useState<string | null>(null);
@@ -855,6 +860,133 @@ const App = () => {
       }).catch(console.error);
     }
   }, [isSettingsOpen]);
+
+  useEffect(() => {
+    if (isSettingsOpen && settingsTab === 'backup') {
+      Promise.all([
+        db.getHouseholds(),
+        db.getResidents(),
+        db.getFinancialRecords(),
+        db.getHouseholdFunds(),
+        db.getWardFunds(new Date().getFullYear())
+      ]).then(([h, r, f, hf, wf]) => {
+        setBackupStats({
+          households: h.length,
+          residents: r.length,
+          financial: f.length,
+          funds: hf.length,
+          wardFunds: wf.length
+        });
+      }).catch(console.error);
+    }
+  }, [isSettingsOpen, settingsTab]);
+
+  const handleExportBackup = async () => {
+    try {
+      setIsExportingBackup(true);
+      const data = await (db as any).exportFullBackup();
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}h${String(now.getMinutes()).padStart(2, '0')}`;
+      const cleanTdpName = (tdpName || 'TDP').replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1E00-\u1EFF]/g, '_');
+      const filename = `SaoLuu_CSDL_${cleanTdpName}_${dateStr}.json`;
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const ev = new CustomEvent('show-toast', {
+        detail: {
+          message: `✅ Đã xuất tệp sao lưu thành công! (${data.counts.households} hộ, ${data.counts.residents} nhân khẩu, ${data.counts.financial_records} thu chi)`,
+          type: 'success'
+        }
+      });
+      window.dispatchEvent(ev);
+    } catch (err: any) {
+      console.error('Export backup error:', err);
+      const ev = new CustomEvent('show-toast', {
+        detail: { message: `❌ Lỗi khi xuất file sao lưu: ${err.message || err}`, type: 'danger' }
+      });
+      window.dispatchEvent(ev);
+    } finally {
+      setIsExportingBackup(false);
+    }
+  };
+
+  const handleSelectBackupFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (!parsed || !parsed.data) {
+          throw new Error('Tệp không đúng định dạng sao lưu CSDL chuẩn của phần mềm.');
+        }
+        setBackupFileRaw(parsed);
+        setBackupFileInfo({
+          name: file.name,
+          size: (file.size / 1024).toFixed(1) + ' KB',
+          exported_at: parsed.exported_at ? new Date(parsed.exported_at).toLocaleString('vi-VN') : 'Không rõ',
+          tdp_name: parsed.tdp_name || 'Không rõ',
+          counts: parsed.counts || {
+            households: parsed.data.households?.length || 0,
+            residents: parsed.data.residents?.length || 0,
+            financial_records: parsed.data.financial_records?.length || 0,
+            household_funds: parsed.data.household_funds?.length || 0,
+            ward_funds: parsed.data.ward_funds?.length || 0
+          }
+        });
+      } catch (err: any) {
+        alert(`❌ Lỗi đọc tệp sao lưu: ${err.message || err}`);
+        setBackupFileInfo(null);
+        setBackupFileRaw(null);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleExecuteRestore = async () => {
+    if (!backupFileRaw) return;
+    const confirm = window.confirm(
+      `⚠️ XÁC NHẬN PHỤC HỒI DỮ LIỆU TỪ TỆP SAO LƯU?\n\n` +
+      `• Tệp sao lưu: ${backupFileInfo?.name}\n` +
+      `• Tạo lúc: ${backupFileInfo?.exported_at}\n` +
+      `• Số hộ dân: ${backupFileInfo?.counts?.households || 0}\n` +
+      `• Số nhân khẩu: ${backupFileInfo?.counts?.residents || 0}\n` +
+      `• Sổ thu chi: ${backupFileInfo?.counts?.financial_records || 0} bản ghi\n\n` +
+      `Hệ thống sẽ đồng bộ và cập nhật lại toàn bộ cơ sở dữ liệu từ tệp này. Bấm OK để tiếp tục.`
+    );
+    if (!confirm) return;
+
+    try {
+      setIsImportingBackup(true);
+      const res = await (db as any).restoreFullBackup(backupFileRaw);
+      const ev = new CustomEvent('show-toast', {
+        detail: { message: `✅ ${res.message}`, type: 'success' }
+      });
+      window.dispatchEvent(ev);
+      setBackupFileInfo(null);
+      setBackupFileRaw(null);
+      setSettingsOpen(false);
+    } catch (err: any) {
+      console.error('Restore error:', err);
+      const ev = new CustomEvent('show-toast', {
+        detail: { message: `❌ Lỗi khôi phục: ${err.message || err}`, type: 'danger' }
+      });
+      window.dispatchEvent(ev);
+    } finally {
+      setIsImportingBackup(false);
+    }
+  };
 
   const handleGenerateKey = async () => {
     if (!supabase) return;
@@ -3406,6 +3538,22 @@ const App = () => {
                 >
                   ⚙️ Cấu hình chung
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setSettingsTab('backup')}
+                  style={{
+                    padding: '8px 16px',
+                    fontWeight: '600',
+                    fontSize: '0.85rem',
+                    border: 'none',
+                    borderBottom: settingsTab === 'backup' ? '3px solid #059669' : '3px solid transparent',
+                    background: 'none',
+                    color: settingsTab === 'backup' ? '#059669' : '#64748b',
+                    cursor: 'pointer'
+                  }}
+                >
+                  💾 Sao lưu & Khôi phục
+                </button>
                 {(localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin') && (
                   <button
                     type="button"
@@ -4740,9 +4888,226 @@ const App = () => {
                 </>
               )}
 
+              {settingsTab === 'backup' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Card 1: Xuất tệp sao lưu */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(16,185,129,0.06), rgba(16,185,129,0.02))',
+                    border: '1.5px solid rgba(16,185,129,0.25)',
+                    borderRadius: '14px',
+                    padding: '18px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>💾</span>
+                      <div>
+                        <div style={{ fontWeight: '750', fontSize: '0.95rem', color: '#065f46' }}>
+                          1. Sao lưu Cơ sở Dữ liệu (Tải về máy tính)
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                          Đóng gói toàn bộ dữ liệu hiện tại của {tdpName || 'Tổ dân phố'} thành 1 tệp JSON dự phòng an toàn.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Stats of Current Data */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: '8px',
+                      background: 'white',
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: '1px solid #d1fae5'
+                    }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Hộ gia đình</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#059669' }}>
+                          {backupStats?.households !== undefined ? `${backupStats.households.toLocaleString('vi-VN')} hộ` : '...'}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Nhân khẩu</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#059669' }}>
+                          {backupStats?.residents !== undefined ? `${backupStats.residents.toLocaleString('vi-VN')} người` : '...'}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Bản ghi thu chi</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#059669' }}>
+                          {backupStats?.financial !== undefined ? `${backupStats.financial.toLocaleString('vi-VN')} phiếu` : '...'}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Biên lai quỹ hộ</div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#059669' }}>
+                          {backupStats?.funds !== undefined ? `${backupStats.funds.toLocaleString('vi-VN')} lượt` : '...'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleExportBackup}
+                      disabled={isExportingBackup}
+                      style={{
+                        padding: '12px 18px',
+                        borderRadius: '10px',
+                        border: 'none',
+                        backgroundColor: '#059669',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(5,150,105,0.25)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#047857'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                    >
+                      {isExportingBackup ? '⏳ Đang kết xuất tệp sao lưu...' : '💾 Tải tệp sao lưu CSDL (.json) về máy ngay'}
+                    </button>
+                  </div>
+
+                  {/* Card 2: Phục hồi tệp sao lưu */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(59,130,246,0.06), rgba(59,130,246,0.02))',
+                    border: '1.5px solid rgba(59,130,246,0.25)',
+                    borderRadius: '14px',
+                    padding: '18px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>📥</span>
+                      <div>
+                        <div style={{ fontWeight: '750', fontSize: '0.95rem', color: '#1e40af' }}>
+                          2. Phục hồi Cơ sở Dữ liệu từ tệp sao lưu (.json)
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                          Chọn tệp JSON đã lưu trước đây để phục hồi lại dữ liệu vào phần mềm.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* File Picker button */}
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        type="file"
+                        id="backup-file-input"
+                        accept=".json"
+                        onChange={handleSelectBackupFile}
+                        style={{ display: 'none' }}
+                      />
+                      <label
+                        htmlFor="backup-file-input"
+                        style={{
+                          padding: '10px 16px',
+                          borderRadius: '8px',
+                          border: '1.5px dashed #3b82f6',
+                          backgroundColor: '#eff6ff',
+                          color: '#2563eb',
+                          fontWeight: '750',
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        📂 Chọn tệp sao lưu (.json) từ máy tính...
+                      </label>
+                      {backupFileInfo && (
+                        <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '600' }}>
+                          Đã chọn: <code style={{ color: '#2563eb' }}>{backupFileInfo.name}</code> ({backupFileInfo.size})
+                        </span>
+                      )}
+                    </div>
+
+                    {/* File Preview Card if selected */}
+                    {backupFileInfo && (
+                      <div style={{
+                        background: 'white',
+                        border: '1.5px solid #93c5fd',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                      }}>
+                        <div style={{ fontSize: '0.82rem', color: '#1e3a8a', fontWeight: '700' }}>
+                          📋 Thông tin bản sao lưu chuẩn bị khôi phục:
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#334155', lineHeight: '1.6' }}>
+                          • Địa bàn: <strong>{backupFileInfo.tdp_name}</strong><br />
+                          • Thời điểm sao lưu: <strong>{backupFileInfo.exported_at}</strong><br />
+                          • Dữ liệu bao gồm: <strong>{backupFileInfo.counts.households}</strong> hộ dân, <strong>{backupFileInfo.counts.residents}</strong> nhân khẩu, <strong>{backupFileInfo.counts.financial_records}</strong> bản ghi thu chi, <strong>{backupFileInfo.counts.household_funds}</strong> biên lai quỹ.
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={handleExecuteRestore}
+                            disabled={isImportingBackup}
+                            style={{
+                              flex: 1,
+                              padding: '10px 16px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              backgroundColor: '#2563eb',
+                              color: 'white',
+                              fontWeight: '750',
+                              fontSize: '0.85rem',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {isImportingBackup ? '⏳ Đang khôi phục dữ liệu...' : '🚀 Bắt đầu khôi phục dữ liệu ngay'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setBackupFileInfo(null); setBackupFileRaw(null); }}
+                            style={{
+                              padding: '10px 14px',
+                              borderRadius: '8px',
+                              border: '1px solid #cbd5e1',
+                              backgroundColor: 'white',
+                              color: '#64748b',
+                              fontWeight: '600',
+                              fontSize: '0.82rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Hủy chọn
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', fontStyle: 'italic', lineHeight: '1.4' }}>
+                      💡 <strong>Mẹo an toàn:</strong> Bạn nên sao lưu tệp CSDL về máy định kỳ (hàng tuần hoặc hàng tháng). Trong mọi trường hợp nếu có máy khác hoặc người dùng thao tác nhầm, bạn luôn có thể phục hồi lại chuẩn xác 100%.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setSettingsOpen(false)}>Hủy bỏ</button>
-                <button type="submit" className="btn btn-primary">💾 Lưu cấu hình</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setSettingsOpen(false)}>
+                  {settingsTab === 'backup' ? 'Đóng' : 'Hủy bỏ'}
+                </button>
+                {settingsTab === 'general' && (
+                  <button type="submit" className="btn btn-primary">💾 Lưu cấu hình</button>
+                )}
               </div>
             </form>
           </div>
