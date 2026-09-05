@@ -36,3 +36,6 @@ dist-electron/
 .env.local
 .env.*.local
 
+# Scratch and temporary scripts
+scratch/
+
