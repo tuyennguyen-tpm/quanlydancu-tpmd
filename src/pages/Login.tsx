@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Users } from 'lucide-react';
+import { ShieldCheck, Users, HardDrive } from 'lucide-react';
 import { supabase, db, seedTenantData, checkAndSeedUser, refreshSupabaseClient } from '../services/db';
 import { showToast } from '../utils/toast';
 
@@ -103,11 +103,28 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
     } catch (err: any) {
       const msg = err.message || '';
       let viMsg = 'Đăng nhập thất bại. Vui lòng thử lại.';
+      if (msg.includes('restricted') || msg.includes('quota') || msg.includes('violation')) {
+        showToast('Máy chủ đám mây đang tạm khóa do đầy băng thông. Đang chuyển sang Chế độ Ngoại tuyến (Offline)...', 'warning');
+        setTimeout(() => {
+          localStorage.setItem('user_role', 'admin');
+          localStorage.setItem('current_role', 'admin');
+          onOfflineMode();
+        }, 1200);
+        return;
+      }
       if (msg.includes('Invalid login credentials')) viMsg = 'Email hoặc mật khẩu không đúng!';
       else if (msg.includes('Email not confirmed')) viMsg = 'Tài khoản chưa xác thực email! Vui lòng kiểm tra hộp thư và nhấn liên kết xác nhận.';
       else if (msg.includes('Too many requests')) viMsg = 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng chờ vài phút rồi thử lại.';
       else if (msg.includes('User not found')) viMsg = 'Không tìm thấy tài khoản với email này!';
-      else if (msg.includes('network') || msg.includes('fetch')) viMsg = 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
+      else if (msg.includes('network') || msg.includes('fetch')) {
+        showToast('Lỗi kết nối máy chủ đám mây. Đang chuyển sang Chế độ Ngoại tuyến (Offline)...', 'warning');
+        setTimeout(() => {
+          localStorage.setItem('user_role', 'admin');
+          localStorage.setItem('current_role', 'admin');
+          onOfflineMode();
+        }, 1200);
+        return;
+      }
       showToast(viMsg, 'danger');
     } finally {
       setLoading(false);
@@ -532,6 +549,38 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px', width: '100%' }}>
               {authMode === 'login' && (
                 <>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      localStorage.setItem('user_role', 'admin');
+                      localStorage.setItem('current_role', 'admin');
+                      onOfflineMode();
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.32) 100%)',
+                      border: '1px solid rgba(52, 211, 153, 0.45)',
+                      borderRadius: '8px',
+                      color: '#34d399',
+                      fontWeight: '700',
+                      fontSize: '0.92rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)'
+                    }}
+                  >
+                    <HardDrive size={18} />
+                    Vào làm việc Ngoại tuyến (Offline - Không cần tài khoản)
+                  </button>
+
+                  <div className="login-divider" style={{ margin: '4px 0' }}>
+                    <span>HOẶC ĐĂNG NHẬP ĐÁM MÂY</span>
+                  </div>
+
                   <button className="google-login-btn" onClick={handleGoogleLogin}>
                     <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginRight: '10px' }}>
                       <path
@@ -560,8 +609,6 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
                   </button>
                 </>
               )}
-
-
             </div>
           )}
         </div>

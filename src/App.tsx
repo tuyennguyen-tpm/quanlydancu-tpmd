@@ -2713,6 +2713,13 @@ const App = () => {
         <Login 
           onOfflineMode={() => {
             localStorage.setItem('offline_mode', 'true');
+            if (!localStorage.getItem('user_role')) {
+              localStorage.setItem('user_role', 'admin');
+            }
+            if (!localStorage.getItem('current_role')) {
+              localStorage.setItem('current_role', 'admin');
+            }
+            setUserRole(localStorage.getItem('user_role') || 'admin');
             setOfflineMode(true);
             const ev = new CustomEvent('show-toast', { detail: { message: 'Đang chuyển sang chế độ ngoại tuyến...', type: 'info' } });
             window.dispatchEvent(ev);
