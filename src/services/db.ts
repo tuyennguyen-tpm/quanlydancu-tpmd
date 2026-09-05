@@ -20,8 +20,17 @@ export interface EnvironmentLog {
 }
 
 const getSupabaseClient = () => {
-  const localUrl = localStorage.getItem('supabase_url');
-  const localKey = localStorage.getItem('supabase_anon_key');
+  let localUrl = localStorage.getItem('supabase_url');
+  let localKey = localStorage.getItem('supabase_anon_key');
+  
+  // Tự động xóa URL cũ nếu bị lưu trong localStorage trình duyệt
+  if (localUrl && (localUrl.includes('yvtmckpdpinipxyvphdm') || localUrl.includes('zebrotq') || localUrl.includes('pxnvgoqmtydqxljtiyinb'))) {
+    localStorage.removeItem('supabase_url');
+    localStorage.removeItem('supabase_anon_key');
+    localUrl = null;
+    localKey = null;
+  }
+
   const rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://pxnvgoqmtydqxljtyinb.supabase.co';
   const rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
   const url = (rawUrl || '').trim();
