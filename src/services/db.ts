@@ -270,31 +270,37 @@ const getTenantFilter = (): { field: 'user_id' | 'ward_id'; value: string } | nu
   const isGuest = localStorage.getItem('guest_mode') === 'true';
   const tenantId = localStorage.getItem('guest_tenant_id');
   if (isGuest && tenantId) {
-    return { field: 'user_id', value: tenantId };
+    // Nếu tenantId là ID cũ bị chết thì fallback sang user mới
+    const safeTenantId = tenantId === 'b3c31146-3399-4add-b600-7f39f34a1bac' ? 'b6986043-87f9-446b-b317-80476fa67a7e' : tenantId;
+    return { field: 'user_id', value: safeTenantId };
   }
 
   const userRole = localStorage.getItem('user_role');
-  const selectedTdpId = localStorage.getItem('selected_tdp_user_id');
+  let selectedTdpId = localStorage.getItem('selected_tdp_user_id');
 
-  // Ward Admin: lọc theo ward_id khi chọn "Tất cả", hoặc user_id khi chọn Tổ cụ thể
+  // Nếu selectedTdpId là ID của database cũ thì xóa ngay
+  if (selectedTdpId === 'b3c31146-3399-4add-b600-7f39f34a1bac' || selectedTdpId === 'null' || selectedTdpId === 'undefined') {
+    localStorage.removeItem('selected_tdp_user_id');
+    selectedTdpId = null;
+  }
+
+  // Ward Admin / Super Admin: lọc theo ward_id khi chọn "Tất cả", hoặc user_id khi chọn Tổ cụ thể
   if (userRole === 'ward_admin' || userRole === 'super_admin') {
     if (selectedTdpId && selectedTdpId !== 'all') {
-      // Chọn Tổ cụ thể → lọc theo user_id của Tổ đó
       return { field: 'user_id', value: selectedTdpId };
     }
-    // Chọn "Tất cả" → lọc theo ward_id của Phường để tránh lẫn dữ liệu Phường khác
-    const wardId = localStorage.getItem('user_ward_id');
+    const wardId = localStorage.getItem('user_ward_id') || '585004fb-8c9b-4c1c-affc-9b05de52b82a';
     if (wardId) {
       return { field: 'ward_id', value: wardId };
     }
     return null;
   }
 
-  // TDP Leader hoặc các vai trò khác: lọc theo user_id của chính họ
+  // TDP Leader hoặc các vai trò khác:
   if (selectedTdpId && selectedTdpId !== 'all') {
     return { field: 'user_id', value: selectedTdpId };
   }
-  const currentUserId = localStorage.getItem('supabase_user_id');
+  const currentUserId = localStorage.getItem('supabase_user_id') || 'b6986043-87f9-446b-b317-80476fa67a7e';
   if (currentUserId) {
     return { field: 'user_id', value: currentUserId };
   }

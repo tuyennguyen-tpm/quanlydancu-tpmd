@@ -77,6 +77,10 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
       if (data && data.user) {
         await checkAndSeedUser(data.user.id);
         
+        localStorage.removeItem('guest_mode');
+        localStorage.removeItem('guest_tenant_id');
+        localStorage.removeItem('selected_tdp_user_id');
+
         // Fetch and store profile
         const profile = await db.getUserProfile(data.user.id);
         if (profile) {
@@ -86,7 +90,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
           localStorage.setItem('user_tdp_name', profile.tdp_name || '');
           localStorage.setItem('user_full_name', profile.full_name || '');
           
-          if (profile.role === 'ward_admin') {
+          if (profile.role === 'ward_admin' || profile.role === 'super_admin') {
             // Set current_role to admin and delete any old selected tdp id
             localStorage.setItem('current_role', 'admin');
             localStorage.removeItem('selected_tdp_user_id');
