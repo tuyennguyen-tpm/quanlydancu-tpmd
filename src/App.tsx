@@ -583,10 +583,16 @@ const App = () => {
 
 
   const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
-  const [activeTab, setActiveTab] = useState('Bảng điều khiển');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('active_tab') || 'Bảng điều khiển');
   const [userRole, setUserRole] = useState<string>(localStorage.getItem('current_role') || 'demo');
   const [tdpList, setTdpList] = useState<any[]>([]);
   const [selectedTdpUserId, setSelectedTdpUserId] = useState<string>(localStorage.getItem('selected_tdp_user_id') || 'all');
+
+  useEffect(() => {
+    if (activeTab) {
+      localStorage.setItem('active_tab', activeTab);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const userRoleVal = localStorage.getItem('user_role');
@@ -619,6 +625,14 @@ const App = () => {
     // Check if the current role is verified on this device
     const initRole = localStorage.getItem('current_role') || 'demo';
     const isVerified = localStorage.getItem(`role_verified_${initRole}`) === 'true';
+    const hasAuth = !!localStorage.getItem('supabase_user_id') || !!localStorage.getItem('user_role');
+
+    // If device is already authenticated with Supabase account, preserve their current role and verification
+    if (hasAuth && initRole !== 'demo') {
+      localStorage.setItem(`role_verified_${initRole}`, 'true');
+      setUserRole(initRole);
+      return;
+    }
     
     // demo and mat_tran don't need PIN verification
     if (!isVerified && initRole !== 'mat_tran' && initRole !== 'demo') {
@@ -1395,9 +1409,19 @@ const App = () => {
 
         if (profile.role === 'ward_admin' || profile.role === 'super_admin') {
           localStorage.setItem('current_role', 'admin');
+          localStorage.setItem('role_verified_admin', 'true');
           setUserRole('admin');
         } else if (profile.role === 'tdp_leader') {
           localStorage.setItem('tdp_name', profile.tdp_name || 'Tổ dân phố');
+          const currentRoleSaved = localStorage.getItem('current_role');
+          if (!currentRoleSaved || currentRoleSaved === 'demo') {
+            localStorage.setItem('current_role', 'to_truong');
+            localStorage.setItem('role_verified_to_truong', 'true');
+            setUserRole('to_truong');
+          } else {
+            localStorage.setItem(`role_verified_${currentRoleSaved}`, 'true');
+            setUserRole(currentRoleSaved);
+          }
         }
 
         // Check key expiration for non-highest admins
