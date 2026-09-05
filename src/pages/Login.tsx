@@ -80,6 +80,7 @@ const Login = ({ onOfflineMode, onGuestMode }: LoginProps) => {
         localStorage.removeItem('guest_mode');
         localStorage.removeItem('guest_tenant_id');
         localStorage.removeItem('selected_tdp_user_id');
+        localStorage.setItem('welcome_setup_completed', 'true');
 
         // Fetch and store profile
         const profile = await db.getUserProfile(data.user.id);

@@ -1213,7 +1213,7 @@ const App = () => {
       logo_url: '',
       support_name: 'Lê Thị Dung',
       support_phone: '0912 083 018 - 0899 661 982',
-      welcome_setup_completed: 'false',
+      welcome_setup_completed: 'true',
       user_ward_id: '00000000-0000-0000-0000-000000000000'
     };
     

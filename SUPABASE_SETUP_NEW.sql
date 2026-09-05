@@ -125,12 +125,15 @@ CREATE TABLE IF NOT EXISTS ward_funds (
     household_id UUID REFERENCES households(id) ON DELETE CASCADE,
     ward_id UUID REFERENCES wards(id) ON DELETE SET NULL,
     year INTEGER NOT NULL,
-    fund_name TEXT NOT NULL,
-    amount BIGINT NOT NULL DEFAULT 0,
+    full_name TEXT,
+    dob TEXT,
+    address TEXT,
+    contributions JSONB DEFAULT '{}'::jsonb,
+    fund_name TEXT,
+    amount BIGINT DEFAULT 0,
     paid_at DATE DEFAULT CURRENT_DATE,
     note TEXT,
     household_name TEXT,
-    address TEXT,
     group_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -309,10 +312,11 @@ CREATE TABLE IF NOT EXISTS party_fees (
 
 -- 17. Bảng Cấu hình ứng dụng (app_config)
 CREATE TABLE IF NOT EXISTS app_config (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    key TEXT NOT NULL UNIQUE,
-    value JSONB NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (user_id, key)
 );
 
 -- 18. Khởi tạo Phường Quảng Giao mặc định
