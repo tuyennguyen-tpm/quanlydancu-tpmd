@@ -5524,40 +5524,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     <Printer size={16} /> In Thông báo dự kiến thu (Mẫu chuẩn)
                   </button>
 
-                  <button
-                    onClick={handleRollbackToAug15}
-                    title="Khôi phục dữ liệu thu về mốc chuẩn 15/08/2026 (Loại bỏ các hộ bị ghi nhận tự động nhầm và giữ nguyên các hộ đã thu thực tế trước 15/08)"
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: '#eff6ff',
-                      border: '1.5px solid #93c5fd',
-                      color: '#1d4ed8',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      height: 'auto',
-                      minHeight: '36px',
-                      fontSize: '0.85rem',
-                      boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dbeafe';
-                      e.currentTarget.style.borderColor = '#60a5fa';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#eff6ff';
-                      e.currentTarget.style.borderColor = '#93c5fd';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    <RefreshCw size={16} style={{ color: '#1d4ed8' }} /> Khôi phục về mốc 15/08/2026
-                  </button>
-
                   <button 
                     onClick={handlePrintFundsList}
                     style={{
