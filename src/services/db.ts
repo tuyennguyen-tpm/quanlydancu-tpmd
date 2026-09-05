@@ -31,8 +31,15 @@ const getSupabaseClient = () => {
     localKey = null;
   }
 
-  const rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://pxnvgoqmtydqxljtyinb.supabase.co';
-  const rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
+  let rawUrl = localUrl || import.meta.env.VITE_SUPABASE_URL || 'https://pxnvgoqmtydqxljtyinb.supabase.co';
+  let rawKey = localKey || import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
+
+  // Phòng thủ triệt để: Nếu URL từ Vercel Env hay bất kỳ đâu trỏ vào project cũ bị khóa thì ép dùng project mới
+  if (!rawUrl || rawUrl.includes('yvtmckpdpinipxyvphdm') || rawUrl.includes('zebrotq') || rawUrl.includes('pxnvgoqmtydqxljtiyinb')) {
+    rawUrl = 'https://pxnvgoqmtydqxljtyinb.supabase.co';
+    rawKey = 'sb_publishable_IlXMJqlHdpVgSKMBB1PCwQ_als-0lLf';
+  }
+
   const url = (rawUrl || '').trim();
   const key = (rawKey || '').trim().replace(/[\r\n\t]/g, '');
   if (url && key) {
