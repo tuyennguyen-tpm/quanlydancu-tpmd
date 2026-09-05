@@ -537,6 +537,65 @@ export const checkAndSeedUser = async (userId: string): Promise<void> => {
   }
 };
 
+
+// === HELPER: Parallel pagination fetch ===
+// Lấy count trước bằng HEAD request, sau đó tải tất cả các trang song song với Promise.all
+const fetchAllParallel = async <T>(
+  buildQuery: (selectOpts?: any) => any,
+  chunkSize = 1000
+): Promise<T[]> => {
+  if (!supabase) return [];
+  try {
+    // Bước 1: Lấy tổng số records bằng HEAD request
+    const countRes = await buildQuery({ count: 'exact', head: true });
+    const count = countRes?.count;
+
+    if (typeof count === 'number' && count > 0) {
+      // Bước 2: Tạo tất cả chunk queries và chạy song song
+      const chunks: Promise<any>[] = [];
+      for (let from = 0; from < count; from += chunkSize) {
+        const to = Math.min(from + chunkSize - 1, count - 1);
+        chunks.push(buildQuery().range(from, to));
+      }
+
+      const results = await Promise.all(chunks);
+      let allData: T[] = [];
+      for (const res of results) {
+        if (!res.error && Array.isArray(res.data)) {
+          allData.push(...res.data);
+        }
+      }
+      return allData;
+    }
+  } catch (err) {
+    console.warn('[DB] fetchAllParallel count query failed, falling back:', err);
+  }
+
+  // Fallback dự phòng nếu HEAD request không lấy được count
+  try {
+    const firstRes = await buildQuery().range(0, chunkSize - 1);
+    if (firstRes.error || !firstRes.data || firstRes.data.length === 0) {
+      return [];
+    }
+    let allData: T[] = [...firstRes.data];
+    if (firstRes.data.length === chunkSize) {
+      let from = chunkSize;
+      while (true) {
+        const res = await buildQuery().range(from, from + chunkSize - 1);
+        if (res.error || !res.data || res.data.length === 0) break;
+        allData.push(...res.data);
+        if (res.data.length < chunkSize) break;
+        from += chunkSize;
+      }
+    }
+    return allData;
+  } catch (err) {
+    console.error('[DB] fetchAllParallel fallback error:', err);
+    return [];
+  }
+};
+
+
 export const db = {
   // --- Ward Multi-tenancy & Key verification ---
   validateRegistrationKey: async (keyText: string): Promise<{ valid: boolean; role?: string; tdp_name?: string; ward_id?: string; message: string }> => {
@@ -743,36 +802,15 @@ export const db = {
   getHouseholds: async (): Promise<Household[]> => {
     if (supabase) {
       try {
-        let allData: any[] = [];
-        let from = 0;
-        const limit = 1000;
-        let hasMore = true;
-        let hasError = false;
-        
-        while (hasMore) {
-          let query = supabase.from('households').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
-          const tenantFilter = getTenantFilter();
-          if (tenantFilter) {
-            query = query.eq(tenantFilter.field, tenantFilter.value);
+        const tenantFilter = getTenantFilter();
+        const allData = await fetchAllParallel<Household>(
+          (opts) => {
+            let q = supabase!.from('households').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+            return q;
           }
-          const { data, error } = await query;
-          if (error) {
-            handleDbError('tải danh sách hộ dân', error);
-            hasError = true;
-            break;
-          }
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            if (data.length < limit) hasMore = false;
-            else from += limit;
-          } else {
-            hasMore = false;
-          }
-        }
-        
-        if (!hasError || allData.length > 0) {
-          return allData;
-        }
+        );
+        if (allData.length > 0) return allData;
       } catch (e) {
         console.error('Supabase getHouseholds error, falling back to local storage', e);
       }
@@ -906,34 +944,15 @@ export const db = {
   getResidents: async (): Promise<Resident[]> => {
     if (supabase) {
       try {
-        let allData: any[] = [];
-        let from = 0;
-        const limit = 1000;
-        let hasMore = true;
-        let hasError = false;
-        
-        while (hasMore) {
-          let query = supabase.from('residents').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
-          const tenantFilter = getTenantFilter();
-          if (tenantFilter) {
-            query = query.eq(tenantFilter.field, tenantFilter.value);
+        const tenantFilter = getTenantFilter();
+        const allData = await fetchAllParallel<any>(
+          (opts) => {
+            let q = supabase!.from('residents').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+            return q;
           }
-          const { data, error } = await query;
-          if (error) {
-            handleDbError('tải danh sách nhân khẩu', error);
-            hasError = true;
-            break;
-          }
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            if (data.length < limit) hasMore = false;
-            else from += limit;
-          } else {
-            hasMore = false;
-          }
-        }
-        
-        if (!hasError || allData.length > 0) {
+        );
+        if (allData.length > 0) {
           const currentYear = new Date().getFullYear();
           const mapped = allData.map((r: any) => {
             const dobYear = r.dob ? new Date(r.dob).getFullYear() : 0;
@@ -1089,49 +1108,26 @@ export const db = {
   getFinancialRecords: async (): Promise<FinancialRecord[]> => {
     if (supabase) {
       try {
-        let allData: any[] = [];
-        let from = 0;
-        const limit = 1000;
-        let hasMore = true;
-        let hasError = false;
-
-        while (hasMore) {
-          let query = supabase.from('financial_records').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
-          const tenantFilter = getTenantFilter();
-          if (tenantFilter) {
-            query = query.eq(tenantFilter.field, tenantFilter.value);
+        const tenantFilter = getTenantFilter();
+        const allData = await fetchAllParallel<any>(
+          (opts) => {
+            let q = supabase!.from('financial_records').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+            return q;
           }
-          const { data, error } = await query;
-          if (error) {
-            handleDbError('tải danh sách thu chi', error);
-            hasError = true;
-            break;
+        );
+        const localRecords = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
+        const localMap = new Map(localRecords.map(r => [r.id, r]));
+        const mergedData = allData.map((remote: any) => {
+          const local = localMap.get(remote.id);
+          let payerName = remote.payer || local?.payer || '';
+          if (!payerName && remote.description) {
+            const match = remote.description.match(/\[(?:Payer|NguoiNhan|Người nhận|Người nộp):\s*([^\]]+)\]/i);
+            if (match) payerName = match[1].trim();
           }
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            if (data.length < limit) hasMore = false;
-            else from += limit;
-          } else {
-            hasMore = false;
-          }
-        }
-        if (!hasError) {
-          const localRecords = getStorageItem<FinancialRecord[]>('financial_records', seedFinancialRecords);
-          const localMap = new Map(localRecords.map(r => [r.id, r]));
-          const mergedData = allData.map(remote => {
-            const local = localMap.get(remote.id);
-            let payerName = remote.payer || local?.payer || '';
-            if (!payerName && remote.description) {
-              const match = remote.description.match(/\[(?:Payer|NguoiNhan|Người nhận|Người nộp):\s*([^\]]+)\]/i);
-              if (match) payerName = match[1].trim();
-            }
-            return {
-              ...remote,
-              payer: payerName
-            };
-          });
-          return mergedData;
-        }
+          return { ...remote, payer: payerName };
+        });
+        return mergedData;
       } catch (e) {
         console.error('Supabase getFinancialRecords error, falling back to local storage', e);
       }
@@ -1383,7 +1379,7 @@ export const db = {
       try {
         // Không dùng .neq('id', 'CONFIG_PIN') vì cột id là UUID, không so sánh được với chuỗi text
         // Thay vào đó lọc bằng JavaScript sau khi nhận dữ liệu
-        let query = supabase.from('documents').select('*').order('uploaded_at', { ascending: false });
+        let query = supabase.from('documents').select('*').order('upload_date', { ascending: false });
         const tenantFilter = getTenantFilter();
         if (tenantFilter) {
           query = query.eq(tenantFilter.field, tenantFilter.value);
@@ -1762,33 +1758,15 @@ export const db = {
   getHouseholdFunds: async (): Promise<HouseholdFund[]> => {
     if (supabase) {
       try {
-        let allData: any[] = [];
-        let from = 0;
-        const limit = 1000;
-        let hasMore = true;
-        let hasError = false;
-
-        while (hasMore) {
-          let query = supabase.from('household_funds').select('*').order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
-          const tenantFilter = getTenantFilter();
-          if (tenantFilter) {
-            query = query.eq(tenantFilter.field, tenantFilter.value);
+        const tenantFilter = getTenantFilter();
+        const allData = await fetchAllParallel<HouseholdFund>(
+          (opts) => {
+            let q = supabase!.from('household_funds').select('*', opts).order('created_at', { ascending: true }).order('id', { ascending: true });
+            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+            return q;
           }
-          const { data, error } = await query;
-          if (error) {
-            handleDbError('tải danh sách đóng quỹ hộ dân', error);
-            hasError = true;
-            break;
-          }
-          if (data && data.length > 0) {
-            allData = [...allData, ...data];
-            if (data.length < limit) hasMore = false;
-            else from += limit;
-          } else {
-            hasMore = false;
-          }
-        }
-        if (!hasError) return allData;
+        );
+        return allData;
       } catch (e) {
         console.error('Supabase getHouseholdFunds error, falling back to local storage', e);
       }
@@ -2245,38 +2223,19 @@ export const db = {
   getWardFunds: async (year: number): Promise<WardFund[]> => {
     if (supabase) {
       try {
-        let allData: any[] = [];
-        let from = 0;
-        const limit = 1000;
-        let hasMore = true;
-        let hasError = false;
-
-        while (hasMore) {
-          let query = supabase.from('ward_funds').select('*').eq('year', year).order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, from + limit - 1);
-          const tenantFilter = getTenantFilter();
-          if (tenantFilter) {
-            query = query.eq(tenantFilter.field, tenantFilter.value);
+        const tenantFilter = getTenantFilter();
+        const allData = await fetchAllParallel<any>(
+          (opts) => {
+            let q = supabase!.from('ward_funds').select('*', opts).eq('year', year).order('created_at', { ascending: true }).order('id', { ascending: true });
+            if (tenantFilter) q = q.eq(tenantFilter.field, tenantFilter.value);
+            return q;
           }
-          const { data, error } = await query;
-          if (error) {
-            handleDbError('lấy danh sách quỹ phường', error);
-            hasError = true;
-            break;
-          }
-          if (data && data.length > 0) {
-            const normalized = data.map((d: any) => ({
-              ...d,
-              full_name: (d.full_name || d.household_name || '').trim(),
-              household_name: (d.household_name || d.full_name || '').trim()
-            }));
-            allData = [...allData, ...normalized];
-            if (data.length < limit) hasMore = false;
-            else from += limit;
-          } else {
-            hasMore = false;
-          }
-        }
-        if (!hasError) return allData;
+        );
+        return allData.map((d: any) => ({
+          ...d,
+          full_name: (d.full_name || d.household_name || '').trim(),
+          household_name: (d.household_name || d.full_name || '').trim()
+        }));
       } catch (e) {
         handleDbError('lấy danh sách quỹ phường', e);
       }
