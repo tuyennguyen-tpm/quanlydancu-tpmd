@@ -899,14 +899,13 @@ export const db = {
     if (supabase) {
       try {
         const { error } = await supabase.from('households').delete().eq('id', id);
-        if (error) handleDbError('xóa hộ dân', error);
-        if (!error) {
-          await appCache.invalidate('households');
-          await appCache.invalidate('residents');
-          return true;
+        if (error) {
+          handleDbError('xóa hộ dân', error);
+          throw new Error(error.message || 'Lỗi khi xóa hộ dân trên máy chủ');
         }
-      } catch (e) {
-        console.error('Supabase deleteHousehold error, falling back to local storage', e);
+      } catch (e: any) {
+        console.error('Supabase deleteHousehold error:', e);
+        throw e;
       }
     }
     const households = getStorageItem<Household[]>('households', seedHouseholds);
@@ -1060,13 +1059,13 @@ export const db = {
     if (supabase) {
       try {
         const { error } = await supabase.from('residents').delete().eq('id', id);
-        if (error) handleDbError('xóa nhân khẩu', error);
-        if (!error) {
-          await appCache.invalidate('residents');
-          return true;
+        if (error) {
+          handleDbError('xóa nhân khẩu', error);
+          throw new Error(error.message || 'Lỗi khi xóa nhân khẩu trên máy chủ');
         }
-      } catch (e) {
-        console.error('Supabase deleteResident error, falling back to local storage', e);
+      } catch (e: any) {
+        console.error('Supabase deleteResident error:', e);
+        throw e;
       }
     }
     const residents = getStorageItem<Resident[]>('residents', seedResidents);

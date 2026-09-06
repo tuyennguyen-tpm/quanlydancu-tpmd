@@ -430,11 +430,11 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
       const [rList, hList] = await Promise.all([
-        db.getResidents(),
-        db.getHouseholds()
+        db.getResidents(forceRefresh),
+        db.getHouseholds(forceRefresh)
       ]);
       setResidents(rList);
       setHouseholds(hList);
@@ -705,16 +705,23 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     const wasHead = residentToDelete?.is_head && residentToDelete.household_id;
 
     if (window.confirm('Bạn có chắc chắn muốn xóa nhân khẩu này khỏi hệ thống?')) {
+      // 1. Cập nhật UI tức thì (Optimistic update)
+      setResidents(prev => prev.filter(r => r.id !== id));
+
       try {
         await db.deleteResident(id);
         if (wasHead && residentToDelete) {
           await db.autoReassignHeadOfHousehold(residentToDelete.household_id, residentToDelete.id);
         }
         showToast('Xóa nhân khẩu thành công!', 'success');
-        loadData();
+        await loadData(true);
         window.dispatchEvent(new CustomEvent('db-changed'));
-      } catch (e) {
-        showToast('Lỗi xóa nhân khẩu!', 'danger');
+      } catch (e: any) {
+        // Khôi phục lại nếu có lỗi
+        if (residentToDelete) {
+          setResidents(prev => [...prev, residentToDelete]);
+        }
+        showToast(`Lỗi xóa nhân khẩu: ${e?.message || e}`, 'danger');
       }
     }
     setActiveMenuId(null);

@@ -266,11 +266,11 @@ const Households = () => {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
       const [hList, rList] = await Promise.all([
-        db.getHouseholds(),
-        db.getResidents()
+        db.getHouseholds(forceRefresh),
+        db.getResidents(forceRefresh)
       ]);
       setHouseholds(hList);
       setResidents(rList);
@@ -308,13 +308,16 @@ const Households = () => {
     const handleStorageChange = () => {
       setTdpName(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn');
     };
+    const handleDbChanged = () => {
+      loadData();
+    };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('tdp-name-changed', handleStorageChange);
-    window.addEventListener('db-changed', loadData);
+    window.addEventListener('db-changed', handleDbChanged);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tdp-name-changed', handleStorageChange);
-      window.removeEventListener('db-changed', loadData);
+      window.removeEventListener('db-changed', handleDbChanged);
     };
   }, []);
 
@@ -1425,13 +1428,15 @@ const Households = () => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa hộ dân này? Hành động này sẽ đồng thời xóa hoặc giải liên kết tất cả nhân khẩu thuộc hộ này.')) {
+      setHouseholds(prev => prev.filter(h => h.id !== id));
       try {
         await db.deleteHousehold(id);
         showToast('Xóa hộ dân thành công!', 'success');
-        loadData();
+        await loadData(true);
         window.dispatchEvent(new CustomEvent('db-changed'));
-      } catch (e) {
-        showToast('Không thể xóa hộ dân!', 'danger');
+      } catch (e: any) {
+        await loadData(true);
+        showToast(`Không thể xóa hộ dân: ${e?.message || e}`, 'danger');
       }
     }
     setActiveMenuId(null);

@@ -103,31 +103,44 @@ export const appCache = {
    * Xóa cache của 1 key hoặc tất cả keys bắt đầu bằng prefix
    */
   invalidate: async (prefixOrKey: string): Promise<void> => {
+    const cleanPrefix = (prefixOrKey || '').replace('*', '');
+
+    // 1. Xóa trong Memory Cache (L1)
     for (const k of Array.from(memoryCache.keys())) {
-      if (k === prefixOrKey || k.startsWith(prefixOrKey)) {
+      if (!cleanPrefix || k === cleanPrefix || k.startsWith(cleanPrefix)) {
         memoryCache.delete(k);
       }
     }
 
+    // 2. Xóa trong IndexedDB (L2) và chờ transaction hoàn tất
     try {
       const db = await getIndexedDB();
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      if (prefixOrKey.includes('*')) {
-        const p = prefixOrKey.replace('*', '');
+      await new Promise<void>((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+        tx.onabort = () => resolve();
+
+        if (!cleanPrefix) {
+          store.clear();
+          return;
+        }
+
         const req = store.openCursor();
         req.onsuccess = () => {
           const cursor = req.result;
           if (cursor) {
-            if (String(cursor.key).startsWith(p)) {
+            const keyStr = String(cursor.key);
+            if (keyStr === cleanPrefix || keyStr.startsWith(cleanPrefix)) {
               cursor.delete();
             }
             cursor.continue();
           }
         };
-      } else {
-        store.delete(prefixOrKey);
-      }
+        req.onerror = () => resolve();
+      });
     } catch {
       // Ignore
     }
