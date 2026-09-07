@@ -2937,53 +2937,210 @@ const WardFunds = () => {
     }
   };
 
-  // ─── Xuất Excel tổng hợp: Quỹ Phường + Quỹ TDP ────────────────────────────
+  // ─── Xuất Excel tổng hợp: Quỹ Phường + Quỹ TDP (CHUẨN 1.251 HỘ GIA ĐÌNH) ────────────────
   const handleExportCombinedReport = async () => {
-    if (filteredFunds.length === 0) {
-      showToast('Danh sách trống, không thể xuất báo cáo!', 'warning');
-      return;
-    }
-
     try {
       const workbook = new ExcelJS.Workbook();
       const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
 
-      // ── Helper: Xây dựng 1 worksheet tổng hợp ─────────────────────────────
+      // ── Xây dựng Master List chuẩn 1.251 Hộ gia đình của tổ dân phố ──
+      type CombinedHhRow = {
+        householdId: string;
+        headName: string;
+        dob: string;
+        groupName: string;
+        address: string;
+        memberCount: number;
+        isPaidTdp: boolean;
+        totalPaidTdp: number;
+        totalPaidWard: number;
+        note: string;
+        fundData: { [fundName: string]: { expected: number; actual: number; date: string } };
+        members: WardFund[];
+      };
+
+      const hhMap = new Map<string, CombinedHhRow>();
+
+      if (households && households.length > 0) {
+        households.forEach(hh => {
+          let headName = '';
+          let dob = '';
+          if (hh.head_of_household_id) {
+            const headRes = residentByIdMap.get(hh.head_of_household_id);
+            if (headRes) {
+              headName = headRes.full_name;
+              dob = headRes.dob || '';
+            }
+          }
+          if (!headName) {
+            const hhMembers = residentsByHouseholdIdMap.get(hh.id) || [];
+            const headMember = hhMembers.find(r => r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) || hhMembers[0];
+            if (headMember) {
+              headName = headMember.full_name;
+              dob = headMember.dob || '';
+            }
+          }
+          if (!headName && hh.martyr_name) headName = hh.martyr_name;
+
+          hhMap.set(hh.id, {
+            householdId: hh.id,
+            headName: headName || `Hộ số ${hh.household_number || hh.id.slice(0, 8)}`,
+            dob,
+            groupName: (hh.self_management_group || 'Chưa phân tổ').trim(),
+            address: hh.address || '',
+            memberCount: (residentsByHouseholdIdMap.get(hh.id) || []).length || 1,
+            isPaidTdp: false,
+            totalPaidTdp: 0,
+            totalPaidWard: 0,
+            note: '',
+            fundData: {},
+            members: []
+          });
+        });
+      }
+
+      // Khớp dữ liệu các khoản thu Phường của các nhân khẩu vào từng Hộ gia đình
+      funds.forEach(f => {
+        if (Number(f.year) !== Number(selectedYear)) return;
+
+        const hhInfo = fundMetaMap.get(f.id) || findMatchingHouseholdForWardFund(f);
+        const householdId = hhInfo.householdId;
+
+        if (householdId && hhMap.has(householdId)) {
+          const item = hhMap.get(householdId)!;
+          item.members.push(f);
+          if (!item.headName && hhInfo.headName) item.headName = hhInfo.headName;
+          if (!item.address && (hhInfo.address || f.address)) item.address = hhInfo.address || f.address;
+          if (!item.dob && f.dob) item.dob = f.dob;
+          if (!item.groupName || item.groupName === 'Chưa phân tổ') {
+            item.groupName = (hhInfo.groupName || getGroupOfFundRecord(f) || 'Chưa phân tổ').trim();
+          }
+        } else if (householdId) {
+          // Fallback cho trường hợp hộ chưa có trong bảng households
+          if (!hhMap.has(householdId)) {
+            hhMap.set(householdId, {
+              householdId,
+              headName: hhInfo.headName || f.full_name,
+              dob: f.dob || '',
+              groupName: (hhInfo.groupName || getGroupOfFundRecord(f) || 'Chưa phân tổ').trim(),
+              address: hhInfo.address || f.address || '',
+              memberCount: 1,
+              isPaidTdp: false,
+              totalPaidTdp: 0,
+              totalPaidWard: 0,
+              note: '',
+              fundData: {},
+              members: [f]
+            });
+          } else {
+            hhMap.get(householdId)!.members.push(f);
+          }
+        }
+      });
+
+      if (hhMap.size === 0) {
+        showToast('Không có dữ liệu hộ gia đình để xuất!', 'warning');
+        return;
+      }
+
+      // Tổng hợp số liệu thu nộp cho từng hộ gia đình
+      const allHouseholdsList: CombinedHhRow[] = [];
+
+      hhMap.forEach(hh => {
+        let sumExpWard = 0;
+        let sumActWard = 0;
+
+        activeFunds.forEach(fund => {
+          let fExp = 0;
+          let fAct = 0;
+          let latestDate = '';
+
+          hh.members.forEach(m => {
+            const compExp = computedExpectedMap.get(m.id) || {};
+            const exp = compExp[fund.name] ?? (m.contributions?.[fund.name]?.expected ?? 0);
+            const act = m.contributions?.[fund.name]?.actual || 0;
+            const dt = m.contributions?.[fund.name]?.date || '';
+            fExp += exp;
+            fAct += act;
+            if (dt && (!latestDate || dt > latestDate)) latestDate = dt;
+          });
+
+          const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
+          if (fExp === 0 && isHouseholdScope) {
+            fExp = fund.target;
+          }
+
+          hh.fundData[fund.name] = {
+            expected: fExp,
+            actual: fAct,
+            date: latestDate
+          };
+          sumExpWard += fExp;
+          sumActWard += fAct;
+        });
+
+        hh.totalPaidWard = sumActWard;
+
+        // Quỹ TDP
+        const hhTdpFunds = householdFunds.filter(hf => hf.household_id === hh.householdId && Number(hf.year) === Number(selectedYear));
+        hh.totalPaidTdp = hhTdpFunds.reduce((s, f) => s + (f.amount || 0), 0);
+        const hasTdpPaid = hh.totalPaidTdp > 0;
+
+        // Quỹ Phường đã thu
+        const isWardMarkedPaid = hh.members.some(m => (m as any).note === 'Đã nộp đủ đợt tập trung');
+        const hasWardPaid = isWardMarkedPaid || sumActWard > 0;
+
+        // Biên lai gộp
+        const SAVE_KEY_COMBINED = getCanonicalHouseholdReceiptKey(hh.householdId, selectedYear, 'combined');
+        const hasSavedReceipt = Boolean(localStorage.getItem(SAVE_KEY_COMBINED));
+
+        hh.isPaidTdp = hasTdpPaid || hasWardPaid || hasSavedReceipt;
+        hh.note = hh.isPaidTdp ? 'Đã thu' : 'Chưa thu';
+
+        allHouseholdsList.push(hh);
+      });
+
+      // Lọc theo Cụm/Tổ nếu người dùng chọn lọc
+      const scopedHouseholds = groupFilter === 'all'
+        ? allHouseholdsList
+        : allHouseholdsList.filter(item => {
+            const grp = (item.groupName || '').trim().toLowerCase();
+            const gFilter = groupFilter.trim().toLowerCase();
+            return grp === gFilter || grp.includes(gFilter) || gFilter.includes(grp);
+          });
+
+      // ── Helper: Xây dựng 1 worksheet tổng hợp HỘ GIA ĐÌNH ─────────────────
       const buildCombinedSheet = (
         ws: ExcelJS.Worksheet,
-        sheetFunds: typeof filteredFunds,
+        sheetHouseholds: typeof scopedHouseholds,
         sheetTitle: string,
         isSummary: boolean
       ) => {
-        // Số cột: STT + HọTên + NămSinh + Cụm/Tổ + ĐịaChỉ
-        //        + (PhảiNộp + ThựcNộp + NgàyNộp) * số quỹ phường
-        //        + QuỹTDP + GhiChú
         const fundColCount  = activeFunds.length * 3;
-        const totalCols     = 5 + fundColCount + 2; // +QuỹTDP +GhiChú
+        const totalCols     = 5 + fundColCount + 2; // STT + HọTên + NămSinh + Cụm/Tổ + ĐịaChỉ + CácQuỹ*3 + QuỹTDP + GhiChú
         const lastColLetter = ws.getColumn(totalCols).letter;
-        const tdpColIndex   = 5 + fundColCount + 1; // vị trí cột Quỹ TDP
-        const noteColIndex  = 5 + fundColCount + 2; // vị trí cột Ghi chú
+        const tdpColIndex   = 5 + fundColCount + 1;
+        const noteColIndex  = 5 + fundColCount + 2;
 
-        // ── Tiêu đề ──
+        // Tiêu đề
         ws.getCell('A1').value = sheetTitle;
         ws.getCell('A1').font = { name: 'Segoe UI', size: 15, bold: true, color: { argb: 'FF15803D' } };
         ws.mergeCells(`A1:${lastColLetter}1`);
         ws.getRow(1).height = 30;
 
-        ws.getCell('A2').value = `Tổ dân phố: ${tdpName} — Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} — Năm: ${selectedYear}`;
+        ws.getCell('A2').value = `Tổ dân phố: ${tdpName} — Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} — Năm: ${selectedYear} (Tổng số: ${sheetHouseholds.length} hộ gia đình)`;
         ws.getCell('A2').font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
         ws.mergeCells(`A2:${lastColLetter}2`);
         ws.getRow(2).height = 20;
 
-        // ── Dòng ghi chú quan trọng ──
-        ws.getCell('A3').value = '⚠️ Cột "Quỹ TDP": ✓ = Hộ đã nộp ít nhất 1 khoản quỹ phường trong năm (dùng làm cơ sở xác nhận đã thu quỹ TDP).';
-        ws.getCell('A3').font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FFB45309' } };
-        ws.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
+        ws.getCell('A3').value = '📌 Danh sách thu nộp được lập theo HỘ GIA ĐÌNH (Chuẩn 1.251 hộ trên địa bàn). Cột "Quỹ TDP": ✓ = Đã thu quỹ TDP theo hộ.';
+        ws.getCell('A3').font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF0369A1' } };
+        ws.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
         ws.mergeCells(`A3:${lastColLetter}3`);
         ws.getRow(3).height = 18;
 
-        // ── Header nhóm cột (dòng 4) ──
-        ws.getCell('A4').value = 'Thông tin cá nhân';
+        // Dòng 4: Header nhóm cột
+        ws.getCell('A4').value = 'Thông tin Hộ gia đình';
         ws.mergeCells('A4:E4');
 
         let currentColNum = 6;
@@ -2995,7 +3152,6 @@ const WardFunds = () => {
           currentColNum += 3;
         });
 
-        // Header cột Quỹ TDP và Ghi chú
         ws.getCell(ws.getColumn(tdpColIndex).letter + '4').value = '🏘️ Quỹ TDP';
         ws.getCell(ws.getColumn(noteColIndex).letter + '4').value = 'Ghi chú';
 
@@ -3006,14 +3162,13 @@ const WardFunds = () => {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
           cell.alignment = { vertical: 'middle', horizontal: 'center' };
         });
-        // Riêng cột Quỹ TDP dùng màu xanh lá khác biệt
         const tdpHeaderCell = ws.getCell(ws.getColumn(tdpColIndex).letter + '4');
         tdpHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF166534' } };
 
-        // ── Sub-headers (dòng 5) ──
-        const subHeaders = ['STT', 'Họ và tên', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ'];
+        // Dòng 5: Sub-headers
+        const subHeaders = ['STT', 'Họ và tên chủ hộ', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ (Số nhà / Ngõ)'];
         activeFunds.forEach(() => { subHeaders.push('Phải nộp (đ)', 'Thực nộp (đ)', 'Ngày nộp'); });
-        subHeaders.push('Đã thu?', 'Chú thích');
+        subHeaders.push('Đã thu?', 'Ghi chú');
 
         const subHeaderRow = ws.addRow(subHeaders);
         subHeaderRow.height = 24;
@@ -3022,33 +3177,30 @@ const WardFunds = () => {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
           cell.alignment = { vertical: 'middle', horizontal: 'center' };
           cell.border = { bottom: { style: 'medium', color: { argb: 'FF3B82F6' } } };
-          // Cột Quỹ TDP dùng màu xanh lá nhạt
           if (colIdx === tdpColIndex) {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
             cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF166534' } };
           }
         });
 
-        // ── Sắp xếp dữ liệu theo thứ tự tổ ──
-        const sortedFunds = [...sheetFunds].sort((a, b) => {
-          const gA = getGroupOfFundRecord(a) || '';
-          const gB = getGroupOfFundRecord(b) || '';
-          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
-          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+        // Sắp xếp danh sách theo thứ tự tổ, sau đó tên chủ hộ A-Z
+        const sortedHouseholds = [...sheetHouseholds].sort((a, b) => {
+          const gA = a.groupName || '';
+          const gB = b.groupName || '';
+          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase() || gA.toLowerCase().includes(g.toLowerCase()));
+          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase() || gB.toLowerCase().includes(g.toLowerCase()));
           const rankA = idxA !== -1 ? idxA : 999;
           const rankB = idxB !== -1 ? idxB : 999;
           if (rankA !== rankB) return rankA - rankB;
-          return (a.full_name || '').toLowerCase().localeCompare((b.full_name || '').toLowerCase(), 'vi');
+          return a.headName.localeCompare(b.headName, 'vi');
         });
 
-        // ── Dữ liệu ──
         let currentGroup = '';
-        let sttCounter   = 0;
+        let sttCounter = 0;
 
-        sortedFunds.forEach(item => {
-          const itemGroup = getGroupOfFundRecord(item) || 'Chưa phân nhóm';
+        sortedHouseholds.forEach(hh => {
+          const itemGroup = hh.groupName || 'Chưa phân nhóm';
 
-          // Dòng phân nhóm (chỉ ở sheet tổng hợp)
           if (isSummary && itemGroup !== currentGroup) {
             currentGroup = itemGroup;
             const gRow = ws.addRow([`── ${currentGroup.toUpperCase()} ──`]);
@@ -3063,33 +3215,25 @@ const WardFunds = () => {
 
           sttCounter++;
 
-          // Xác định đã thu quỹ TDP: hộ nào có thực nộp > 0 ở BẤT KỲ quỹ phường nào
-          const hasAnyPayment = activeFunds.some(fund => {
-            const contrib = item.contributions?.[fund.name];
-            return contrib && (contrib.actual || 0) > 0;
-          });
-
           const rowVals: (string | number)[] = [
             sttCounter,
-            item.full_name || '',
-            formatDateVN(item.dob),
+            hh.headName || '',
+            formatDateVN(hh.dob),
             itemGroup,
-            item.address || ''
+            hh.address || ''
           ];
 
           activeFunds.forEach(fund => {
-            const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+            const data = hh.fundData[fund.name] || { expected: 0, actual: 0, date: '' };
             rowVals.push(
-              contrib.expected || fund.target,
-              contrib.actual || 0,
-              formatDateVN(contrib.date) || ''
+              data.expected,
+              data.actual,
+              formatDateVN(data.date) || ''
             );
           });
 
-          // Cột Quỹ TDP
-          rowVals.push(hasAnyPayment ? '✓ Đã thu' : '');
-          // Cột Ghi chú
-          rowVals.push(item.note || '');
+          rowVals.push(hh.isPaidTdp ? '✓ Đã thu' : 'Chưa thu');
+          rowVals.push(hh.note || '');
 
           const r = ws.addRow(rowVals);
           r.height = 20;
@@ -3099,47 +3243,38 @@ const WardFunds = () => {
             } else if (colIndex >= 6 && colIndex < tdpColIndex) {
               const offset = (colIndex - 6) % 3;
               if (offset === 2) {
-                // Ngày nộp
                 cell.alignment = { horizontal: 'center', vertical: 'middle' };
               } else {
-                // Số tiền
                 cell.numFmt = '#,##0';
                 cell.alignment = { horizontal: 'right', vertical: 'middle' };
               }
             } else if (colIndex === tdpColIndex) {
-              // Cột Quỹ TDP
               cell.alignment = { horizontal: 'center', vertical: 'middle' };
-              cell.font = { name: 'Segoe UI', size: 10, bold: hasAnyPayment, color: { argb: hasAnyPayment ? 'FF166534' : 'FFEF4444' } };
-              if (hasAnyPayment) {
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
-              }
+              cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: hh.isPaidTdp ? 'FF166534' : 'FFDC2626' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: hh.isPaidTdp ? 'FFF0FDF4' : 'FFFEF2F2' } };
             } else {
               cell.alignment = { horizontal: 'left', vertical: 'middle' };
             }
           });
         });
 
-        // ── Dòng tổng cộng ──
+        // Dòng tổng cộng
         const totalRowVals: (string | number)[] = ['TỔNG CỘNG', '', '', '', ''];
         activeFunds.forEach(fund => {
-          const sumExpected = sheetFunds.reduce((sum, f) => {
-            const exp = f.contributions?.[fund.name]?.expected;
-            return sum + (exp !== undefined && exp > 0 ? exp : fund.target);
-          }, 0);
-          const sumActual = sheetFunds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
+          const sumExpected = sortedHouseholds.reduce((sum, hh) => sum + (hh.fundData[fund.name]?.expected || 0), 0);
+          const sumActual = sortedHouseholds.reduce((sum, hh) => sum + (hh.fundData[fund.name]?.actual || 0), 0);
           totalRowVals.push(sumExpected, sumActual, '');
         });
-        // Tổng đã thu quỹ TDP
-        const countPaid = sheetFunds.filter(item =>
-          activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0)
-        ).length;
-        totalRowVals.push(`${countPaid} / ${sheetFunds.length} hộ`, '');
+
+        const countPaid = sortedHouseholds.filter(hh => hh.isPaidTdp).length;
+        totalRowVals.push(`${countPaid} / ${sortedHouseholds.length} hộ`, '');
 
         const totalRow = ws.addRow(totalRowVals);
         ws.mergeCells(`A${totalRow.number}:E${totalRow.number}`);
         totalRow.height = 24;
         totalRow.getCell(1).font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FF15803D' } };
         totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
         let curCellIndex2 = 6;
         activeFunds.forEach(() => {
           [curCellIndex2, curCellIndex2 + 1].forEach(colIdx => {
@@ -3150,11 +3285,12 @@ const WardFunds = () => {
           });
           curCellIndex2 += 3;
         });
+
         const tdpTotalCell = totalRow.getCell(tdpColIndex);
         tdpTotalCell.font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FF166534' } };
         tdpTotalCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        // ── Viền và gridlines ──
+        // Viền các ô
         ws.eachRow((row, rowNum) => {
           if (rowNum >= 4) {
             row.eachCell(cell => {
@@ -3170,58 +3306,61 @@ const WardFunds = () => {
           }
         });
 
-        // ── Độ rộng cột ──
+        // Độ rộng cột
         ws.columns.forEach((col, idx) => {
           if (idx === 0) col.width = 6;       // STT
-          else if (idx === 1) col.width = 26; // Họ tên
+          else if (idx === 1) col.width = 28; // Họ tên chủ hộ
           else if (idx === 2) col.width = 12; // Năm sinh
           else if (idx === 3) col.width = 16; // Cụm/Tổ
-          else if (idx === 4) col.width = 26; // Địa chỉ
+          else if (idx === 4) col.width = 28; // Địa chỉ
           else if (idx < totalCols - 2) {
-            const mod = (idx - 5) % 3;
-            col.width = mod === 2 ? 14 : 14;  // Số tiền / Ngày nộp
-          } else if (idx === totalCols - 2) col.width = 14; // Quỹ TDP
-          else col.width = 20; // Ghi chú
+            col.width = 14;
+          } else if (idx === totalCols - 2) col.width = 16; // Quỹ TDP
+          else col.width = 22; // Ghi chú
         });
       };
 
-      // ── Sheet 1: Tổng hợp ──
-      const summarySheet = workbook.addWorksheet('📋 Tổng hợp TDP+Phường');
+      // Sheet 1: Tổng hợp toàn bộ 1.251 hộ
+      const summarySheet = workbook.addWorksheet('📋 Tổng hợp TDP+Phường (Hộ)');
       buildCombinedSheet(
         summarySheet,
-        filteredFunds,
-        `TỔNG HỢP THU QUỸ PHƯỜNG & QUỸ TỔ DÂN PHỐ NĂM ${selectedYear}`,
+        scopedHouseholds,
+        `TỔNG HỢP THU QUỸ PHƯỜNG & QUỸ TỔ DÂN PHỐ NĂM ${selectedYear} (THEO HỘ GIA ĐÌNH)`,
         true
       );
 
-      // ── Sheet 2+: Theo từng Tổ/Cụm ──
+      // Sheet 2+: Theo từng Cụm / Tổ
       groups.forEach(groupName => {
-        const groupFunds = filteredFunds.filter(f => {
-          const grp = getGroupOfFundRecord(f);
-          return grp.trim().toLowerCase() === groupName.trim().toLowerCase();
+        const groupHh = scopedHouseholds.filter(hh => {
+          const grp = (hh.groupName || '').trim().toLowerCase();
+          const gLower = groupName.trim().toLowerCase();
+          return grp === gLower || grp.includes(gLower) || gLower.includes(grp);
         });
-        if (groupFunds.length > 0) {
+        if (groupHh.length > 0) {
           const safeSheetName = groupName.replace(/[\\/*?:[\]]/g, '').slice(0, 31);
           const groupSheet = workbook.addWorksheet(safeSheetName);
           buildCombinedSheet(
             groupSheet,
-            groupFunds,
+            groupHh,
             `THU QUỸ PHƯỜNG & QUỸ TDP NĂM ${selectedYear} — ${groupName.toUpperCase()}`,
             false
           );
         }
       });
 
-      // ── Sheet cho hộ chưa phân nhóm (nếu có) ──
-      const unassignedFunds2 = filteredFunds.filter(f => {
-        const grp = getGroupOfFundRecord(f);
-        return !groups.some(g => g.trim().toLowerCase() === grp.trim().toLowerCase());
+      // Sheet chưa phân nhóm nếu có
+      const unassignedHh = scopedHouseholds.filter(hh => {
+        const grp = (hh.groupName || '').trim().toLowerCase();
+        return !groups.some(g => {
+          const gLower = g.trim().toLowerCase();
+          return grp === gLower || grp.includes(gLower) || gLower.includes(grp);
+        });
       });
-      if (unassignedFunds2.length > 0) {
+      if (unassignedHh.length > 0) {
         const unassignedSheet = workbook.addWorksheet('Chưa phân nhóm');
         buildCombinedSheet(
           unassignedSheet,
-          unassignedFunds2,
+          unassignedHh,
           `THU QUỸ PHƯỜNG & QUỸ TDP NĂM ${selectedYear} — CHƯA PHÂN NHÓM`,
           false
         );
@@ -3231,61 +3370,189 @@ const WardFunds = () => {
       const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link   = document.createElement('a');
       link.href     = URL.createObjectURL(blob);
-      link.download = `Tong_Hop_Quy_Phuong_va_TDP_${selectedYear}.xlsx`;
+      link.download = `Tong_Hop_Quy_Phuong_va_TDP_${selectedYear}_Theo_Ho.xlsx`;
       link.click();
-      showToast('Đã xuất file Excel tổng hợp Quỹ Phường + TDP thành công!', 'success');
+      showToast(`Đã xuất file Excel tổng hợp theo Hộ thành công (${scopedHouseholds.length} hộ)!`, 'success');
     } catch (e) {
       showToast('Lỗi khi xuất file Excel tổng hợp!', 'danger');
       console.error(e);
     }
   };
 
-  // ─── Xuất Excel chuyên biệt TDP: Danh sách Hộ ĐÃ ĐÓNG và CHƯA ĐÓNG ─────────
+  // ─── Xuất Excel chuyên biệt TDP: Danh sách Hộ ĐÃ ĐÓNG và CHƯA ĐÓNG (CHUẨN 1.251 HỘ GIA ĐÌNH) ─────────
   const handleExportTDPStatusReport = async () => {
-    // Tự động lấy toàn bộ danh sách năm đã chọn để không bị ảnh hưởng bởi ô lọc trạng thái
-    const targetFunds = groupFilter === 'all'
-      ? funds
-      : funds.filter(f => (getGroupOfFundRecord(f) || '').trim().toLowerCase() === groupFilter.trim().toLowerCase());
-
-    if (targetFunds.length === 0) {
-      showToast('Danh sách năm nay trống, không thể xuất báo cáo!', 'warning');
-      return;
-    }
-
     try {
       const workbook = new ExcelJS.Workbook();
       const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
 
-      // Phân tách 2 nhóm
-      const paidList: WardFund[] = [];
-      const unpaidList: WardFund[] = [];
+      // Gom và chuẩn hóa danh sách các HỘ GIA ĐÌNH thực tế (1.251 hộ gia đình)
+      type HHReportItem = {
+        householdId: string;
+        headName: string;
+        dob: string;
+        groupName: string;
+        address: string;
+        isPaid: boolean;
+        totalPaidTdp: number;
+        totalPaidWard: number;
+        note: string;
+        members: WardFund[];
+      };
 
-      targetFunds.forEach(item => {
-        const hasPaid = activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0);
-        if (hasPaid) {
-          paidList.push(item);
-        } else {
-          unpaidList.push(item);
+      const groupMap = new Map<string, HHReportItem>();
+
+      // 1. Khởi tạo Master List từ danh sách households trong CSDL (chuẩn 1.251 hộ)
+      if (households && households.length > 0) {
+        households.forEach(hh => {
+          let headName = '';
+          let dob = '';
+          if (hh.head_of_household_id) {
+            const headRes = residentByIdMap.get(hh.head_of_household_id);
+            if (headRes) {
+              headName = headRes.full_name;
+              dob = headRes.dob || '';
+            }
+          }
+          if (!headName) {
+            const hhMembers = residentsByHouseholdIdMap.get(hh.id) || [];
+            const headMember = hhMembers.find(r => r.is_head || (r.relationship_with_head && r.relationship_with_head.toLowerCase().trim() === 'chủ hộ')) || hhMembers[0];
+            if (headMember) {
+              headName = headMember.full_name;
+              dob = headMember.dob || '';
+            }
+          }
+          if (!headName && hh.martyr_name) headName = hh.martyr_name;
+
+          groupMap.set(hh.id, {
+            householdId: hh.id,
+            headName: headName || `Hộ số ${hh.household_number || hh.id.slice(0, 8)}`,
+            dob,
+            groupName: (hh.self_management_group || 'Chưa phân tổ').trim(),
+            address: hh.address || '',
+            isPaid: false,
+            totalPaidTdp: 0,
+            totalPaidWard: 0,
+            note: '',
+            members: []
+          });
+        });
+      }
+
+      // 2. Gán các nhân khẩu từ Quỹ Phường vào từng Hộ tương ứng
+      funds.forEach(f => {
+        if (Number(f.year) !== Number(selectedYear)) return;
+
+        const hhInfo = fundMetaMap.get(f.id) || findMatchingHouseholdForWardFund(f);
+        const householdId = hhInfo.householdId;
+
+        if (householdId && groupMap.has(householdId)) {
+          const item = groupMap.get(householdId)!;
+          item.members.push(f);
+          if (!item.headName && hhInfo.headName) item.headName = hhInfo.headName;
+          if (!item.address && (hhInfo.address || f.address)) item.address = hhInfo.address || f.address;
+          if (!item.dob && f.dob) item.dob = f.dob;
+          if (!item.groupName || item.groupName === 'Chưa phân tổ') {
+            item.groupName = (hhInfo.groupName || getGroupOfFundRecord(f) || 'Chưa phân tổ').trim();
+          }
+        } else if (householdId) {
+          // Fallback nếu có hộ ngoài bảng households
+          if (!groupMap.has(householdId)) {
+            groupMap.set(householdId, {
+              householdId,
+              headName: hhInfo.headName || f.full_name,
+              dob: f.dob || '',
+              groupName: (hhInfo.groupName || getGroupOfFundRecord(f) || 'Chưa phân tổ').trim(),
+              address: hhInfo.address || f.address || '',
+              isPaid: false,
+              totalPaidTdp: 0,
+              totalPaidWard: 0,
+              note: '',
+              members: [f]
+            });
+          } else {
+            groupMap.get(householdId)!.members.push(f);
+          }
         }
       });
 
-      // Hàm sắp xếp theo thứ tự tổ trong cài đặt, sau đó theo tên A-Z
-      const sortFundList = (list: WardFund[]) => {
+      if (groupMap.size === 0) {
+        showToast('Không tìm thấy dữ liệu hộ gia đình nào!', 'warning');
+        return;
+      }
+
+      // 3. Hoàn thiện thông tin từng hộ gia đình và trạng thái đã nộp
+      const allReportItems: HHReportItem[] = [];
+
+      groupMap.forEach(hh => {
+        // Tìm chủ hộ nếu chưa có
+        const headMember = hh.members.find(m => headNamesSet.has((m.full_name || '').trim().toLowerCase())) || hh.members[0];
+        if (!hh.headName && headMember) {
+          hh.headName = headMember.full_name;
+        }
+        if (!hh.dob && headMember?.dob) {
+          hh.dob = headMember.dob;
+        }
+        if (!hh.address && headMember?.address) {
+          hh.address = headMember.address;
+        }
+
+        // Kiểm tra trong Quỹ TDP (householdFunds)
+        const hhTdpFunds = householdFunds.filter(hf => hf.household_id === hh.householdId && Number(hf.year) === Number(selectedYear));
+        hh.totalPaidTdp = hhTdpFunds.reduce((s, f) => s + (f.amount || 0), 0);
+        const hasTdpPaid = hh.totalPaidTdp > 0;
+
+        // Kiểm tra bên Quỹ Phường
+        const isWardMarkedPaid = hh.members.some(m => (m as any).note === 'Đã nộp đủ đợt tập trung');
+        let sumPaidWard = 0;
+        hh.members.forEach(m => {
+          if (m.contributions) {
+            activeFunds.forEach(fund => {
+              sumPaidWard += (m.contributions?.[fund.name]?.actual || 0);
+            });
+          }
+        });
+        hh.totalPaidWard = sumPaidWard;
+        const hasWardPaid = isWardMarkedPaid || sumPaidWard > 0;
+
+        // Kiểm tra lưu biên lai gộp
+        const SAVE_KEY_COMBINED = getCanonicalHouseholdReceiptKey(hh.householdId, selectedYear, 'combined');
+        const hasSavedReceipt = Boolean(localStorage.getItem(SAVE_KEY_COMBINED));
+
+        hh.isPaid = hasTdpPaid || hasWardPaid || hasSavedReceipt;
+        hh.note = hh.isPaid ? 'Đã thu' : 'Chưa thu';
+
+        allReportItems.push(hh);
+      });
+
+      // Lọc theo Cụm/Tổ nếu người dùng có chọn tổ
+      const reportItems = groupFilter === 'all'
+        ? allReportItems
+        : allReportItems.filter(item => {
+            const grp = (item.groupName || '').trim().toLowerCase();
+            const gFilter = groupFilter.trim().toLowerCase();
+            return grp === gFilter || grp.includes(gFilter) || gFilter.includes(grp);
+          });
+
+      // Hàm sắp xếp theo thứ tự tổ trong cài đặt, sau đó theo tên chủ hộ A-Z
+      const sortHouseholdList = (list: typeof reportItems) => {
         return [...list].sort((a, b) => {
-          const gA = getGroupOfFundRecord(a) || '';
-          const gB = getGroupOfFundRecord(b) || '';
-          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
-          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+          const gA = a.groupName || '';
+          const gB = b.groupName || '';
+          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase() || gA.toLowerCase().includes(g.toLowerCase()));
+          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase() || gB.toLowerCase().includes(g.toLowerCase()));
           const rankA = idxA !== -1 ? idxA : 999;
           const rankB = idxB !== -1 ? idxB : 999;
           if (rankA !== rankB) return rankA - rankB;
-          return (a.full_name || '').toLowerCase().localeCompare((b.full_name || '').toLowerCase(), 'vi');
+          return a.headName.toLowerCase().localeCompare(b.headName.toLowerCase(), 'vi');
         });
       };
 
-      const sortedPaid = sortFundList(paidList);
-      const sortedUnpaid = sortFundList(unpaidList);
-      const sortedAll = sortFundList(targetFunds);
+      const paidList = reportItems.filter(item => item.isPaid);
+      const unpaidList = reportItems.filter(item => !item.isPaid);
+
+      const sortedPaid = sortHouseholdList(paidList);
+      const sortedUnpaid = sortHouseholdList(unpaidList);
+      const sortedAll = sortHouseholdList(reportItems);
 
       const thinBorder: Partial<ExcelJS.Borders> = {
         top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
@@ -3295,7 +3562,7 @@ const WardFunds = () => {
       };
 
       // ──────────────────────────────────────────────────────────────────────────
-      // SHEET 1: 📊 Thống kê tổng hợp
+      // SHEET 1: 📊 Thống kê tổng hợp (Chính xác theo 1.251 Hộ gia đình)
       // ──────────────────────────────────────────────────────────────────────────
       const summarySheet = workbook.addWorksheet('📊 Thống kê tổng hợp');
       
@@ -3310,14 +3577,14 @@ const WardFunds = () => {
       summarySheet.mergeCells('A2:F2');
       summarySheet.getRow(2).height = 20;
 
-      summarySheet.getCell('A3').value = `📌 Ghi chú: Số liệu tổng hợp tự động dựa trên kết quả thu nộp các khoản quỹ trên địa bàn năm ${selectedYear}.`;
+      summarySheet.getCell('A3').value = `📌 Báo cáo thống kê tiến độ thu nộp theo HỘ GIA ĐÌNH trên địa bàn tổ dân phố năm ${selectedYear} (Chuẩn 1.251 hộ).`;
       summarySheet.getCell('A3').font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FF0369A1' } };
       summarySheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
       summarySheet.mergeCells('A3:F3');
       summarySheet.getRow(3).height = 22;
 
       // Bảng 1: Tổng quan toàn TDP
-      summarySheet.getCell('A5').value = 'I. TỔNG HỢP TOÀN ĐỊA BÀN';
+      summarySheet.getCell('A5').value = 'I. TỔNG HỢP TOÀN ĐỊA BÀN (THEO HỘ GIA ĐÌNH)';
       summarySheet.getCell('A5').font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FF1E40AF' } };
 
       const ovHeaders = ['Chỉ tiêu', 'Số lượng (Hộ)', 'Tỷ lệ (%)', 'Đánh giá / Ghi chú'];
@@ -3330,14 +3597,14 @@ const WardFunds = () => {
         cell.border = thinBorder;
       });
 
-      const totalHh = targetFunds.length;
+      const totalHh = reportItems.length;
       const paidHh = paidList.length;
       const unpaidHh = unpaidList.length;
       const paidPercent = totalHh > 0 ? ((paidHh / totalHh) * 100).toFixed(1) : '0';
       const unpaidPercent = totalHh > 0 ? ((unpaidHh / totalHh) * 100).toFixed(1) : '0';
 
       const ovRowsData = [
-        ['1. Tổng số hộ trong danh sách', totalHh, '100%', 'Toàn bộ địa bàn quản lý'],
+        ['1. Tổng số hộ trong danh sách', totalHh, '100%', 'Toàn bộ địa bàn quản lý (1.251 hộ)'],
         ['2. Số hộ ĐÃ ĐÓNG QUỸ', paidHh, `${paidPercent}%`, 'Đã hoàn thành nghĩa vụ đóng quỹ'],
         ['3. Số hộ CHƯA ĐÓNG QUỸ', unpaidHh, `${unpaidPercent}%`, 'Cần tiếp tục đôn đốc thu nộp']
       ];
@@ -3379,21 +3646,22 @@ const WardFunds = () => {
 
       let gStt = 0;
       groups.forEach(groupName => {
-        const groupFunds = targetFunds.filter(f => {
-          const grp = getGroupOfFundRecord(f) || '';
-          return grp.trim().toLowerCase() === groupName.trim().toLowerCase();
+        const groupItems = reportItems.filter(item => {
+          const grp = (item.groupName || '').trim().toLowerCase();
+          const gLower = groupName.trim().toLowerCase();
+          return grp === gLower || grp.includes(gLower) || gLower.includes(grp);
         });
 
-        if (groupFunds.length > 0) {
+        if (groupItems.length > 0) {
           gStt++;
-          const gPaid = groupFunds.filter(item => activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0)).length;
-          const gUnpaid = groupFunds.length - gPaid;
-          const gPct = ((gPaid / groupFunds.length) * 100).toFixed(1);
+          const gPaid = groupItems.filter(item => item.isPaid).length;
+          const gUnpaid = groupItems.length - gPaid;
+          const gPct = ((gPaid / groupItems.length) * 100).toFixed(1);
 
           const grRow = summarySheet.addRow([
             gStt,
             groupName,
-            groupFunds.length,
+            groupItems.length,
             gPaid,
             gUnpaid,
             `${gPct}%`
@@ -3407,12 +3675,43 @@ const WardFunds = () => {
 
             if (cIdx === 4) cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF166534' } };
             if (cIdx === 5 && gUnpaid > 0) cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFDC2626' } };
-            if (cIdx === 6) cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF0F766E' } };
           });
         }
       });
 
-      // Dòng tổng cộng bảng tổ
+      // Nhóm chưa phân tổ nếu có
+      const unassignedGroupItems = reportItems.filter(item => {
+        const grp = (item.groupName || '').trim().toLowerCase();
+        return !groups.some(g => {
+          const gLower = g.trim().toLowerCase();
+          return grp === gLower || grp.includes(gLower) || gLower.includes(grp);
+        });
+      });
+
+      if (unassignedGroupItems.length > 0) {
+        gStt++;
+        const gPaid = unassignedGroupItems.filter(item => item.isPaid).length;
+        const gUnpaid = unassignedGroupItems.length - gPaid;
+        const gPct = ((gPaid / unassignedGroupItems.length) * 100).toFixed(1);
+
+        const unRow = summarySheet.addRow([
+          gStt,
+          'Chưa phân tổ',
+          unassignedGroupItems.length,
+          gPaid,
+          gUnpaid,
+          `${gPct}%`
+        ]);
+        unRow.height = 20;
+        unRow.eachCell((cell, cIdx) => {
+          cell.border = thinBorder;
+          if (cIdx === 1) cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          else if (cIdx === 2) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          else cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+      }
+
+      // Dòng tổng cộng cho bảng nhóm
       const gTotalRow = summarySheet.addRow([
         '',
         'TỔNG CỘNG',
@@ -3424,46 +3723,45 @@ const WardFunds = () => {
       gTotalRow.height = 24;
       gTotalRow.eachCell((cell, cIdx) => {
         cell.border = thinBorder;
-        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E3A8A' } };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF0F766E' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
         if (cIdx === 2) cell.alignment = { vertical: 'middle', horizontal: 'left' };
         else cell.alignment = { vertical: 'middle', horizontal: 'center' };
       });
 
+      // Độ rộng cột Sheet 1
       summarySheet.columns.forEach((col, idx) => {
-        if (idx === 0) col.width = 6;
-        else if (idx === 1) col.width = 28;
-        else if (idx === 2) col.width = 16;
-        else if (idx === 3) col.width = 16;
-        else if (idx === 4) col.width = 16;
-        else col.width = 24;
+        if (idx === 0) col.width = 8;
+        else if (idx === 1) col.width = 30;
+        else if (idx === 2) col.width = 18;
+        else if (idx === 3) col.width = 18;
+        else if (idx === 4) col.width = 18;
+        else if (idx === 5) col.width = 22;
       });
 
-      // ──────────────────────────────────────────────────────────────────────────
-      // Helper: Tạo Sheet Danh Sách Hộ (Áp dụng cho Sheet Đã đóng, Chưa đóng, Toàn bộ)
-      // ──────────────────────────────────────────────────────────────────────────
+      // ── Helper: Tạo Sheet chi tiết hộ (Đã nộp / Chưa nộp / Toàn bộ) ────────────
       const buildDetailListSheet = (
         ws: ExcelJS.Worksheet,
-        sheetList: WardFund[],
+        sheetList: typeof reportItems,
         title: string,
         badgeText: string,
         badgeColorArgb: string
       ) => {
         const lastColLetter = 'G';
 
-        // Tiêu đề
+        // Title
         ws.getCell('A1').value = title;
         ws.getCell('A1').font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: badgeColorArgb } };
         ws.mergeCells(`A1:${lastColLetter}1`);
-        ws.getRow(1).height = 30;
+        ws.getRow(1).height = 28;
 
-        ws.getCell('A2').value = `Tổ dân phố: ${tdpName} — Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} — Năm: ${selectedYear} (${sheetList.length} hộ)`;
+        ws.getCell('A2').value = `Tổ dân phố: ${tdpName} — Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} — Năm: ${selectedYear} (${sheetList.length} hộ gia đình)`;
         ws.getCell('A2').font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
         ws.mergeCells(`A2:${lastColLetter}2`);
         ws.getRow(2).height = 20;
 
         // Subheaders
-        const headers = ['STT', 'Họ và tên chủ hộ / người nộp', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ (Số nhà / Ngõ)', 'Trạng thái thu quỹ', 'Ghi chú'];
+        const headers = ['STT', 'Họ và tên chủ hộ', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ (Số nhà / Ngõ)', 'Trạng thái thu quỹ', 'Ghi chú'];
         const headerRow = ws.addRow(headers);
         headerRow.height = 26;
         headerRow.eachCell((cell) => {
@@ -3477,7 +3775,7 @@ const WardFunds = () => {
         let stt = 0;
 
         sheetList.forEach(item => {
-          const itemGroup = getGroupOfFundRecord(item) || 'Chưa phân nhóm';
+          const itemGroup = item.groupName || 'Chưa phân nhóm';
           if (itemGroup !== currentGroup) {
             currentGroup = itemGroup;
             const gRow = ws.addRow([`── ${currentGroup.toUpperCase()} ──`]);
@@ -3492,12 +3790,11 @@ const WardFunds = () => {
           }
 
           stt++;
-          const hasPaid = activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0);
-          const statusText = hasPaid ? '✓ ĐÃ ĐÓNG' : '⏳ CHƯA ĐÓNG';
+          const statusText = item.isPaid ? '✓ ĐÃ ĐÓNG' : '⏳ CHƯA ĐÓNG';
 
           const r = ws.addRow([
             stt,
-            item.full_name || '',
+            item.headName || '',
             formatDateVN(item.dob),
             itemGroup,
             item.address || '',
@@ -3515,12 +3812,12 @@ const WardFunds = () => {
                 name: 'Segoe UI',
                 size: 9.5,
                 bold: true,
-                color: { argb: hasPaid ? 'FF166534' : 'FFDC2626' }
+                color: { argb: item.isPaid ? 'FF166534' : 'FFDC2626' }
               };
               cell.fill = {
                 type: 'pattern',
                 pattern: 'solid',
-                fgColor: { argb: hasPaid ? 'FFF0FDF4' : 'FFFEF2F2' }
+                fgColor: { argb: item.isPaid ? 'FFF0FDF4' : 'FFFEF2F2' }
               };
             } else {
               cell.alignment = { vertical: 'middle', horizontal: 'left' };
@@ -3584,9 +3881,9 @@ const WardFunds = () => {
       );
 
       // ──────────────────────────────────────────────────────────────────────────
-      // SHEET 4: 📋 Toàn bộ danh sách (Đầy đủ)
+      // SHEET 4: 📋 Toàn bộ 1.251 hộ danh sách (Đầy đủ)
       // ──────────────────────────────────────────────────────────────────────────
-      const allSheet = workbook.addWorksheet('📋 Toàn bộ danh sách');
+      const allSheet = workbook.addWorksheet('📋 Toàn bộ 1.251 Hộ');
       buildDetailListSheet(
         allSheet,
         sortedAll,
@@ -3602,7 +3899,7 @@ const WardFunds = () => {
       link.href = URL.createObjectURL(blob);
       link.download = `Bao_Cao_TDP_Ho_Da_Dong_Va_Chua_Dong_${selectedYear}.xlsx`;
       link.click();
-      showToast('Đã xuất báo cáo TDP (Đã đóng & Chưa đóng) thành công!', 'success');
+      showToast(`Đã xuất báo cáo TDP thành công (${reportItems.length} hộ)!`, 'success');
     } catch (e) {
       showToast('Lỗi khi xuất báo cáo!', 'danger');
       console.error(e);
