@@ -3240,6 +3240,375 @@ const WardFunds = () => {
     }
   };
 
+  // ─── Xuất Excel chuyên biệt TDP: Danh sách Hộ ĐÃ ĐÓNG và CHƯA ĐÓNG ─────────
+  const handleExportTDPStatusReport = async () => {
+    // Tự động lấy toàn bộ danh sách năm đã chọn để không bị ảnh hưởng bởi ô lọc trạng thái
+    const targetFunds = groupFilter === 'all'
+      ? funds
+      : funds.filter(f => (getGroupOfFundRecord(f) || '').trim().toLowerCase() === groupFilter.trim().toLowerCase());
+
+    if (targetFunds.length === 0) {
+      showToast('Danh sách năm nay trống, không thể xuất báo cáo!', 'warning');
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+
+      // Phân tách 2 nhóm
+      const paidList: WardFund[] = [];
+      const unpaidList: WardFund[] = [];
+
+      targetFunds.forEach(item => {
+        const hasPaid = activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0);
+        if (hasPaid) {
+          paidList.push(item);
+        } else {
+          unpaidList.push(item);
+        }
+      });
+
+      // Hàm sắp xếp theo thứ tự tổ trong cài đặt, sau đó theo tên A-Z
+      const sortFundList = (list: WardFund[]) => {
+        return [...list].sort((a, b) => {
+          const gA = getGroupOfFundRecord(a) || '';
+          const gB = getGroupOfFundRecord(b) || '';
+          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+          const rankA = idxA !== -1 ? idxA : 999;
+          const rankB = idxB !== -1 ? idxB : 999;
+          if (rankA !== rankB) return rankA - rankB;
+          return (a.full_name || '').toLowerCase().localeCompare((b.full_name || '').toLowerCase(), 'vi');
+        });
+      };
+
+      const sortedPaid = sortFundList(paidList);
+      const sortedUnpaid = sortFundList(unpaidList);
+      const sortedAll = sortFundList(targetFunds);
+
+      const thinBorder: Partial<ExcelJS.Borders> = {
+        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+      };
+
+      // ──────────────────────────────────────────────────────────────────────────
+      // SHEET 1: 📊 Thống kê tổng hợp
+      // ──────────────────────────────────────────────────────────────────────────
+      const summarySheet = workbook.addWorksheet('📊 Thống kê tổng hợp');
+      
+      // Tiêu đề
+      summarySheet.getCell('A1').value = `BÁO CÁO TIẾN ĐỘ THU NỘP QUỸ TỔ DÂN PHỐ NĂM ${selectedYear}`;
+      summarySheet.getCell('A1').font = { name: 'Segoe UI', size: 15, bold: true, color: { argb: 'FF1E3A8A' } };
+      summarySheet.mergeCells('A1:F1');
+      summarySheet.getRow(1).height = 30;
+
+      summarySheet.getCell('A2').value = `Tổ dân phố: ${tdpName} — Ngày lập báo cáo: ${new Date().toLocaleDateString('vi-VN')}`;
+      summarySheet.getCell('A2').font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
+      summarySheet.mergeCells('A2:F2');
+      summarySheet.getRow(2).height = 20;
+
+      summarySheet.getCell('A3').value = `📌 Ghi chú: Số liệu tổng hợp tự động dựa trên kết quả thu nộp các khoản quỹ trên địa bàn năm ${selectedYear}.`;
+      summarySheet.getCell('A3').font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FF0369A1' } };
+      summarySheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+      summarySheet.mergeCells('A3:F3');
+      summarySheet.getRow(3).height = 22;
+
+      // Bảng 1: Tổng quan toàn TDP
+      summarySheet.getCell('A5').value = 'I. TỔNG HỢP TOÀN ĐỊA BÀN';
+      summarySheet.getCell('A5').font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FF1E40AF' } };
+
+      const ovHeaders = ['Chỉ tiêu', 'Số lượng (Hộ)', 'Tỷ lệ (%)', 'Đánh giá / Ghi chú'];
+      const ovHeaderRow = summarySheet.addRow(ovHeaders);
+      ovHeaderRow.height = 24;
+      ovHeaderRow.eachCell(cell => {
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = thinBorder;
+      });
+
+      const totalHh = targetFunds.length;
+      const paidHh = paidList.length;
+      const unpaidHh = unpaidList.length;
+      const paidPercent = totalHh > 0 ? ((paidHh / totalHh) * 100).toFixed(1) : '0';
+      const unpaidPercent = totalHh > 0 ? ((unpaidHh / totalHh) * 100).toFixed(1) : '0';
+
+      const ovRowsData = [
+        ['1. Tổng số hộ trong danh sách', totalHh, '100%', 'Toàn bộ địa bàn quản lý'],
+        ['2. Số hộ ĐÃ ĐÓNG QUỸ', paidHh, `${paidPercent}%`, 'Đã hoàn thành nghĩa vụ đóng quỹ'],
+        ['3. Số hộ CHƯA ĐÓNG QUỸ', unpaidHh, `${unpaidPercent}%`, 'Cần tiếp tục đôn đốc thu nộp']
+      ];
+
+      ovRowsData.forEach((rowVals, idx) => {
+        const r = summarySheet.addRow(rowVals);
+        r.height = 22;
+        r.eachCell((cell, cIdx) => {
+          cell.border = thinBorder;
+          if (cIdx === 1) {
+            cell.font = { name: 'Segoe UI', size: 10, bold: idx > 0 };
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          } else if (cIdx === 2 || cIdx === 3) {
+            cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: idx === 1 ? 'FF166534' : idx === 2 ? 'FFDC2626' : 'FF1E293B' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          } else {
+            cell.font = { name: 'Segoe UI', size: 10, italic: true };
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          }
+          if (idx === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
+          if (idx === 2) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF2F2' } };
+        });
+      });
+
+      // Bảng 2: Chi tiết theo từng Cụm / Tổ
+      summarySheet.addRow([]);
+      const groupTitleRow = summarySheet.addRow(['II. TIẾN ĐỘ THEO TỪNG CỤM / TỔ TỰ QUẢN']);
+      groupTitleRow.getCell(1).font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FF1E40AF' } };
+
+      const gHeaders = ['STT', 'Cụm / Tổ tự quản', 'Tổng số hộ', 'Đã đóng (Hộ)', 'Chưa đóng (Hộ)', 'Tỷ lệ hoàn thành (%)'];
+      const gHeaderRow = summarySheet.addRow(gHeaders);
+      gHeaderRow.height = 24;
+      gHeaderRow.eachCell(cell => {
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = thinBorder;
+      });
+
+      let gStt = 0;
+      groups.forEach(groupName => {
+        const groupFunds = targetFunds.filter(f => {
+          const grp = getGroupOfFundRecord(f) || '';
+          return grp.trim().toLowerCase() === groupName.trim().toLowerCase();
+        });
+
+        if (groupFunds.length > 0) {
+          gStt++;
+          const gPaid = groupFunds.filter(item => activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0)).length;
+          const gUnpaid = groupFunds.length - gPaid;
+          const gPct = ((gPaid / groupFunds.length) * 100).toFixed(1);
+
+          const grRow = summarySheet.addRow([
+            gStt,
+            groupName,
+            groupFunds.length,
+            gPaid,
+            gUnpaid,
+            `${gPct}%`
+          ]);
+          grRow.height = 20;
+          grRow.eachCell((cell, cIdx) => {
+            cell.border = thinBorder;
+            if (cIdx === 1) cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            else if (cIdx === 2) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            else cell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+            if (cIdx === 4) cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF166534' } };
+            if (cIdx === 5 && gUnpaid > 0) cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFDC2626' } };
+            if (cIdx === 6) cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF0F766E' } };
+          });
+        }
+      });
+
+      // Dòng tổng cộng bảng tổ
+      const gTotalRow = summarySheet.addRow([
+        '',
+        'TỔNG CỘNG',
+        totalHh,
+        paidHh,
+        unpaidHh,
+        `${paidPercent}%`
+      ]);
+      gTotalRow.height = 24;
+      gTotalRow.eachCell((cell, cIdx) => {
+        cell.border = thinBorder;
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E3A8A' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+        if (cIdx === 2) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        else cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+
+      summarySheet.columns.forEach((col, idx) => {
+        if (idx === 0) col.width = 6;
+        else if (idx === 1) col.width = 28;
+        else if (idx === 2) col.width = 16;
+        else if (idx === 3) col.width = 16;
+        else if (idx === 4) col.width = 16;
+        else col.width = 24;
+      });
+
+      // ──────────────────────────────────────────────────────────────────────────
+      // Helper: Tạo Sheet Danh Sách Hộ (Áp dụng cho Sheet Đã đóng, Chưa đóng, Toàn bộ)
+      // ──────────────────────────────────────────────────────────────────────────
+      const buildDetailListSheet = (
+        ws: ExcelJS.Worksheet,
+        sheetList: WardFund[],
+        title: string,
+        badgeText: string,
+        badgeColorArgb: string
+      ) => {
+        const lastColLetter = 'G';
+
+        // Tiêu đề
+        ws.getCell('A1').value = title;
+        ws.getCell('A1').font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: badgeColorArgb } };
+        ws.mergeCells(`A1:${lastColLetter}1`);
+        ws.getRow(1).height = 30;
+
+        ws.getCell('A2').value = `Tổ dân phố: ${tdpName} — Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} — Năm: ${selectedYear} (${sheetList.length} hộ)`;
+        ws.getCell('A2').font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
+        ws.mergeCells(`A2:${lastColLetter}2`);
+        ws.getRow(2).height = 20;
+
+        // Subheaders
+        const headers = ['STT', 'Họ và tên chủ hộ / người nộp', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ (Số nhà / Ngõ)', 'Trạng thái thu quỹ', 'Ghi chú'];
+        const headerRow = ws.addRow(headers);
+        headerRow.height = 26;
+        headerRow.eachCell((cell) => {
+          cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: badgeColorArgb } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = thinBorder;
+        });
+
+        let currentGroup = '';
+        let stt = 0;
+
+        sheetList.forEach(item => {
+          const itemGroup = getGroupOfFundRecord(item) || 'Chưa phân nhóm';
+          if (itemGroup !== currentGroup) {
+            currentGroup = itemGroup;
+            const gRow = ws.addRow([`── ${currentGroup.toUpperCase()} ──`]);
+            ws.mergeCells(`A${gRow.number}:${lastColLetter}${gRow.number}`);
+            gRow.height = 22;
+            gRow.eachCell(cell => {
+              cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E40AF' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+              cell.border = thinBorder;
+            });
+          }
+
+          stt++;
+          const hasPaid = activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0);
+          const statusText = hasPaid ? '✓ ĐÃ ĐÓNG' : '⏳ CHƯA ĐÓNG';
+
+          const r = ws.addRow([
+            stt,
+            item.full_name || '',
+            formatDateVN(item.dob),
+            itemGroup,
+            item.address || '',
+            statusText,
+            item.note || ''
+          ]);
+          r.height = 21;
+          r.eachCell((cell, colIdx) => {
+            cell.border = thinBorder;
+            if (colIdx === 1 || colIdx === 3) {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            } else if (colIdx === 6) {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              cell.font = {
+                name: 'Segoe UI',
+                size: 9.5,
+                bold: true,
+                color: { argb: hasPaid ? 'FF166534' : 'FFDC2626' }
+              };
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: hasPaid ? 'FFF0FDF4' : 'FFFEF2F2' }
+              };
+            } else {
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            }
+          });
+        });
+
+        // Dòng tổng cộng
+        const totalRow = ws.addRow([
+          '',
+          `TỔNG CỘNG: ${sheetList.length} HỘ`,
+          '',
+          '',
+          '',
+          badgeText,
+          ''
+        ]);
+        totalRow.height = 25;
+        totalRow.eachCell((cell, colIdx) => {
+          cell.border = thinBorder;
+          cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: badgeColorArgb } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+          if (colIdx === 2) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          else cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        // Độ rộng cột
+        ws.columns.forEach((col, idx) => {
+          if (idx === 0) col.width = 6;       // STT
+          else if (idx === 1) col.width = 28; // Họ tên
+          else if (idx === 2) col.width = 13; // Năm sinh
+          else if (idx === 3) col.width = 16; // Cụm/Tổ
+          else if (idx === 4) col.width = 28; // Địa chỉ
+          else if (idx === 5) col.width = 18; // Trạng thái
+          else col.width = 24;                // Ghi chú
+        });
+      };
+
+      // ──────────────────────────────────────────────────────────────────────────
+      // SHEET 2: ✅ Danh sách hộ ĐÃ ĐÓNG
+      // ──────────────────────────────────────────────────────────────────────────
+      const paidSheet = workbook.addWorksheet('✅ DS Hộ Đã Đóng');
+      buildDetailListSheet(
+        paidSheet,
+        sortedPaid,
+        `DANH SÁCH CÁC HỘ ĐÃ ĐÓNG QUỸ TỔ DÂN PHỐ NĂM ${selectedYear}`,
+        `Đã nộp: ${sortedPaid.length} hộ`,
+        'FF15803D'
+      );
+
+      // ──────────────────────────────────────────────────────────────────────────
+      // SHEET 3: ⏳ Danh sách hộ CHƯA ĐÓNG
+      // ──────────────────────────────────────────────────────────────────────────
+      const unpaidSheet = workbook.addWorksheet('⏳ DS Hộ Chưa Đóng');
+      buildDetailListSheet(
+        unpaidSheet,
+        sortedUnpaid,
+        `DANH SÁCH CÁC HỘ CHƯA ĐÓNG QUỸ TỔ DÂN PHỐ NĂM ${selectedYear}`,
+        `Chưa nộp: ${sortedUnpaid.length} hộ`,
+        'FFDC2626'
+      );
+
+      // ──────────────────────────────────────────────────────────────────────────
+      // SHEET 4: 📋 Toàn bộ danh sách (Đầy đủ)
+      // ──────────────────────────────────────────────────────────────────────────
+      const allSheet = workbook.addWorksheet('📋 Toàn bộ danh sách');
+      buildDetailListSheet(
+        allSheet,
+        sortedAll,
+        `BẢNG TỔNG HỢP TOÀN BỘ CÁC HỘ ĐÓNG VÀ CHƯA ĐÓNG QUỸ NĂM ${selectedYear}`,
+        `Tổng: ${sortedAll.length} hộ`,
+        'FF1E40AF'
+      );
+
+      // Xuất file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Bao_Cao_TDP_Ho_Da_Dong_Va_Chua_Dong_${selectedYear}.xlsx`;
+      link.click();
+      showToast('Đã xuất báo cáo TDP (Đã đóng & Chưa đóng) thành công!', 'success');
+    } catch (e) {
+      showToast('Lỗi khi xuất báo cáo!', 'danger');
+      console.error(e);
+    }
+  };
+
   const handlePrintList = () => {
     if (filteredFunds.length === 0) {
       showToast('Danh sách trống, không thể in!', 'warning');
@@ -8075,6 +8444,31 @@ const WardFunds = () => {
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <FileSpreadsheet size={14} /> Xuất tổng hợp Phường + TDP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPrintMenu(false);
+                        handleExportTDPStatusReport();
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#0369a1',
+                        fontWeight: '600',
+                        fontSize: '0.82rem',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#e0f2fe'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <FileSpreadsheet size={14} /> Xuất DS TDP (Đã nộp & Chưa nộp)
                     </button>
                     <button
                       type="button"
