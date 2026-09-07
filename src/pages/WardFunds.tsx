@@ -3010,8 +3010,8 @@ const WardFunds = () => {
           const item = hhMap.get(householdId)!;
           item.members.push(f);
           if (!item.headName && hhInfo.headName) item.headName = hhInfo.headName;
-          if (!item.address && (hhInfo.address || f.address)) item.address = hhInfo.address || f.address;
-          if (!item.dob && f.dob) item.dob = f.dob;
+          if (!item.address && (hhInfo.address || f.address)) item.address = hhInfo.address || f.address || '';
+          if (!item.dob && f.dob) item.dob = f.dob || '';
           if (!item.groupName || item.groupName === 'Chưa phân tổ') {
             item.groupName = (hhInfo.groupName || getGroupOfFundRecord(f) || 'Chưa phân tổ').trim();
           }
@@ -3449,8 +3449,8 @@ const WardFunds = () => {
           const item = groupMap.get(householdId)!;
           item.members.push(f);
           if (!item.headName && hhInfo.headName) item.headName = hhInfo.headName;
-          if (!item.address && (hhInfo.address || f.address)) item.address = hhInfo.address || f.address;
-          if (!item.dob && f.dob) item.dob = f.dob;
+          if (!item.address && (hhInfo.address || f.address)) item.address = hhInfo.address || f.address || '';
+          if (!item.dob && f.dob) item.dob = f.dob || '';
           if (!item.groupName || item.groupName === 'Chưa phân tổ') {
             item.groupName = (hhInfo.groupName || getGroupOfFundRecord(f) || 'Chưa phân tổ').trim();
           }
