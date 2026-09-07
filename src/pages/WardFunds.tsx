@@ -2937,6 +2937,309 @@ const WardFunds = () => {
     }
   };
 
+  // ─── Xuất Excel tổng hợp: Quỹ Phường + Quỹ TDP ────────────────────────────
+  const handleExportCombinedReport = async () => {
+    if (filteredFunds.length === 0) {
+      showToast('Danh sách trống, không thể xuất báo cáo!', 'warning');
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const tdpName = localStorage.getItem('tdp_name') || 'Quảng Giao';
+
+      // ── Helper: Xây dựng 1 worksheet tổng hợp ─────────────────────────────
+      const buildCombinedSheet = (
+        ws: ExcelJS.Worksheet,
+        sheetFunds: typeof filteredFunds,
+        sheetTitle: string,
+        isSummary: boolean
+      ) => {
+        // Số cột: STT + HọTên + NămSinh + Cụm/Tổ + ĐịaChỉ
+        //        + (PhảiNộp + ThựcNộp + NgàyNộp) * số quỹ phường
+        //        + QuỹTDP + GhiChú
+        const fundColCount  = activeFunds.length * 3;
+        const totalCols     = 5 + fundColCount + 2; // +QuỹTDP +GhiChú
+        const lastColLetter = ws.getColumn(totalCols).letter;
+        const tdpColIndex   = 5 + fundColCount + 1; // vị trí cột Quỹ TDP
+        const noteColIndex  = 5 + fundColCount + 2; // vị trí cột Ghi chú
+
+        // ── Tiêu đề ──
+        ws.getCell('A1').value = sheetTitle;
+        ws.getCell('A1').font = { name: 'Segoe UI', size: 15, bold: true, color: { argb: 'FF15803D' } };
+        ws.mergeCells(`A1:${lastColLetter}1`);
+        ws.getRow(1).height = 30;
+
+        ws.getCell('A2').value = `Tổ dân phố: ${tdpName} — Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} — Năm: ${selectedYear}`;
+        ws.getCell('A2').font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
+        ws.mergeCells(`A2:${lastColLetter}2`);
+        ws.getRow(2).height = 20;
+
+        // ── Dòng ghi chú quan trọng ──
+        ws.getCell('A3').value = '⚠️ Cột "Quỹ TDP": ✓ = Hộ đã nộp ít nhất 1 khoản quỹ phường trong năm (dùng làm cơ sở xác nhận đã thu quỹ TDP).';
+        ws.getCell('A3').font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FFB45309' } };
+        ws.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
+        ws.mergeCells(`A3:${lastColLetter}3`);
+        ws.getRow(3).height = 18;
+
+        // ── Header nhóm cột (dòng 4) ──
+        ws.getCell('A4').value = 'Thông tin cá nhân';
+        ws.mergeCells('A4:E4');
+
+        let currentColNum = 6;
+        activeFunds.forEach(fund => {
+          const startCell = ws.getColumn(currentColNum).letter + '4';
+          const endCell   = ws.getColumn(currentColNum + 2).letter + '4';
+          ws.getCell(startCell).value = fund.name;
+          ws.mergeCells(`${startCell}:${endCell}`);
+          currentColNum += 3;
+        });
+
+        // Header cột Quỹ TDP và Ghi chú
+        ws.getCell(ws.getColumn(tdpColIndex).letter + '4').value = '🏘️ Quỹ TDP';
+        ws.getCell(ws.getColumn(noteColIndex).letter + '4').value = 'Ghi chú';
+
+        const groupRow = ws.getRow(4);
+        groupRow.height = 26;
+        groupRow.eachCell(cell => {
+          cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+        // Riêng cột Quỹ TDP dùng màu xanh lá khác biệt
+        const tdpHeaderCell = ws.getCell(ws.getColumn(tdpColIndex).letter + '4');
+        tdpHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF166534' } };
+
+        // ── Sub-headers (dòng 5) ──
+        const subHeaders = ['STT', 'Họ và tên', 'Năm sinh', 'Cụm / Tổ', 'Địa chỉ'];
+        activeFunds.forEach(() => { subHeaders.push('Phải nộp (đ)', 'Thực nộp (đ)', 'Ngày nộp'); });
+        subHeaders.push('Đã thu?', 'Chú thích');
+
+        const subHeaderRow = ws.addRow(subHeaders);
+        subHeaderRow.height = 24;
+        subHeaderRow.eachCell((cell, colIdx) => {
+          cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF1E293B' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          cell.border = { bottom: { style: 'medium', color: { argb: 'FF3B82F6' } } };
+          // Cột Quỹ TDP dùng màu xanh lá nhạt
+          if (colIdx === tdpColIndex) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
+            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF166534' } };
+          }
+        });
+
+        // ── Sắp xếp dữ liệu theo thứ tự tổ ──
+        const sortedFunds = [...sheetFunds].sort((a, b) => {
+          const gA = getGroupOfFundRecord(a) || '';
+          const gB = getGroupOfFundRecord(b) || '';
+          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
+          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+          const rankA = idxA !== -1 ? idxA : 999;
+          const rankB = idxB !== -1 ? idxB : 999;
+          if (rankA !== rankB) return rankA - rankB;
+          return (a.full_name || '').toLowerCase().localeCompare((b.full_name || '').toLowerCase(), 'vi');
+        });
+
+        // ── Dữ liệu ──
+        let currentGroup = '';
+        let sttCounter   = 0;
+
+        sortedFunds.forEach(item => {
+          const itemGroup = getGroupOfFundRecord(item) || 'Chưa phân nhóm';
+
+          // Dòng phân nhóm (chỉ ở sheet tổng hợp)
+          if (isSummary && itemGroup !== currentGroup) {
+            currentGroup = itemGroup;
+            const gRow = ws.addRow([`── ${currentGroup.toUpperCase()} ──`]);
+            ws.mergeCells(`A${gRow.number}:${lastColLetter}${gRow.number}`);
+            gRow.height = 22;
+            gRow.eachCell(cell => {
+              cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E40AF' } };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            });
+          }
+
+          sttCounter++;
+
+          // Xác định đã thu quỹ TDP: hộ nào có thực nộp > 0 ở BẤT KỲ quỹ phường nào
+          const hasAnyPayment = activeFunds.some(fund => {
+            const contrib = item.contributions?.[fund.name];
+            return contrib && (contrib.actual || 0) > 0;
+          });
+
+          const rowVals: (string | number)[] = [
+            sttCounter,
+            item.full_name || '',
+            formatDateVN(item.dob),
+            itemGroup,
+            item.address || ''
+          ];
+
+          activeFunds.forEach(fund => {
+            const contrib = item.contributions?.[fund.name] || { expected: fund.target, actual: 0 };
+            rowVals.push(
+              contrib.expected || fund.target,
+              contrib.actual || 0,
+              formatDateVN(contrib.date) || ''
+            );
+          });
+
+          // Cột Quỹ TDP
+          rowVals.push(hasAnyPayment ? '✓ Đã thu' : '');
+          // Cột Ghi chú
+          rowVals.push(item.note || '');
+
+          const r = ws.addRow(rowVals);
+          r.height = 20;
+          r.eachCell((cell, colIndex) => {
+            if (colIndex === 1 || colIndex === 3) {
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            } else if (colIndex >= 6 && colIndex < tdpColIndex) {
+              const offset = (colIndex - 6) % 3;
+              if (offset === 2) {
+                // Ngày nộp
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+              } else {
+                // Số tiền
+                cell.numFmt = '#,##0';
+                cell.alignment = { horizontal: 'right', vertical: 'middle' };
+              }
+            } else if (colIndex === tdpColIndex) {
+              // Cột Quỹ TDP
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+              cell.font = { name: 'Segoe UI', size: 10, bold: hasAnyPayment, color: { argb: hasAnyPayment ? 'FF166534' : 'FFEF4444' } };
+              if (hasAnyPayment) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
+              }
+            } else {
+              cell.alignment = { horizontal: 'left', vertical: 'middle' };
+            }
+          });
+        });
+
+        // ── Dòng tổng cộng ──
+        const totalRowVals: (string | number)[] = ['TỔNG CỘNG', '', '', '', ''];
+        activeFunds.forEach(fund => {
+          const sumExpected = sheetFunds.reduce((sum, f) => {
+            const exp = f.contributions?.[fund.name]?.expected;
+            return sum + (exp !== undefined && exp > 0 ? exp : fund.target);
+          }, 0);
+          const sumActual = sheetFunds.reduce((sum, f) => sum + (f.contributions?.[fund.name]?.actual || 0), 0);
+          totalRowVals.push(sumExpected, sumActual, '');
+        });
+        // Tổng đã thu quỹ TDP
+        const countPaid = sheetFunds.filter(item =>
+          activeFunds.some(fund => (item.contributions?.[fund.name]?.actual || 0) > 0)
+        ).length;
+        totalRowVals.push(`${countPaid} / ${sheetFunds.length} hộ`, '');
+
+        const totalRow = ws.addRow(totalRowVals);
+        ws.mergeCells(`A${totalRow.number}:E${totalRow.number}`);
+        totalRow.height = 24;
+        totalRow.getCell(1).font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FF15803D' } };
+        totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        let curCellIndex2 = 6;
+        activeFunds.forEach(() => {
+          [curCellIndex2, curCellIndex2 + 1].forEach(colIdx => {
+            const cell = totalRow.getCell(colIdx);
+            cell.font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FF15803D' } };
+            cell.numFmt = '#,##0';
+            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          });
+          curCellIndex2 += 3;
+        });
+        const tdpTotalCell = totalRow.getCell(tdpColIndex);
+        tdpTotalCell.font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FF166534' } };
+        tdpTotalCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        // ── Viền và gridlines ──
+        ws.eachRow((row, rowNum) => {
+          if (rowNum >= 4) {
+            row.eachCell(cell => {
+              if (!cell.border || !cell.border.top) {
+                cell.border = {
+                  top:    { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                  left:   { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                  bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                  right:  { style: 'thin', color: { argb: 'FFCBD5E1' } }
+                };
+              }
+            });
+          }
+        });
+
+        // ── Độ rộng cột ──
+        ws.columns.forEach((col, idx) => {
+          if (idx === 0) col.width = 6;       // STT
+          else if (idx === 1) col.width = 26; // Họ tên
+          else if (idx === 2) col.width = 12; // Năm sinh
+          else if (idx === 3) col.width = 16; // Cụm/Tổ
+          else if (idx === 4) col.width = 26; // Địa chỉ
+          else if (idx < totalCols - 2) {
+            const mod = (idx - 5) % 3;
+            col.width = mod === 2 ? 14 : 14;  // Số tiền / Ngày nộp
+          } else if (idx === totalCols - 2) col.width = 14; // Quỹ TDP
+          else col.width = 20; // Ghi chú
+        });
+      };
+
+      // ── Sheet 1: Tổng hợp ──
+      const summarySheet = workbook.addWorksheet('📋 Tổng hợp TDP+Phường');
+      buildCombinedSheet(
+        summarySheet,
+        filteredFunds,
+        `TỔNG HỢP THU QUỸ PHƯỜNG & QUỸ TỔ DÂN PHỐ NĂM ${selectedYear}`,
+        true
+      );
+
+      // ── Sheet 2+: Theo từng Tổ/Cụm ──
+      groups.forEach(groupName => {
+        const groupFunds = filteredFunds.filter(f => {
+          const grp = getGroupOfFundRecord(f);
+          return grp.trim().toLowerCase() === groupName.trim().toLowerCase();
+        });
+        if (groupFunds.length > 0) {
+          const safeSheetName = groupName.replace(/[\\/*?:[\]]/g, '').slice(0, 31);
+          const groupSheet = workbook.addWorksheet(safeSheetName);
+          buildCombinedSheet(
+            groupSheet,
+            groupFunds,
+            `THU QUỸ PHƯỜNG & QUỸ TDP NĂM ${selectedYear} — ${groupName.toUpperCase()}`,
+            false
+          );
+        }
+      });
+
+      // ── Sheet cho hộ chưa phân nhóm (nếu có) ──
+      const unassignedFunds2 = filteredFunds.filter(f => {
+        const grp = getGroupOfFundRecord(f);
+        return !groups.some(g => g.trim().toLowerCase() === grp.trim().toLowerCase());
+      });
+      if (unassignedFunds2.length > 0) {
+        const unassignedSheet = workbook.addWorksheet('Chưa phân nhóm');
+        buildCombinedSheet(
+          unassignedSheet,
+          unassignedFunds2,
+          `THU QUỸ PHƯỜNG & QUỸ TDP NĂM ${selectedYear} — CHƯA PHÂN NHÓM`,
+          false
+        );
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link   = document.createElement('a');
+      link.href     = URL.createObjectURL(blob);
+      link.download = `Tong_Hop_Quy_Phuong_va_TDP_${selectedYear}.xlsx`;
+      link.click();
+      showToast('Đã xuất file Excel tổng hợp Quỹ Phường + TDP thành công!', 'success');
+    } catch (e) {
+      showToast('Lỗi khi xuất file Excel tổng hợp!', 'danger');
+      console.error(e);
+    }
+  };
+
   const handlePrintList = () => {
     if (filteredFunds.length === 0) {
       showToast('Danh sách trống, không thể in!', 'warning');
@@ -7747,6 +8050,31 @@ const WardFunds = () => {
                       onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <FileSpreadsheet size={14} /> Xuất báo cáo Excel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPrintMenu(false);
+                        handleExportCombinedReport();
+                      }}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#166534',
+                        fontWeight: '600',
+                        fontSize: '0.82rem',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dcfce7'}
+                      onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <FileSpreadsheet size={14} /> Xuất tổng hợp Phường + TDP
                     </button>
                     <button
                       type="button"
