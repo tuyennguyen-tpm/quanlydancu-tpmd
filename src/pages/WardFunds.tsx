@@ -573,7 +573,7 @@ const WardFunds = () => {
   // Helper to resolve group/tổ of a fund record directly
   const getGroupOfFundRecord = (f: WardFund) => {
     // 1. Quét địa chỉ trước để lấy tổ/cụm thực tế ghi trên địa chỉ (độ ưu tiên cao nhất)
-    const addr = (f.address || '').toLowerCase();
+    const addr = (f.address || '').toLowerCase().replace(/\s+/g, ' ');
     for (const g of groups) {
       const gLower = g.toLowerCase();
       if (addr.includes(gLower)) {
@@ -582,10 +582,17 @@ const WardFunds = () => {
       const numMatch = g.match(/\d+/);
       if (numMatch) {
         const num = numMatch[0];
-        if (addr.includes(`tổ ${num}`) || addr.includes(`tổ: ${num}`) || addr.includes(`tổ tự quản ${num}`) || addr.includes(`tổ tự quản số ${num}`)) {
+        // Quét linh hoạt: tổ 4, to 4, cụm 4, cum 4, xóm 4, xom 4, t4, t 4, tổ 04
+        const regex = new RegExp(`(?:tổ|to|cụm|cum|xóm|xom|t)\\s*:?\\s*0?${num}\\b`, 'i');
+        if (regex.test(addr)) {
           return g;
         }
       }
+    }
+
+    if (addr.includes('việt trung') || addr.includes('viet trung') || /\bvt\b/i.test(addr)) {
+      const vt = groups.find(g => g.toLowerCase().includes('việt trung'));
+      if (vt) return vt;
     }
 
     // 2. Nếu địa chỉ không ghi rõ tổ/cụm cụ thể, đối chiếu với danh sách nhân khẩu trong cơ sở dữ liệu
@@ -3484,7 +3491,22 @@ const WardFunds = () => {
           if (!dob && headMember?.dob) dob = headMember.dob;
         }
 
-        const groupName = (hhMeta?.groupName || (household as any)?.self_management_group || getGroupOfFundRecord(members[0]) || 'Chưa phân tổ').trim();
+        let resolvedGroup = (hhMeta?.groupName && hhMeta.groupName !== 'Chưa phân tổ') ? hhMeta.groupName : ((household as any)?.self_management_group || '');
+        if (!resolvedGroup || resolvedGroup === 'Chưa phân tổ') {
+          for (const m of members) {
+            const g = getGroupOfFundRecord(m);
+            if (g && g !== 'Chưa phân tổ') {
+              resolvedGroup = g;
+              break;
+            }
+            const matched = findMatchingHouseholdForWardFund(m);
+            if (matched?.groupName && matched.groupName !== 'Chưa phân tổ') {
+              resolvedGroup = matched.groupName;
+              break;
+            }
+          }
+        }
+        const groupName = (resolvedGroup || 'Chưa phân tổ').trim();
         const address = hhMeta?.address || household?.address || members[0]?.address || '';
 
         // Tính toán số tiền phải thu và thực thu chuẩn
