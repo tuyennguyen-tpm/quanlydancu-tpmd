@@ -947,16 +947,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         }
       });
 
-      // Quét thêm tất cả các hộ đã lưu bản in Biên lai gộp
-      households.forEach(hh => {
-        if (!hhGroupMap.has(hh.id)) {
-          const SAVE_KEY_COMBINED = getCanonicalHouseholdReceiptKey(hh.id, fundYear, 'combined');
-          if (localStorage.getItem(SAVE_KEY_COMBINED)) {
-            hhGroupMap.set(hh.id, { householdId: hh.id, members: [] });
-          }
-        }
-      });
-
       const today = new Date().toISOString().slice(0, 10);
       const newHouseholdFundsToSave: HouseholdFund[] = [];
       const newFinancialRecordsToSave: FinancialRecord[] = [];
@@ -966,12 +956,11 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         const household = households.find(h => h.id === householdId);
         if (!household) return;
 
+        // Chỉ đồng bộ khi cán bộ đã bấm "Thu đủ cả nhà" (note: Đã nộp đủ đợt tập trung) hoặc có khoản thực nộp > 0đ
         const isAnyMarkedPaid = members.some(m => (m as any).note === 'Đã nộp đủ đợt tập trung');
         const hasAnyActualPay = members.some(m => m.contributions && Object.values(m.contributions).some((c: any) => (c?.actual || 0) > 0));
-        const SAVE_KEY_COMBINED = getCanonicalHouseholdReceiptKey(householdId, fundYear, 'combined');
-        const hasSavedReceipt = Boolean(localStorage.getItem(SAVE_KEY_COMBINED));
 
-        const isHouseholdPaid = isAnyMarkedPaid || hasAnyActualPay || hasSavedReceipt;
+        const isHouseholdPaid = isAnyMarkedPaid || hasAnyActualPay;
         if (!isHouseholdPaid) return;
 
         const headResident = residents.find(r => (r.id === household.head_of_household_id) || r.is_head);
@@ -4571,13 +4560,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       const hhFunds = hhFundsMap.get(hh.id) || [];
       const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
 
-      const SAVE_KEY_COMBINED = getCanonicalHouseholdReceiptKey(hh.id, fundYear, 'combined');
-      const hasSavedReceipt = Boolean(localStorage.getItem(SAVE_KEY_COMBINED));
-
       const hhAddr = ((hh.address || '') + ' ' + ((hh as any).self_management_group || '')).toLowerCase();
       const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || ((hh as any).self_management_group || '').trim() === 'Tổ 8';
 
-      // Hộ chỉ được tính là đã đóng tiền nếu có lưu biên lai gộp hoặc thực tế có đóng tiền > 0đ
+      // Hộ chỉ được tính là đã đóng tiền nếu thực tế cán bộ đã bấm "Thu đủ cả nhà" hoặc có thực nộp tiền > 0đ
       const hasActualTdpPayment = totalPaid > 0;
 
       const isAllFundsSatisfied = tdpFundsConfig.length > 0 && tdpFundsConfig.every(fund => {
@@ -4587,10 +4573,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         return paidFund && paidFund.amount >= fund.target;
       });
 
-      // Hộ nộp đủ nếu có lưu biên lai gộp hoặc thực tế có đóng tiền và hoàn thành đủ chỉ tiêu các quỹ
-      const isPaidFull = hasSavedReceipt || (hasActualTdpPayment && isAllFundsSatisfied);
-      // Hộ đã đóng tiền (ít nhất 1 khoản) nếu có lưu biên lai gộp hoặc thực tế có đóng tiền > 0đ
-      const isPaidAny = hasSavedReceipt || hasActualTdpPayment;
+      // Hộ nộp đủ nếu thực tế có đóng tiền và hoàn thành đủ chỉ tiêu các quỹ
+      const isPaidFull = hasActualTdpPayment && isAllFundsSatisfied;
+      // Hộ đã đóng tiền (ít nhất 1 khoản) nếu thực tế có đóng tiền > 0đ
+      const isPaidAny = hasActualTdpPayment;
 
       map.set(hh.id, { isPaidFull, isPaidAny, totalPaid });
     });
