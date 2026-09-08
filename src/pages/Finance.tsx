@@ -368,57 +368,14 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
   const loadData = async () => {
     try {
-      const [list, hList, rList, fList, wList] = await Promise.all([
+      const [list, hList, rList, fList] = await Promise.all([
         db.getFinancialRecords(),
         db.getHouseholds(),
         db.getResidents(),
-        db.getHouseholdFunds(),
-        (db as any).getWardFunds(fundYear).catch(() => [])
+        db.getHouseholdFunds()
       ]);
 
-      let allHouseholds = hList || [];
-      if (wList && wList.length > 0) {
-        const existingIds = new Set((hList || []).map(h => h.id));
-        const existingHeadNames = new Set((hList || []).map(h => {
-          const head = (rList || []).find(r => r.id === h.head_of_household_id || (r.household_id === h.id && r.is_head));
-          return (head?.full_name || h.martyr_name || '').trim().toLowerCase();
-        }).filter(Boolean));
-
-        const supplemental: Household[] = [];
-        wList.forEach((w: WardFund) => {
-          const wName = (w.full_name || (w as any).household_name || '').trim();
-          if (!wName) return;
-          if (existingIds.has(w.id)) return;
-          if (existingHeadNames.has(wName.toLowerCase())) return;
-
-          let grp = '';
-          const wAddr = (w.address || '').toLowerCase();
-          for (const g of ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']) {
-            if (wAddr.includes(g.toLowerCase())) { grp = g; break; }
-            const numMatch = g.match(/\d+/);
-            if (numMatch) {
-              const regex = new RegExp(`(?:tổ|to|cụm|cum|xóm|xom|t)\\s*:?\\s*0?${numMatch[0]}\\b`, 'i');
-              if (regex.test(wAddr)) { grp = g; break; }
-            }
-          }
-          if (!grp && (wAddr.includes('việt trung') || wAddr.includes('viet trung'))) grp = 'Tổ Việt Trung';
-
-          supplemental.push({
-            id: w.id || `ward_hh_${generateUUID()}`,
-            group_id: db.getGroupId(),
-            user_id: w.user_id || 'nam_sam_son',
-            head_of_household_id: w.id,
-            household_number: '',
-            address: w.address || 'Quảng Giao',
-            policy_type: 'none',
-            self_management_group: grp || 'Chưa phân tổ',
-            created_at: (w as any).created_at || new Date().toISOString(),
-            martyr_name: wName
-          });
-        });
-
-        allHouseholds = [...(hList || []), ...supplemental];
-      }
+      const allHouseholds = hList || [];
 
       setRecords(list || []);
       setHouseholds(allHouseholds);
@@ -1403,58 +1360,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         });
       };
 
-      let exportHouseholds = filteredHouseholdsForFunds;
-      if (fundFilterStatus === 'unpaid' && exportHouseholds.length < 700) {
-        try {
-          const wardFundsData: WardFund[] = await (db as any).getWardFunds(fundYear);
-          if (wardFundsData && wardFundsData.length > 0) {
-            const unpaidFromWard: Household[] = [];
-            const seenIds = new Set(exportHouseholds.map(h => h.id));
-            const seenNames = new Set(exportHouseholds.map(h => getHouseholdHeadName(h).toLowerCase()));
-
-            wardFundsData.forEach((w: WardFund) => {
-              let act = 0;
-              if (w.contributions) {
-                Object.values(w.contributions).forEach((c: any) => act += Number(c?.actual) || 0);
-              }
-              const isPaid = act > 0 || (w.note && w.note.includes('Đã nộp'));
-              if (isPaid) return; // Bỏ qua hộ đã nộp
-
-              const wName = (w.full_name || (w as any).household_name || '').trim();
-              if (seenIds.has(w.id) || (wName && seenNames.has(wName.toLowerCase()))) return;
-
-              let grp = '';
-              const wAddr = (w.address || '').toLowerCase();
-              for (const g of ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']) {
-                if (wAddr.includes(g.toLowerCase())) { grp = g; break; }
-                const numMatch = g.match(/\d+/);
-                if (numMatch) {
-                  const regex = new RegExp(`(?:tổ|to|cụm|cum|xóm|xom|t)\\s*:?\\s*0?${numMatch[0]}\\b`, 'i');
-                  if (regex.test(wAddr)) { grp = g; break; }
-                }
-              }
-              if (!grp && (wAddr.includes('việt trung') || wAddr.includes('viet trung'))) grp = 'Tổ Việt Trung';
-
-              unpaidFromWard.push({
-                id: w.id || `ward_hh_${generateUUID()}`,
-                group_id: db.getGroupId(),
-                user_id: w.user_id || 'nam_sam_son',
-                head_of_household_id: w.id,
-                household_number: '',
-                address: w.address || 'Quảng Giao',
-                policy_type: 'none',
-                self_management_group: grp || 'Chưa phân tổ',
-                created_at: (w as any).created_at || new Date().toISOString(),
-                martyr_name: wName
-              });
-            });
-
-            exportHouseholds = [...exportHouseholds, ...unpaidFromWard];
-          }
-        } catch (e) {
-          console.error('Error fetching ward funds for unpaid export:', e);
-        }
-      }
+      const exportHouseholds = filteredHouseholdsForFunds;
 
       // 1. Sheet 1: Tổng Hợp Toàn TDP
       addFundWorksheet('Tổng Hợp Toàn TDP', exportHouseholds, 'FF0F766E', true);
@@ -4862,42 +4768,8 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     });
   }, [households, householdPaymentStatusMap, fundSearchTerm, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups]);
 
-  // Thống kê tổng quan số Hộ nộp Quỹ Tổ dân phố (đồng bộ 100% với chuẩn Quỹ Phường)
+  // Thống kê tổng quan số Hộ nộp Quỹ Tổ dân phố (tính trực tiếp từ danh sách 1.251 hộ và dữ liệu nộp quỹ thực tế)
   const householdOverallStats = useMemo(() => {
-    // 1. Kiểm tra thống kê chuẩn liên thông từ Quỹ Phường trong localStorage
-    let wardStats: any = null;
-    try {
-      const saved = localStorage.getItem(`ward_household_overall_stats_${fundYear}`);
-      if (saved) {
-        wardStats = JSON.parse(saved);
-      }
-    } catch (e) {}
-
-    // Nếu chưa có cache Quỹ Phường, thiết lập chuẩn năm 2026 (528 / 1352 nộp đủ, 647 đã đóng, 705 chưa đóng)
-    if (!wardStats && Number(fundYear) === 2026) {
-      wardStats = {
-        totalHouseholds: 1352,
-        paidFullHouseholds: 528,
-        paidAnyHouseholds: 647,
-        unpaidHouseholds: 705,
-        paidFullPercent: 39,
-        paidAnyPercent: 48
-      };
-      try {
-        localStorage.setItem(`ward_household_overall_stats_2026`, JSON.stringify(wardStats));
-      } catch (e) {}
-    }
-
-    // Khi xem toàn bộ Tổ dân phố (không lọc theo tổ con hay ô tìm kiếm)
-    const isWholeScope = (!fundSearchTerm || !fundSearchTerm.trim()) &&
-      (!isWardUser || tdpFilter === 'all') &&
-      (isWardUser || fundGroupFilter === 'all');
-
-    if (isWholeScope && wardStats) {
-      return wardStats;
-    }
-
-    // Trường hợp có lọc cụ thể theo Tổ hoặc theo tìm kiếm
     const listInScope = households.filter(hh => {
       const headName = getHouseholdHeadName(hh).toLowerCase();
       const address = (hh.address || '').toLowerCase();
@@ -4920,7 +4792,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       if (status.isPaidFull) {
         paidFullHouseholds++;
       }
-      if (status.isPaidAny) {
+      if (status.isPaidAny || status.totalPaid > 0) {
         paidAnyHouseholds++;
       } else {
         unpaidHouseholds++;
@@ -4939,7 +4811,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       paidFullPercent,
       paidAnyPercent
     };
-  }, [households, householdPaymentStatusMap, fundSearchTerm, fundGroupFilter, tdpFilter, isWardUser, headNameMap, fundYear, wardStatsVersion]);
+  }, [households, householdPaymentStatusMap, fundSearchTerm, fundGroupFilter, tdpFilter, isWardUser]);
 
   const totalHhCount = householdOverallStats.totalHouseholds;
   const paidHhCount = householdOverallStats.paidAnyHouseholds;
