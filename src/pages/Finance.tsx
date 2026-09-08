@@ -1137,10 +1137,13 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         titleRow2.getCell(1).font = { bold: true, name: 'Segoe UI', size: 14, color: { argb: headerColorArgb } };
 
         // Phụ đề thống kê số lượng hộ (đồng bộ chuẩn 100% với Bảng chính và Quỹ Phường)
-        const paidCount = list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidAny).length;
-        const paidFullCount = list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidFull).length;
-        const unpaidCount = list.length - paidCount;
-        const subTitle = worksheet.addRow([`(Tổng số: ${list.length} hộ — Đã nộp đủ: ${paidFullCount} hộ, Đã nộp tiền: ${paidCount} hộ, Chưa nộp: ${unpaidCount} hộ)`]);
+        const isOverallSummary = isSummarySheet && (!fundSearchTerm || !fundSearchTerm.trim()) && fundGroupFilter === 'all';
+        const displayTotalCount = isOverallSummary ? householdOverallStats.totalHouseholds : list.length;
+        const displayPaidFullCount = isOverallSummary ? householdOverallStats.paidFullHouseholds : list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidFull).length;
+        const displayPaidCount = isOverallSummary ? householdOverallStats.paidAnyHouseholds : list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidAny).length;
+        const displayUnpaidCount = isOverallSummary ? householdOverallStats.unpaidHouseholds : Math.max(0, displayTotalCount - displayPaidCount);
+
+        const subTitle = worksheet.addRow([`(Tổng số: ${displayTotalCount.toLocaleString('vi-VN')} hộ — Đã nộp đủ: ${displayPaidFullCount.toLocaleString('vi-VN')} hộ, Đã nộp tiền: ${displayPaidCount.toLocaleString('vi-VN')} hộ, Chưa nộp: ${displayUnpaidCount.toLocaleString('vi-VN')} hộ)`]);
         subTitle.getCell(1).font = { italic: true, name: 'Segoe UI', size: 10, color: { argb: 'FF64748B' } };
         worksheet.addRow([]); // Dòng trống
 
@@ -1247,7 +1250,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         const totalRowData = [
           'TỔNG CỘNG', 
           ...(isSummarySheet ? [''] : []), 
-          `${list.length} hộ (${paidCount} đã nộp, ${unpaidCount} chưa nộp)`, 
+          `${displayTotalCount.toLocaleString('vi-VN')} hộ (${displayPaidFullCount.toLocaleString('vi-VN')} nộp đủ, ${displayPaidCount.toLocaleString('vi-VN')} đã nộp tiền, ${displayUnpaidCount.toLocaleString('vi-VN')} chưa nộp)`, 
           '', 
           0
         ];
