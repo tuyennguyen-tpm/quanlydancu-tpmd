@@ -1136,10 +1136,11 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         const titleRow2 = worksheet.addRow([`BÁO CÁO THU NỘP CÁC LOẠI QUỸ NĂM ${fundYear} - ${sheetName.toUpperCase()}`]);
         titleRow2.getCell(1).font = { bold: true, name: 'Segoe UI', size: 14, color: { argb: headerColorArgb } };
 
-        // Phụ đề thống kê số lượng hộ
-        const paidCount = list.filter(h => (totalPaidLookup.get(`${h.id}_${fundYear}`) || 0) > 0).length;
+        // Phụ đề thống kê số lượng hộ (đồng bộ chuẩn 100% với Bảng chính và Quỹ Phường)
+        const paidCount = list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidAny).length;
+        const paidFullCount = list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidFull).length;
         const unpaidCount = list.length - paidCount;
-        const subTitle = worksheet.addRow([`(Tổng số: ${list.length} hộ — Đã nộp: ${paidCount} hộ, Chưa nộp: ${unpaidCount} hộ)`]);
+        const subTitle = worksheet.addRow([`(Tổng số: ${list.length} hộ — Đã nộp đủ: ${paidFullCount} hộ, Đã nộp tiền: ${paidCount} hộ, Chưa nộp: ${unpaidCount} hộ)`]);
         subTitle.getCell(1).font = { italic: true, name: 'Segoe UI', size: 10, color: { argb: 'FF64748B' } };
         worksheet.addRow([]); // Dòng trống
 
