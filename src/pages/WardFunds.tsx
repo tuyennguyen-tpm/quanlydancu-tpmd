@@ -1240,8 +1240,7 @@ const WardFunds = () => {
   const dailyStats = useMemo(() => {
     const targetDateStr = summaryDate;
     let totalAmount = 0;
-    const paidHouseholdIds = new Set<string>();
-    const paidWardResidentIds = new Set<string>();
+    const uniquePaidHouseholdIds = new Set<string>();
     const byCategory: Record<string, number> = {};
 
     // Tính từ Quỹ TDP (householdFunds)
@@ -1249,14 +1248,18 @@ const WardFunds = () => {
       const pDate = (hf.paid_at || '').slice(0, 10);
       if (pDate === targetDateStr && hf.amount > 0) {
         totalAmount += hf.amount;
-        paidHouseholdIds.add(hf.household_id);
-        byCategory[hf.fund_name] = (byCategory[hf.fund_name] || 0) + hf.amount;
+        uniquePaidHouseholdIds.add(hf.household_id);
+        const fundLabel = hf.fund_name.startsWith('[TDP]') ? hf.fund_name : `[TDP] ${hf.fund_name}`;
+        byCategory[fundLabel] = (byCategory[fundLabel] || 0) + hf.amount;
       }
     });
 
     // Tính từ Quỹ Phường (ward_funds / funds)
     funds.forEach(wf => {
       if (!wf.contributions) return;
+      const meta = fundMetaMap.get(wf.id);
+      const hhId = meta?.householdId || findMatchingHouseholdForWardFund(wf)?.householdId || wf.id;
+
       activeFunds.forEach((fund: any) => {
         const contrib = getContributionData(wf.contributions, fund.name);
         if (!contrib) return;
@@ -1265,7 +1268,7 @@ const WardFunds = () => {
           const amt = Number(contrib.actual) || 0;
           if (amt > 0) {
             totalAmount += amt;
-            paidWardResidentIds.add(wf.id);
+            uniquePaidHouseholdIds.add(hhId);
             byCategory[fund.name] = (byCategory[fund.name] || 0) + amt;
           }
         }
@@ -1275,10 +1278,10 @@ const WardFunds = () => {
     return {
       date: targetDateStr,
       totalAmount,
-      householdCount: paidHouseholdIds.size + paidWardResidentIds.size,
+      householdCount: uniquePaidHouseholdIds.size,
       byCategory
     };
-  }, [householdFunds, funds, activeFunds, summaryDate]);
+  }, [householdFunds, funds, activeFunds, summaryDate, fundMetaMap]);
 
   // Add new record manually
   const handleAddNewRecord = () => {
