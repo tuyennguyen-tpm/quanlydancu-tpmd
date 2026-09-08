@@ -3506,7 +3506,26 @@ const WardFunds = () => {
             }
           }
         }
-        const groupName = (resolvedGroup || 'Chưa phân tổ').trim();
+        let groupName = (resolvedGroup || '').trim();
+        if (!groupName || groupName === 'Chưa phân tổ') {
+          const addr = (hhMeta?.address || household?.address || members[0]?.address || '').toLowerCase();
+          for (const g of groups) {
+            if (addr.includes(g.toLowerCase())) {
+              groupName = g;
+              break;
+            }
+            const numMatch = g.match(/\d+/);
+            if (numMatch && new RegExp(`(?:tổ|to|cụm|cum|xóm|xom|t)\\s*:?\\s*0?${numMatch[0]}\\b`, 'i').test(addr)) {
+              groupName = g;
+              break;
+            }
+          }
+          if (!groupName && (addr.includes('việt trung') || addr.includes('viet trung'))) groupName = 'Tổ Việt Trung';
+        }
+        if (!groupName || groupName === 'Chưa phân tổ') {
+          // Loại bỏ các hộ chưa phân tổ theo đúng yêu cầu chỉ lấy hộ khẩu chính thức
+          return;
+        }
         const address = hhMeta?.address || household?.address || members[0]?.address || '';
 
         // Tính toán số tiền phải thu và thực thu chuẩn

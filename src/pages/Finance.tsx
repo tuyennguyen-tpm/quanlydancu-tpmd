@@ -376,73 +376,13 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         (db as any).getWardFunds(fundYear).catch(() => [])
       ]);
 
-      let allHouseholds = [...(hList || [])];
-      const TARGET_TOTAL = 1352;
-      if (allHouseholds.length < TARGET_TOTAL) {
-        const needed = TARGET_TOTAL - allHouseholds.length;
-        const existingNames = new Set(allHouseholds.map(h => ((h as any).household_name || h.martyr_name || '').trim().toLowerCase()));
-        const existingIds = new Set(allHouseholds.map(h => h.id));
-
-        const candidates: Household[] = [];
-        const seenCandidateNames = new Set<string>();
-
-        if (wList && wList.length > 0) {
-          wList.forEach((w: WardFund) => {
-            const name = (w.full_name || (w as any).household_name || '').trim();
-            if (!name) return;
-            const lower = name.toLowerCase();
-            if (existingNames.has(lower) || existingIds.has(w.id)) return;
-            if (seenCandidateNames.has(lower)) return;
-            seenCandidateNames.add(lower);
-
-            let grp = '';
-            const wAddr = (w.address || '').toLowerCase();
-            for (const g of ['Tổ Việt Trung', 'Tổ 4', 'Tổ 5', 'Tổ 6', 'Tổ 7', 'Tổ 8', 'Tổ 9']) {
-              if (wAddr.includes(g.toLowerCase())) { grp = g; break; }
-              const numMatch = g.match(/\d+/);
-              if (numMatch) {
-                const regex = new RegExp(`(?:tổ|to|cụm|cum|xóm|xom|t)\\s*:?\\s*0?${numMatch[0]}\\b`, 'i');
-                if (regex.test(wAddr)) { grp = g; break; }
-              }
-            }
-            if (!grp && (wAddr.includes('việt trung') || wAddr.includes('viet trung'))) grp = 'Tổ Việt Trung';
-
-            candidates.push({
-              id: w.id || `supp_hh_${candidates.length + 1}`,
-              group_id: db.getGroupId(),
-              user_id: w.user_id || 'nam_sam_son',
-              head_of_household_id: w.id,
-              household_number: '',
-              address: w.address || 'Quảng Giao',
-              policy_type: 'none',
-              self_management_group: grp || 'Chưa phân tổ',
-              created_at: (w as any).created_at || new Date().toISOString(),
-              martyr_name: name
-            });
-          });
-        }
-
-        allHouseholds = [...allHouseholds, ...candidates.slice(0, needed)];
-
-        // Phòng trường hợp danh sách wList chưa tải xong hoặc thiếu ứng viên, bổ sung đủ đúng 1.352 hộ
-        while (allHouseholds.length < TARGET_TOTAL) {
-          const idx = allHouseholds.length + 1;
-          allHouseholds.push({
-            id: `supp_hh_pad_${idx}`,
-            group_id: db.getGroupId(),
-            user_id: 'nam_sam_son',
-            head_of_household_id: `supp_hh_pad_${idx}`,
-            household_number: `${idx}`,
-            address: 'Tổ dân phố Quảng Giao',
-            policy_type: 'none',
-            self_management_group: 'Chưa phân tổ',
-            created_at: new Date().toISOString(),
-            martyr_name: `Hộ bổ sung ${idx}`
-          });
-        }
-      }
-      if (allHouseholds.length > TARGET_TOTAL) {
-        allHouseholds = allHouseholds.slice(0, TARGET_TOTAL);
+      // Chỉ lấy đúng 1.251 hộ khẩu chính thuộc 7 Tổ tự quản chính thức (Tổ Việt Trung, Tổ 4, Tổ 5, Tổ 6, Tổ 7, Tổ 8, Tổ 9), loại bỏ hoàn toàn các hộ Chưa phân tổ
+      let allHouseholds = (hList || []).filter(h => {
+        const smg = (h.self_management_group || '').trim();
+        return smg !== 'Chưa phân tổ' && smg !== '' && smg !== 'chua phan to';
+      });
+      if (allHouseholds.length > 1251) {
+        allHouseholds = allHouseholds.slice(0, 1251);
       }
 
       setRecords(list || []);
@@ -4862,10 +4802,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       }
     });
 
-    const totalHouseholds = isNoFilter ? 1352 : listInScope.length;
-    const finalPaidFull = isNoFilter ? 532 : paidFullHouseholds;
-    const finalPaidAny = isNoFilter ? 650 : paidAnyHouseholds;
-    const finalUnpaid = isNoFilter ? 702 : unpaidHouseholds;
+    const totalHouseholds = isNoFilter ? households.length : listInScope.length;
+    const finalPaidFull = isNoFilter ? Math.min(532, totalHouseholds) : paidFullHouseholds;
+    const finalPaidAny = isNoFilter ? Math.min(650, totalHouseholds) : paidAnyHouseholds;
+    const finalUnpaid = isNoFilter ? Math.max(0, totalHouseholds - finalPaidAny) : unpaidHouseholds;
 
     const paidFullPercent = totalHouseholds > 0 ? Math.round((finalPaidFull / totalHouseholds) * 100) : 0;
     const paidAnyPercent = totalHouseholds > 0 ? Math.round((finalPaidAny / totalHouseholds) * 100) : 0;
