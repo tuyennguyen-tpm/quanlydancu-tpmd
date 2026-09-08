@@ -192,7 +192,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
   const [fundYear, setFundYear] = useState<number>(new Date().getFullYear());
   const [fundSearchInput, setFundSearchInput] = useState('');
   const fundSearchTerm = useDeferredValue(fundSearchInput);
-  const [fundFilterStatus, setFundFilterStatus] = useState<'all' | 'paid' | 'unpaid'>('all');
+  const [fundFilterStatus, setFundFilterStatus] = useState<'all' | 'paid' | 'paid_all' | 'paid_any' | 'unpaid'>('all');
   const [fundGroupFilter, setFundGroupFilter] = useState<string>('all');
   const [tdpList, setTdpList] = useState<any[]>([]);
   const [tdpMap, setTdpMap] = useState<Record<string, string>>({});
@@ -858,19 +858,25 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
   };
 
   // ─── Đồng bộ tự động từ Quỹ Phường sang Quỹ TDP ────────────────────────────
-  const handleSyncFromWardFunds = async () => {
+  const handleSyncFromWardFunds = async (silent: boolean = false) => {
     try {
-      showToast('Đang quét và đồng bộ dữ liệu từ Quỹ Phường...', 'info');
+      if (!silent) {
+        showToast('Đang quét và đồng bộ dữ liệu từ Quỹ Phường...', 'info');
+      }
 
       const wardFundsData: WardFund[] = await (db as any).getWardFunds(fundYear);
       if (!wardFundsData || wardFundsData.length === 0) {
-        showToast(`Chưa có dữ liệu Quỹ Phường năm ${fundYear} để đồng bộ!`, 'warning');
+        if (!silent) {
+          showToast(`Chưa có dữ liệu Quỹ Phường năm ${fundYear} để đồng bộ!`, 'warning');
+        }
         return;
       }
 
       const tdpActiveFunds = db.getFundList() || [];
       if (tdpActiveFunds.length === 0) {
-        showToast('Chưa có danh mục quỹ Tổ dân phố nào được cấu hình!', 'warning');
+        if (!silent) {
+          showToast('Chưa có danh mục quỹ Tổ dân phố nào được cấu hình!', 'warning');
+        }
         return;
       }
 
@@ -894,19 +900,42 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         const nameClean = (record.full_name || '').trim().toLowerCase();
         const addrClean = (record.address || '').trim().toLowerCase();
 
-        // 1. Khớp theo địa chỉ Hộ
-        const matchedByAddr = households.find(h => {
-          const hAddr = (h.address || '').trim().toLowerCase();
-          return hAddr && (hAddr === addrClean || hAddr.includes(addrClean) || addrClean.includes(hAddr));
-        });
+        // 1. Khớp theo ID nhân khẩu nếu có
+        if (record.id || (record as any).user_id) {
+          const recId = record.id || (record as any).user_id;
+          const matchedById = residents.find(r => r.id === recId || (r as any).user_id === recId);
+          if (matchedById?.household_id) {
+            matchedHhId = matchedById.household_id;
+          }
+        }
 
-        if (matchedByAddr) {
-          matchedHhId = matchedByAddr.id;
-        } else {
-          // 2. Khớp theo nhân khẩu
+        // 2. Khớp theo tên nhân khẩu
+        if (!matchedHhId && nameClean) {
           const matchedRes = residents.find(r => (r.full_name || '').trim().toLowerCase() === nameClean);
           if (matchedRes?.household_id) {
             matchedHhId = matchedRes.household_id;
+          }
+        }
+
+        // 3. Khớp theo tên chủ hộ
+        if (!matchedHhId && nameClean) {
+          const matchedHhHead = households.find(h => {
+            const hHead = headNameMap.get(h.id)?.trim().toLowerCase();
+            return hHead && hHead === nameClean;
+          });
+          if (matchedHhHead) {
+            matchedHhId = matchedHhHead.id;
+          }
+        }
+
+        // 4. Khớp theo địa chỉ Hộ
+        if (!matchedHhId && addrClean) {
+          const matchedByAddr = households.find(h => {
+            const hAddr = (h.address || '').trim().toLowerCase();
+            return hAddr && (hAddr === addrClean || hAddr.includes(addrClean) || addrClean.includes(hAddr));
+          });
+          if (matchedByAddr) {
+            matchedHhId = matchedByAddr.id;
           }
         }
 
@@ -915,6 +944,16 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             hhGroupMap.set(matchedHhId, { householdId: matchedHhId, members: [] });
           }
           hhGroupMap.get(matchedHhId)!.members.push(record);
+        }
+      });
+
+      // Quét thêm tất cả các hộ đã lưu bản in Biên lai gộp
+      households.forEach(hh => {
+        if (!hhGroupMap.has(hh.id)) {
+          const SAVE_KEY_COMBINED = getCanonicalHouseholdReceiptKey(hh.id, fundYear, 'combined');
+          if (localStorage.getItem(SAVE_KEY_COMBINED)) {
+            hhGroupMap.set(hh.id, { householdId: hh.id, members: [] });
+          }
         }
       });
 
@@ -998,7 +1037,9 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       });
 
       if (newHouseholdFundsToSave.length === 0) {
-        showToast(`Tất cả các hộ đã thu bên Quỹ Phường đều đã được đồng bộ đầy đủ từ trước!`, 'info');
+        if (!silent) {
+          showToast(`Tất cả các hộ đã thu bên Quỹ Phường đều đã được đồng bộ đầy đủ từ trước!`, 'info');
+        }
         return;
       }
 
@@ -1015,12 +1056,26 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       });
 
       window.dispatchEvent(new CustomEvent('db-changed'));
-      showToast(`⚡ Đã đồng bộ thành công ${syncedHouseholdCount} hộ từ Quỹ Phường sang Quỹ TDP!`, 'success');
+      if (!silent) {
+        showToast(`⚡ Đã đồng bộ thành công ${syncedHouseholdCount} hộ từ Quỹ Phường sang Quỹ TDP!`, 'success');
+      }
     } catch (err) {
       console.error('Lỗi khi đồng bộ từ Quỹ Phường:', err);
-      showToast('Có lỗi xảy ra khi đồng bộ!', 'danger');
+      if (!silent) {
+        showToast('Có lỗi xảy ra khi đồng bộ!', 'danger');
+      }
     }
   };
+
+  // Tự động đồng bộ ngầm khi chuyển sang tab Thu quỹ TDP hoặc đổi năm
+  useEffect(() => {
+    if (subTab === 'funds') {
+      const autoSyncTimer = setTimeout(() => {
+        handleSyncFromWardFunds(true);
+      }, 400);
+      return () => clearTimeout(autoSyncTimer);
+    }
+  }, [subTab, fundYear]);
 
   const handleExportFundsExcel = async () => {
     try {
@@ -4506,6 +4561,38 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     return map;
   }, [householdFunds, fundYear, fundNames]);
 
+  // Tra cứu trạng thái nộp quỹ của từng hộ (Đã nộp đủ tất cả quỹ TDP / Đã nộp ít nhất 1 quỹ / Chưa nộp)
+  // Liên thông với Biên lai gộp đã lưu hoặc ghi nhận nộp bên Quỹ Phường
+  const householdPaymentStatusMap = useMemo(() => {
+    const map = new Map<string, { isPaidFull: boolean; isPaidAny: boolean; totalPaid: number }>();
+    const tdpFundsConfig = fundList.length > 0 ? fundList : (db.getFundList() || []);
+
+    households.forEach(hh => {
+      const hhFunds = hhFundsMap.get(hh.id) || [];
+      const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
+
+      const SAVE_KEY_COMBINED = getCanonicalHouseholdReceiptKey(hh.id, fundYear, 'combined');
+      const hasSavedReceipt = Boolean(localStorage.getItem(SAVE_KEY_COMBINED));
+
+      const hhAddr = ((hh.address || '') + ' ' + ((hh as any).self_management_group || '')).toLowerCase();
+      const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || ((hh as any).self_management_group || '').trim() === 'Tổ 8';
+
+      // Hộ nộp đủ tất cả các quỹ TDP nếu có biên lai gộp hoặc đã hoàn thành đủ chỉ tiêu tất cả các quỹ TDP
+      const isPaidFull = hasSavedReceipt || (tdpFundsConfig.length > 0 && tdpFundsConfig.every(fund => {
+        const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
+        if (isKhuyenHoc && isGroup8 && Number(fundYear) === 2026) return true; // Miễn năm 2026
+        const paidFund = hhFunds.find(f => f.fund_name === fund.name);
+        return paidFund && paidFund.amount >= fund.target;
+      }));
+
+      const isPaidAny = totalPaid > 0 || isPaidFull;
+
+      map.set(hh.id, { isPaidFull, isPaidAny, totalPaid });
+    });
+
+    return map;
+  }, [households, hhFundsMap, totalPaidLookup, fundYear, fundList]);
+
   const filteredHouseholdsForFunds = useMemo(() => {
     const list = households.filter(hh => {
       const headName = getHouseholdHeadName(hh).toLowerCase();
@@ -4516,12 +4603,14 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       
       if (!matchesSearch) return false;
       
-      const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
+      const status = householdPaymentStatusMap.get(hh.id) || { isPaidFull: false, isPaidAny: false, totalPaid: 0 };
       
-      if (fundFilterStatus === 'paid') {
-        if (totalPaid === 0) return false;
+      if (fundFilterStatus === 'paid_all') {
+        if (!status.isPaidFull) return false;
+      } else if (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') {
+        if (!status.isPaidAny) return false;
       } else if (fundFilterStatus === 'unpaid') {
-        if (totalPaid > 0) return false;
+        if (status.isPaidAny) return false;
       }
 
       // Lọc theo phân quyền Tổ (cấp TDP) hoặc TDP (cấp phường)
@@ -4550,10 +4639,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       const nameB = getHouseholdHeadName(b).toLowerCase();
       return nameA.localeCompare(nameB, 'vi');
     });
-  }, [households, totalPaidLookup, fundSearchTerm, fundYear, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups]);
+  }, [households, householdPaymentStatusMap, fundSearchTerm, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups]);
 
-  // Đếm tổng số hộ, số hộ đã nộp, và số hộ chưa nộp theo phạm vi lọc hiện tại
-  const { totalHhCount, paidHhCount, unpaidHhCount } = useMemo(() => {
+  // Thống kê tổng quan số Hộ nộp Quỹ Tổ dân phố (đồng bộ 100% với chuẩn Quỹ Phường)
+  const householdOverallStats = useMemo(() => {
     const listInScope = households.filter(hh => {
       const headName = getHouseholdHeadName(hh).toLowerCase();
       const address = (hh.address || '').toLowerCase();
@@ -4567,23 +4656,39 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       return matchesTdp && matchesGroup;
     });
 
-    let paid = 0;
-    let unpaid = 0;
+    let paidFullHouseholds = 0;
+    let paidAnyHouseholds = 0;
+    let unpaidHouseholds = 0;
+
     listInScope.forEach(hh => {
-      const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
-      if (totalPaid > 0) {
-        paid++;
+      const status = householdPaymentStatusMap.get(hh.id) || { isPaidFull: false, isPaidAny: false, totalPaid: 0 };
+      if (status.isPaidFull) {
+        paidFullHouseholds++;
+      }
+      if (status.isPaidAny) {
+        paidAnyHouseholds++;
       } else {
-        unpaid++;
+        unpaidHouseholds++;
       }
     });
 
+    const totalHouseholds = listInScope.length;
+    const paidFullPercent = totalHouseholds > 0 ? Math.round((paidFullHouseholds / totalHouseholds) * 100) : 0;
+    const paidAnyPercent = totalHouseholds > 0 ? Math.round((paidAnyHouseholds / totalHouseholds) * 100) : 0;
+
     return {
-      totalHhCount: listInScope.length,
-      paidHhCount: paid,
-      unpaidHhCount: unpaid
+      totalHouseholds,
+      paidFullHouseholds,
+      paidAnyHouseholds,
+      unpaidHouseholds,
+      paidFullPercent,
+      paidAnyPercent
     };
-  }, [households, totalPaidLookup, fundSearchTerm, fundYear, fundGroupFilter, tdpFilter, isWardUser, headNameMap]);
+  }, [households, householdPaymentStatusMap, fundSearchTerm, fundGroupFilter, tdpFilter, isWardUser, headNameMap]);
+
+  const totalHhCount = householdOverallStats.totalHouseholds;
+  const paidHhCount = householdOverallStats.paidAnyHouseholds;
+  const unpaidHhCount = householdOverallStats.unpaidHouseholds;
 
   // 4. Tối ưu hóa hiệu năng: Tính toán nhanh thông số thống kê cho các thẻ 3D
   const fundStatistics = useMemo(() => {
@@ -5235,6 +5340,51 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               ℹ️ <strong>Chế độ Kế toán:</strong> Bạn đang xem danh sách thu quỹ theo hộ dân (Chế độ chỉ xem thông tin, không được phép ghi nhận/chỉnh sửa).
             </div>
           )}
+          {/* Card Thống kê Tổng quan Hộ Gia Đình Nộp Quỹ Tổ Dân Phố */}
+          <div 
+            style={{
+              backgroundColor: '#f0fdf4',
+              border: '1.5px solid #bbf7d0',
+              borderRadius: '14px',
+              padding: '14px 18px',
+              boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
+              position: 'relative',
+              overflow: 'hidden',
+              marginBottom: '18px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  🏡 Tiến độ Hộ nộp Quỹ Tổ dân phố
+                </span>
+                <h3 style={{ margin: '4px 0 0 0', fontSize: '1.45rem', fontWeight: '850', color: '#1e293b' }}>
+                  {householdOverallStats.paidFullHouseholds} / {householdOverallStats.totalHouseholds} hộ nộp đủ
+                </h3>
+              </div>
+              <div style={{
+                backgroundColor: 'rgba(22,163,74,0.12)',
+                color: '#15803d',
+                borderRadius: '10px',
+                padding: '6px 10px',
+                fontSize: '0.8rem',
+                fontWeight: '800'
+              }}>
+                Nộp đủ {householdOverallStats.paidFullPercent}%
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div style={{ width: '100%', height: '6px', backgroundColor: '#dcfce7', borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(householdOverallStats.paidFullPercent, 100)}%`, height: '100%', backgroundColor: '#16a34a', borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#475569', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
+              <span>Đã đóng tiền: <strong style={{ color: '#16a34a' }}>{householdOverallStats.paidAnyHouseholds} hộ</strong></span>
+              <span>Chưa đóng: <strong style={{ color: '#dc2626' }}>{householdOverallStats.unpaidHouseholds} hộ</strong></span>
+            </div>
+          </div>
+
           {/* Thống kê Quỹ nổi 3D */}
           {!isWardUser && canPrintExport && (
             <div className="fund-stats-3d-grid" style={{
@@ -5354,17 +5504,17 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   style={{
                     padding: '8px 14px',
                     borderRadius: '8px',
-                    border: fundFilterStatus === 'paid' 
+                    border: (fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid')
                       ? '1.5px solid #16a34a' 
                       : fundFilterStatus === 'unpaid' 
                       ? '1.5px solid #dc2626' 
                       : '1px solid var(--border)',
-                    background: fundFilterStatus === 'paid' 
+                    background: (fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid')
                       ? '#f0fdf4' 
                       : fundFilterStatus === 'unpaid' 
                       ? '#fef2f2' 
                       : '#ffffff',
-                    color: fundFilterStatus === 'paid' 
+                    color: (fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid')
                       ? '#166534' 
                       : fundFilterStatus === 'unpaid' 
                       ? '#b91c1c' 
@@ -5373,14 +5523,15 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     fontSize: '0.88rem',
                     outline: 'none',
                     cursor: 'pointer',
-                    minWidth: '210px',
+                    minWidth: '220px',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <option value="all">👥 Tất cả các hộ ({totalHhCount})</option>
-                  <option value="paid">✅ Hộ đã nộp ({paidHhCount})</option>
-                  <option value="unpaid">❌ Hộ chưa nộp ({unpaidHhCount})</option>
+                  <option value="all">👥 Tất cả các hộ ({householdOverallStats.totalHouseholds})</option>
+                  <option value="paid_all">🟢 Đã nộp đủ tất cả các quỹ ({householdOverallStats.paidFullHouseholds})</option>
+                  <option value="paid_any">🟡 Đã nộp ít nhất 1 quỹ ({householdOverallStats.paidAnyHouseholds})</option>
+                  <option value="unpaid">🔴 Chưa nộp quỹ nào ({householdOverallStats.unpaidHouseholds})</option>
                 </select>
               </div>
               
@@ -5618,7 +5769,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
                   {!isGuest && (
                     <button 
-                      onClick={handleSyncFromWardFunds}
+                      onClick={() => handleSyncFromWardFunds(false)}
                       style={{
                         padding: '8px 16px',
                         borderRadius: '8px',
@@ -5664,17 +5815,17 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               padding: '10px 16px',
               borderRadius: '8px',
               marginBottom: '12px',
-              backgroundColor: fundFilterStatus === 'paid' ? '#f0fdf4' : '#fef2f2',
-              border: `1.5px solid ${fundFilterStatus === 'paid' ? '#86efac' : '#fca5a5'}`,
-              color: fundFilterStatus === 'paid' ? '#166534' : '#991b1b',
+              backgroundColor: (fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') ? '#f0fdf4' : '#fef2f2',
+              border: `1.5px solid ${(fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') ? '#86efac' : '#fca5a5'}`,
+              color: (fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') ? '#166534' : '#991b1b',
               fontSize: '0.9rem',
               fontWeight: '600',
               animation: 'fadeIn 0.2s ease'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {fundFilterStatus === 'paid' ? <CheckCircle size={18} color="#16a34a" /> : <XCircle size={18} color="#dc2626" />}
+                {(fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') ? <CheckCircle size={18} color="#16a34a" /> : <XCircle size={18} color="#dc2626" />}
                 <span>
-                  Đang lọc danh sách: <strong>{filteredHouseholdsForFunds.length}</strong> hộ <strong>{fundFilterStatus === 'paid' ? 'ĐÃ NỘP QUỸ' : 'CHƯA NỘP QUỸ'}</strong> năm {fundYear}
+                  Đang lọc danh sách: <strong>{filteredHouseholdsForFunds.length}</strong> hộ <strong>{fundFilterStatus === 'paid_all' ? 'ĐÃ NỘP ĐỦ TẤT CẢ CÁC QUỸ' : (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') ? 'ĐÃ ĐÓNG TIỀN (ÍT NHẤT 1 KHOẢN)' : 'CHƯA ĐÓNG QUỸ NÀO'}</strong> năm {fundYear}
                 </span>
               </div>
               <button
@@ -5683,9 +5834,9 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                 style={{
                   padding: '4px 10px',
                   borderRadius: '6px',
-                  border: `1px solid ${fundFilterStatus === 'paid' ? '#16a34a' : '#dc2626'}`,
+                  border: `1px solid ${(fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') ? '#16a34a' : '#dc2626'}`,
                   background: 'white',
-                  color: fundFilterStatus === 'paid' ? '#16a34a' : '#dc2626',
+                  color: (fundFilterStatus === 'paid_all' || fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') ? '#16a34a' : '#dc2626',
                   fontSize: '0.8rem',
                   fontWeight: '700',
                   cursor: 'pointer'
@@ -5724,11 +5875,9 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                 {filteredHouseholdsForFunds.slice(0, visibleCount).map((hh) => {
                   const headName = getHouseholdHeadName(hh);
                   const hhFunds = hhFundsMap.get(hh.id) || [];
-                  const totalPaid = hhFunds.reduce((sum, f) => sum + f.amount, 0);
-                  const isAllTdpPaid = fundList.length > 0 && fundList.every((fund) => {
-                    const paidFund = hhFunds.find(f => f.fund_name === fund.name);
-                    return paidFund && paidFund.amount >= fund.target;
-                  });
+                  const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
+                  const status = householdPaymentStatusMap.get(hh.id) || { isPaidFull: false, isPaidAny: false, totalPaid: 0 };
+                  const isAllTdpPaid = status.isPaidFull;
                   
                   return (
                     <tr key={hh.id}>
@@ -5736,18 +5885,34 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                         <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{headName}</div>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>{hh.address}</div>
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: '700', color: totalPaid > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+                      <td style={{ textAlign: 'right', fontWeight: '700', color: totalPaid > 0 || isAllTdpPaid ? 'var(--success)' : 'var(--text-muted)' }}>
                         {formatCurrency(totalPaid)}
+                        {isAllTdpPaid && (
+                          <div style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '800', marginTop: '2px' }}>
+                            ✓ Đã nộp đủ
+                          </div>
+                        )}
                       </td>
                       {fundNames.map((fundName, idx) => {
                         const paidFund = hhFunds.find(f => f.fund_name === fundName);
                         const amountPaid = paidFund ? paidFund.amount : 0;
                         const fundConfig = fundList.find(f => f.name === fundName);
                         const targetAmt = fundConfig ? fundConfig.target : 0;
+                        const isKhuyenHoc = fundName.toLowerCase().includes('khuyến học') || fundName.toLowerCase().includes('khuyen hoc');
+                        const hhAddr = ((hh.address || '') + ' ' + ((hh as any).self_management_group || '')).toLowerCase();
+                        const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || ((hh as any).self_management_group || '').trim() === 'Tổ 8';
+                        const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(fundYear) === 2026;
+
+                        const isEffectivePaid = amountPaid > 0 || (isAllTdpPaid && !isExemptTdpGroup8);
+                        const effectiveDisplayAmount = amountPaid > 0 ? amountPaid : (isAllTdpPaid && !isExemptTdpGroup8 ? targetAmt : 0);
                         
                         return (
                           <td key={idx} style={{ textAlign: 'center' }}>
-                            {amountPaid > 0 ? (
+                            {isExemptTdpGroup8 ? (
+                              <span style={{ fontSize: '0.75rem', color: '#059669', fontStyle: 'italic', fontWeight: '700', padding: '4px 8px', borderRadius: '12px', background: '#ecfdf5' }}>
+                                Đã thu trước
+                              </span>
+                            ) : isEffectivePaid ? (
                               <button 
                                 onClick={() => handleOpenFundPay(hh.id, fundName)}
                                 style={{
@@ -5765,7 +5930,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                                 onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.1)'; }}
                                 title="Bấm để sửa đổi hoặc xóa"
                               >
-                                {formatCurrency(amountPaid)}
+                                {formatCurrency(effectiveDisplayAmount)}
                               </button>
                             ) : (
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
