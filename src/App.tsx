@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, partyDb, checkAndSeedUser } from './services/db';
+import { appCache } from './services/cache';
 import { askGemini } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
@@ -1756,9 +1757,11 @@ const App = () => {
 
     const triggerSyncToUI = (_sourceText: string, payload?: any) => {
       lastPayload = payload;
+      // Dọn sạch cache cục bộ để thiết bị bắt buộc lấy dữ liệu mới nhất từ Supabase
+      appCache.invalidatePrefixes(['ward_funds', 'household_funds', 'financial_records', 'households', 'residents']).catch(() => {});
       if (syncTimer) clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('db-changed', { detail: { payload: lastPayload, fromRemote: true } }));
+        window.dispatchEvent(new CustomEvent('db-changed', { detail: { payload: lastPayload, fromRemote: true, force: true } }));
       }, 350);
 
       if (toastTimer) clearTimeout(toastTimer);
@@ -1807,9 +1810,10 @@ const App = () => {
 
     window.addEventListener('db-changed', handleLocalDbChanged);
 
-    // Tự động kiểm tra và đồng bộ dữ liệu mới nhất ngay khi người dùng quay lại cửa sổ/tab trình duyệt
+    // Tự động kiểm tra và đồng bộ dữ liệu mới nhất ngay khi người dùng quay lại cửa sổ/tab trình duyệt hoặc mở khóa điện thoại
     const handleWindowFocus = () => {
-      window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true } }));
+      appCache.invalidatePrefixes(['ward_funds', 'household_funds']).catch(() => {});
+      window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true, force: true } }));
     };
     window.addEventListener('focus', handleWindowFocus);
     const handleVisibilityChange = () => {

@@ -292,13 +292,13 @@ const WardFunds = () => {
   };
 
   // Load Data ngầm im lặng không khóa màn hình xoay xoay Đang xử lý dữ liệu
-  const loadData = async (isInitial = false) => {
+  const loadData = async (isInitial = false, forceRefresh = false) => {
     if (isInitial) setIsLoading(true);
     try {
-      const data = await db.getWardFunds(selectedYear);
+      const data = await db.getWardFunds(selectedYear, forceRefresh);
       setFunds(data);
       try {
-        const hhFunds = await db.getHouseholdFunds();
+        const hhFunds = await db.getHouseholdFunds(forceRefresh);
         setHouseholdFunds(hhFunds || []);
       } catch { /* ignore */ }
     } catch (e) {
@@ -358,10 +358,12 @@ const WardFunds = () => {
   }, []);
 
   useEffect(() => {
-    loadData(true);
+    // Khi mở trang: Luôn tự động ép tải dữ liệu tươi mới nhất từ máy chủ Supabase về
+    loadData(true, true);
     const handleSilentReload = (e: Event) => {
       const detail = (e as CustomEvent)?.detail;
       const payload = detail?.payload;
+      const isForce = Boolean(detail?.force);
       if (payload && payload.new && (payload.table === 'ward_funds' || payload.tableName === 'ward_funds')) {
         const newRecord = payload.new;
         if (newRecord && Number(newRecord.year) === Number(selectedYear)) {
@@ -377,7 +379,7 @@ const WardFunds = () => {
           return;
         }
       }
-      loadData(false);
+      loadData(false, isForce);
     };
     window.addEventListener('db-changed', handleSilentReload);
     return () => window.removeEventListener('db-changed', handleSilentReload);

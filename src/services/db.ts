@@ -289,7 +289,7 @@ const getTenantFilter = (): { field: 'user_id' | 'ward_id'; value: string } | nu
     if (selectedTdpId && selectedTdpId !== 'all') {
       return { field: 'user_id', value: selectedTdpId };
     }
-    const wardId = localStorage.getItem('user_ward_id') || '585004fb-8c9b-4c1c-affc-9b05de52b82a';
+    const wardId = localStorage.getItem('user_ward_id') || '81b0839d-a9a3-40e3-bdc9-9a119b2ee181';
     if (wardId) {
       return { field: 'ward_id', value: wardId };
     }
@@ -308,9 +308,12 @@ const getTenantFilter = (): { field: 'user_id' | 'ward_id'; value: string } | nu
 };
 
 const enrichPayload = (payload: any) => {
-  const wardId = localStorage.getItem('user_ward_id');
-  if (wardId && !payload.ward_id) {
+  const wardId = localStorage.getItem('user_ward_id') || '81b0839d-a9a3-40e3-bdc9-9a119b2ee181';
+  if (!payload.ward_id) {
     payload.ward_id = wardId;
+  }
+  if (!payload.user_id) {
+    payload.user_id = localStorage.getItem('supabase_user_id') || 'b6986043-87f9-446b-b317-80476fa67a7e';
   }
   // Chuyển status 'moved_out' thành 'temporary_absent' cho Supabase nếu database chứa CHECK constraint cũ
   if (payload.status === 'moved_out') {
@@ -806,8 +809,20 @@ export const db = {
     const cacheKey = `households_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
 
     if (!forceRefresh) {
-      const cached = await appCache.get<Household[]>(cacheKey);
-      if (cached && cached.length > 0) return cached;
+      const freshCached = await appCache.get<Household[]>(cacheKey, 30 * 1000);
+      if (freshCached && freshCached.length > 0) return freshCached;
+
+      const staleCached = await (appCache as any).getStale?.(cacheKey);
+      if (staleCached && staleCached.length > 0) {
+        setTimeout(() => {
+          db.getHouseholds(true).then(fresh => {
+            if (fresh && fresh.length > 0) {
+              window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true, silent: true, table: 'households' } }));
+            }
+          }).catch(() => {});
+        }, 10);
+        return staleCached;
+      }
     }
 
     return appCache.dedupe(cacheKey, async () => {
@@ -968,8 +983,20 @@ export const db = {
     const cacheKey = `residents_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
 
     if (!forceRefresh) {
-      const cached = await appCache.get<Resident[]>(cacheKey);
-      if (cached && cached.length > 0) return cached;
+      const freshCached = await appCache.get<Resident[]>(cacheKey, 30 * 1000);
+      if (freshCached && freshCached.length > 0) return freshCached;
+
+      const staleCached = await (appCache as any).getStale?.(cacheKey);
+      if (staleCached && staleCached.length > 0) {
+        setTimeout(() => {
+          db.getResidents(true).then(fresh => {
+            if (fresh && fresh.length > 0) {
+              window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true, silent: true, table: 'residents' } }));
+            }
+          }).catch(() => {});
+        }, 10);
+        return staleCached;
+      }
     }
 
     return appCache.dedupe(cacheKey, async () => {
@@ -1152,8 +1179,20 @@ export const db = {
     const cacheKey = `financial_records_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
 
     if (!forceRefresh) {
-      const cached = await appCache.get<FinancialRecord[]>(cacheKey);
-      if (cached && cached.length > 0) return cached;
+      const freshCached = await appCache.get<FinancialRecord[]>(cacheKey, 30 * 1000);
+      if (freshCached && freshCached.length > 0) return freshCached;
+
+      const staleCached = await (appCache as any).getStale?.(cacheKey);
+      if (staleCached && staleCached.length > 0) {
+        setTimeout(() => {
+          db.getFinancialRecords(true).then(fresh => {
+            if (fresh && fresh.length > 0) {
+              window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true, silent: true, table: 'financial_records' } }));
+            }
+          }).catch(() => {});
+        }, 10);
+        return staleCached;
+      }
     }
 
     return appCache.dedupe(cacheKey, async () => {
@@ -1820,8 +1859,20 @@ export const db = {
     const cacheKey = `household_funds_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
 
     if (!forceRefresh) {
-      const cached = await appCache.get<HouseholdFund[]>(cacheKey);
-      if (cached && cached.length > 0) return cached;
+      const freshCached = await appCache.get<HouseholdFund[]>(cacheKey, 30 * 1000);
+      if (freshCached && freshCached.length > 0) return freshCached;
+
+      const staleCached = await (appCache as any).getStale?.(cacheKey);
+      if (staleCached && staleCached.length > 0) {
+        setTimeout(() => {
+          db.getHouseholdFunds(true).then(fresh => {
+            if (fresh && fresh.length > 0) {
+              window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true, silent: true, table: 'household_funds' } }));
+            }
+          }).catch(() => {});
+        }, 10);
+        return staleCached;
+      }
     }
 
     return appCache.dedupe(cacheKey, async () => {
@@ -2328,8 +2379,20 @@ export const db = {
     const cacheKey = `ward_funds_${year}_${tenantFilter?.field || 'all'}_${tenantFilter?.value || 'all'}`;
 
     if (!forceRefresh) {
-      const cached = await appCache.get<WardFund[]>(cacheKey);
-      if (cached && cached.length > 0) return cached;
+      const freshCached = await appCache.get<WardFund[]>(cacheKey, 30 * 1000);
+      if (freshCached && freshCached.length > 0) return freshCached;
+
+      const staleCached = await (appCache as any).getStale?.(cacheKey);
+      if (staleCached && staleCached.length > 0) {
+        setTimeout(() => {
+          db.getWardFunds(year, true).then(fresh => {
+            if (fresh && fresh.length > 0) {
+              window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true, silent: true, table: 'ward_funds' } }));
+            }
+          }).catch(() => {});
+        }, 10);
+        return staleCached;
+      }
     }
 
     return appCache.dedupe(cacheKey, async () => {

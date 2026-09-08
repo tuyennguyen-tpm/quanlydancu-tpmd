@@ -366,14 +366,14 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
   const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
       const [list, hList, rList, fList, wList] = await Promise.all([
-        db.getFinancialRecords(),
-        db.getHouseholds(),
-        db.getResidents(),
-        db.getHouseholdFunds(),
-        (db as any).getWardFunds(fundYear).catch(() => [])
+        db.getFinancialRecords(forceRefresh),
+        db.getHouseholds(forceRefresh),
+        db.getResidents(forceRefresh),
+        db.getHouseholdFunds(forceRefresh),
+        (db as any).getWardFunds(fundYear, forceRefresh).catch(() => [])
       ]);
 
       // Chỉ lấy đúng 1.251 hộ khẩu chính thuộc 7 Tổ tự quản chính thức (Tổ Việt Trung, Tổ 4, Tổ 5, Tổ 6, Tổ 7, Tổ 8, Tổ 9), loại bỏ hoàn toàn các hộ Chưa phân tổ
@@ -405,15 +405,17 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     }
   };
 
-  const handleDebouncedLoad = () => {
+  const handleDebouncedLoad = (e?: Event) => {
+    const isForce = Boolean((e as CustomEvent)?.detail?.force);
     if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
     loadTimerRef.current = setTimeout(() => {
-      loadData();
+      loadData(isForce);
     }, 300);
   };
 
   useEffect(() => {
-    loadData();
+    // Luôn tự động tải dữ liệu tươi mới từ máy chủ Supabase khi mở trang
+    loadData(true);
     window.addEventListener('db-changed', handleDebouncedLoad);
 
     const handleSaveNoticeMessage = async (event: MessageEvent) => {

@@ -41,8 +41,9 @@ function getIndexedDB(): Promise<IDBDatabase> {
 export const appCache = {
   /**
    * Lấy dữ liệu từ L1 Cache (Memory - 0ms) hoặc L2 Cache (IndexedDB - 15ms)
+   * Nếu đã hết hạn (age >= maxAgeMs), trả về null để bắt buộc nạp mới từ đám mây
    */
-  get: async <T>(key: string, maxAgeMs = 10 * 60 * 1000): Promise<T | null> => {
+  get: async <T>(key: string, maxAgeMs = 60 * 1000): Promise<T | null> => {
     // 1. Check L1 Memory Cache (Instant 0ms)
     const mem = memoryCache.get(key);
     if (mem) {
@@ -50,6 +51,7 @@ export const appCache = {
       if (age < maxAgeMs) {
         return mem.data as T;
       }
+      memoryCache.delete(key);
     }
 
     // 2. Check L2 IndexedDB Cache (10-20ms)
@@ -63,13 +65,41 @@ export const appCache = {
           const record = req.result;
           if (record && record.data) {
             const age = Date.now() - (record.timestamp || 0);
-            // Cập nhật ngược lại vào L1 Memory để các lần gọi tiếp theo là 0ms
-            memoryCache.set(key, { data: record.data, timestamp: record.timestamp || Date.now() });
             if (age < maxAgeMs) {
+              // Cập nhật ngược lại vào L1 Memory để các lần gọi tiếp theo là 0ms
+              memoryCache.set(key, { data: record.data, timestamp: record.timestamp || Date.now() });
               resolve(record.data as T);
               return;
             }
-            // Nếu quá hạn nhưng vẫn có dữ liệu (Stale), có thể trả về để render trước
+            // Đã hết hạn -> trả về null để lấy dữ liệu mới nhất từ máy chủ
+            resolve(null);
+            return;
+          }
+          resolve(null);
+        };
+        req.onerror = () => resolve(null);
+      });
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Lấy nhanh dữ liệu cũ từ cache để render ngay tức khắc (0ms) trong khi chờ cập nhật nền
+   */
+  getStale: async <T>(key: string): Promise<T | null> => {
+    const mem = memoryCache.get(key);
+    if (mem) return mem.data as T;
+
+    try {
+      const db = await getIndexedDB();
+      return new Promise<T | null>((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(key);
+        req.onsuccess = () => {
+          const record = req.result;
+          if (record && record.data) {
             resolve(record.data as T);
             return;
           }
@@ -78,7 +108,7 @@ export const appCache = {
         req.onerror = () => resolve(null);
       });
     } catch {
-      return mem ? (mem.data as T) : null;
+      return null;
     }
   },
 
@@ -158,5 +188,34 @@ export const appCache = {
     });
     inFlightRequests.set(key, p);
     return p;
+  },
+
+  /**
+   * Xóa một danh sách tiền tố cache cùng một lúc
+   */
+  invalidatePrefixes: async (prefixes: string[]): Promise<void> => {
+    for (const p of prefixes) {
+      await appCache.invalidate(p);
+    }
+  },
+
+  /**
+   * Xóa sạch toàn bộ cache
+   */
+  clearAll: async (): Promise<void> => {
+    memoryCache.clear();
+    try {
+      const db = await getIndexedDB();
+      await new Promise<void>((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.clear();
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+    } catch {
+      // Ignore
+    }
   }
 };
+
