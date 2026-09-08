@@ -1075,7 +1075,10 @@ const WardFunds = () => {
     let paidAnyHouseholds = 0;
     let unpaidHouseholds = 0;
 
-    hhMap.forEach((members) => {
+    const paidFullHhIds: string[] = [];
+    const paidAnyHhIds: string[] = [];
+
+    hhMap.forEach((members, hhId) => {
       let totalExp = 0;
       let totalAct = 0;
 
@@ -1092,9 +1095,11 @@ const WardFunds = () => {
 
       if (totalExp > 0 && totalAct >= totalExp) {
         paidFullHouseholds++;
+        paidFullHhIds.push(hhId);
       }
       if (totalAct > 0) {
         paidAnyHouseholds++;
+        paidAnyHhIds.push(hhId);
       } else {
         unpaidHouseholds++;
       }
@@ -1103,7 +1108,7 @@ const WardFunds = () => {
     const paidFullPercent = totalHouseholds > 0 ? Math.round((paidFullHouseholds / totalHouseholds) * 100) : 0;
     const paidAnyPercent = totalHouseholds > 0 ? Math.round((paidAnyHouseholds / totalHouseholds) * 100) : 0;
 
-    return {
+    const statsResult = {
       totalHouseholds,
       paidFullHouseholds,
       paidAnyHouseholds,
@@ -1111,7 +1116,18 @@ const WardFunds = () => {
       paidFullPercent,
       paidAnyPercent
     };
-  }, [funds, fundMetaMap, computedExpectedMap, activeFunds, households]);
+
+    try {
+      localStorage.setItem(`ward_household_overall_stats_${selectedYear}`, JSON.stringify(statsResult));
+      localStorage.setItem(`ward_paid_full_hh_ids_${selectedYear}`, JSON.stringify(paidFullHhIds));
+      localStorage.setItem(`ward_paid_any_hh_ids_${selectedYear}`, JSON.stringify(paidAnyHhIds));
+      window.dispatchEvent(new CustomEvent('ward-stats-updated'));
+    } catch (e) {
+      // ignore
+    }
+
+    return statsResult;
+  }, [funds, fundMetaMap, computedExpectedMap, activeFunds, households, selectedYear]);
 
   // Calculate Statistics dynamically - luôn dùng chỉ tiêu mới nhất từ cấu hình & bổ sung đếm số hộ đã nộp
   const fundStats = useMemo(() => {
