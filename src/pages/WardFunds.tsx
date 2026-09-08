@@ -1612,6 +1612,14 @@ const WardFunds = () => {
         });
       }
 
+      if (!shouldPay && householdId) {
+        try {
+          const receiptKey = getCanonicalHouseholdReceiptKey(householdId, selectedYear, 'combined');
+          localStorage.removeItem(receiptKey);
+          (db as any).deleteReceiptCustomization?.(receiptKey);
+        } catch (e) {}
+      }
+
       showToast(
         shouldPay 
           ? `✅ Đã thu đủ và lập phiếu thu gộp cho hộ dân!` 

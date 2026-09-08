@@ -233,12 +233,17 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
   const [wardStatsVersion, setWardStatsVersion] = useState(0);
   useEffect(() => {
-    const handleWardUpdate = () => setWardStatsVersion(v => v + 1);
+    const handleWardUpdate = () => {
+      setWardStatsVersion(v => v + 1);
+      loadData();
+    };
     window.addEventListener('ward-stats-updated', handleWardUpdate);
     window.addEventListener('db-changed', handleWardUpdate);
+    window.addEventListener('storage', handleWardUpdate);
     return () => {
       window.removeEventListener('ward-stats-updated', handleWardUpdate);
       window.removeEventListener('db-changed', handleWardUpdate);
+      window.removeEventListener('storage', handleWardUpdate);
     };
   }, []);
 
