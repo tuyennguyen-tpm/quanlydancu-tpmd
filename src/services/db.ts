@@ -1881,10 +1881,19 @@ export const db = {
   },
   saveHouseholdFundsBatch: async (funds: (Omit<HouseholdFund, 'created_at'> & { created_at?: string })[]): Promise<HouseholdFund[]> => {
     if (!funds || funds.length === 0) return [];
-    const fullFunds: HouseholdFund[] = funds.map(fund => ({
-      ...fund,
-      created_at: fund.created_at || new Date().toISOString()
-    }));
+    
+    // Khử trùng lặp khóa (household_id + year + fund_name) trước khi gửi lên Supabase
+    // để ngăn lỗi PostgreSQL 409: "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const dedupMap = new Map<string, HouseholdFund>();
+    funds.forEach(fund => {
+      const full: HouseholdFund = {
+        ...fund,
+        created_at: fund.created_at || new Date().toISOString()
+      };
+      dedupMap.set(`${full.household_id}_${full.year}_${full.fund_name}`, full);
+    });
+    const fullFunds = Array.from(dedupMap.values());
+
     if (supabase) {
       try {
         const uId = await getSessionUserId();
@@ -1914,10 +1923,14 @@ export const db = {
   },
   saveFinancialRecordsBatch: async (records: FinancialRecord[]): Promise<boolean> => {
     if (!records || records.length === 0) return true;
+    const dedupMap = new Map<string, FinancialRecord>();
+    records.forEach(r => dedupMap.set(r.id, r));
+    const dedupedRecords = Array.from(dedupMap.values());
+
     if (supabase) {
       try {
         const uId = await getSessionUserId();
-        const payloads = records.map(r => enrichPayload({ ...r, user_id: uId }));
+        const payloads = dedupedRecords.map(r => enrichPayload({ ...r, user_id: uId }));
         const CHUNK_SIZE = 150;
         for (let i = 0; i < payloads.length; i += CHUNK_SIZE) {
           const chunk = payloads.slice(i, i + CHUNK_SIZE);

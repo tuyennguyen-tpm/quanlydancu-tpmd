@@ -1094,7 +1094,13 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         return;
       }
 
-      await (db as any).saveHouseholdFundsBatch(newHouseholdFundsToSave);
+      const dedupHfMap = new Map<string, HouseholdFund>();
+      newHouseholdFundsToSave.forEach(f => dedupHfMap.set(`${f.household_id}_${f.year}_${f.fund_name}`, f));
+      const cleanHfToSave = Array.from(dedupHfMap.values());
+
+      if (cleanHfToSave.length > 0) {
+        await (db as any).saveHouseholdFundsBatch(cleanHfToSave);
+      }
       if (newFinancialRecordsToSave.length > 0) {
         await (db as any).saveFinancialRecordsBatch(newFinancialRecordsToSave);
       }
@@ -1102,7 +1108,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       setHouseholdFunds(prev => {
         const map = new Map<string, HouseholdFund>();
         prev.forEach(f => map.set(`${f.household_id}_${f.year}_${f.fund_name}`, f));
-        newHouseholdFundsToSave.forEach(f => map.set(`${f.household_id}_${f.year}_${f.fund_name}`, f));
+        cleanHfToSave.forEach(f => map.set(`${f.household_id}_${f.year}_${f.fund_name}`, f));
         return Array.from(map.values());
       });
 
