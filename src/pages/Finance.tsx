@@ -4744,6 +4744,34 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     };
   }, [households, householdPaymentStatusMap, fundSearchTerm, fundGroupFilter, tdpFilter, isWardUser, headNameMap, fundYear, wardStatsVersion]);
 
+  // Thống kê tổng số tiền thu được của Quỹ Phường + Quỹ TDP (Toàn đợt)
+  const overallMoneyStats = useMemo(() => {
+    // 1. Tổng tiền Quỹ TDP thực thu
+    const tdpFundsConfig = fundList.length > 0 ? fundList : (db.getFundList() || []);
+    const activeSet = new Set(tdpFundsConfig.map(f => f.name));
+    let tdpCollected = 0;
+    householdFunds.forEach(f => {
+      if (Number(f.year) === Number(fundYear) && (activeSet.size === 0 || activeSet.has(f.fund_name))) {
+        tdpCollected += Number(f.amount) || 0;
+      }
+    });
+
+    // 2. Tổng tiền Quỹ Phường thực thu (liên thông từ Quỹ Phường)
+    let wardCollected = 0;
+    try {
+      const savedWard = localStorage.getItem(`ward_total_collected_${fundYear}`);
+      if (savedWard) wardCollected = Number(savedWard) || 0;
+    } catch (e) {}
+
+    const grandTotal = wardCollected + tdpCollected;
+
+    return {
+      wardCollected,
+      tdpCollected,
+      grandTotal
+    };
+  }, [householdFunds, fundYear, fundList, wardStatsVersion]);
+
   const totalHhCount = householdOverallStats.totalHouseholds;
   const paidHhCount = householdOverallStats.paidAnyHouseholds;
   const unpaidHhCount = householdOverallStats.unpaidHouseholds;
@@ -5398,48 +5426,120 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               ℹ️ <strong>Chế độ Kế toán:</strong> Bạn đang xem danh sách thu quỹ theo hộ dân (Chế độ chỉ xem thông tin, không được phép ghi nhận/chỉnh sửa).
             </div>
           )}
-          {/* Card Thống kê Tổng quan Hộ Gia Đình Nộp Quỹ Tổ Dân Phố */}
-          <div 
-            style={{
-              backgroundColor: '#f0fdf4',
-              border: '1.5px solid #bbf7d0',
-              borderRadius: '14px',
-              padding: '14px 18px',
-              boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
-              position: 'relative',
-              overflow: 'hidden',
-              marginBottom: '18px'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          {/* Bảng điều khiển Tiến độ & Tổng tiền thu */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '16px',
+            marginBottom: '18px'
+          }}>
+            {/* Card 1: Tiến độ Hộ nộp Quỹ Tổ Dân Phố */}
+            <div 
+              style={{
+                backgroundColor: '#f0fdf4',
+                border: '1.5px solid #bbf7d0',
+                borderRadius: '14px',
+                padding: '14px 18px',
+                boxShadow: '0 2px 4px -1px rgba(0,0,0,0.008)',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxSizing: 'border-box'
+              }}
+            >
               <div>
-                <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  🏡 Tiến độ Hộ nộp Quỹ Tổ dân phố
-                </span>
-                <h3 style={{ margin: '4px 0 0 0', fontSize: '1.45rem', fontWeight: '850', color: '#1e293b' }}>
-                  {householdOverallStats.paidFullHouseholds} / {householdOverallStats.totalHouseholds} hộ nộp đủ
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      🏡 Tiến độ Hộ nộp Quỹ Tổ dân phố
+                    </span>
+                    <h3 style={{ margin: '4px 0 0 0', fontSize: '1.45rem', fontWeight: '850', color: '#1e293b' }}>
+                      {householdOverallStats.paidFullHouseholds} / {householdOverallStats.totalHouseholds} hộ nộp đủ
+                    </h3>
+                  </div>
+                  <div style={{
+                    backgroundColor: 'rgba(22,163,74,0.12)',
+                    color: '#15803d',
+                    borderRadius: '10px',
+                    padding: '6px 10px',
+                    fontSize: '0.8rem',
+                    fontWeight: '800'
+                  }}>
+                    Nộp đủ {householdOverallStats.paidFullPercent}%
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div style={{ width: '100%', height: '6px', backgroundColor: '#dcfce7', borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(householdOverallStats.paidFullPercent, 100)}%`, height: '100%', backgroundColor: '#16a34a', borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#475569', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
+                <span>Đã đóng tiền: <strong style={{ color: '#16a34a' }}>{householdOverallStats.paidAnyHouseholds} hộ</strong></span>
+                <span>Chưa đóng: <strong style={{ color: '#dc2626' }}>{householdOverallStats.unpaidHouseholds} hộ</strong></span>
+              </div>
+            </div>
+
+            {/* Card 2: Tổng Tiền Thu Đợt Tập Trung (Quỹ Phường + Quỹ TDP) */}
+            <div 
+              style={{
+                background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)',
+                border: '1.5px solid #fde047',
+                borderRadius: '14px',
+                padding: '14px 18px',
+                boxShadow: '0 4px 12px rgba(234,179,8,0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxSizing: 'border-box'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: '850', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    💵 Tổng tiền thu đợt tập trung
+                  </span>
+                  <span style={{
+                    backgroundColor: 'rgba(217,119,6,0.14)',
+                    color: '#b45309',
+                    borderRadius: '8px',
+                    padding: '4px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: '800'
+                  }}>
+                    Năm {fundYear}
+                  </span>
+                </div>
+
+                <h3 style={{ margin: '6px 0 2px 0', fontSize: '1.45rem', fontWeight: '850', color: '#854d0e' }}>
+                  {overallMoneyStats.grandTotal.toLocaleString('vi-VN')} đ
                 </h3>
+                <div style={{ fontSize: '0.78rem', color: '#78350f', fontWeight: '600' }}>
+                  Tổng thu gộp cả Quỹ Phường & Quỹ TDP
+                </div>
               </div>
+
               <div style={{
-                backgroundColor: 'rgba(22,163,74,0.12)',
-                color: '#15803d',
-                borderRadius: '10px',
-                padding: '6px 10px',
-                fontSize: '0.8rem',
-                fontWeight: '800'
+                marginTop: '12px',
+                paddingTop: '8px',
+                borderTop: '1px solid #fef08a',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '8px',
+                fontSize: '0.78rem'
               }}>
-                Nộp đủ {householdOverallStats.paidFullPercent}%
+                <div style={{ background: '#ffffff', border: '1px solid #fef08a', padding: '3px 8px', borderRadius: '6px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                  🏛️ Quỹ Phường: <strong style={{ color: '#16a34a' }}>{overallMoneyStats.wardCollected.toLocaleString('vi-VN')} đ</strong>
+                </div>
+                <div style={{ background: '#ffffff', border: '1px solid #fef08a', padding: '3px 8px', borderRadius: '6px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                  🏠 Quỹ TDP: <strong style={{ color: '#2563eb' }}>{overallMoneyStats.tdpCollected.toLocaleString('vi-VN')} đ</strong>
+                </div>
               </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div style={{ width: '100%', height: '6px', backgroundColor: '#dcfce7', borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
-              <div style={{ width: `${Math.min(householdOverallStats.paidFullPercent, 100)}%`, height: '100%', backgroundColor: '#16a34a', borderRadius: '3px', transition: 'width 0.4s ease-out' }}></div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#475569', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
-              <span>Đã đóng tiền: <strong style={{ color: '#16a34a' }}>{householdOverallStats.paidAnyHouseholds} hộ</strong></span>
-              <span>Chưa đóng: <strong style={{ color: '#dc2626' }}>{householdOverallStats.unpaidHouseholds} hộ</strong></span>
             </div>
           </div>
 

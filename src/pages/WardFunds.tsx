@@ -1186,6 +1186,37 @@ const WardFunds = () => {
     });
   }, [activeFunds, funds, fundMetaMap, households, computedExpectedMap]);
 
+  // Thống kê tổng số tiền thu được của Quỹ Phường + Quỹ TDP (Toàn đợt)
+  const overallMoneyStats = useMemo(() => {
+    const wardCollected = fundStats.reduce((sum, f) => sum + f.actual, 0);
+    const wardExpected = fundStats.reduce((sum, f) => sum + f.expected, 0);
+
+    const tdpFundsConfig = (db as any).getFundList() || [];
+    const tdpFundNamesSet = new Set(tdpFundsConfig.map((f: any) => f.name));
+    let tdpCollected = 0;
+    householdFunds.forEach(hf => {
+      if (Number(hf.year) === Number(selectedYear) && (tdpFundNamesSet.size === 0 || tdpFundNamesSet.has(hf.fund_name))) {
+        tdpCollected += Number(hf.amount) || 0;
+      }
+    });
+
+    const grandTotal = wardCollected + tdpCollected;
+
+    try {
+      localStorage.setItem(`ward_total_collected_${selectedYear}`, String(wardCollected));
+      localStorage.setItem(`ward_total_expected_${selectedYear}`, String(wardExpected));
+      localStorage.setItem(`tdp_total_collected_${selectedYear}`, String(tdpCollected));
+      localStorage.setItem(`grand_total_collected_${selectedYear}`, String(grandTotal));
+    } catch (e) {}
+
+    return {
+      wardCollected,
+      wardExpected,
+      tdpCollected,
+      grandTotal
+    };
+  }, [fundStats, householdFunds, selectedYear]);
+
   const dailyStats = useMemo(() => {
     const targetDateStr = summaryDate;
     let totalAmount = 0;
@@ -8455,6 +8486,66 @@ const WardFunds = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.78rem', color: '#475569', fontWeight: '600', flexWrap: 'wrap', gap: '4px' }}>
               <span>Đã đóng tiền: <strong style={{ color: '#16a34a' }}>{householdOverallStats.paidAnyHouseholds} hộ</strong></span>
               <span>Chưa đóng: <strong style={{ color: '#dc2626' }}>{householdOverallStats.unpaidHouseholds} hộ</strong></span>
+            </div>
+          </div>
+
+          {/* Card Thống kê Tổng Tiền Thu Đợt Tập Trung (Quỹ Phường + Quỹ TDP) */}
+          <div 
+            style={{
+              background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)',
+              border: '1.5px solid #fde047',
+              borderRadius: '14px',
+              padding: '14px 18px',
+              boxShadow: '0 4px 12px rgba(234,179,8,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '175px',
+              boxSizing: 'border-box'
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: '850', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  💵 Tổng tiền thu đợt tập trung
+                </span>
+                <span style={{
+                  backgroundColor: 'rgba(217,119,6,0.14)',
+                  color: '#b45309',
+                  borderRadius: '8px',
+                  padding: '4px 8px',
+                  fontSize: '0.75rem',
+                  fontWeight: '800'
+                }}>
+                  Năm {selectedYear}
+                </span>
+              </div>
+
+              <h3 style={{ margin: '6px 0 2px 0', fontSize: '1.5rem', fontWeight: '850', color: '#854d0e' }}>
+                {overallMoneyStats.grandTotal.toLocaleString('vi-VN')} đ
+              </h3>
+              <div style={{ fontSize: '0.78rem', color: '#78350f', fontWeight: '600' }}>
+                Tổng thu gộp cả Quỹ Phường & Quỹ TDP
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: '12px',
+              paddingTop: '8px',
+              borderTop: '1px solid #fef08a',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px',
+              fontSize: '0.78rem'
+            }}>
+              <div style={{ background: '#ffffff', border: '1px solid #fef08a', padding: '3px 8px', borderRadius: '6px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                🏛️ Quỹ Phường: <strong style={{ color: '#16a34a' }}>{overallMoneyStats.wardCollected.toLocaleString('vi-VN')} đ</strong>
+              </div>
+              <div style={{ background: '#ffffff', border: '1px solid #fef08a', padding: '3px 8px', borderRadius: '6px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                🏠 Quỹ TDP: <strong style={{ color: '#2563eb' }}>{overallMoneyStats.tdpCollected.toLocaleString('vi-VN')} đ</strong>
+              </div>
             </div>
           </div>
 
