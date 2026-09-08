@@ -1132,18 +1132,36 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         const titleRow1 = worksheet.addRow([`TỔ DÂN PHỐ ${tdpNameStored.toUpperCase()} - ${wardNameStored.toUpperCase()}`]);
         titleRow1.getCell(1).font = { bold: true, name: 'Segoe UI', size: 10, color: { argb: 'FF475569' } };
 
-        // 2. Tiêu đề chính của Sheet
-        const titleRow2 = worksheet.addRow([`BÁO CÁO THU NỘP CÁC LOẠI QUỸ NĂM ${fundYear} - ${sheetName.toUpperCase()}`]);
+        // 2. Tiêu đề chính của Sheet (kèm tên bộ lọc nếu đang áp dụng)
+        let filterSuffix = '';
+        if (fundFilterStatus === 'unpaid') filterSuffix = ' - HỘ CHƯA NỘP QUỸ';
+        else if (fundFilterStatus === 'paid_all') filterSuffix = ' - HỘ ĐÃ NỘP ĐỦ TẤT CẢ CÁC QUỸ';
+        else if (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') filterSuffix = ' - HỘ ĐÃ NỘP QUỸ';
+
+        const titleRow2 = worksheet.addRow([`BÁO CÁO THU NỘP CÁC LOẠI QUỸ NĂM ${fundYear} - ${sheetName.toUpperCase()}${filterSuffix}`]);
         titleRow2.getCell(1).font = { bold: true, name: 'Segoe UI', size: 14, color: { argb: headerColorArgb } };
 
-        // Phụ đề thống kê số lượng hộ (đồng bộ chuẩn 100% với Bảng chính và Quỹ Phường)
-        const isOverallSummary = isSummarySheet && (!fundSearchTerm || !fundSearchTerm.trim()) && fundGroupFilter === 'all';
+        // Phụ đề thống kê số lượng hộ (đồng bộ chuẩn 100% với Bảng chính và bộ lọc đang chọn)
+        const isOverallSummary = isSummarySheet && (!fundSearchTerm || !fundSearchTerm.trim()) && fundGroupFilter === 'all' && fundFilterStatus === 'all';
         const displayTotalCount = isOverallSummary ? householdOverallStats.totalHouseholds : list.length;
         const displayPaidFullCount = isOverallSummary ? householdOverallStats.paidFullHouseholds : list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidFull).length;
         const displayPaidCount = isOverallSummary ? householdOverallStats.paidAnyHouseholds : list.filter(h => householdPaymentStatusMap.get(h.id)?.isPaidAny).length;
         const displayUnpaidCount = isOverallSummary ? householdOverallStats.unpaidHouseholds : Math.max(0, displayTotalCount - displayPaidCount);
 
-        const subTitle = worksheet.addRow([`(Tổng số: ${displayTotalCount.toLocaleString('vi-VN')} hộ — Đã nộp đủ: ${displayPaidFullCount.toLocaleString('vi-VN')} hộ, Đã nộp tiền: ${displayPaidCount.toLocaleString('vi-VN')} hộ, Chưa nộp: ${displayUnpaidCount.toLocaleString('vi-VN')} hộ)`]);
+        let subTitleText = '';
+        if (fundFilterStatus === 'unpaid') {
+          subTitleText = `(Tổng số danh sách: ${list.length.toLocaleString('vi-VN')} hộ chưa nộp quỹ)`;
+        } else if (fundFilterStatus === 'paid_all') {
+          subTitleText = `(Tổng số danh sách: ${list.length.toLocaleString('vi-VN')} hộ đã nộp đủ tất cả các quỹ)`;
+        } else if (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') {
+          subTitleText = `(Tổng số danh sách: ${list.length.toLocaleString('vi-VN')} hộ đã nộp quỹ)`;
+        } else if (isOverallSummary) {
+          subTitleText = `(Tổng số: ${displayTotalCount.toLocaleString('vi-VN')} hộ — Đã nộp đủ: ${displayPaidFullCount.toLocaleString('vi-VN')} hộ, Đã nộp tiền: ${displayPaidCount.toLocaleString('vi-VN')} hộ, Chưa nộp: ${displayUnpaidCount.toLocaleString('vi-VN')} hộ)`;
+        } else {
+          subTitleText = `(Tổng số: ${list.length.toLocaleString('vi-VN')} hộ — Đã nộp đủ: ${displayPaidFullCount.toLocaleString('vi-VN')} hộ, Đã nộp tiền: ${displayPaidCount.toLocaleString('vi-VN')} hộ, Chưa nộp: ${displayUnpaidCount.toLocaleString('vi-VN')} hộ)`;
+        }
+
+        const subTitle = worksheet.addRow([subTitleText]);
         subTitle.getCell(1).font = { italic: true, name: 'Segoe UI', size: 10, color: { argb: 'FF64748B' } };
         worksheet.addRow([]); // Dòng trống
 
@@ -1247,10 +1265,23 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
         // 6. Dòng TỔNG CỘNG chân bảng
         const totalColOffset = isSummarySheet ? 5 : 4;
+        let totalCountLabel = '';
+        if (fundFilterStatus === 'unpaid') {
+          totalCountLabel = `${list.length.toLocaleString('vi-VN')} hộ chưa nộp`;
+        } else if (fundFilterStatus === 'paid_all') {
+          totalCountLabel = `${list.length.toLocaleString('vi-VN')} hộ nộp đủ`;
+        } else if (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') {
+          totalCountLabel = `${list.length.toLocaleString('vi-VN')} hộ đã nộp tiền`;
+        } else if (isOverallSummary) {
+          totalCountLabel = `${displayTotalCount.toLocaleString('vi-VN')} hộ (${displayPaidFullCount.toLocaleString('vi-VN')} nộp đủ, ${displayPaidCount.toLocaleString('vi-VN')} đã nộp tiền, ${displayUnpaidCount.toLocaleString('vi-VN')} chưa nộp)`;
+        } else {
+          totalCountLabel = `${list.length.toLocaleString('vi-VN')} hộ (${displayPaidFullCount.toLocaleString('vi-VN')} nộp đủ, ${displayPaidCount.toLocaleString('vi-VN')} đã nộp tiền, ${displayUnpaidCount.toLocaleString('vi-VN')} chưa nộp)`;
+        }
+
         const totalRowData = [
           'TỔNG CỘNG', 
           ...(isSummarySheet ? [''] : []), 
-          `${displayTotalCount.toLocaleString('vi-VN')} hộ (${displayPaidFullCount.toLocaleString('vi-VN')} nộp đủ, ${displayPaidCount.toLocaleString('vi-VN')} đã nộp tiền, ${displayUnpaidCount.toLocaleString('vi-VN')} chưa nộp)`, 
+          totalCountLabel, 
           '', 
           0
         ];
@@ -1346,7 +1377,12 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       link.href = url;
       
       const filenameTdp = (localStorage.getItem('tdp_name') || 'nam_sam_son').toLowerCase().replace(/\s+/g, '_');
-      link.setAttribute('download', `thu_quy_ho_dan_${filenameTdp}_${fundYear}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      let filterFileSuffix = '';
+      if (fundFilterStatus === 'unpaid') filterFileSuffix = '_chua_nop';
+      else if (fundFilterStatus === 'paid_all') filterFileSuffix = '_nop_du';
+      else if (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') filterFileSuffix = '_da_nop';
+
+      link.setAttribute('download', `thu_quy_ho_dan_${filenameTdp}_${fundYear}${filterFileSuffix}_${new Date().toISOString().slice(0, 10)}.xlsx`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -4603,17 +4639,24 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         return paidFund && paidFund.amount >= fund.target;
       });
 
-      let isPaidFull = false;
-      let isPaidAny = false;
+      const hasActualTdpPayment = totalPaid > 0;
+      const isWardPaidAny = (wardPaidAnyHhIds !== null && wardPaidAnyHhIds.size > 0) ? wardPaidAnyHhIds.has(hh.id) : false;
+      const isWardPaidFull = (wardPaidFullHhIds !== null && wardPaidFullHhIds.size > 0) ? wardPaidFullHhIds.has(hh.id) : false;
+      let hasReceiptSaved = false;
+      try {
+        hasReceiptSaved = !!localStorage.getItem(`receipt_html_${hh.id}_${fundYear}_combined`);
+      } catch (e) {}
 
-      if (wardPaidAnyHhIds !== null && wardPaidAnyHhIds.size > 0) {
-        isPaidAny = wardPaidAnyHhIds.has(hh.id);
-        isPaidFull = wardPaidFullHhIds ? wardPaidFullHhIds.has(hh.id) : (isPaidAny && isAllFundsSatisfied);
-      } else {
-        const hasActualTdpPayment = totalPaid > 0;
-        isPaidFull = hasActualTdpPayment && isAllFundsSatisfied;
-        isPaidAny = hasActualTdpPayment;
-      }
+      // Một hộ được tính là đã nộp tiền nếu:
+      // 1. Có tiền nộp thực tế trong Quỹ TDP (totalPaid > 0)
+      // 2. HOẶC được đánh dấu nộp bên Quỹ Phường (isWardPaidAny)
+      // 3. HOẶC đã in/lưu biên lai thu gộp (hasReceiptSaved)
+      const isPaidAny = hasActualTdpPayment || isWardPaidAny || hasReceiptSaved;
+
+      // Một hộ được tính là nộp đủ nếu:
+      // 1. (Đã nộp tiền và thỏa mãn tất cả chỉ tiêu các quỹ TDP)
+      // 2. HOẶC được đánh dấu nộp đủ bên Quỹ Phường (isWardPaidFull)
+      const isPaidFull = (isPaidAny && isAllFundsSatisfied) || isWardPaidFull;
 
       map.set(hh.id, { isPaidFull, isPaidAny, totalPaid });
     });
@@ -4636,9 +4679,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       if (fundFilterStatus === 'paid_all') {
         if (!status.isPaidFull) return false;
       } else if (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') {
-        if (!status.isPaidAny) return false;
+        if (!status.isPaidAny && status.totalPaid <= 0) return false;
       } else if (fundFilterStatus === 'unpaid') {
-        if (status.isPaidAny) return false;
+        // Hộ đã nộp tiền (totalPaid > 0 hoặc isPaidAny = true) thì LOẠI BỎ HOÀN TOÀN khỏi danh sách chưa nộp
+        if (status.isPaidAny || status.totalPaid > 0) return false;
       }
 
       // Lọc theo phân quyền Tổ (cấp TDP) hoặc TDP (cấp phường)
