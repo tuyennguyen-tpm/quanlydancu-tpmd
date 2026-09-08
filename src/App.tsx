@@ -1807,10 +1807,24 @@ const App = () => {
 
     window.addEventListener('db-changed', handleLocalDbChanged);
 
+    // Tự động kiểm tra và đồng bộ dữ liệu mới nhất ngay khi người dùng quay lại cửa sổ/tab trình duyệt
+    const handleWindowFocus = () => {
+      window.dispatchEvent(new CustomEvent('db-changed', { detail: { fromRemote: true } }));
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleWindowFocus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       if (syncTimer) clearTimeout(syncTimer);
       if (toastTimer) clearTimeout(toastTimer);
       window.removeEventListener('db-changed', handleLocalDbChanged);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (supabase) {
         supabase.removeChannel(realtimeChannel);
       }
