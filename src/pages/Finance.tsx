@@ -4514,10 +4514,54 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     return list;
   }, [records]);
 
+  // Thống kê tổng số tiền thu được của Quỹ Phường + Quỹ TDP (Toàn đợt)
+  const overallMoneyStats = useMemo(() => {
+    // 1. Tổng tiền Quỹ TDP thực thu
+    const tdpFundsConfig = fundList.length > 0 ? fundList : (db.getFundList() || []);
+    const activeSet = new Set(tdpFundsConfig.map(f => f.name));
+    let tdpCollected = 0;
+    householdFunds.forEach(f => {
+      if (Number(f.year) === Number(fundYear) && (activeSet.size === 0 || activeSet.has(f.fund_name))) {
+        tdpCollected += Number(f.amount) || 0;
+      }
+    });
+
+    // 2. Tổng tiền Quỹ Phường thực thu (liên thông từ Quỹ Phường)
+    let wardCollected = 0;
+    try {
+      const savedWard = localStorage.getItem(`ward_total_collected_${fundYear}`);
+      if (savedWard) wardCollected = Number(savedWard) || 0;
+    } catch (e) {}
+
+    const grandTotal = wardCollected + tdpCollected;
+
+    return {
+      wardCollected,
+      tdpCollected,
+      grandTotal
+    };
+  }, [householdFunds, fundYear, fundList, wardStatsVersion]);
+
+  // Các khoản thu ngoài quỹ hộ dân (ủng hộ, tài trợ, mừng...)
+  const manualIncome = useMemo(() => {
+    return records
+      .filter(r => r.type === 'income')
+      .filter(r => {
+        const isAuto = 
+          r.recorded_by === 'Hệ thống tự động' || 
+          r.recorded_by === 'Đồng bộ tự động từ Quỹ Phường' ||
+          (r.description && r.description.includes('[QUY_')) ||
+          (r.category && r.category.startsWith('[TDP]')) ||
+          (r.category && r.category.toLowerCase().includes('quỹ'));
+        return !isAuto;
+      })
+      .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  }, [records]);
+
   // Calculations
-  const totalIncome = deduplicatedRecords
-    .filter(r => r.type === 'income')
-    .reduce((sum, r) => sum + r.amount, 0);
+  // Tiền thu Quỹ TDP thực tế (150.471.600 đ) + Thu ngoài quỹ
+  const tdpFundIncome = overallMoneyStats.tdpCollected;
+  const totalIncome = tdpFundIncome + manualIncome;
 
   const totalExpense = deduplicatedRecords
     .filter(r => r.type === 'expense')
@@ -4891,34 +4935,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     };
   }, [households, householdPaymentStatusMap, fundSearchTerm, fundGroupFilter, tdpFilter, isWardUser, headNameMap, fundYear, wardStatsVersion]);
 
-  // Thống kê tổng số tiền thu được của Quỹ Phường + Quỹ TDP (Toàn đợt)
-  const overallMoneyStats = useMemo(() => {
-    // 1. Tổng tiền Quỹ TDP thực thu
-    const tdpFundsConfig = fundList.length > 0 ? fundList : (db.getFundList() || []);
-    const activeSet = new Set(tdpFundsConfig.map(f => f.name));
-    let tdpCollected = 0;
-    householdFunds.forEach(f => {
-      if (Number(f.year) === Number(fundYear) && (activeSet.size === 0 || activeSet.has(f.fund_name))) {
-        tdpCollected += Number(f.amount) || 0;
-      }
-    });
-
-    // 2. Tổng tiền Quỹ Phường thực thu (liên thông từ Quỹ Phường)
-    let wardCollected = 0;
-    try {
-      const savedWard = localStorage.getItem(`ward_total_collected_${fundYear}`);
-      if (savedWard) wardCollected = Number(savedWard) || 0;
-    } catch (e) {}
-
-    const grandTotal = wardCollected + tdpCollected;
-
-    return {
-      wardCollected,
-      tdpCollected,
-      grandTotal
-    };
-  }, [householdFunds, fundYear, fundList, wardStatsVersion]);
-
   const totalHhCount = householdOverallStats.totalHouseholds;
   const paidHhCount = householdOverallStats.paidAnyHouseholds;
   const unpaidHhCount = householdOverallStats.unpaidHouseholds;
@@ -5107,8 +5123,15 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             <div className="finance-stat-card income">
               <div className="stat-icon"><TrendingUp size={24} /></div>
               <div className="stat-details">
-                 <span className="label">Tổng thu tích lũy</span>
-                 <h2 className="value text-success">{formatCurrency(totalIncome)}</h2>
+                 <span className="label" title="Tổng số tiền các loại quỹ Tổ dân phố thực tế đã thu được (tự động cập nhật theo hộ nộp)">
+                   Tổng thu Quỹ Tổ dân phố
+                 </span>
+                 <h2 className="value text-success">{formatCurrency(overallMoneyStats.tdpCollected)}</h2>
+                 {manualIncome > 0 && (
+                   <span style={{ fontSize: '0.73rem', color: '#059669', fontWeight: '600' }}>
+                     (+ {formatCurrency(manualIncome)} thu ngoài quỹ)
+                   </span>
+                 )}
               </div>
             </div>
             <div className="finance-stat-card expense">
