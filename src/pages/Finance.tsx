@@ -4577,15 +4577,20 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       const hhAddr = ((hh.address || '') + ' ' + ((hh as any).self_management_group || '')).toLowerCase();
       const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || ((hh as any).self_management_group || '').trim() === 'Tổ 8';
 
-      // Hộ nộp đủ tất cả các quỹ TDP nếu có biên lai gộp hoặc đã hoàn thành đủ chỉ tiêu tất cả các quỹ TDP
-      const isPaidFull = hasSavedReceipt || (tdpFundsConfig.length > 0 && tdpFundsConfig.every(fund => {
+      // Hộ chỉ được tính là đã đóng tiền nếu có lưu biên lai gộp hoặc thực tế có đóng tiền > 0đ
+      const hasActualTdpPayment = totalPaid > 0;
+
+      const isAllFundsSatisfied = tdpFundsConfig.length > 0 && tdpFundsConfig.every(fund => {
         const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học') || fund.name.toLowerCase().includes('khuyen hoc');
         if (isKhuyenHoc && isGroup8 && Number(fundYear) === 2026) return true; // Miễn năm 2026
         const paidFund = hhFunds.find(f => f.fund_name === fund.name);
         return paidFund && paidFund.amount >= fund.target;
-      }));
+      });
 
-      const isPaidAny = totalPaid > 0 || isPaidFull;
+      // Hộ nộp đủ nếu có lưu biên lai gộp hoặc thực tế có đóng tiền và hoàn thành đủ chỉ tiêu các quỹ
+      const isPaidFull = hasSavedReceipt || (hasActualTdpPayment && isAllFundsSatisfied);
+      // Hộ đã đóng tiền (ít nhất 1 khoản) nếu có lưu biên lai gộp hoặc thực tế có đóng tiền > 0đ
+      const isPaidAny = hasSavedReceipt || hasActualTdpPayment;
 
       map.set(hh.id, { isPaidFull, isPaidAny, totalPaid });
     });
