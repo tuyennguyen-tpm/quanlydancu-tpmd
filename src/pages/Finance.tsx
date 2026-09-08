@@ -5980,41 +5980,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     <Download size={16} style={{ color: '#16a34a' }} /> Xuất Excel
                   </button>
 
-                  {!isGuest && (
-                    <button 
-                      onClick={() => handleSyncFromWardFunds(false)}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        backgroundColor: '#f0fdfa',
-                        border: '1px solid #99f6e4',
-                        color: '#0d9488',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        height: 'auto',
-                        minHeight: '36px',
-                        fontSize: '0.85rem'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ccfbf1';
-                        e.currentTarget.style.borderColor = '#5eead4';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f0fdfa';
-                        e.currentTarget.style.borderColor = '#99f6e4';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }}
-                      title="Lấy danh sách các hộ đã nộp bên Quỹ Phường hoặc in biên lai gộp để cập nhật vào Quỹ TDP"
-                    >
-                      <RefreshCw size={16} /> ⚡ Đồng bộ từ Quỹ Phường
-                    </button>
-                  )}
-                </>
+                  </>
               )}
             </div>
           </div>
