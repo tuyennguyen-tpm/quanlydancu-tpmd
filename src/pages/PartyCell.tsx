@@ -619,10 +619,22 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const currentRole = localStorage.getItem('current_role') || 'mat_tran';
   const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'all' || currentRole === 'can_bo_chung';
   const canPrintExport = isCanBoChung && localStorage.getItem('guest_mode') !== 'true';
-  const [members, setMembers] = useState<PartyMember[]>([]);
+  const [members, setMembers] = useState<PartyMember[]>(() => {
+    try {
+      const saved = localStorage.getItem('party_members');
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return [];
+  });
   const [residents, setResidents] = useState<Resident[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    try {
+      const saved = localStorage.getItem('party_members');
+      if (saved && JSON.parse(saved).length > 0) return false;
+    } catch { /* ignore */ }
+    return false;
+  });
   const [searchInput, setSearchInput] = useState('');
   const search = useDeferredValue(searchInput);
   const [selectedPartyGroup, setSelectedPartyGroup] = useState<string>('all');
@@ -659,15 +671,10 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   }, [members]);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    // 1. Tải và hiển thị ngay danh sách đảng viên
     try {
-      const [m, r, h] = await Promise.all([
-        partyDb.getPartyMembers(), 
-        db.getResidents(),
-        db.getHouseholds()
-      ]);
+      const m = await partyDb.getPartyMembers();
       
-      // 1. Clean in-memory instantly (takes < 1ms)
       const corrupted: PartyMember[] = [];
       const cleanedMembers = m.map((member) => {
         let needsUpdate = false;
@@ -693,11 +700,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       });
 
       setMembers(cleanedMembers);
-      setResidents(r);
-      setHouseholds(h);
       setLoading(false);
 
-      // 2. Background cleanup in database (sequential, non-blocking to UI)
       if (corrupted.length > 0) {
         (async () => {
           for (const member of corrupted) {
@@ -710,8 +714,20 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         })();
       }
     } catch (err) {
-      console.error('Load failed:', err);
+      console.error('Load party members failed:', err);
       setLoading(false);
+    }
+
+    // 2. Tải ngầm danh sách cư dân & hộ khẩu, không bao giờ chặn màn hình
+    try {
+      const [r, h] = await Promise.all([
+        db.getResidents(),
+        db.getHouseholds()
+      ]);
+      setResidents(r);
+      setHouseholds(h);
+    } catch (err) {
+      console.error('Load residents/households background failed:', err);
     }
   }, []);
 
@@ -1469,6 +1485,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
         // Cập nhật State giao diện ngay lập tức trong 0ms (người dùng thấy ngay không cần reload trang)
         setMembers(updatedMembersState);
+        setLoading(false);
         showToast(`Đã nhập thành công! Thêm mới ${addedCount} và cập nhật ${updatedCount} đảng viên.`, 'success');
 
         // Lưu hàng loạt vào LocalStorage & đồng bộ Supabase ngầm siêu tốc
@@ -2026,7 +2043,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       </div>
 
       {/* Table */}
-      {loading ? <div className="no-data">Đang tải...</div> : filtered.length === 0 ? (
+      {loading && members.length === 0 ? <div className="no-data">Đang tải...</div> : filtered.length === 0 ? (
         <div className="no-data"><Users size={36} /><p>Chưa có đảng viên nào</p></div>
       ) : (
         <div className="party-table-wrap">
