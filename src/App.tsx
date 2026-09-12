@@ -2838,9 +2838,11 @@ const App = () => {
     { id: 'security', icon: ShieldCheck, label: 'An ninh trật tự', group: 'Quản lý dân cư' },
     { id: 'healthcare', icon: Activity, label: 'Y tế & Sức khỏe', group: 'Quản lý dân cư' },
 
-    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount, badgeColor: '#ef4444' },
-    { id: 'meetings-party', icon: Calendar, label: 'Lịch họp Chi bộ', group: 'Tổ chức - Đoàn thể' },
-    { id: 'meetings-front', icon: UserPlus, label: 'Ban CT Mặt trận', group: 'Tổ chức - Đoàn thể' },
+    { id: 'meetings', icon: Calendar, label: 'Tổ dân phố', group: 'Biên bản & Lịch họp' },
+    { id: 'meetings-party', icon: Star, label: 'Chi bộ Đảng', group: 'Biên bản & Lịch họp' },
+    { id: 'meetings-front', icon: Users, label: 'Ban CT Mặt trận', group: 'Biên bản & Lịch họp' },
+
+    { id: 'party-cell', icon: Star, label: 'Chi bộ Đảng (Đảng viên)', group: 'Tổ chức - Đoàn thể', badge: partyMemberCount, badgeColor: '#ef4444' },
     { id: 'elderly', icon: UserCircle, label: 'Hội Người cao tuổi', group: 'Tổ chức - Đoàn thể' },
     { id: 'ccb', icon: Award, label: 'Hội Cựu chiến binh', group: 'Tổ chức - Đoàn thể' },
     { id: 'farmers-association', icon: Sprout, label: 'Hội Nông dân', group: 'Tổ chức - Đoàn thể' },
@@ -2849,8 +2851,6 @@ const App = () => {
     { id: 'documents', icon: FileText, label: 'Văn bản - Nghị quyết', group: 'Điều hành' },
     { id: 'ward-documents', icon: FileText, label: 'Công văn của Phường', group: 'Điều hành' },
     { id: 'invitation-templates', icon: Mail, label: 'Mẫu giấy mời', group: 'Điều hành' },
-    { id: 'meetings-minutes', icon: Calendar, label: 'Họp – Biên bản', group: 'Điều hành' },
-    { id: 'meetings', icon: Calendar, label: 'Lịch họp Tổ dân phố', group: 'Điều hành' },
     { id: 'regulations', icon: Check, label: 'Quy định & Nhiệm vụ', group: 'Điều hành' },
     { id: 'finance', icon: Wallet, label: 'Thu chi TDP', group: 'Tài chính' },
     { id: 'ward-funds', icon: Wallet, label: 'Quỹ nộp phường', group: 'Tài chính' },
@@ -3264,7 +3264,7 @@ const App = () => {
         </div>
 
         <nav className="sidebar-nav">
-          {['Tổng quan', 'Quản lý dân cư', 'Tổ chức - Đoàn thể', 'Điều hành', 'Tài chính', 'Tiện ích'].map(grpName => {
+          {['Tổng quan', 'Quản lý dân cư', 'Biên bản & Lịch họp', 'Tổ chức - Đoàn thể', 'Điều hành', 'Tài chính', 'Tiện ích'].map(grpName => {
             const grpItems = menuItems.filter(item => item.group === grpName);
             if (grpItems.length === 0) return null;
             return (

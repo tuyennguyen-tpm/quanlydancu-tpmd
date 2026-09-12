@@ -3,6 +3,7 @@ import { Calendar, Users, MapPin, Clock, Plus, X, ListCollapse, FileText, Trash2
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Meeting } from '../types';
+import MeetingMinutes from './MeetingMinutes';
 
 const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }) => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
@@ -24,8 +25,14 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const [activeFrontTab, setActiveFrontTab] = useState<'meetings' | 'committee'>('meetings');
+  const [activeTab, setActiveTab] = useState<'meetings' | 'minutes' | 'committee'>('meetings');
+  const [selectedMeetingMinutesId, setSelectedMeetingMinutesId] = useState<string | undefined>(undefined);
   const [committeeMembers, setCommitteeMembers] = useState<any[]>([]);
+
+  useEffect(() => {
+    setActiveTab('meetings');
+    setSelectedMeetingMinutesId(undefined);
+  }, [type]);
 
   // Form states for committee members
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
@@ -144,15 +151,17 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
   const handleCreateMinutes = (meetingId?: string, meetingType?: string) => {
     if (meetingId) {
       localStorage.setItem('selected_meeting_minutes_id', meetingId);
+      setSelectedMeetingMinutesId(meetingId);
     } else {
       localStorage.removeItem('selected_meeting_minutes_id');
+      setSelectedMeetingMinutesId(undefined);
     }
     if (meetingType) {
       localStorage.setItem('selected_meeting_minutes_type', meetingType);
     } else {
-      localStorage.removeItem('selected_meeting_minutes_type');
+      localStorage.setItem('selected_meeting_minutes_type', type);
     }
-    window.dispatchEvent(new CustomEvent('change-tab', { detail: 'meetings-minutes' }));
+    setActiveTab('minutes');
   };
 
   const handleDeleteMeeting = async (id: string, title: string) => {
@@ -424,20 +433,20 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
 
   return (
     <div className="meetings-page">
-      <div className="page-header" style={{ display: 'block', marginBottom: '24px' }}>
+      <div className="page-header" style={{ display: 'block', marginBottom: '20px' }}>
         <h1 style={{ margin: '0 0 6px 0', fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-main)' }}>
-          {type === 'party' ? 'Họp chi bộ' : type === 'front' ? 'Họp mặt trận' : 'Quản lý họp dân'}
+          {type === 'party' ? 'Chi bộ Đảng' : type === 'front' ? 'Ban Công tác Mặt trận' : 'Tổ dân phố'}
         </h1>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)', flex: 1, minWidth: '280px' }}>
             {type === 'party' 
-              ? `Tổ chức và quản lý thông tin các cuộc họp Chi bộ Tổ dân phố ${tdpName}.`
+              ? `Hệ thống quản lý lịch sinh hoạt Chi bộ và biên bản họp Đảng Tổ dân phố ${tdpName}.`
               : type === 'front'
-                ? `Tổ chức và quản lý thông tin các cuộc họp Mặt trận Tổ quốc Tổ dân phố ${tdpName}.`
-                : `Tổ chức và quản lý thông tin các cuộc họp Tổ dân phố ${tdpName}.`
+                ? `Hệ thống quản lý lịch họp, biên bản và nhân sự Ban Công tác Mặt trận Tổ dân phố ${tdpName}.`
+                : `Hệ thống quản lý lịch họp dân và biên bản cuộc họp Tổ dân phố ${tdpName}.`
             }
           </p>
-          {!isGuest && (type !== 'front' || activeFrontTab !== 'committee') && (
+          {!isGuest && activeTab === 'meetings' && (
             <div style={{ display: 'flex', gap: '12px' }}>
               <button 
                 type="button"
@@ -470,54 +479,80 @@ const Meetings = ({ type = 'general' }: { type?: 'general' | 'party' | 'front' }
         </div>
       </div>
 
-      {type === 'front' && (
-        <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '20px', gap: '16px' }}>
+      {/* Navigation Sub-Tabs */}
+      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: '20px', gap: '12px' }}>
+        <button 
+          type="button"
+          onClick={() => { setActiveTab('meetings'); setSelectedMeetingMinutesId(undefined); }}
+          style={{
+            padding: '10px 18px',
+            fontSize: '14px',
+            fontWeight: '700',
+            border: 'none',
+            background: 'none',
+            borderBottom: activeTab === 'meetings' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeTab === 'meetings' ? 'var(--primary)' : 'var(--text-muted)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <Calendar size={16} />
+          {type === 'party' ? 'Lịch sinh hoạt Chi bộ' : type === 'front' ? 'Lịch họp Mặt trận' : 'Lịch họp Tổ dân phố'}
+        </button>
+
+        <button 
+          type="button"
+          onClick={() => setActiveTab('minutes')}
+          style={{
+            padding: '10px 18px',
+            fontSize: '14px',
+            fontWeight: '700',
+            border: 'none',
+            background: 'none',
+            borderBottom: activeTab === 'minutes' ? '3px solid var(--primary)' : '3px solid transparent',
+            color: activeTab === 'minutes' ? 'var(--primary)' : 'var(--text-muted)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <FileText size={16} />
+          {type === 'party' ? 'Biên bản Chi bộ' : type === 'front' ? 'Biên bản Mặt trận' : 'Biên bản họp TDP'}
+        </button>
+
+        {type === 'front' && (
           <button 
             type="button"
-            onClick={() => setActiveFrontTab('meetings')}
+            onClick={() => setActiveTab('committee')}
             style={{
-              padding: '10px 16px',
-              fontSize: '14.5px',
-              fontWeight: '600',
+              padding: '10px 18px',
+              fontSize: '14px',
+              fontWeight: '700',
               border: 'none',
               background: 'none',
-              borderBottom: activeFrontTab === 'meetings' ? '3px solid var(--primary)' : '3px solid transparent',
-              color: activeFrontTab === 'meetings' ? 'var(--primary)' : 'var(--text-muted)',
+              borderBottom: activeTab === 'committee' ? '3px solid var(--primary)' : '3px solid transparent',
+              color: activeTab === 'committee' ? 'var(--primary)' : 'var(--text-muted)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Calendar size={16} />
-            Cuộc họp Mặt trận
-          </button>
-          <button 
-            type="button"
-            onClick={() => setActiveFrontTab('committee')}
-            style={{
-              padding: '10px 16px',
-              fontSize: '14.5px',
-              fontWeight: '600',
-              border: 'none',
-              background: 'none',
-              borderBottom: activeFrontTab === 'committee' ? '3px solid var(--primary)' : '3px solid transparent',
-              color: activeFrontTab === 'committee' ? 'var(--primary)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+              gap: '8px',
               transition: 'all 0.15s ease'
             }}
           >
             <Users size={16} />
             Ban công tác Mặt trận
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {type === 'front' && activeFrontTab === 'committee' ? (
+      {activeTab === 'minutes' ? (
+        <MeetingMinutes scope={type} hideHeader={true} initialMeetingId={selectedMeetingMinutesId} />
+      ) : activeTab === 'committee' && type === 'front' ? (
         <div className="card-gov" style={{ background: 'white', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', marginTop: '8px', marginBottom: '32px' }}>
           <div className="card-gov-header" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', background: 'var(--bg-main)' }}>
             <div style={{ fontWeight: '700', fontSize: '15px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>

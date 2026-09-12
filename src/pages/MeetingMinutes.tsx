@@ -6,8 +6,20 @@ import type { Meeting, MeetingMinutesData } from '../types';
 import { VoiceInputButton } from '../components/VoiceInputButton';
 
 
-const MeetingMinutes = () => {
+interface MeetingMinutesProps {
+  scope?: 'general' | 'party' | 'front';
+  initialMeetingId?: string;
+  hideHeader?: boolean;
+}
+
+const MeetingMinutes: React.FC<MeetingMinutesProps> = ({ 
+  scope, 
+  initialMeetingId, 
+  hideHeader = false 
+}) => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
+  const [activeCategory, setActiveCategory] = useState<'general' | 'party' | 'front'>(scope || 'general');
+  const currentCategory = scope || activeCategory;
   
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
@@ -17,6 +29,7 @@ const MeetingMinutes = () => {
     window.addEventListener('role-changed', handleRoleChange);
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
+
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState('');
   const [savedMinutes, setSavedMinutes] = useState<MeetingMinutesData[]>([]);
@@ -146,6 +159,7 @@ const MeetingMinutes = () => {
 
   const serializeMetadata = (rawContent: string) => {
     const metadata = {
+      meetingType: meetingType || currentCategory,
       orgLevel1,
       orgLevel2,
       nationLevel1,
@@ -168,6 +182,9 @@ const MeetingMinutes = () => {
     if (match) {
       try {
         const meta = JSON.parse(match[1]);
+        if (meta.meetingType) {
+          setMeetingType(meta.meetingType);
+        }
         setOrgLevel1(meta.orgLevel1 || `UBND ${(localStorage.getItem('ward_name') || 'Phường Nam Sầm Sơn').toUpperCase()}`);
         setOrgLevel2(meta.orgLevel2 || `TỔ DÂN PHỐ ${(localStorage.getItem('tdp_name') || 'Nam Sầm Sơn').toUpperCase()}`);
         setNationLevel1(meta.nationLevel1 || 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
@@ -187,6 +204,32 @@ const MeetingMinutes = () => {
     }
     return fullContent;
   };
+
+  const getMinutesType = (m: MeetingMinutesData, meetingList: Meeting[]): 'general' | 'party' | 'front' => {
+    const regex = /\n\n<!--METADATA:({.*?})-->$/s;
+    const match = m.content ? m.content.match(regex) : null;
+    if (match) {
+      try {
+        const meta = JSON.parse(match[1]);
+        if (meta.meetingType === 'party' || meta.type === 'party') return 'party';
+        if (meta.meetingType === 'front' || meta.type === 'front') return 'front';
+        if (meta.meetingType === 'general' || meta.type === 'general') return 'general';
+      } catch {}
+    }
+    if (m.meeting_id && meetingList.length > 0) {
+      const linked = meetingList.find(item => item.id === m.meeting_id);
+      if (linked?.type) return linked.type as 'general' | 'party' | 'front';
+    }
+    const titleLower = (m.title || '').toLowerCase();
+    const contentLower = (m.content || '').toLowerCase();
+    const chairmanLower = (m.chairman || '').toLowerCase();
+    if (titleLower.includes('chi bộ') || contentLower.includes('chi bộ') || chairmanLower.includes('bí thư')) return 'party';
+    if (titleLower.includes('mặt trận') || contentLower.includes('mặt trận') || chairmanLower.includes('trưởng ban ctmt') || chairmanLower.includes('mặt trận')) return 'front';
+    return 'general';
+  };
+
+  const filteredSavedMinutes = savedMinutes.filter(m => getMinutesType(m, meetings) === currentCategory);
+  const filteredMeetings = meetings.filter(m => (m.type || 'general') === currentCategory);
 
   const getDocNumberSuffix = (type: string) => {
     if (type === 'party') return '/BB-CB';
@@ -512,6 +555,19 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     }
   };
 
+  useEffect(() => {
+    if (scope) {
+      setActiveCategory(scope);
+      setMeetingType(scope);
+    }
+  }, [scope]);
+
+  useEffect(() => {
+    if (initialMeetingId && meetings.length > 0) {
+      handleSelectMeeting(initialMeetingId, meetings);
+    }
+  }, [initialMeetingId, meetings]);
+
   // Load meetings for the selector and check pre-filled data
   useEffect(() => {
     const loadMeetings = async () => {
@@ -520,9 +576,9 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         const sortedList = list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         setMeetings(sortedList);
 
-        // Check if there is a preselected meeting or type passed via localStorage
-        const preSelectedId = localStorage.getItem('selected_meeting_minutes_id');
-        const preSelectedType = localStorage.getItem('selected_meeting_minutes_type');
+        // Check if there is a preselected meeting or type passed via localStorage or props
+        const preSelectedId = initialMeetingId || localStorage.getItem('selected_meeting_minutes_id');
+        const preSelectedType = scope || localStorage.getItem('selected_meeting_minutes_type');
 
         if (preSelectedId) {
           localStorage.removeItem('selected_meeting_minutes_id');
@@ -584,7 +640,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     };
     loadMeetings();
     loadSavedMinutes();
-  }, []);
+  }, [scope, initialMeetingId]);
 
   useEffect(() => {
     const handleTdpNameChange = () => {
@@ -764,26 +820,61 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
     showToast('Đã mở biên bản đã lưu!', 'success');
   };
 
-  const handleCreateNewMinutes = () => {
+  const handleCreateNewMinutes = (catType: string = currentCategory) => {
     setCurrentMinutesId(null);
     setSelectedMeetingId('');
-    setTitle('Họp Tổ dân phố thường kỳ');
+    
+    let defaultTitle = 'Họp Tổ dân phố thường kỳ';
+    let defaultAttendance = '85';
+    const defaults = getDefaultChairmanAndSecretary(catType);
+    let initialChairman = defaults.chairman;
+    let initialSecretary = defaults.secretary;
+    
+    if (catType === 'party') {
+      defaultTitle = 'Họp Chi bộ Tổ dân phố thường kỳ';
+      defaultAttendance = '15';
+      const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+      setOrgLevel1(`ĐẢNG BỘ PHƯỜNG ${cleanWard}`);
+      setOrgLevel2(`CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+      setNationLevel1('ĐẢNG CỘNG SẢN VIỆT NAM');
+      const dateObj = new Date();
+      setNationLevel2(`${wardName.replace(/Phường/gi, '').trim()}, ngày ${dateObj.getDate()} tháng ${dateObj.getMonth() + 1} năm ${dateObj.getFullYear()}`);
+      setDocTitle('BIÊN BẢN SINH HOẠT CHI BỘ');
+      setSecretaryTitle('THƯ KÝ HỘI NGHỊ');
+      setChairmanTitle('BÍ THƯ CHI BỘ');
+    } else if (catType === 'front') {
+      defaultTitle = 'Họp Ban công tác Mặt trận thường kỳ';
+      defaultAttendance = '12';
+      const cleanWard = wardName.replace(/Phường/gi, '').trim().toUpperCase();
+      setOrgLevel1(`ỦY BAN MTTQ VN PHƯỜNG ${cleanWard}`);
+      setOrgLevel2(`BAN CÔNG TÁC MẶT TRẬN TDP ${tdpName.toUpperCase()}`);
+      setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+      setNationLevel2('Độc lập - Tự do - Hạnh phúc');
+      setDocTitle('BIÊN BẢN CUỘC HỌP');
+      setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+      setChairmanTitle('TRƯỞNG BAN');
+    } else {
+      defaultTitle = 'Họp Tổ dân phố thường kỳ';
+      defaultAttendance = '85';
+      setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
+      setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
+      setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+      setNationLevel2('Độc lập - Tự do - Hạnh phúc');
+      setDocTitle('BIÊN BẢN CUỘC HỌP');
+      setSecretaryTitle('THƯ KÝ CUỘC HỌP');
+      setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
+    }
+
+    setTitle(defaultTitle);
     setDate(new Date().toISOString().slice(0, 10));
     setTime('19:30');
-    setLocation('Nhà văn hóa');
-    setChairman('Nguyễn Kim Tuyến - Tổ trưởng');
-    setSecretary('Lê Thị Dung - Thư ký');
+    setLocation('Nhà văn hóa Tổ dân phố');
+    setChairman(initialChairman);
+    setSecretary(initialSecretary);
     setSecretary2(getOfficialNameFromConfig('thu_ky2', ''));
-    setAttendance('85');
-    setMeetingType('general');
-    setContent(applyDefaultContentCustom('Họp Tổ dân phố thường kỳ', '', 'general', 'Nguyễn Kim Tuyến - Tổ trưởng', 'Lê Thị Dung - Thư ký'));
-    setOrgLevel1(`UBND ${wardName.toUpperCase()}`);
-    setOrgLevel2(`TỔ DÂN PHỐ ${tdpName.toUpperCase()}`);
-    setNationLevel1('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
-    setNationLevel2('Độc lập - Tự do - Hạnh phúc');
-    setDocTitle('BIÊN BẢN CUỘC HỌP');
-    setSecretaryTitle('THƯ KÝ CUỘC HỌP');
-    setChairmanTitle('CHỦ TRÌ CUỘC HỌP');
+    setAttendance(defaultAttendance);
+    setMeetingType(catType);
+    setContent(applyDefaultContentCustom(defaultTitle, '', catType, initialChairman, initialSecretary));
     setDocNumber('.....');
     setEndTime('...... giờ');
   };
@@ -1201,17 +1292,103 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
   };
 
   return (
-    <div className="minutes-page" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="minutes-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* Page Header */}
-      <div className="page-header" style={{ display: 'block', marginBottom: '8px' }}>
-        <h1 style={{ margin: '0 0 6px 0', fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-main)' }}>
-          📄 Lập Biên bản cuộc họp
-        </h1>
-        <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
-          Hệ thống hỗ trợ tự động soạn thảo biên bản họp dân, họp chi bộ, họp mặt trận. Chỉ cần chỉnh sửa một vài thông tin cơ bản và in ấn trực tiếp.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="page-header" style={{ display: 'block', marginBottom: '4px' }}>
+          <h1 style={{ margin: '0 0 6px 0', fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-main)' }}>
+            📄 Lập Biên bản cuộc họp
+          </h1>
+          <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+            Hệ thống hỗ trợ tự động soạn thảo biên bản họp dân, họp chi bộ, họp mặt trận. Chỉ cần chỉnh sửa một vài thông tin cơ bản và in ấn trực tiếp.
+          </p>
+        </div>
+      )}
+
+      {/* Category Tabs if not scoped */}
+      {!scope && (
+        <div style={{ display: 'flex', gap: '10px', borderBottom: '2px solid var(--border)', paddingBottom: '12px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('general');
+              setMeetingType('general');
+              handleCreateNewMinutes('general');
+            }}
+            style={{
+              padding: '9px 18px',
+              borderRadius: '8px',
+              fontWeight: '700',
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: activeCategory === 'general' ? '#2563eb' : 'white',
+              color: activeCategory === 'general' ? 'white' : 'var(--text-main)',
+              border: '1.5px solid',
+              borderColor: activeCategory === 'general' ? '#2563eb' : 'var(--border)',
+              boxShadow: activeCategory === 'general' ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🏛️ Tổ Dân Phố
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('party');
+              setMeetingType('party');
+              handleCreateNewMinutes('party');
+            }}
+            style={{
+              padding: '9px 18px',
+              borderRadius: '8px',
+              fontWeight: '700',
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: activeCategory === 'party' ? '#dc2626' : 'white',
+              color: activeCategory === 'party' ? 'white' : 'var(--text-main)',
+              border: '1.5px solid',
+              borderColor: activeCategory === 'party' ? '#dc2626' : 'var(--border)',
+              boxShadow: activeCategory === 'party' ? '0 2px 8px rgba(220, 38, 38, 0.25)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🔴 Chi Bộ Đảng
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('front');
+              setMeetingType('front');
+              handleCreateNewMinutes('front');
+            }}
+            style={{
+              padding: '9px 18px',
+              borderRadius: '8px',
+              fontWeight: '700',
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: activeCategory === 'front' ? '#059669' : 'white',
+              color: activeCategory === 'front' ? 'white' : 'var(--text-main)',
+              border: '1.5px solid',
+              borderColor: activeCategory === 'front' ? '#059669' : 'var(--border)',
+              boxShadow: activeCategory === 'front' ? '0 2px 8px rgba(5, 150, 105, 0.25)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            🤝 Ban CT Mặt Trận
+          </button>
+        </div>
+      )}
 
       {/* Main Grid Layout */}
       <div className="minutes-container" style={{
@@ -1236,11 +1413,11 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
             <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-main)' }}>
-              📁 Biên bản đã lưu
+              📁 Biên bản đã lưu ({filteredSavedMinutes.length})
             </h3>
             {!isGuest && (
               <button 
-                onClick={handleCreateNewMinutes}
+                onClick={() => handleCreateNewMinutes(currentCategory)}
                 style={{
                   background: 'rgba(59, 130, 246, 0.1)',
                   border: 'none',
@@ -1261,7 +1438,7 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
           </div>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {savedMinutes.map(m => (
+            {filteredSavedMinutes.map(m => (
               <div 
                 key={m.id}
                 onClick={() => handleSelectSavedMinutes(m)}
@@ -1312,9 +1489,9 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
                 )}
               </div>
             ))}
-            {savedMinutes.length === 0 && (
+            {filteredSavedMinutes.length === 0 && (
               <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>
-                Chưa có biên bản nào được lưu trữ.
+                Chưa có biên bản nào của {currentCategory === 'party' ? 'Chi bộ' : currentCategory === 'front' ? 'Mặt trận' : 'Tổ dân phố'} được lưu trữ.
               </div>
             )}
           </div>
@@ -1350,9 +1527,9 @@ Toàn thể đại biểu tham dự hội nghị biểu quyết thông qua các 
               }}
             >
               <option value="">-- Tạo biên bản mới / Không liên kết --</option>
-              {meetings.map(m => (
+              {filteredMeetings.map(m => (
                 <option key={m.id} value={m.id}>
-                  [{m.type === 'party' ? 'Chi bộ' : m.type === 'front' ? 'Mặt trận' : 'Dân cư'}] {m.title} ({new Date(m.date).toLocaleDateString('vi-VN')})
+                  [{m.type === 'party' ? 'Chi bộ' : m.type === 'front' ? 'Mặt trận' : 'Tổ dân phố'}] {m.title} ({new Date(m.date).toLocaleDateString('vi-VN')})
                 </option>
               ))}
             </select>
