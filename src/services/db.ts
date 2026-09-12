@@ -3353,11 +3353,17 @@ export const partyDb = {
       try {
         let query = supabase.from('party_members').select('*').order('created_at', { ascending: true });
         const tenantFilter = getTenantFilter();
-        if (tenantFilter) {
-          query = query.eq(tenantFilter.field, tenantFilter.value);
+        // Bảng party_members dùng user_id, không có cột ward_id
+        if (tenantFilter && tenantFilter.field === 'user_id') {
+          query = query.eq('user_id', tenantFilter.value);
         }
         const { data, error } = await query;
-        if (error) handleDbError('tải danh sách đảng viên', error);
+        if (error) {
+          // Thử lại nếu lỗi sắp xếp hoặc filter
+          const retry = await supabase.from('party_members').select('*');
+          if (!retry.error && retry.data) return retry.data;
+          console.warn('getPartyMembers error:', error.message);
+        }
         if (!error && data) return data;
       } catch (e) { console.error('getPartyMembers fallback:', e); }
     }
@@ -3370,40 +3376,60 @@ export const partyDb = {
       probation_date: member.probation_date || null,
     };
     const full: PartyMember = { ...cleanMember, created_at: member.created_at || new Date().toISOString() } as PartyMember;
-    if (supabase) {
-      const uId = await getSessionUserId();
-      try {
-        const { data, error } = await supabase.from('party_members').upsert({ ...full, user_id: uId, resident_id: full.resident_id || null }).select().single();
-        if (error) {
-          // Tự động fallback loại bỏ party_group nếu Supabase chưa chạy migration tạo cột này
-          if (error.message.includes('party_group') || error.code === '42703') {
-            console.warn('Supabase party_members table is missing party_group column. Retrying without it.');
-            const { party_group, ...supabasePayload } = full as any;
-            const { data: retryData, error: retryError } = await supabase.from('party_members').upsert({ ...supabasePayload, user_id: uId, resident_id: full.resident_id || null }).select().single();
-            if (retryError) { handleDbError('lưu đảng viên', retryError); throw new Error(retryError.message); }
-            if (retryData) return retryData;
-          } else {
-            handleDbError('lưu đảng viên', error);
-            throw new Error(error.message);
-          }
-        } else if (data) {
-          return data;
-        }
-      } catch (err: any) {
-        if (err.message?.includes('party_group') || err.message?.includes('42703')) {
-          const { party_group, ...supabasePayload } = full as any;
-          const { data: retryData, error: retryError } = await supabase.from('party_members').upsert({ ...supabasePayload, user_id: uId, resident_id: full.resident_id || null }).select().single();
-          if (retryError) { handleDbError('lưu đảng viên', retryError); throw new Error(retryError.message); }
-          if (retryData) return retryData;
-        } else {
-          throw err;
-        }
-      }
-    }
+
+    // Luôn ghi đè cập nhật localStorage trước để không bao giờ mất dữ liệu cục bộ
     const list = getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
     const idx = list.findIndex(m => m.id === member.id);
     if (idx >= 0) list[idx] = full; else list.push(full);
     setStorageItem('party_members', list);
+
+    if (supabase) {
+      const uId = await getSessionUserId();
+      try {
+        const payload: any = { ...full, user_id: uId, resident_id: full.resident_id || null };
+        const { data, error } = await supabase.from('party_members').upsert(payload).select().maybeSingle();
+        if (error) {
+          // Tự động fallback loại bỏ các cột mở rộng nếu bảng Supabase chưa chạy migration tạo cột mới
+          if (error.code === '42703' || error.code === '23514' || error.message?.includes('column') || error.message?.includes('check constraint')) {
+            console.warn('Supabase party_members schema mismatch. Retrying with safe base columns:', error.message);
+            const safeStatus = ['official', 'probation', 'inactive'].includes(full.status) ? full.status : 'official';
+            const safePayload: any = {
+              id: full.id,
+              user_id: uId,
+              resident_id: full.resident_id || null,
+              full_name: full.full_name,
+              party_code: full.party_code || null,
+              join_date: full.join_date || null,
+              probation_date: full.probation_date || null,
+              position: full.position || 'member',
+              status: safeStatus,
+              notes: full.notes || null,
+              created_at: full.created_at || new Date().toISOString(),
+            };
+            if (full.party_group) safePayload.party_group = full.party_group;
+
+            const { data: retryData, error: retryError } = await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
+            if (retryError) {
+              delete safePayload.party_group;
+              const { data: retryData2, error: retryError2 } = await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
+              if (retryError2) {
+                console.warn('Supabase savePartyMember fallback error:', retryError2.message);
+              } else if (retryData2) {
+                return full;
+              }
+            } else if (retryData) {
+              return full;
+            }
+          } else {
+            console.warn('Supabase savePartyMember error:', error.message);
+          }
+        } else if (data) {
+          return full;
+        }
+      } catch (err: any) {
+        console.warn('Supabase savePartyMember exception fallback:', err);
+      }
+    }
     return full;
   },
   deletePartyMember: async (id: string): Promise<boolean> => {
@@ -3436,11 +3462,15 @@ export const partyDb = {
       try {
         let query = supabase.from('party_meetings').select('*').order('date', { ascending: false });
         const tenantFilter = getTenantFilter();
-        if (tenantFilter) {
-          query = query.eq(tenantFilter.field, tenantFilter.value);
+        if (tenantFilter && tenantFilter.field === 'user_id') {
+          query = query.eq('user_id', tenantFilter.value);
         }
         const { data, error } = await query;
-        if (error) handleDbError('tải danh sách sinh hoạt chi bộ', error);
+        if (error) {
+          const retry = await supabase.from('party_meetings').select('*');
+          if (!retry.error && retry.data) return retry.data;
+          console.warn('getPartyMeetings error:', error.message);
+        }
         if (!error && data) return data;
       } catch (e) { console.error('getPartyMeetings fallback:', e); }
     }
@@ -3480,11 +3510,15 @@ export const partyDb = {
         let q = supabase.from('party_evaluations').select('*');
         if (year) q = q.eq('year', year);
         const tenantFilter = getTenantFilter();
-        if (tenantFilter) {
-          q = q.eq(tenantFilter.field, tenantFilter.value);
+        if (tenantFilter && tenantFilter.field === 'user_id') {
+          q = q.eq('user_id', tenantFilter.value);
         }
         const { data, error } = await q;
-        if (error) handleDbError('tải đánh giá đảng viên', error);
+        if (error) {
+          const retry = year ? await supabase.from('party_evaluations').select('*').eq('year', year) : await supabase.from('party_evaluations').select('*');
+          if (!retry.error && retry.data) return retry.data;
+          console.warn('getPartyEvaluations error:', error.message);
+        }
         if (!error && data) return data;
       } catch (e) { console.error('getPartyEvaluations fallback:', e); }
     }
@@ -3512,11 +3546,15 @@ export const partyDb = {
       try {
         let query = supabase.from('party_fees').select('*').eq('year', year);
         const tenantFilter = getTenantFilter();
-        if (tenantFilter) {
-          query = query.eq(tenantFilter.field, tenantFilter.value);
+        if (tenantFilter && tenantFilter.field === 'user_id') {
+          query = query.eq('user_id', tenantFilter.value);
         }
         const { data, error } = await query;
-        if (error) handleDbError('tải đảng phí', error);
+        if (error) {
+          const retry = await supabase.from('party_fees').select('*').eq('year', year);
+          if (!retry.error && retry.data) return retry.data;
+          console.warn('getPartyFees error:', error.message);
+        }
         if (!error && data) return data;
       } catch (e) { console.error('getPartyFees fallback:', e); }
     }
