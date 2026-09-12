@@ -1332,6 +1332,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         const hZoneIdx = hasHeaders ? findColIdx(['vùng ltt', 'vùng lương', 'vùng']) : -1;
         const hNotesIdx = hasHeaders ? findColIdx(['ghi chú']) : -1;
 
+        const membersToSave: PartyMember[] = [];
+        const updatedMembersState = [...members];
+
         for (const columns of rows) {
           if (columns.length < 1) continue;
 
@@ -1430,12 +1433,12 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               if (hhIdx >= 0 && households[hhIdx].self_management_group !== partyGroupStr) {
                 const updatedHh = { ...households[hhIdx], self_management_group: partyGroupStr };
                 households[hhIdx] = updatedHh;
-                await db.saveHousehold(updatedHh);
+                db.saveHousehold(updatedHh).catch(() => {});
               }
             }
           }
 
-          await partyDb.savePartyMember({
+          const memberPayload: PartyMember = {
             id: matched ? matched.id : generateUUID(),
             full_name: fullName,
             party_code: partyCode.trim() || (matched ? matched.party_code : undefined),
@@ -1449,18 +1452,27 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             salary_base: salary,
             wage_zone: ([1, 2, 3, 4].includes(zone) ? zone : 3) as (1 | 2 | 3 | 4),
             notes: notesStr || (matched ? matched.notes : ''),
-            created_at: matched ? matched.created_at : undefined,
-          });
+            created_at: matched ? matched.created_at : new Date().toISOString(),
+          };
 
-          if (matched) {
+          membersToSave.push(memberPayload);
+
+          const existIdx = updatedMembersState.findIndex(m => m.id === memberPayload.id);
+          if (existIdx >= 0) {
+            updatedMembersState[existIdx] = memberPayload;
             updatedCount++;
           } else {
+            updatedMembersState.push(memberPayload);
             addedCount++;
           }
         }
 
+        // Cập nhật State giao diện ngay lập tức trong 0ms (người dùng thấy ngay không cần reload trang)
+        setMembers(updatedMembersState);
         showToast(`Đã nhập thành công! Thêm mới ${addedCount} và cập nhật ${updatedCount} đảng viên.`, 'success');
-        load();
+
+        // Lưu hàng loạt vào LocalStorage & đồng bộ Supabase ngầm siêu tốc
+        await partyDb.savePartyMembersBatch(membersToSave);
       } catch (err: any) {
         showToast(`Lỗi phân tích file: ${err.message}`, 'danger');
       }

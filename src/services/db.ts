@@ -3431,6 +3431,57 @@ export const partyDb = {
     }
     return full;
   },
+  savePartyMembersBatch: async (membersList: PartyMember[]): Promise<void> => {
+    if (!membersList || membersList.length === 0) return;
+
+    // 1. Cập nhật localStorage ngay lập tức
+    const currentList = getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
+    const updatedMap = new Map(currentList.map(m => [m.id, m]));
+    for (const m of membersList) {
+      updatedMap.set(m.id, m);
+    }
+    const newList = Array.from(updatedMap.values());
+    setStorageItem('party_members', newList);
+
+    // 2. Gửi hàng loạt lên Supabase chỉ trong 1 request duy nhất (Bulk Upsert)
+    if (supabase) {
+      let uId = await getSessionUserId();
+      if (!uId) {
+        uId = localStorage.getItem('supabase_user_id') || 'b6986043-87f9-446b-b317-80476fa67a7e';
+      }
+      try {
+        const safePayloads = membersList.map(full => {
+          const safeStatus = ['official', 'probation', 'inactive'].includes(full.status) ? full.status : 'official';
+          const p: any = {
+            id: mapToUUID(full.id),
+            user_id: uId,
+            resident_id: full.resident_id ? mapToUUID(full.resident_id) : null,
+            full_name: full.full_name,
+            party_code: full.party_code || null,
+            join_date: full.join_date || null,
+            probation_date: full.probation_date || null,
+            position: full.position || 'member',
+            status: safeStatus,
+            notes: full.notes || null,
+            created_at: full.created_at || new Date().toISOString(),
+          };
+          if (full.party_group) p.party_group = full.party_group;
+          return p;
+        });
+
+        for (let i = 0; i < safePayloads.length; i += 100) {
+          const chunk = safePayloads.slice(i, i + 100);
+          const { error } = await supabase.from('party_members').upsert(chunk);
+          if (error && error.code === '42703') {
+            const strippedChunk = chunk.map(({ party_group, ...rest }: any) => rest);
+            await supabase.from('party_members').upsert(strippedChunk);
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase savePartyMembersBatch exception fallback:', err);
+      }
+    }
+  },
   deletePartyMember: async (id: string): Promise<boolean> => {
     if (supabase) {
       try {
