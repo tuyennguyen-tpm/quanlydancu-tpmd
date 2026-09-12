@@ -815,28 +815,30 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const getPositionFromLabel = (lbl: string): string => {
-    const val = lbl.trim().toLowerCase();
-    if (val.includes('bí thư') && !val.includes('phó')) return 'secretary';
-    if (val.includes('phó bí thư')) return 'deputy_secretary';
+    const val = (lbl || '').trim().toLowerCase();
+    if (val.includes('phó bí thư') || val.includes('phó')) return 'deputy_secretary';
+    if (val.includes('bí thư')) return 'secretary';
     return 'member';
   };
 
   const getStatusFromLabel = (lbl: string): string => {
-    const val = lbl.trim().toLowerCase();
-    if (val.includes('chính thức')) return 'official';
+    const val = (lbl || '').trim().toLowerCase();
+    if (val.includes('213')) return 'party_213';
     if (val.includes('dự bị')) return 'probation';
     if (val.includes('mất') || val.includes('qua đời') || val.includes('tử vong')) return 'deceased';
     if (val.includes('miễn') || val.includes('tạm miễn') || val.includes('không hoạt động') || val.includes('không hđ')) return 'inactive';
+    if (val.includes('chính thức')) return 'official';
     return 'official';
   };
 
   const getFeeCatFromLabel = (lbl: string): string => {
-    const val = lbl.trim().toLowerCase();
-    if (val.includes('bắt buộc') || val.includes('bhxh')) return 'bhxh';
-    if (val.includes('hưu')) return 'pension';
+    const val = (lbl || '').trim().toLowerCase();
+    if (val.includes('miễn')) return 'exempt';
     if (val.includes('chưa đến tuổi') || val.includes('chưa hưu')) return 'no_bhxh_under_retire';
     if (val.includes('đủ tuổi') || val.includes('chưa có chế độ')) return 'no_bhxh_over_retire';
+    if (val.includes('hưu')) return 'pension';
     if (val.includes('học sinh') || val.includes('sinh viên')) return 'student';
+    if (val.includes('bắt buộc') || val.includes('bhxh')) return 'bhxh';
     return 'bhxh';
   };
 
@@ -854,14 +856,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       const worksheet = workbook.addWorksheet('Danh sách đảng viên');
 
       // Title header rows (for premium look)
-      worksheet.mergeCells('A1:M1');
+      worksheet.mergeCells('A1:O1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = `DANH SÁCH ĐẢNG VIÊN CHI BỘ TỔ DÂN PHỐ ${tdpName.toUpperCase()}`;
       titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF991B1B' } };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(1).height = 35;
 
-      worksheet.mergeCells('A2:M2');
+      worksheet.mergeCells('A2:O2');
       const subCell = worksheet.getCell('A2');
       subCell.value = `Thời gian xuất bản: ${new Date().toLocaleDateString('vi-VN')} - Tổng cộng: ${filtered.length} đảng viên`;
       subCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
@@ -874,7 +876,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Headers definition
       const headers = [
-        "STT", "Họ và tên", "Ngày tháng năm sinh", "Số thẻ Đảng", "Tổ đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức",
+        "STT", "Họ và tên", "Số CCCD", "Ngày tháng năm sinh", "Số thẻ Đảng", "Tổ đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức", "Tuổi Đảng",
         "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
       ];
       
@@ -914,16 +916,30 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanMName
         );
         const dobStr = res && res.dob ? fmtDate(res.dob) : '';
+        const cccdStr = res?.cccd ? String(res.cccd).trim() : ((m as any).cccd ? String((m as any).cccd).trim() : '');
+
+        // Tính tuổi Đảng
+        const dateStr = m.probation_date || m.join_date;
+        let tuoiDangStr = '';
+        if (dateStr) {
+          const yr = new Date(dateStr).getFullYear();
+          if (!isNaN(yr)) {
+            const age = currentYear - yr;
+            tuoiDangStr = age >= 0 ? `${age} năm` : '';
+          }
+        }
 
         const addedRow = worksheet.addRow([
           index + 1,
           m.full_name,
+          cccdStr,
           dobStr,
           m.party_code || '',
           getMemberPartyGroup(m),
           POSITION_LABEL[m.position] || m.position,
           m.probation_date ? fmtDate(m.probation_date) : '',
           m.join_date ? fmtDate(m.join_date) : '',
+          tuoiDangStr,
           STATUS_LABEL[m.status] || m.status,
           FEE_CATEGORY_LABEL[m.fee_category || 'bhxh'] || m.fee_category || 'bhxh',
           m.salary_base || 0,
@@ -951,18 +967,20 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           // Alignments
           if (colNumber === 1) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          } else if (colNumber === 2 || colNumber === 5 || colNumber === 11 || colNumber === 13) {
-            cell.alignment = { vertical: 'middle', horizontal: colNumber === 11 ? 'right' : 'left' };
+          } else if (colNumber === 2 || colNumber === 6 || colNumber === 15) {
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          } else if (colNumber === 13) {
+            cell.alignment = { vertical: 'middle', horizontal: 'right' };
           } else {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
 
           // Format numbers
-          if (colNumber === 11) {
+          if (colNumber === 13) {
             cell.numFmt = '#,##0';
           }
-          if (colNumber === 4) {
-            cell.numFmt = '@'; // Force text format for party code
+          if (colNumber === 3 || colNumber === 5) {
+            cell.numFmt = '@'; // Force text format for CCCD and party code (preserves leading zeroes)
           }
 
           // Highlight leaders
@@ -976,16 +994,33 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         });
       });
 
-      // Auto-fit columns
+      // Auto-fit columns (15 columns: 0 to 14)
       worksheet.columns.forEach((column, colIdx) => {
-        if (colIdx > 12) return;
-        let maxLen = colIdx === 0 ? 6 : 12;
+        if (colIdx > 14) return;
+        let minWidth = 12;
+        if (colIdx === 0) minWidth = 6;       // STT
+        else if (colIdx === 1) minWidth = 22; // Họ tên
+        else if (colIdx === 2) minWidth = 16; // Số CCCD
+        else if (colIdx === 3) minWidth = 14; // Ngày sinh
+        else if (colIdx === 4) minWidth = 14; // Số thẻ Đảng
+        else if (colIdx === 5) minWidth = 14; // Tổ đảng
+        else if (colIdx === 6) minWidth = 14; // Chức vụ
+        else if (colIdx === 7) minWidth = 14; // Ngày kết nạp
+        else if (colIdx === 8) minWidth = 14; // Ngày chính thức
+        else if (colIdx === 9) minWidth = 12; // Tuổi Đảng
+        else if (colIdx === 10) minWidth = 14; // Trạng thái
+        else if (colIdx === 11) minWidth = 20; // Loại đảng phí
+        else if (colIdx === 12) minWidth = 18; // Lương/trợ cấp
+        else if (colIdx === 13) minWidth = 10; // Vùng LTT
+        else if (colIdx === 14) minWidth = 16; // Ghi chú
+
+        let maxLen = minWidth;
         column.values?.forEach((v, rowIdx) => {
           if (rowIdx <= 4) return;
           const valStr = v ? v.toString() : '';
           if (valStr.length > maxLen) maxLen = valStr.length;
         });
-        column.width = Math.min(Math.max(maxLen + 4, colIdx === 0 ? 6 : 12), 40);
+        column.width = Math.min(Math.max(maxLen + 3, minWidth), 40);
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -1153,7 +1188,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     if (!file) return;
 
     const reader = new FileReader();
-    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+    const fileNameLower = file.name.toLowerCase();
+    const isXlsx = fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls');
 
     if (isXlsx) {
       reader.readAsArrayBuffer(file);
@@ -1164,6 +1200,28 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     reader.onload = async (evt) => {
       try {
         let rows: string[][] = [];
+        let detectedHeaders: string[] = [];
+
+        const extractCellValue = (cell: ExcelJS.Cell): string => {
+          let val: any = cell.value;
+          if (val === undefined || val === null) return '';
+          if (typeof val === 'object') {
+            if (val instanceof Date) {
+              const d = val.getDate().toString().padStart(2, '0');
+              const m = (val.getMonth() + 1).toString().padStart(2, '0');
+              const y = val.getFullYear();
+              return `${d}/${m}/${y}`;
+            }
+            if ('result' in val) {
+              val = val.result;
+            } else if ('richText' in val && Array.isArray(val.richText)) {
+              return val.richText.map((t: any) => t.text || '').join('').trim();
+            } else if ('text' in val) {
+              return String(val.text || '').trim();
+            }
+          }
+          return String(val !== undefined && val !== null ? val : '').trim();
+        };
 
         if (isXlsx) {
           const arrayBuffer = evt.target?.result as ArrayBuffer;
@@ -1176,8 +1234,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           }
           
           worksheet.eachRow((row) => {
-            const firstCellVal = row.getCell(1).value?.toString() || '';
-            const secondCellVal = row.getCell(2).value?.toString() || '';
+            const firstCellVal = extractCellValue(row.getCell(1));
+            const secondCellVal = extractCellValue(row.getCell(2));
             
             // Skip title, description or notes rows
             if (
@@ -1190,20 +1248,21 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               return;
             }
 
-            // Skip header row
-            if (firstCellVal.includes('Họ và tên') || secondCellVal.includes('Họ và tên') || firstCellVal.includes('STT')) {
+            // Check header row
+            if (firstCellVal.includes('Họ và tên') || secondCellVal.includes('Họ và tên') || firstCellVal === 'STT' || firstCellVal.includes('STT')) {
+              const hVals: string[] = [];
+              const totalCols = Math.max(row.cellCount || 0, 16);
+              for (let c = 1; c <= totalCols; c++) {
+                hVals.push(extractCellValue(row.getCell(c)));
+              }
+              detectedHeaders = hVals;
               return;
             }
 
             const rowValues: string[] = [];
-            const totalCols = Math.max(row.cellCount || 0, 15);
+            const totalCols = Math.max(row.cellCount || 0, 16);
             for (let c = 1; c <= totalCols; c++) {
-              const cell = row.getCell(c);
-              let val = cell.value;
-              if (val && typeof val === 'object' && 'result' in val) {
-                val = (val as any).result;
-              }
-              rowValues.push(val !== undefined && val !== null ? val.toString().trim() : '');
+              rowValues.push(extractCellValue(row.getCell(c)));
             }
             rows.push(rowValues);
           });
@@ -1215,19 +1274,17 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             return;
           }
           
-          for (let i = 1; i < lines.length; i++) {
+          for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const cols = parseCSVLine(line).map(val => val.replace(/^"|"$/g, '').trim());
             
-            // Skip title or header rows
-            if (
-              cols[0] === 'Họ và tên' || 
-              cols[1] === 'Họ và tên' || 
-              cols[0] === 'STT' || 
-              cols[0].includes('DANH SÁCH') || 
-              cols[0].includes('MẪU') || 
-              (cols[0] === '' && (!cols[1] || cols[1] === ''))
-            ) {
+            // Skip title
+            if (cols[0].includes('DANH SÁCH') || cols[0].includes('MẪU') || (cols[0] === '' && (!cols[1] || cols[1] === ''))) {
+              continue;
+            }
+            // Check header
+            if (cols[0] === 'Họ và tên' || cols[1] === 'Họ và tên' || cols[0] === 'STT') {
+              detectedHeaders = cols;
               continue;
             }
             rows.push(cols);
@@ -1243,73 +1300,127 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         let addedCount = 0;
         let updatedCount = 0;
 
+        // Chuẩn hóa tên loại bỏ ký tự tàng hình và Unicode NFC chuẩn
+        const cleanNameStr = (str: string) => {
+          return (str || '')
+            .normalize('NFC')
+            .replace(/[\u200B-\u200D\uFEFF]/g, '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+        };
+
+        const findColIdx = (keywords: string[]) => {
+          return detectedHeaders.findIndex(h => {
+            const cleanH = h.toLowerCase().normalize('NFC').trim();
+            return keywords.some(k => cleanH.includes(k.toLowerCase().normalize('NFC')));
+          });
+        };
+
+        const hasHeaders = detectedHeaders.length > 0 && findColIdx(['họ và tên', 'họ tên', 'tên đảng viên']) !== -1;
+        const hNameIdx = hasHeaders ? findColIdx(['họ và tên', 'họ tên', 'tên đảng viên']) : -1;
+        const hCccdIdx = hasHeaders ? findColIdx(['cccd', 'căn cước', 'định danh', 'cmnd']) : -1;
+        const hDobIdx = hasHeaders ? findColIdx(['ngày sinh', 'năm sinh', 'ngày tháng năm sinh']) : -1;
+        const hPartyCodeIdx = hasHeaders ? findColIdx(['số thẻ đảng', 'thẻ đảng', 'mã số']) : -1;
+        const hPartyGroupIdx = hasHeaders ? findColIdx(['tổ đảng', 'chi tổ']) : -1;
+        const hPosIdx = hasHeaders ? findColIdx(['chức vụ']) : -1;
+        const hProbationDIdx = hasHeaders ? findColIdx(['kết nạp', 'dự bị']) : -1;
+        const hJoinDIdx = hasHeaders ? findColIdx(['chính thức']) : -1;
+        const hStatIdx = hasHeaders ? findColIdx(['trạng thái', 'tình trạng']) : -1;
+        const hFeeCatIdx = hasHeaders ? findColIdx(['loại đảng phí', 'đảng phí']) : -1;
+        const hSalaryIdx = hasHeaders ? findColIdx(['lương', 'trợ cấp', 'căn cứ']) : -1;
+        const hZoneIdx = hasHeaders ? findColIdx(['vùng ltt', 'vùng lương', 'vùng']) : -1;
+        const hNotesIdx = hasHeaders ? findColIdx(['ghi chú']) : -1;
+
         for (const columns of rows) {
           if (columns.length < 1) continue;
 
-          // Check if the first column is a sequence number (STT). If so, offset indices by 1
-          const isShifted = /^\d+$/.test(columns[0]) || columns[0] === '';
-          const offset = isShifted ? 1 : 0;
+          let fullName = '';
+          let excelCccd = '';
+          let partyCode = '';
+          let partyGroupStr = '';
+          let pos: any = 'member';
+          let probationD: string | null = null;
+          let joinD: string | null = null;
+          let stat: any = 'official';
+          let feeCat: any = 'bhxh';
+          let salary = 0;
+          let zone = 3;
+          let notesStr = '';
+          let excelDob: string | undefined = undefined;
 
-          if (columns.length <= offset || !columns[offset]) continue;
+          if (hasHeaders && hNameIdx !== -1) {
+            fullName = columns[hNameIdx] || '';
+            if (!fullName.trim()) continue;
+            excelCccd = hCccdIdx !== -1 ? (columns[hCccdIdx] || '').trim() : '';
+            partyCode = hPartyCodeIdx !== -1 ? columns[hPartyCodeIdx] || '' : '';
+            partyGroupStr = hPartyGroupIdx !== -1 ? columns[hPartyGroupIdx] || '' : '';
+            pos = getPositionFromLabel(hPosIdx !== -1 ? columns[hPosIdx] || 'Đảng viên' : 'Đảng viên') as any;
+            probationD = hProbationDIdx !== -1 ? parseInputDate(columns[hProbationDIdx]) || null : null;
+            joinD = hJoinDIdx !== -1 ? parseInputDate(columns[hJoinDIdx]) || null : null;
+            stat = getStatusFromLabel(hStatIdx !== -1 ? columns[hStatIdx] || 'Chính thức' : 'Chính thức') as any;
+            feeCat = getFeeCatFromLabel(hFeeCatIdx !== -1 ? columns[hFeeCatIdx] || 'Có BHXH bắt buộc' : 'Có BHXH bắt buộc') as any;
+            salary = hSalaryIdx !== -1 ? parseInt(columns[hSalaryIdx].replace(/[.,\sđVNDvnd]/g, '')) || 0 : 0;
+            zone = (hZoneIdx !== -1 ? parseInt(columns[hZoneIdx]) || 3 : 3) as any;
+            notesStr = hNotesIdx !== -1 ? columns[hNotesIdx] || '' : '';
+            excelDob = hDobIdx !== -1 ? parseInputDate(columns[hDobIdx]) : undefined;
+          } else {
+            // Fallback: positional indexing
+            const isShifted = /^\d+$/.test(columns[0]) || columns[0] === '';
+            const offset = isShifted ? 1 : 0;
 
-          const fullName = columns[offset];
-          // columns[offset + 1] is "Ngày tháng năm sinh" (dob). We skip it here as it's saved in residents and not directly in party_members.
-          const partyCode = columns[offset + 2] || '';
-          
-          // Tự động nhận diện cấu trúc tệp mới (13 cột bao gồm STT) hoặc cũ (12 cột bao gồm STT)
-          const hasBasePartyCol = columns.length >= (isShifted ? 13 : 12);
-          const colIdxOffset = hasBasePartyCol ? 1 : 0;
+            if (columns.length <= offset || !columns[offset]) continue;
 
-          const pos = getPositionFromLabel(columns[offset + 3 + colIdxOffset] || 'Đảng viên') as any;
-          const probationD = parseInputDate(columns[offset + 4 + colIdxOffset]) || null;
-          const joinD = parseInputDate(columns[offset + 5 + colIdxOffset]) || null;
-          const stat = getStatusFromLabel(columns[offset + 6 + colIdxOffset] || 'Chính thức') as any;
-          const feeCat = getFeeCatFromLabel(columns[offset + 7 + colIdxOffset] || 'Có BHXH bắt buộc') as any;
-          const salary = parseInt(columns[offset + 8 + colIdxOffset]) || 0;
-          const zone = (parseInt(columns[offset + 9 + colIdxOffset]) || 3) as any;
-          const notesStr = columns[offset + 10 + colIdxOffset] || '';
+            fullName = columns[offset];
+            partyCode = columns[offset + 2] || '';
+            
+            const hasBasePartyCol = columns.length >= (isShifted ? 13 : 12);
+            const colIdxOffset = hasBasePartyCol ? 1 : 0;
 
-          // Chuẩn hóa tên loại bỏ ký tự tàng hình và Unicode NFC chuẩn
-          const cleanNameStr = (str: string) => {
-            return (str || '')
-              .normalize('NFC')
-              .replace(/[\u200B-\u200D\uFEFF]/g, '')
-              .toLowerCase()
-              .replace(/\s+/g, ' ')
-              .trim();
-          };
+            pos = getPositionFromLabel(columns[offset + 3 + colIdxOffset] || 'Đảng viên') as any;
+            probationD = parseInputDate(columns[offset + 4 + colIdxOffset]) || null;
+            joinD = parseInputDate(columns[offset + 5 + colIdxOffset]) || null;
+            stat = getStatusFromLabel(columns[offset + 6 + colIdxOffset] || 'Chính thức') as any;
+            feeCat = getFeeCatFromLabel(columns[offset + 7 + colIdxOffset] || 'Có BHXH bắt buộc') as any;
+            salary = parseInt((columns[offset + 8 + colIdxOffset] || '0').replace(/[.,\sđVNDvnd]/g, '')) || 0;
+            zone = (parseInt(columns[offset + 9 + colIdxOffset]) || 3) as any;
+            notesStr = columns[offset + 10 + colIdxOffset] || '';
+            partyGroupStr = hasBasePartyCol ? (columns[offset + 3] || '') : '';
+            excelDob = parseInputDate(columns[offset + 1]);
+          }
 
           const cleanFullName = cleanNameStr(fullName);
-          const cleanPartyCode = partyCode.trim().replace(/[-\s]/g, '').toLowerCase();
-
-          // Lấy ngày sinh từ Excel để so khớp chính xác
-          const excelDob = parseInputDate(columns[offset + 1]);
+          const cleanPartyCodeForMatch = partyCode.trim().replace(/[-\s]/g, '').toLowerCase();
 
           const matched = currentMembers.find(m => {
             const dbPartyCode = (m.party_code || '').trim().replace(/[-\s]/g, '').toLowerCase();
-            if (cleanPartyCode && dbPartyCode) {
-              if (cleanPartyCode === dbPartyCode) return true;
+            if (cleanPartyCodeForMatch && dbPartyCode) {
+              if (cleanPartyCodeForMatch === dbPartyCode) return true;
             }
             return cleanNameStr(m.full_name) === cleanFullName;
           });
 
-          // Auto-link to resident_id if not present (sử dụng cả Họ tên và Ngày sinh để tránh trùng tên)
+          // Auto-link to resident_id: ưu tiên CCCD, sau đó đối chiếu Họ tên + Ngày sinh
           let rId = matched?.resident_id || null;
           if (!rId) {
-            const matchedRes = residents.find(r => {
-              const nameMatches = cleanNameStr(r.full_name) === cleanFullName;
-              if (!nameMatches) return false;
-              if (excelDob && r.dob) {
-                return r.dob.trim() === excelDob.trim();
+            if (excelCccd) {
+              const byCccd = residents.find(r => r.cccd && r.cccd.trim() === excelCccd);
+              if (byCccd) rId = byCccd.id;
+            }
+            if (!rId) {
+              const matchedRes = residents.find(r => {
+                const nameMatches = cleanNameStr(r.full_name) === cleanFullName;
+                if (!nameMatches) return false;
+                if (excelDob && r.dob) {
+                  return r.dob.trim() === excelDob.trim();
+                }
+                return true;
+              });
+              if (matchedRes) {
+                rId = matchedRes.id;
               }
-              return true;
-            });
-            if (matchedRes) {
-              rId = matchedRes.id;
             }
           }
-
-          const partyGroupStr = hasBasePartyCol ? (columns[offset + 3] || '') : '';
 
           // Đồng bộ tự động Tổ đảng sang Tổ tự quản của Hộ khẩu nếu có liên kết
           if (partyGroupStr && rId) {
@@ -1327,7 +1438,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           await partyDb.savePartyMember({
             id: matched ? matched.id : generateUUID(),
             full_name: fullName,
-            party_code: cleanPartyCode,
+            party_code: partyCode.trim() || (matched ? matched.party_code : undefined),
             position: pos,
             probation_date: probationD || (matched ? matched.probation_date : undefined),
             join_date: joinD || (matched ? matched.join_date : undefined),
