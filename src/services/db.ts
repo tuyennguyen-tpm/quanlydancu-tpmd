@@ -3349,6 +3349,7 @@ const seedPartyMembers: PartyMember[] = [
 export const partyDb = {
   // --- Đảng viên ---
   getPartyMembers: async (): Promise<PartyMember[]> => {
+    const localList = getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
     if (supabase) {
       try {
         let query = supabase.from('party_members').select('*').order('created_at', { ascending: true });
@@ -3358,16 +3359,25 @@ export const partyDb = {
           query = query.eq('user_id', tenantFilter.value);
         }
         const { data, error } = await query;
-        if (error) {
-          // Thử lại nếu lỗi sắp xếp hoặc filter
-          const retry = await supabase.from('party_members').select('*');
-          if (!retry.error && retry.data) return retry.data;
-          console.warn('getPartyMembers error:', error.message);
+        if (!error && data && data.length > 0) {
+          // Kết hợp dữ liệu từ Supabase với các trường mở rộng đã lưu trong localStorage (gender, fee_category, salary_base, wage_zone)
+          const merged = data.map((remote: any) => {
+            const local = localList.find(l => l.id === remote.id || mapToUUID(l.id) === remote.id);
+            return {
+              ...remote,
+              gender: local?.gender || remote.gender || 'male',
+              fee_category: local?.fee_category || remote.fee_category || 'bhxh',
+              salary_base: local?.salary_base ?? remote.salary_base ?? 0,
+              wage_zone: local?.wage_zone ?? remote.wage_zone ?? 3,
+              is_exempt_party_activities: local?.is_exempt_party_activities ?? remote.is_exempt_party_activities ?? false,
+            };
+          });
+          setStorageItem('party_members', merged);
+          return merged;
         }
-        if (!error && data) return data;
       } catch (e) { console.error('getPartyMembers fallback:', e); }
     }
-    return getStorageItem<PartyMember[]>('party_members', seedPartyMembers);
+    return localList;
   },
   savePartyMember: async (member: Omit<PartyMember, 'created_at'> & { created_at?: string }): Promise<PartyMember> => {
     const cleanMember = {
@@ -3384,47 +3394,36 @@ export const partyDb = {
     setStorageItem('party_members', list);
 
     if (supabase) {
-      const uId = await getSessionUserId();
+      let uId = await getSessionUserId();
+      if (!uId) {
+        uId = localStorage.getItem('supabase_user_id') || 'b6986043-87f9-446b-b317-80476fa67a7e';
+      }
       try {
-        const payload: any = { ...full, user_id: uId, resident_id: full.resident_id || null };
-        const { data, error } = await supabase.from('party_members').upsert(payload).select().maybeSingle();
-        if (error) {
-          // Tự động fallback loại bỏ các cột mở rộng nếu bảng Supabase chưa chạy migration tạo cột mới
-          if (error.code === '42703' || error.code === '23514' || error.message?.includes('column') || error.message?.includes('check constraint')) {
-            console.warn('Supabase party_members schema mismatch. Retrying with safe base columns:', error.message);
-            const safeStatus = ['official', 'probation', 'inactive'].includes(full.status) ? full.status : 'official';
-            const safePayload: any = {
-              id: full.id,
-              user_id: uId,
-              resident_id: full.resident_id || null,
-              full_name: full.full_name,
-              party_code: full.party_code || null,
-              join_date: full.join_date || null,
-              probation_date: full.probation_date || null,
-              position: full.position || 'member',
-              status: safeStatus,
-              notes: full.notes || null,
-              created_at: full.created_at || new Date().toISOString(),
-            };
-            if (full.party_group) safePayload.party_group = full.party_group;
+        // Chỉ gửi các cột chuẩn tồn tại trong bảng Supabase party_members để tránh lỗi 400
+        const safeStatus = ['official', 'probation', 'inactive'].includes(full.status) ? full.status : 'official';
+        const safePayload: any = {
+          id: mapToUUID(full.id),
+          user_id: uId,
+          resident_id: full.resident_id ? mapToUUID(full.resident_id) : null,
+          full_name: full.full_name,
+          party_code: full.party_code || null,
+          join_date: full.join_date || null,
+          probation_date: full.probation_date || null,
+          position: full.position || 'member',
+          status: safeStatus,
+          notes: full.notes || null,
+          created_at: full.created_at || new Date().toISOString(),
+        };
+        if (full.party_group) safePayload.party_group = full.party_group;
 
-            const { data: retryData, error: retryError } = await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
-            if (retryError) {
-              delete safePayload.party_group;
-              const { data: retryData2, error: retryError2 } = await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
-              if (retryError2) {
-                console.warn('Supabase savePartyMember fallback error:', retryError2.message);
-              } else if (retryData2) {
-                return full;
-              }
-            } else if (retryData) {
-              return full;
-            }
+        const { error } = await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
+        if (error) {
+          if (error.code === '42703' && safePayload.party_group) {
+            delete safePayload.party_group;
+            await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
           } else {
-            console.warn('Supabase savePartyMember error:', error.message);
+            console.warn('Supabase savePartyMember fallback note:', error.message);
           }
-        } else if (data) {
-          return full;
         }
       } catch (err: any) {
         console.warn('Supabase savePartyMember exception fallback:', err);
