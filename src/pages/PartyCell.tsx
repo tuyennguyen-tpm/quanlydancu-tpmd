@@ -892,7 +892,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
       // Headers definition
       const headers = [
-        "STT", "Họ và tên", "Số CCCD", "Ngày tháng năm sinh", "Số thẻ Đảng", "Tổ đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức", "Tuổi Đảng",
+        "STT", "Họ và tên", "Giới tính", "Số CCCD", "Ngày tháng năm sinh", "Số thẻ Đảng", "Tổ đảng", "Chức vụ", "Ngày kết nạp dự bị", "Ngày chính thức", "Tuổi Đảng",
         "Trạng thái", "Loại đảng phí", "Lương/trợ cấp căn cứ (VND)", "Vùng LTT", "Ghi chú"
       ];
       
@@ -933,6 +933,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         );
         const dobStr = res && res.dob ? fmtDate(res.dob) : '';
         const cccdStr = res?.cccd ? String(res.cccd).trim() : ((m as any).cccd ? String((m as any).cccd).trim() : '');
+        const genderStr = getMemberGender(m) === 'female' ? 'Nữ' : 'Nam';
 
         // Tính tuổi Đảng
         const dateStr = m.probation_date || m.join_date;
@@ -948,6 +949,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         const addedRow = worksheet.addRow([
           index + 1,
           m.full_name,
+          genderStr,
           cccdStr,
           dobStr,
           m.party_code || '',
@@ -983,19 +985,19 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           // Alignments
           if (colNumber === 1) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          } else if (colNumber === 2 || colNumber === 6 || colNumber === 15) {
+          } else if (colNumber === 2 || colNumber === 7 || colNumber === 16) {
             cell.alignment = { vertical: 'middle', horizontal: 'left' };
-          } else if (colNumber === 13) {
+          } else if (colNumber === 14) {
             cell.alignment = { vertical: 'middle', horizontal: 'right' };
           } else {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
 
           // Format numbers
-          if (colNumber === 13) {
+          if (colNumber === 14) {
             cell.numFmt = '#,##0';
           }
-          if (colNumber === 3 || colNumber === 5) {
+          if (colNumber === 4 || colNumber === 6) {
             cell.numFmt = '@'; // Force text format for CCCD and party code (preserves leading zeroes)
           }
 
@@ -1010,25 +1012,26 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         });
       });
 
-      // Auto-fit columns (15 columns: 0 to 14)
+      // Auto-fit columns (16 columns: 0 to 15)
       worksheet.columns.forEach((column, colIdx) => {
-        if (colIdx > 14) return;
+        if (colIdx > 15) return;
         let minWidth = 12;
         if (colIdx === 0) minWidth = 6;       // STT
         else if (colIdx === 1) minWidth = 22; // Họ tên
-        else if (colIdx === 2) minWidth = 16; // Số CCCD
-        else if (colIdx === 3) minWidth = 14; // Ngày sinh
-        else if (colIdx === 4) minWidth = 14; // Số thẻ Đảng
-        else if (colIdx === 5) minWidth = 14; // Tổ đảng
-        else if (colIdx === 6) minWidth = 14; // Chức vụ
-        else if (colIdx === 7) minWidth = 14; // Ngày kết nạp
-        else if (colIdx === 8) minWidth = 14; // Ngày chính thức
-        else if (colIdx === 9) minWidth = 12; // Tuổi Đảng
-        else if (colIdx === 10) minWidth = 14; // Trạng thái
-        else if (colIdx === 11) minWidth = 20; // Loại đảng phí
-        else if (colIdx === 12) minWidth = 18; // Lương/trợ cấp
-        else if (colIdx === 13) minWidth = 10; // Vùng LTT
-        else if (colIdx === 14) minWidth = 16; // Ghi chú
+        else if (colIdx === 2) minWidth = 12; // Giới tính
+        else if (colIdx === 3) minWidth = 16; // Số CCCD
+        else if (colIdx === 4) minWidth = 14; // Ngày sinh
+        else if (colIdx === 5) minWidth = 14; // Số thẻ Đảng
+        else if (colIdx === 6) minWidth = 14; // Tổ đảng
+        else if (colIdx === 7) minWidth = 14; // Chức vụ
+        else if (colIdx === 8) minWidth = 14; // Ngày kết nạp
+        else if (colIdx === 9) minWidth = 14; // Ngày chính thức
+        else if (colIdx === 10) minWidth = 12; // Tuổi Đảng
+        else if (colIdx === 11) minWidth = 14; // Trạng thái
+        else if (colIdx === 12) minWidth = 20; // Loại đảng phí
+        else if (colIdx === 13) minWidth = 18; // Lương/trợ cấp
+        else if (colIdx === 14) minWidth = 10; // Vùng LTT
+        else if (colIdx === 15) minWidth = 16; // Ghi chú
 
         let maxLen = minWidth;
         column.values?.forEach((v, rowIdx) => {
@@ -1061,14 +1064,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       const worksheet = workbook.addWorksheet('Mẫu nhập đảng viên');
 
       // Instructions block
-      worksheet.mergeCells('A1:J1');
+      worksheet.mergeCells('A1:L1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = 'MẪU NHẬP LIỆU DANH SÁCH ĐẢNG VIÊN CHI BỘ';
       titleCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FF0F766E' } };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(1).height = 30;
 
-      worksheet.mergeCells('A2:J2');
+      worksheet.mergeCells('A2:L2');
       const subCell = worksheet.getCell('A2');
       subCell.value = 'Lưu ý: Không thay đổi tiêu đề cột. Ngày nhập dạng DD/MM/YYYY (VD: 24/10/1995). Nhập đúng các trạng thái/chức vụ mẫu.';
       subCell.font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FFE11D48' } };
@@ -1079,7 +1082,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       worksheet.getRow(3).height = 8;
 
       const headers = [
-        "Họ và tên", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (DD/MM/YYYY)", "Ngày chính thức (DD/MM/YYYY)",
+        "Họ và tên", "Giới tính (Nam/Nữ)", "Số CCCD", "Số thẻ Đảng", "Chức vụ (Bí thư/Phó Bí thư/Đảng viên)", "Ngày kết nạp dự bị (DD/MM/YYYY)", "Ngày chính thức (DD/MM/YYYY)",
         "Trạng thái (Chính thức/Dự bị/Miễn sinh hoạt)", "Loại đảng phí", "Lương hoặc lương hưu căn cứ (VND)", "Vùng lương tối thiểu (1/2/3/4)", "Ghi chú"
       ];
 
@@ -1103,8 +1106,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
       });
 
       const samples = [
-        ["Nguyễn Văn A", "DV-0001", "Bí thư", "19/05/2020", "19/05/2021", "Chính thức", "Có BHXH bắt buộc", 6500000, 3, "Chủ trì họp chi bộ"],
-        ["Trần Thị B", "DV-0002", "Đảng viên", "01/10/2025", "", "Dự bị", "Học sinh, sinh viên", 0, 3, "Đảng viên dự bị"]
+        ["Nguyễn Văn A", "Nam", "038085001234", "DV-0001", "Bí thư", "19/05/2020", "19/05/2021", "Chính thức", "Có BHXH bắt buộc", 6500000, 3, "Chủ trì họp chi bộ"],
+        ["Trần Thị B", "Nữ", "038185005678", "DV-0002", "Đảng viên", "01/10/2025", "", "Dự bị", "Học sinh, sinh viên", 0, 3, "Đảng viên dự bị"]
       ];
 
       samples.forEach(row => {
@@ -1118,19 +1121,19 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
             right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
           };
-          if (colNumber === 1 || colNumber === 10) {
+          if (colNumber === 1 || colNumber === 12) {
             cell.alignment = { vertical: 'middle', horizontal: 'left' };
           } else {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           }
-          if (colNumber === 8) cell.numFmt = '#,##0';
-          if (colNumber === 2) cell.numFmt = '@';
+          if (colNumber === 10) cell.numFmt = '#,##0';
+          if (colNumber === 3 || colNumber === 4) cell.numFmt = '@';
         });
       });
 
       worksheet.columns.forEach((column, colIdx) => {
-        if (colIdx > 9) return;
-        column.width = colIdx === 0 ? 18 : colIdx === 2 ? 18 : colIdx === 6 ? 22 : colIdx === 7 ? 22 : 16;
+        if (colIdx > 11) return;
+        column.width = colIdx === 0 ? 20 : colIdx === 1 ? 12 : colIdx === 2 ? 16 : colIdx === 3 ? 16 : colIdx === 8 ? 22 : colIdx === 9 ? 22 : 16;
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -1335,6 +1338,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
         const hasHeaders = detectedHeaders.length > 0 && findColIdx(['họ và tên', 'họ tên', 'tên đảng viên']) !== -1;
         const hNameIdx = hasHeaders ? findColIdx(['họ và tên', 'họ tên', 'tên đảng viên']) : -1;
+        const hGenderIdx = hasHeaders ? findColIdx(['giới tính', 'nam/nữ', 'phái', 'gender']) : -1;
         const hCccdIdx = hasHeaders ? findColIdx(['cccd', 'căn cước', 'định danh', 'cmnd']) : -1;
         const hDobIdx = hasHeaders ? findColIdx(['ngày sinh', 'năm sinh', 'ngày tháng năm sinh']) : -1;
         const hPartyCodeIdx = hasHeaders ? findColIdx(['số thẻ đảng', 'thẻ đảng', 'mã số']) : -1;
@@ -1356,6 +1360,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
           let fullName = '';
           let excelCccd = '';
+          let excelGender: 'male' | 'female' | undefined = undefined;
           let partyCode = '';
           let partyGroupStr = '';
           let pos: any = 'member';
@@ -1372,6 +1377,14 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             fullName = columns[hNameIdx] || '';
             if (!fullName.trim()) continue;
             excelCccd = hCccdIdx !== -1 ? (columns[hCccdIdx] || '').trim() : '';
+            if (hGenderIdx !== -1) {
+              const rawG = (columns[hGenderIdx] || '').toString().trim().toLowerCase();
+              if (rawG.includes('nữ') || rawG.includes('nu') || rawG === 'female' || rawG === 'f') {
+                excelGender = 'female';
+              } else if (rawG.includes('nam') || rawG === 'male' || rawG === 'm') {
+                excelGender = 'male';
+              }
+            }
             partyCode = hPartyCodeIdx !== -1 ? columns[hPartyCodeIdx] || '' : '';
             partyGroupStr = hPartyGroupIdx !== -1 ? columns[hPartyGroupIdx] || '' : '';
             pos = getPositionFromLabel(hPosIdx !== -1 ? columns[hPosIdx] || 'Đảng viên' : 'Đảng viên') as any;
@@ -1457,6 +1470,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
           const memberPayload: PartyMember = {
             id: matched ? matched.id : generateUUID(),
             full_name: fullName,
+            gender: excelGender || matched?.gender || (rId ? residents.find(r => r.id === rId)?.gender : undefined) || 'male',
             party_code: partyCode.trim() || (matched ? matched.party_code : undefined),
             position: pos,
             probation_date: probationD || (matched ? matched.probation_date : undefined),
@@ -1631,6 +1645,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         <tr>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${idx + 1}</td>
           <td style="border: 1px solid #000; padding: 6px; white-space: nowrap;"><strong>${m.full_name}</strong></td>
+          <td style="text-align: center; border: 1px solid #000; padding: 6px;">${getMemberGender(m) === 'female' ? 'Nữ' : 'Nam'}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${m.party_code || '—'}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${getMemberPartyGroup(m)}</td>
           <td style="text-align: center; border: 1px solid #000; padding: 6px;">${probationDateStr}</td>
@@ -1695,14 +1710,15 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             <thead>
               <tr>
                 <th style="width: 5%;">STT</th>
-                <th style="width: 22%;">Họ và tên</th>
+                <th style="width: 20%;">Họ và tên</th>
+                <th style="width: 8%;">Giới tính</th>
                 <th style="width: 12%;">Số thẻ Đảng</th>
-                <th style="width: 12%;">Tổ đảng</th>
-                <th style="width: 12%;">Ngày kết nạp</th>
-                <th style="width: 12%;">Ngày chính thức</th>
+                <th style="width: 11%;">Tổ đảng</th>
+                <th style="width: 11%;">Ngày kết nạp</th>
+                <th style="width: 11%;">Ngày chính thức</th>
                 <th style="width: 10%;">Trạng thái</th>
-                <th style="width: 10%;">Tuổi Đảng</th>
-                <th style="width: 15%;">Ghi chú</th>
+                <th style="width: 9%;">Tuổi Đảng</th>
+                <th style="width: 13%;">Ghi chú</th>
               </tr>
             </thead>
             <tbody>
