@@ -719,7 +719,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ position: 'member', status: 'official', party_group: '' });
+    setForm({ position: 'member', status: 'official', party_group: '', gender: 'male' });
     setResidentSearch('');
     setShowModal(true);
   };
@@ -1196,7 +1196,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             }
 
             const rowValues: string[] = [];
-            for (let c = 1; c <= 12; c++) {
+            const totalCols = Math.max(row.cellCount || 0, 15);
+            for (let c = 1; c <= totalCols; c++) {
               const cell = row.getCell(c);
               let val = cell.value;
               if (val && typeof val === 'object' && 'result' in val) {
@@ -1366,8 +1367,9 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     if (isNaN(yr)) return 0;
     return currentYear - yr;
   };
-  const getMemberPartyGroup = useCallback((m: PartyMember): string => {
-    if (m.party_group?.trim()) return m.party_group.trim();
+  const getMemberPartyGroup = useCallback((m?: Partial<PartyMember> | null): string => {
+    if (m?.party_group?.trim()) return m.party_group.trim();
+    if (!m || !m.resident_id) return 'Chưa phân tổ';
     const res = residents.find(r => r.id === m.resident_id);
     if (!res) return 'Chưa phân tổ';
     const hh = households.find(h => h.id === res.household_id);
@@ -1375,9 +1377,16 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     return hh.self_management_group.trim();
   }, [residents, households]);
 
-  const getMemberGender = useCallback((m: PartyMember): 'male' | 'female' | 'other' => {
-    if (m.gender) return m.gender;
-    const res = residents.find(r => (m.resident_id && r.id === m.resident_id) || (r.full_name && r.full_name.trim().toLowerCase() === m.full_name.trim().toLowerCase()));
+  const getMemberGender = useCallback((m?: Partial<PartyMember> | null): 'male' | 'female' | 'other' => {
+    if (m?.gender) return m.gender;
+    if (!m) return 'male';
+    const mName = m.full_name ? m.full_name.trim().toLowerCase() : '';
+    if (!m.resident_id && !mName) return 'male';
+
+    const res = residents.find(r => 
+      (m.resident_id && r.id === m.resident_id) || 
+      (mName && r.full_name && r.full_name.trim().toLowerCase() === mName)
+    );
     return res?.gender || 'male';
   }, [residents]);
 
@@ -1590,8 +1599,8 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   };
 
   const filteredResidents = residents.filter(r => {
-    const cleanR = r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
-    const cleanS = residentSearch.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
+    const cleanR = (r.full_name || '').toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
+    const cleanS = (residentSearch || '').toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
     return cleanR.includes(cleanS);
   }).slice(0, 6);
 
@@ -2027,7 +2036,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
               <div className="party-form-row">
                 <div className="party-form-group">
                   <label>Giới tính</label>
-                  <select value={form.gender || getMemberGender(form as PartyMember)} onChange={e => setForm(f => ({ ...f, gender: e.target.value as any }))}>
+                  <select value={form.gender || (form.full_name ? getMemberGender(form as PartyMember) : 'male')} onChange={e => setForm(f => ({ ...f, gender: e.target.value as any }))}>
                     <option value="male">👨 Nam</option>
                     <option value="female">👩 Nữ</option>
                   </select>
