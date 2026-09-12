@@ -1447,7 +1447,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
             party_group: partyGroupStr || (matched ? matched.party_group : ''),
             fee_category: feeCat,
             salary_base: salary,
-            wage_zone: [1, 2, 3, 4].includes(zone) ? zone : 3,
+            wage_zone: ([1, 2, 3, 4].includes(zone) ? zone : 3) as (1 | 2 | 3 | 4),
             notes: notesStr || (matched ? matched.notes : ''),
             created_at: matched ? matched.created_at : undefined,
           });
