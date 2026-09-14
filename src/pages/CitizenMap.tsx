@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useDeferredValue, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -8,13 +8,7 @@ import {
   X, 
   Search, 
   Share2, 
-  Navigation, 
-  Copy, 
-  ExternalLink, 
-  Check, 
-  Users, 
-  Layers,
-  Sparkles
+  Users
 } from 'lucide-react';
 import { db } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -52,6 +46,274 @@ const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number
   return null;
 };
 
+const getMarkerIcon = (type: string, isSelected: boolean = false) => {
+  let color = '#2563eb'; // blue
+  if (type === 'poor') color = '#ef4444'; // red
+  else if (type === 'near_poor') color = '#f59e0b'; // orange
+  else if (type === 'policy_family') color = '#6366f1'; // indigo
+
+  const size = isSelected ? 22 : 16;
+  const border = isSelected ? '3px solid #facc15' : '2.5px solid white';
+  const pulse = isSelected ? 'animation: markerPulse 1.5s infinite;' : '';
+
+  return L.divIcon({
+    className: 'custom-div-icon',
+    html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: ${border}; box-shadow: 0 3px 8px rgba(0,0,0,0.45); transition: all 0.2s; ${pulse}"></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  });
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MEMOIZED MAP VIEW COMPONENT: TÁCH RIÊNG ĐỂ KHÔNG BỊ RE-RENDER KHI GÕ TÌM KIẾM
+// ═════════════════════════════════════════════════════════════════════════════
+interface MapViewProps {
+  mapLayer: 'street' | 'satellite';
+  defaultPosition: [number, number];
+  mapCenter: [number, number];
+  mapZoom: number;
+  mappedHouseholds: Household[];
+  residentMap: Record<string, Resident[]>;
+  residentById: Record<string, Resident>;
+  isGuest: boolean;
+  selectedHouseholdId: string | null;
+  onMapClick: (lat: number, lng: number) => void;
+  onSelectHouseholdId: (id: string) => void;
+  markerRefs: React.MutableRefObject<Record<string, L.Marker | null>>;
+  onShareZalo: (h: Household) => void;
+  onShareFacebook: (h: Household) => void;
+  onOpenGoogleMaps: (h: Household) => void;
+  onCopyLocation: (h: Household) => void;
+}
+
+const InteractiveMapView = React.memo(({
+  mapLayer,
+  defaultPosition,
+  mapCenter,
+  mapZoom,
+  mappedHouseholds,
+  residentMap,
+  residentById,
+  isGuest,
+  selectedHouseholdId,
+  onMapClick,
+  onSelectHouseholdId,
+  markerRefs,
+  onShareZalo,
+  onShareFacebook,
+  onOpenGoogleMaps,
+  onCopyLocation
+}: MapViewProps) => {
+  return (
+    <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+      {/* Lớp bản đồ 1: Bản đồ đường phố 2D chuẩn */}
+      {mapLayer === 'street' && (
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+      )}
+
+      {/* Lớp bản đồ 2: Ảnh chụp vệ tinh độ phân giải cao Esri */}
+      {mapLayer === 'satellite' && (
+        <TileLayer
+          attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        />
+      )}
+
+      <ChangeView center={mapCenter} zoom={mapZoom} />
+      {!isGuest && <MapClickHandler onMapClick={onMapClick} />}
+      
+      {/* Render các ghim hộ dân */}
+      {mappedHouseholds.map(h => {
+        const isSelected = selectedHouseholdId === h.id;
+        const head = h.head_of_household_id ? residentById[h.head_of_household_id] : null;
+        const headName = head ? head.full_name : 'Chưa rõ chủ hộ';
+        const householdMembers = residentMap[h.id] || [];
+
+        return (
+          <Marker 
+            key={h.id} 
+            position={[h.latitude!, h.longitude!]} 
+            icon={getMarkerIcon(h.policy_type, isSelected)}
+            ref={(el) => {
+              if (el) markerRefs.current[h.id] = el;
+              else delete markerRefs.current[h.id];
+            }}
+            eventHandlers={{
+              click: () => {
+                onSelectHouseholdId(h.id);
+              }
+            }}
+          >
+            <Popup>
+              <div className="popup-content" style={{ minWidth: '250px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                  <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>
+                    {headName}
+                  </h4>
+                  <span style={{
+                    fontSize: '0.68rem',
+                    padding: '2px 6px',
+                    borderRadius: '6px',
+                    background: '#eff6ff',
+                    color: '#2563eb',
+                    fontWeight: '700'
+                  }}>
+                    {h.policy_type === 'poor' ? 'Hộ nghèo' : h.policy_type === 'near_poor' ? 'Cận nghèo' : h.policy_type === 'policy_family' ? 'Chính sách' : 'Hộ dân'}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '0.82rem', color: '#475569', margin: '3px 0', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <MapPin size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#64748b' }} />
+                  <span>{h.address || 'Địa bàn TDP'}</span>
+                </p>
+                
+                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 6px 0' }}>
+                  <strong>Sổ hộ khẩu:</strong> {h.household_number || 'Chưa cập nhật'}
+                </p>
+
+                {/* Danh sách thành viên trong hộ */}
+                {householdMembers.length > 0 && (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#475569',
+                    background: '#f8fafc',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    marginBottom: '8px',
+                    border: '1px solid #e2e8f0',
+                    maxHeight: '75px',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{ fontWeight: '700', color: '#334155', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Users size={12} />
+                      <span>Thành viên trong hộ ({householdMembers.length}):</span>
+                    </div>
+                    <div>
+                      {householdMembers.map((r, idx) => (
+                        <span key={r.id}>
+                          {r.full_name} {r.relationship_with_head ? `(${r.relationship_with_head})` : ''}
+                          {idx < householdMembers.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tiện ích chia sẻ vị trí & Chỉ đường qua Zalo, Facebook, Google Maps */}
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '6px' }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Share2 size={12} color="#2563eb" />
+                    <span>Chia sẻ vị trí & Chỉ đường:</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    {/* Chia sẻ qua Zalo */}
+                    <button
+                      type="button"
+                      onClick={() => onShareZalo(h)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #0068ff',
+                        background: '#0068ff',
+                        color: 'white',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                      title="Gửi vị trí qua Zalo"
+                    >
+                      <span>💬 Gửi Zalo</span>
+                    </button>
+
+                    {/* Chia sẻ qua Facebook */}
+                    <button
+                      type="button"
+                      onClick={() => onShareFacebook(h)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #1877f2',
+                        background: '#1877f2',
+                        color: 'white',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                      title="Chia sẻ lên Facebook"
+                    >
+                      <span>🌐 Facebook</span>
+                    </button>
+
+                    {/* Google Maps Chỉ đường */}
+                    <button
+                      type="button"
+                      onClick={() => onOpenGoogleMaps(h)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #10b981',
+                        background: '#10b981',
+                        color: 'white',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                      title="Mở chỉ đường Google Maps"
+                    >
+                      <span>🧭 Chỉ đường</span>
+                    </button>
+
+                    {/* Copy Link vị trí */}
+                    <button
+                      type="button"
+                      onClick={() => onCopyLocation(h)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: '#334155',
+                        fontSize: '0.72rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                      title="Sao chép link vị trí"
+                    >
+                      <span>📋 Copy link</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </MapContainer>
+  );
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MAIN CITIZEN MAP PAGE COMPONENT
+// ═════════════════════════════════════════════════════════════════════════════
 const CitizenMap = () => {
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'demo');
   const isGuest = localStorage.getItem('guest_mode') === 'true' || (currentRole !== 'to_truong' && currentRole !== 'admin');
@@ -80,7 +342,11 @@ const CitizenMap = () => {
   
   // 2 Chế độ xem bản đồ: 'street' (Xem bản đồ) và 'satellite' (Xem vệ tinh)
   const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('street');
+  
+  // Search states với useDeferredValue để gõ phím siêu mượt 60fps không giật lag
   const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
+  const deferredSearchTerm = useDeferredValue(mapSearchTerm);
+  
   const [popupSearchTerm, setPopupSearchTerm] = useState<string>('');
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
@@ -124,31 +390,95 @@ const CitizenMap = () => {
     };
   }, []);
 
-  const getHeadName = (h: Household) => {
-    const head = residents.find(r => r.id === h.head_of_household_id);
+  // ─── TỐI ƯU HÓA: PRE-INDEX TRA CỨU DỮ LIỆU NHÂN KHẨU & CHỦ HỘ TRONG BỘ NHỚ O(1) ───
+  const { residentMap, residentById } = useMemo(() => {
+    const rMap: Record<string, Resident[]> = {};
+    const rById: Record<string, Resident> = {};
+
+    for (let i = 0; i < residents.length; i++) {
+      const r = residents[i];
+      rById[r.id] = r;
+      if (r.household_id) {
+        if (!rMap[r.household_id]) rMap[r.household_id] = [];
+        rMap[r.household_id].push(r);
+      }
+    }
+    return { residentMap: rMap, residentById: rById };
+  }, [residents]);
+
+  const getHeadName = useCallback((h: Household) => {
+    const head = h.head_of_household_id ? residentById[h.head_of_household_id] : null;
     return head ? head.full_name : 'Chưa rõ chủ hộ';
-  };
+  }, [residentById]);
 
-  const getMarkerIcon = (type: string, isSelected: boolean = false) => {
-    let color = '#2563eb'; // blue
-    if (type === 'poor') color = '#ef4444'; // red
-    else if (type === 'near_poor') color = '#f59e0b'; // orange
-    else if (type === 'policy_family') color = '#6366f1'; // indigo
+  // Tạo cấu trúc Index tìm kiếm sẵn có (Pre-computed Search Index)
+  const householdSearchIndex = useMemo(() => {
+    return households.map(h => {
+      const headName = getHeadName(h);
+      const members = residentMap[h.id] || [];
+      const memberNames = members.map(m => m.full_name).join(' ');
+      const searchTarget = `${headName} ${memberNames} ${h.address || ''} ${h.household_number || ''}`.toLowerCase();
 
-    const size = isSelected ? 22 : 16;
-    const border = isSelected ? '3px solid #facc15' : '2.5px solid white';
-    const pulse = isSelected ? 'animation: markerPulse 1.5s infinite;' : '';
-
-    return L.divIcon({
-      className: 'custom-div-icon',
-      html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: ${border}; box-shadow: 0 3px 8px rgba(0,0,0,0.45); transition: all 0.2s; ${pulse}"></div>`,
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2]
+      return {
+        household: h,
+        headName,
+        members,
+        searchTarget
+      };
     });
-  };
+  }, [households, residentMap, getHeadName]);
+
+  // Lọc danh sách hộ dân siêu tốc bằng chuỗi tìm kiếm đã Deferred (Chạy < 1ms)
+  const filteredIndexedHouseholds = useMemo(() => {
+    const s = deferredSearchTerm.trim().toLowerCase();
+    if (!s) {
+      return householdSearchIndex.map(item => ({
+        ...item,
+        matchReason: ''
+      }));
+    }
+
+    return householdSearchIndex
+      .filter(item => item.searchTarget.includes(s))
+      .map(item => {
+        let reason = '';
+        if (item.headName.toLowerCase().includes(s)) {
+          reason = `Chủ hộ: ${item.headName}`;
+        } else {
+          const matchedMem = item.members.find(m => m.full_name.toLowerCase().includes(s));
+          if (matchedMem) {
+            reason = `Có nhân khẩu: ${matchedMem.full_name} (${matchedMem.relationship_with_head || 'Thành viên'})`;
+          } else if ((item.household.address || '').toLowerCase().includes(s)) {
+            reason = `Địa chỉ: ${item.household.address}`;
+          } else if ((item.household.household_number || '').toLowerCase().includes(s)) {
+            reason = `Số sổ: ${item.household.household_number}`;
+          }
+        }
+        return {
+          ...item,
+          matchReason: reason
+        };
+      });
+  }, [householdSearchIndex, deferredSearchTerm]);
+
+  // Gợi ý tìm kiếm nhanh (Tối đa 6 kết quả)
+  const searchSuggestions = useMemo(() => {
+    if (!deferredSearchTerm.trim()) return [];
+    return filteredIndexedHouseholds.slice(0, 6);
+  }, [filteredIndexedHouseholds, deferredSearchTerm]);
+
+  // Hộ dân đã có tọa độ hiển thị trên bản đồ (áp dụng cả lọc chính sách)
+  const mappedHouseholds = useMemo(() => {
+    return households.filter(h => {
+      const hasCoords = h.latitude !== null && h.latitude !== undefined && 
+                        h.longitude !== null && h.longitude !== undefined;
+      const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
+      return hasCoords && matchesPolicy;
+    });
+  }, [households, policyFilter]);
 
   // Chọn hộ dân và bay đến vị trí trên bản đồ, tự động bật popup
-  const handleSelectHousehold = (h: Household) => {
+  const handleSelectHousehold = useCallback((h: Household) => {
     setShowSearchDropdown(false);
     setSelectedHouseholdId(h.id);
 
@@ -161,17 +491,17 @@ const CitizenMap = () => {
         if (marker) {
           marker.openPopup();
         }
-      }, 400);
+      }, 350);
     } else {
       showToast(`Hộ của ông/bà ${getHeadName(h)} chưa được chấm tọa độ trên bản đồ!`, 'warning');
     }
-  };
+  }, [getHeadName]);
 
-  const handleMapClick = (lat: number, lng: number) => {
+  const handleMapClick = useCallback((lat: number, lng: number) => {
     setClickedCoords({ lat, lng });
     setSelectedHouseholdToMove('');
     setPopupSearchTerm('');
-  };
+  }, []);
 
   const handleAssignCoordsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,27 +536,26 @@ const CitizenMap = () => {
     return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   };
 
-  const handleOpenGoogleMaps = (h: Household) => {
+  const handleOpenGoogleMaps = useCallback((h: Household) => {
     if (!h.latitude || !h.longitude) return;
     window.open(getDirectionsUrl(h.latitude, h.longitude), '_blank');
-  };
+  }, []);
 
-  const handleShareZalo = (h: Household) => {
+  const handleShareZalo = useCallback((h: Household) => {
     if (!h.latitude || !h.longitude) return;
     const url = getGoogleMapsUrl(h.latitude, h.longitude);
-    // Mở trang chia sẻ web Zalo
     const zaloShareUrl = `https://zalo.me/share?url=${encodeURIComponent(url)}`;
     window.open(zaloShareUrl, '_blank', 'width=600,height=520');
-  };
+  }, []);
 
-  const handleShareFacebook = (h: Household) => {
+  const handleShareFacebook = useCallback((h: Household) => {
     if (!h.latitude || !h.longitude) return;
     const url = getGoogleMapsUrl(h.latitude, h.longitude);
     const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
     window.open(fbShareUrl, '_blank', 'width=600,height=520');
-  };
+  }, []);
 
-  const handleCopyLocation = (h: Household) => {
+  const handleCopyLocation = useCallback((h: Household) => {
     if (!h.latitude || !h.longitude) return;
     const headName = getHeadName(h);
     const textToCopy = `📍 Vị trí hộ gia đình: ${headName} (${tdpName})\n🏠 Địa chỉ: ${h.address || 'Địa bàn ' + tdpName}\n🧭 Tọa độ: ${h.latitude.toFixed(6)}, ${h.longitude.toFixed(6)}\n🗺️ Xem trên Google Maps (Chỉ đường): ${getDirectionsUrl(h.latitude, h.longitude)}`;
@@ -237,65 +566,14 @@ const CitizenMap = () => {
     } else {
       showToast('Trình duyệt không hỗ trợ tự động copy!', 'warning');
     }
-  };
-
-  // ─── TÌM KIẾM THÔNG MINH (THEO TÊN CHỦ HỘ HOẶC BẤT KỲ NHÂN KHẨU NÀO) ───
-  const getHouseholdMatchInfo = (h: Household, search: string) => {
-    if (!search || !search.trim()) return { matched: true, reason: '' };
-    const s = search.toLowerCase().trim();
-    
-    // 1. Khớp theo tên chủ hộ
-    const headName = getHeadName(h);
-    if (headName.toLowerCase().includes(s)) {
-      return { matched: true, reason: `Chủ hộ: ${headName}` };
-    }
-
-    // 2. Khớp theo tên của bất kỳ thành viên nào trong hộ
-    const matchedResident = residents.find(
-      r => r.household_id === h.id && r.full_name && r.full_name.toLowerCase().includes(s)
-    );
-    if (matchedResident) {
-      return { 
-        matched: true, 
-        reason: `Có nhân khẩu: ${matchedResident.full_name} (${matchedResident.relationship_with_head || 'Thành viên'})` 
-      };
-    }
-
-    // 3. Khớp theo địa chỉ
-    if (h.address && h.address.toLowerCase().includes(s)) {
-      return { matched: true, reason: `Địa chỉ: ${h.address}` };
-    }
-
-    // 4. Khớp theo số sổ hộ khẩu
-    if (h.household_number && h.household_number.toLowerCase().includes(s)) {
-      return { matched: true, reason: `Số sổ: ${h.household_number}` };
-    }
-
-    return { matched: false, reason: '' };
-  };
-
-  // Danh sách các hộ thỏa mãn bộ lọc tìm kiếm
-  const filteredSidebarHouseholds = households.filter(h => {
-    const { matched } = getHouseholdMatchInfo(h, mapSearchTerm);
-    return matched;
-  });
-
-  // Hộ dân đã có tọa độ hiển thị trên bản đồ (áp dụng cả lọc chính sách)
-  const mappedHouseholds = households.filter(h => {
-    const hasCoords = h.latitude !== null && h.latitude !== undefined && 
-                      h.longitude !== null && h.longitude !== undefined;
-    const matchesPolicy = policyFilter === 'all' || h.policy_type === policyFilter;
-    return hasCoords && matchesPolicy;
-  });
-
-  // Gợi ý tìm kiếm nhanh (khi đang gõ ô tìm kiếm)
-  const searchSuggestions = mapSearchTerm.trim() ? filteredSidebarHouseholds.slice(0, 6) : [];
+  }, [getHeadName, tdpName]);
 
   // Lọc danh sách hộ trong popup ghim tọa độ
-  const filteredPopupHouseholds = households.filter(h => {
-    const { matched } = getHouseholdMatchInfo(h, popupSearchTerm);
-    return matched;
-  });
+  const filteredPopupHouseholds = useMemo(() => {
+    const s = popupSearchTerm.trim().toLowerCase();
+    if (!s) return householdSearchIndex;
+    return householdSearchIndex.filter(item => item.searchTarget.includes(s));
+  }, [householdSearchIndex, popupSearchTerm]);
 
   const pinnedCount = households.filter(h => h.latitude && h.longitude).length;
 
@@ -385,7 +663,7 @@ const CitizenMap = () => {
         <div className="map-sidebar">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#1e293b' }}>
-              Danh sách hộ dân ({filteredSidebarHouseholds.length})
+              Danh sách hộ dân ({filteredIndexedHouseholds.length})
             </h3>
             {mapSearchTerm && (
               <button 
@@ -397,7 +675,7 @@ const CitizenMap = () => {
             )}
           </div>
           
-          {/* Ô tìm kiếm thông minh: Tìm tên nhân khẩu hoặc tên chủ hộ */}
+          {/* Ô tìm kiếm thông minh: Tìm tên nhân khẩu hoặc tên chủ hộ (Tối ưu phản hồi tức thì) */}
           <div style={{ position: 'relative', width: '100%', marginBottom: '12px' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Search size={15} style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
@@ -462,10 +740,10 @@ const CitizenMap = () => {
                 <div style={{ padding: '6px 12px', fontSize: '0.72rem', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold' }}>
                   Gợi ý kết quả ({searchSuggestions.length} hộ):
                 </div>
-                {searchSuggestions.map(h => {
+                {searchSuggestions.map(item => {
+                  const h = item.household;
                   const hasC = h.latitude !== null && h.latitude !== undefined && 
                                h.longitude !== null && h.longitude !== undefined;
-                  const matchInfo = getHouseholdMatchInfo(h, mapSearchTerm);
                   return (
                     <div
                       key={h.id}
@@ -483,7 +761,7 @@ const CitizenMap = () => {
                       onMouseOut={e => e.currentTarget.style.backgroundColor = 'white'}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{getHeadName(h)}</strong>
+                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{item.headName}</strong>
                         <span style={{
                           fontSize: '0.68rem',
                           padding: '1px 5px',
@@ -498,9 +776,9 @@ const CitizenMap = () => {
                       <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
                         {h.address || 'Địa bàn TDP'}
                       </div>
-                      {matchInfo.reason && (
+                      {item.matchReason && (
                         <div style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: '600' }}>
-                          👉 {matchInfo.reason}
+                          👉 {item.matchReason}
                         </div>
                       )}
                     </div>
@@ -512,10 +790,10 @@ const CitizenMap = () => {
 
           {/* Danh sách cuộn mini-cards */}
           <div className="household-mini-list">
-            {filteredSidebarHouseholds.map(h => {
+            {filteredIndexedHouseholds.map(item => {
+              const h = item.household;
               const hasC = h.latitude !== null && h.latitude !== undefined && 
                            h.longitude !== null && h.longitude !== undefined;
-              const matchInfo = getHouseholdMatchInfo(h, mapSearchTerm);
               const isSelected = selectedHouseholdId === h.id;
 
               return (
@@ -531,14 +809,14 @@ const CitizenMap = () => {
                   <Home size={18} style={{ color: hasC ? '#2563eb' : '#94a3b8', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="h-name" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      {getHeadName(h)}
+                      {item.headName}
                     </div>
                     <div className="h-addr" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       {h.address || 'Địa bàn TDP'}
                     </div>
-                    {matchInfo.reason && (
+                    {item.matchReason && (
                       <div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '600', marginTop: '2px' }}>
-                        {matchInfo.reason}
+                        {item.matchReason}
                       </div>
                     )}
                   </div>
@@ -573,7 +851,7 @@ const CitizenMap = () => {
               );
             })}
 
-            {filteredSidebarHouseholds.length === 0 && (
+            {filteredIndexedHouseholds.length === 0 && (
               <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8', fontSize: '0.85rem' }}>
                 <div style={{ fontSize: '1.8rem', marginBottom: '6px' }}>🔍</div>
                 Không tìm thấy hộ dân hoặc nhân khẩu nào phù hợp với từ khóa: <strong>"{mapSearchTerm}"</strong>
@@ -648,207 +926,24 @@ const CitizenMap = () => {
             </button>
           </div>
 
-          <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-            {/* Lớp bản đồ 1: Bản đồ đường phố 2D chuẩn */}
-            {mapLayer === 'street' && (
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-            )}
-
-            {/* Lớp bản đồ 2: Ảnh chụp vệ tinh độ phân giải cao Esri */}
-            {mapLayer === 'satellite' && (
-              <TileLayer
-                attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              />
-            )}
-
-            <ChangeView center={mapCenter} zoom={mapZoom} />
-            {!isGuest && <MapClickHandler onMapClick={handleMapClick} />}
-            
-            {/* Render các ghim hộ dân */}
-            {mappedHouseholds.map(h => {
-              const isSelected = selectedHouseholdId === h.id;
-              const householdMembers = residents.filter(r => r.household_id === h.id);
-
-              return (
-                <Marker 
-                  key={h.id} 
-                  position={[h.latitude!, h.longitude!]} 
-                  icon={getMarkerIcon(h.policy_type, isSelected)}
-                  ref={(el) => {
-                    if (el) markerRefs.current[h.id] = el;
-                    else delete markerRefs.current[h.id];
-                  }}
-                  eventHandlers={{
-                    click: () => {
-                      setSelectedHouseholdId(h.id);
-                    }
-                  }}
-                >
-                  <Popup>
-                    <div className="popup-content" style={{ minWidth: '250px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
-                        <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>
-                          {getHeadName(h)}
-                        </h4>
-                        <span style={{
-                          fontSize: '0.68rem',
-                          padding: '2px 6px',
-                          borderRadius: '6px',
-                          background: '#eff6ff',
-                          color: '#2563eb',
-                          fontWeight: '700'
-                        }}>
-                          {h.policy_type === 'poor' ? 'Hộ nghèo' : h.policy_type === 'near_poor' ? 'Cận nghèo' : h.policy_type === 'policy_family' ? 'Chính sách' : 'Hộ dân'}
-                        </span>
-                      </div>
-
-                      <p style={{ fontSize: '0.82rem', color: '#475569', margin: '3px 0', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
-                        <MapPin size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#64748b' }} />
-                        <span>{h.address || 'Địa bàn TDP'}</span>
-                      </p>
-                      
-                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 6px 0' }}>
-                        <strong>Sổ hộ khẩu:</strong> {h.household_number || 'Chưa cập nhật'}
-                      </p>
-
-                      {/* Danh sách thành viên trong hộ */}
-                      {householdMembers.length > 0 && (
-                        <div style={{
-                          fontSize: '0.75rem',
-                          color: '#475569',
-                          background: '#f8fafc',
-                          padding: '6px 8px',
-                          borderRadius: '6px',
-                          marginBottom: '8px',
-                          border: '1px solid #e2e8f0',
-                          maxHeight: '75px',
-                          overflowY: 'auto'
-                        }}>
-                          <div style={{ fontWeight: '700', color: '#334155', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Users size={12} />
-                            <span>Thành viên trong hộ ({householdMembers.length}):</span>
-                          </div>
-                          <div>
-                            {householdMembers.map((r, idx) => (
-                              <span key={r.id}>
-                                {r.full_name} {r.relationship_with_head ? `(${r.relationship_with_head})` : ''}
-                                {idx < householdMembers.length - 1 ? ', ' : ''}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Tiện ích chia sẻ vị trí & Chỉ đường qua Zalo, Facebook, Google Maps */}
-                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '6px' }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Share2 size={12} color="#2563eb" />
-                          <span>Chia sẻ vị trí & Chỉ đường:</span>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                          {/* Chia sẻ qua Zalo */}
-                          <button
-                            type="button"
-                            onClick={() => handleShareZalo(h)}
-                            style={{
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #0068ff',
-                              background: '#0068ff',
-                              color: 'white',
-                              fontSize: '0.72rem',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px'
-                            }}
-                            title="Gửi vị trí qua Zalo"
-                          >
-                            <span>💬 Gửi Zalo</span>
-                          </button>
-
-                          {/* Chia sẻ qua Facebook */}
-                          <button
-                            type="button"
-                            onClick={() => handleShareFacebook(h)}
-                            style={{
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #1877f2',
-                              background: '#1877f2',
-                              color: 'white',
-                              fontSize: '0.72rem',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px'
-                            }}
-                            title="Chia sẻ lên Facebook"
-                          >
-                            <span>🌐 Facebook</span>
-                          </button>
-
-                          {/* Google Maps Chỉ đường */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenGoogleMaps(h)}
-                            style={{
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #10b981',
-                              background: '#10b981',
-                              color: 'white',
-                              fontSize: '0.72rem',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px'
-                            }}
-                            title="Mở chỉ đường Google Maps"
-                          >
-                            <span>🧭 Chỉ đường</span>
-                          </button>
-
-                          {/* Copy Link vị trí */}
-                          <button
-                            type="button"
-                            onClick={() => handleCopyLocation(h)}
-                            style={{
-                              padding: '6px 8px',
-                              borderRadius: '6px',
-                              border: '1px solid #cbd5e1',
-                              background: '#ffffff',
-                              color: '#334155',
-                              fontSize: '0.72rem',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px'
-                            }}
-                            title="Sao chép link vị trí"
-                          >
-                            <span>📋 Copy link</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
-          </MapContainer>
+          <InteractiveMapView 
+            mapLayer={mapLayer}
+            defaultPosition={defaultPosition}
+            mapCenter={mapCenter}
+            mapZoom={mapZoom}
+            mappedHouseholds={mappedHouseholds}
+            residentMap={residentMap}
+            residentById={residentById}
+            isGuest={isGuest}
+            selectedHouseholdId={selectedHouseholdId}
+            onMapClick={handleMapClick}
+            onSelectHouseholdId={setSelectedHouseholdId}
+            markerRefs={markerRefs}
+            onShareZalo={handleShareZalo}
+            onShareFacebook={handleShareFacebook}
+            onOpenGoogleMaps={handleOpenGoogleMaps}
+            onCopyLocation={handleCopyLocation}
+          />
         </div>
       </div>
 
@@ -911,11 +1006,14 @@ const CitizenMap = () => {
                     }}
                   >
                     <option value="">-- Chọn hộ dân từ danh sách ({filteredPopupHouseholds.length} hộ) --</option>
-                    {filteredPopupHouseholds.map(h => (
-                      <option key={h.id} value={h.id}>
-                        {getHeadName(h)} - {h.address || 'Chưa rõ đ/c'} {h.latitude ? '(Đã có tọa độ cũ)' : ''}
-                      </option>
-                    ))}
+                    {filteredPopupHouseholds.map(item => {
+                      const h = item.household;
+                      return (
+                        <option key={h.id} value={h.id}>
+                          {item.headName} - {h.address || 'Chưa rõ đ/c'} {h.latitude ? '(Đã có tọa độ cũ)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
