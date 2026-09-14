@@ -46,6 +46,20 @@ const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number
   return null;
 };
 
+// Child component to automatically recalculate map size and prevent grey/blank map
+const MapResizeHandler = () => {
+  const map = useMap();
+  useEffect(() => {
+    const t1 = setTimeout(() => map.invalidateSize(), 150);
+    const t2 = setTimeout(() => map.invalidateSize(), 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map]);
+  return null;
+};
+
 const getMarkerIcon = (type: string, isSelected: boolean = false) => {
   let color = '#2563eb'; // blue
   if (type === 'poor') color = '#ef4444'; // red
@@ -68,7 +82,7 @@ const getMarkerIcon = (type: string, isSelected: boolean = false) => {
 // MEMOIZED MAP VIEW COMPONENT: TÁCH RIÊNG ĐỂ KHÔNG BỊ RE-RENDER KHI GÕ TÌM KIẾM
 // ═════════════════════════════════════════════════════════════════════════════
 interface MapViewProps {
-  mapLayer: 'street' | 'satellite';
+  mapLayer: 'street' | 'satellite' | 'terrain';
   defaultPosition: [number, number];
   mapCenter: [number, number];
   mapZoom: number;
@@ -106,23 +120,41 @@ const InteractiveMapView = React.memo(({
 }: MapViewProps) => {
   return (
     <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
-      {/* Lớp bản đồ 1: Bản đồ đường phố 2D chuẩn */}
+      {/* Lớp bản đồ 1: Bản đồ đường phố Google Maps (Nét, chi tiết, tải tức thì không bị trắng) */}
       {mapLayer === 'street' && (
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          key="google-street"
+          attribution='&copy; Google Maps'
+          url="https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+          subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+          maxZoom={20}
         />
       )}
 
-      {/* Lớp bản đồ 2: Ảnh chụp vệ tinh độ phân giải cao Esri */}
+      {/* Lớp bản đồ 2: Vệ tinh Google Hybrid (Ảnh vệ tinh quang học kèm tên đường ngõ xóm) */}
       {mapLayer === 'satellite' && (
         <TileLayer
-          attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          key="google-satellite"
+          attribution='&copy; Google Maps'
+          url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+          subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+          maxZoom={20}
+        />
+      )}
+
+      {/* Lớp bản đồ 3: Bản đồ Địa hình Google Maps (Đúng như ảnh số 2 của bạn) */}
+      {mapLayer === 'terrain' && (
+        <TileLayer
+          key="google-terrain"
+          attribution='&copy; Google Maps'
+          url="https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}"
+          subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+          maxZoom={20}
         />
       )}
 
       <ChangeView center={mapCenter} zoom={mapZoom} />
+      <MapResizeHandler />
       {!isGuest && <MapClickHandler onMapClick={onMapClick} />}
       
       {/* Render các ghim hộ dân */}
@@ -340,8 +372,8 @@ const CitizenMap = () => {
   const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedHouseholdToMove, setSelectedHouseholdToMove] = useState<string>('');
   
-  // 2 Chế độ xem bản đồ: 'street' (Xem bản đồ) và 'satellite' (Xem vệ tinh)
-  const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('street');
+  // 3 Chế độ xem bản đồ: 'street' (Xem bản đồ), 'satellite' (Xem vệ tinh), 'terrain' (Địa hình)
+  const [mapLayer, setMapLayer] = useState<'street' | 'satellite' | 'terrain'>('street');
   
   // Search states với useDeferredValue để gõ phím siêu mượt 60fps không giật lag
   const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
@@ -884,7 +916,7 @@ const CitizenMap = () => {
             <button
               type="button"
               style={{
-                padding: '7px 14px',
+                padding: '7px 13px',
                 border: 'none',
                 borderRadius: '8px',
                 fontWeight: '700',
@@ -892,7 +924,7 @@ const CitizenMap = () => {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 backgroundColor: mapLayer === 'street' ? '#2563eb' : 'transparent',
                 color: mapLayer === 'street' ? 'white' : '#475569',
                 transition: 'all 0.15s ease',
@@ -906,7 +938,7 @@ const CitizenMap = () => {
             <button
               type="button"
               style={{
-                padding: '7px 14px',
+                padding: '7px 13px',
                 border: 'none',
                 borderRadius: '8px',
                 fontWeight: '700',
@@ -914,7 +946,7 @@ const CitizenMap = () => {
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 backgroundColor: mapLayer === 'satellite' ? '#2563eb' : 'transparent',
                 color: mapLayer === 'satellite' ? 'white' : '#475569',
                 transition: 'all 0.15s ease',
@@ -923,6 +955,28 @@ const CitizenMap = () => {
               onClick={(e) => { e.stopPropagation(); setMapLayer('satellite'); }}
             >
               <span>🛰️ Xem vệ tinh</span>
+            </button>
+
+            <button
+              type="button"
+              style={{
+                padding: '7px 13px',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '700',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                backgroundColor: mapLayer === 'terrain' ? '#2563eb' : 'transparent',
+                color: mapLayer === 'terrain' ? 'white' : '#475569',
+                transition: 'all 0.15s ease',
+                boxShadow: mapLayer === 'terrain' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none'
+              }}
+              onClick={(e) => { e.stopPropagation(); setMapLayer('terrain'); }}
+            >
+              <span>⛰️ Địa hình</span>
             </button>
           </div>
 
