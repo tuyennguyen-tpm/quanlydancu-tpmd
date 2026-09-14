@@ -8,7 +8,8 @@ import {
   X, 
   Search, 
   Share2, 
-  Users
+  Users,
+  Check
 } from 'lucide-react';
 import { db } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -607,6 +608,13 @@ const CitizenMap = () => {
     return householdSearchIndex.filter(item => item.searchTarget.includes(s));
   }, [householdSearchIndex, popupSearchTerm]);
 
+  // Tự động chọn hộ nếu kết quả tìm kiếm đúng 1 hộ
+  useEffect(() => {
+    if (popupSearchTerm.trim() && filteredPopupHouseholds.length === 1) {
+      setSelectedHouseholdToMove(filteredPopupHouseholds[0].household.id);
+    }
+  }, [popupSearchTerm, filteredPopupHouseholds]);
+
   const pinnedCount = households.filter(h => h.latitude && h.longitude).length;
 
   return (
@@ -1032,9 +1040,10 @@ const CitizenMap = () => {
                       placeholder="Gõ tìm tên chủ hộ hoặc nhân khẩu..."
                       value={popupSearchTerm}
                       onChange={(e) => setPopupSearchTerm(e.target.value)}
+                      autoFocus
                       style={{
                         width: '100%',
-                        padding: '8px 12px 8px 32px',
+                        padding: '8px 30px 8px 32px',
                         borderRadius: '8px',
                         border: '1px solid var(--border)',
                         fontSize: '0.84rem',
@@ -1043,39 +1052,171 @@ const CitizenMap = () => {
                         boxSizing: 'border-box'
                       }}
                     />
+                    {popupSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPopupSearchTerm('');
+                          setSelectedHouseholdToMove('');
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '7px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#94a3b8',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
 
-                  <select 
-                    value={selectedHouseholdToMove} 
-                    onChange={(e) => setSelectedHouseholdToMove(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border)',
-                      fontSize: '0.85rem',
-                      fontFamily: 'inherit',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="">-- Chọn hộ dân từ danh sách ({filteredPopupHouseholds.length} hộ) --</option>
-                    {filteredPopupHouseholds.map(item => {
-                      const h = item.household;
-                      return (
-                        <option key={h.id} value={h.id}>
-                          {item.headName} - {h.address || 'Chưa rõ đ/c'} {h.latitude ? '(Đã có tọa độ cũ)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  {/* Danh sách gợi ý sổ trực tiếp bên dưới */}
+                  <div style={{
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    background: '#ffffff',
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
+                  }}>
+                    <div style={{
+                      padding: '6px 12px',
+                      fontSize: '0.74rem',
+                      fontWeight: '700',
+                      color: '#64748b',
+                      background: '#f8fafc',
+                      borderBottom: '1px solid #e2e8f0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 2
+                    }}>
+                      <span>GỢI Ý HỘ DÂN ({filteredPopupHouseholds.length} hộ)</span>
+                      {selectedHouseholdToMove && (
+                        <span style={{ color: '#16a34a', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <Check size={12} /> Đã chọn
+                        </span>
+                      )}
+                    </div>
+
+                    {filteredPopupHouseholds.length === 0 ? (
+                      <div style={{ padding: '24px 12px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
+                        Không có hộ nào trùng khớp với "{popupSearchTerm}"
+                      </div>
+                    ) : (
+                      filteredPopupHouseholds.map(item => {
+                        const h = item.household;
+                        const isSelected = selectedHouseholdToMove === h.id;
+                        return (
+                          <div
+                            key={h.id}
+                            onClick={() => setSelectedHouseholdToMove(h.id)}
+                            style={{
+                              padding: '8px 12px',
+                              borderBottom: '1px solid #f1f5f9',
+                              cursor: 'pointer',
+                              background: isSelected ? '#eff6ff' : '#ffffff',
+                              borderLeft: isSelected ? '4px solid #2563eb' : '4px solid transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#f8fafc';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) (e.currentTarget as HTMLElement).style.background = '#ffffff';
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{
+                                  fontSize: '0.86rem',
+                                  fontWeight: isSelected ? '700' : '600',
+                                  color: isSelected ? '#1d4ed8' : '#0f172a'
+                                }}>
+                                  {item.headName}
+                                </span>
+                                {h.household_number && (
+                                  <span style={{
+                                    fontSize: '0.68rem',
+                                    padding: '1px 5px',
+                                    borderRadius: '3px',
+                                    background: '#f1f5f9',
+                                    color: '#475569'
+                                  }}>
+                                    Số: {h.household_number}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div style={{
+                                fontSize: '0.74rem',
+                                color: '#64748b',
+                                marginTop: '2px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                🏠 {h.address || 'Chưa rõ địa chỉ'} 
+                                {h.latitude ? (
+                                  <span style={{ color: '#d97706', marginLeft: '6px', fontWeight: '500' }}>• Đã có tọa độ cũ</span>
+                                ) : (
+                                  <span style={{ color: '#16a34a', marginLeft: '6px', fontWeight: '500' }}>• Chưa ghim</span>
+                                )}
+                              </div>
+
+                              {/* Nếu trùng theo tên nhân khẩu thì hiển thị rõ */}
+                              {popupSearchTerm.trim() && !item.headName.toLowerCase().includes(popupSearchTerm.trim().toLowerCase()) && (
+                                <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: '2px' }}>
+                                  👥 Có nhân khẩu trùng từ khóa
+                                </div>
+                              )}
+                            </div>
+
+                            <input
+                              type="radio"
+                              name="selectedHouseholdToMove"
+                              checked={isSelected}
+                              onChange={() => setSelectedHouseholdToMove(h.id)}
+                              style={{ accentColor: '#2563eb', cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-actions" style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setClickedCoords(null)}>
                     Hủy bỏ
                   </button>
-                  <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary" 
+                    disabled={!selectedHouseholdToMove}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '6px',
+                      opacity: selectedHouseholdToMove ? 1 : 0.6,
+                      cursor: selectedHouseholdToMove ? 'pointer' : 'not-allowed'
+                    }}
+                  >
                     <MapPin size={15} />
                     <span>Xác nhận ghim vị trí</span>
                   </button>
