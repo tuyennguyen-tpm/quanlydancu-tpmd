@@ -1,8 +1,21 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { Home, Filter, MapPin, X, Plus, Search } from 'lucide-react';
+import { 
+  Home, 
+  MapPin, 
+  X, 
+  Search, 
+  Share2, 
+  Navigation, 
+  Copy, 
+  ExternalLink, 
+  Check, 
+  Users, 
+  Layers,
+  Sparkles
+} from 'lucide-react';
 import { db } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Household, Resident } from '../types';
@@ -12,10 +25,10 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 let DefaultIcon = L.icon({
-    iconUrl: markerIcon,
-    shadowUrl: markerShadow,
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
@@ -51,10 +64,11 @@ const CitizenMap = () => {
     window.addEventListener('role-changed', handleRoleChange);
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
+
   const [households, setHouseholds] = useState<Household[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   
-  // Viewport state (default center of Nam Sầm Sơn)
+  // Tọa độ trung tâm mặc định (Phường Nam Sầm Sơn / Quảng Giao)
   const defaultPosition: [number, number] = [19.7420, 105.9230];
   const [mapCenter, setMapCenter] = useState<[number, number]>(defaultPosition);
   const [mapZoom, setMapZoom] = useState(16);
@@ -63,9 +77,16 @@ const CitizenMap = () => {
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedHouseholdToMove, setSelectedHouseholdToMove] = useState<string>('');
-  const [mapLayer, setMapLayer] = useState<'street' | 'satellite' | 'terrain'>('satellite');
+  
+  // 2 Chế độ xem bản đồ: 'street' (Xem bản đồ) và 'satellite' (Xem vệ tinh)
+  const [mapLayer, setMapLayer] = useState<'street' | 'satellite'>('street');
   const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
   const [popupSearchTerm, setPopupSearchTerm] = useState<string>('');
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
+  const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
+
+  // Lưu trữ tham chiếu các Leaflet Markers để mở Popup theo lập trình
+  const markerRefs = useRef<Record<string, L.Marker | null>>({});
 
   const loadData = async () => {
     try {
@@ -75,8 +96,14 @@ const CitizenMap = () => {
       ]);
       setHouseholds(hList);
       setResidents(rList);
+
+      // Nếu có hộ dân đã ghim tọa độ, tự động căn giữa vào hộ đầu tiên
+      const firstPinned = hList.find(h => h.latitude && h.longitude);
+      if (firstPinned && firstPinned.latitude && firstPinned.longitude) {
+        setMapCenter([firstPinned.latitude, firstPinned.longitude]);
+      }
     } catch (e) {
-      showToast('Lỗi tải bản đồ!', 'danger');
+      showToast('Lỗi tải dữ liệu bản đồ!', 'danger');
     }
   };
 
@@ -102,26 +129,41 @@ const CitizenMap = () => {
     return head ? head.full_name : 'Chưa rõ chủ hộ';
   };
 
-  const getMarkerIcon = (type: string) => {
+  const getMarkerIcon = (type: string, isSelected: boolean = false) => {
     let color = '#2563eb'; // blue
     if (type === 'poor') color = '#ef4444'; // red
     else if (type === 'near_poor') color = '#f59e0b'; // orange
     else if (type === 'policy_family') color = '#6366f1'; // indigo
-    
+
+    const size = isSelected ? 22 : 16;
+    const border = isSelected ? '3px solid #facc15' : '2.5px solid white';
+    const pulse = isSelected ? 'animation: markerPulse 1.5s infinite;' : '';
+
     return L.divIcon({
       className: 'custom-div-icon',
-      html: `<div style="background-color: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"></div>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
+      html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: ${border}; box-shadow: 0 3px 8px rgba(0,0,0,0.45); transition: all 0.2s; ${pulse}"></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
     });
   };
 
-  const handleMiniCardClick = (h: Household) => {
+  // Chọn hộ dân và bay đến vị trí trên bản đồ, tự động bật popup
+  const handleSelectHousehold = (h: Household) => {
+    setShowSearchDropdown(false);
+    setSelectedHouseholdId(h.id);
+
     if (h.latitude && h.longitude) {
       setMapCenter([h.latitude, h.longitude]);
       setMapZoom(18);
+
+      setTimeout(() => {
+        const marker = markerRefs.current[h.id];
+        if (marker) {
+          marker.openPopup();
+        }
+      }, 400);
     } else {
-      showToast('Hộ dân này chưa được chấm tọa độ trên bản đồ!', 'warning');
+      showToast(`Hộ của ông/bà ${getHeadName(h)} chưa được chấm tọa độ trên bản đồ!`, 'warning');
     }
   };
 
@@ -151,11 +193,94 @@ const CitizenMap = () => {
       loadData();
       window.dispatchEvent(new CustomEvent('db-changed'));
     } catch (e) {
-      showToast('Lỗi định vị!', 'danger');
+      showToast('Lỗi khi lưu tọa độ định vị!', 'danger');
     }
   };
 
-  // Filter households that have coordinates for Map rendering
+  // ─── CÁC TIỆN ÍCH CHIA SẺ VỊ TRÍ ───
+  const getGoogleMapsUrl = (lat: number, lng: number) => {
+    return `https://www.google.com/maps?q=${lat},${lng}`;
+  };
+
+  const getDirectionsUrl = (lat: number, lng: number) => {
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  };
+
+  const handleOpenGoogleMaps = (h: Household) => {
+    if (!h.latitude || !h.longitude) return;
+    window.open(getDirectionsUrl(h.latitude, h.longitude), '_blank');
+  };
+
+  const handleShareZalo = (h: Household) => {
+    if (!h.latitude || !h.longitude) return;
+    const url = getGoogleMapsUrl(h.latitude, h.longitude);
+    // Mở trang chia sẻ web Zalo
+    const zaloShareUrl = `https://zalo.me/share?url=${encodeURIComponent(url)}`;
+    window.open(zaloShareUrl, '_blank', 'width=600,height=520');
+  };
+
+  const handleShareFacebook = (h: Household) => {
+    if (!h.latitude || !h.longitude) return;
+    const url = getGoogleMapsUrl(h.latitude, h.longitude);
+    const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    window.open(fbShareUrl, '_blank', 'width=600,height=520');
+  };
+
+  const handleCopyLocation = (h: Household) => {
+    if (!h.latitude || !h.longitude) return;
+    const headName = getHeadName(h);
+    const textToCopy = `📍 Vị trí hộ gia đình: ${headName} (${tdpName})\n🏠 Địa chỉ: ${h.address || 'Địa bàn ' + tdpName}\n🧭 Tọa độ: ${h.latitude.toFixed(6)}, ${h.longitude.toFixed(6)}\n🗺️ Xem trên Google Maps (Chỉ đường): ${getDirectionsUrl(h.latitude, h.longitude)}`;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textToCopy);
+      showToast('Đã sao chép liên kết vị trí & hướng dẫn chỉ đường!', 'success');
+    } else {
+      showToast('Trình duyệt không hỗ trợ tự động copy!', 'warning');
+    }
+  };
+
+  // ─── TÌM KIẾM THÔNG MINH (THEO TÊN CHỦ HỘ HOẶC BẤT KỲ NHÂN KHẨU NÀO) ───
+  const getHouseholdMatchInfo = (h: Household, search: string) => {
+    if (!search || !search.trim()) return { matched: true, reason: '' };
+    const s = search.toLowerCase().trim();
+    
+    // 1. Khớp theo tên chủ hộ
+    const headName = getHeadName(h);
+    if (headName.toLowerCase().includes(s)) {
+      return { matched: true, reason: `Chủ hộ: ${headName}` };
+    }
+
+    // 2. Khớp theo tên của bất kỳ thành viên nào trong hộ
+    const matchedResident = residents.find(
+      r => r.household_id === h.id && r.full_name && r.full_name.toLowerCase().includes(s)
+    );
+    if (matchedResident) {
+      return { 
+        matched: true, 
+        reason: `Có nhân khẩu: ${matchedResident.full_name} (${matchedResident.relationship_with_head || 'Thành viên'})` 
+      };
+    }
+
+    // 3. Khớp theo địa chỉ
+    if (h.address && h.address.toLowerCase().includes(s)) {
+      return { matched: true, reason: `Địa chỉ: ${h.address}` };
+    }
+
+    // 4. Khớp theo số sổ hộ khẩu
+    if (h.household_number && h.household_number.toLowerCase().includes(s)) {
+      return { matched: true, reason: `Số sổ: ${h.household_number}` };
+    }
+
+    return { matched: false, reason: '' };
+  };
+
+  // Danh sách các hộ thỏa mãn bộ lọc tìm kiếm
+  const filteredSidebarHouseholds = households.filter(h => {
+    const { matched } = getHouseholdMatchInfo(h, mapSearchTerm);
+    return matched;
+  });
+
+  // Hộ dân đã có tọa độ hiển thị trên bản đồ (áp dụng cả lọc chính sách)
   const mappedHouseholds = households.filter(h => {
     const hasCoords = h.latitude !== null && h.latitude !== undefined && 
                       h.longitude !== null && h.longitude !== undefined;
@@ -163,35 +288,66 @@ const CitizenMap = () => {
     return hasCoords && matchesPolicy;
   });
 
-  // Filter households in the sidebar based on search query
-  const filteredSidebarHouseholds = households.filter(h => {
-    const headName = getHeadName(h).toLowerCase();
-    const address = (h.address || '').toLowerCase();
-    const householdNum = (h.household_number || '').toLowerCase();
-    const search = mapSearchTerm.toLowerCase().trim();
-    return headName.includes(search) || address.includes(search) || householdNum.includes(search);
+  // Gợi ý tìm kiếm nhanh (khi đang gõ ô tìm kiếm)
+  const searchSuggestions = mapSearchTerm.trim() ? filteredSidebarHouseholds.slice(0, 6) : [];
+
+  // Lọc danh sách hộ trong popup ghim tọa độ
+  const filteredPopupHouseholds = households.filter(h => {
+    const { matched } = getHouseholdMatchInfo(h, popupSearchTerm);
+    return matched;
   });
 
-  // Filter households in the coordinate assignment modal based on search query
-  const filteredPopupHouseholds = households.filter(h => {
-    const headName = getHeadName(h).toLowerCase();
-    const address = (h.address || '').toLowerCase();
-    const householdNum = (h.household_number || '').toLowerCase();
-    const search = popupSearchTerm.toLowerCase().trim();
-    return headName.includes(search) || address.includes(search) || householdNum.includes(search);
-  });
+  const pinnedCount = households.filter(h => h.latitude && h.longitude).length;
 
   return (
     <div className="map-page-container">
+      {/* Header Bản đồ */}
       <div className="map-header">
         <div className="header-info">
-          <h1>Bản đồ số dân cư {tdpName}</h1>
-          <p>{isGuest ? 'Hiển thị vị trí thực tế của từng hộ dân trên địa bàn.' : 'Hiển thị vị trí thực tế của từng hộ dân. Click lên bản đồ để chấm tọa độ định vị hộ dân mới hoặc di chuyển hộ cũ.'}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.6rem' }}>🗺️</span>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '1.35rem', fontWeight: '800', color: '#0f172a' }}>
+                Bản đồ số dân cư {tdpName}
+              </h1>
+              <p style={{ margin: '3px 0 0', fontSize: '0.86rem', color: '#64748b' }}>
+                {isGuest 
+                  ? 'Tra cứu vị trí thực tế của từng hộ gia đình và nhân khẩu trên địa bàn.' 
+                  : 'Tra cứu vị trí thực tế, xem ảnh vệ tinh, chia sẻ chỉ đường và chấm tọa độ định vị hộ dân.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Thống kê nhanh số hộ đã ghim */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px',
+          background: '#f8fafc', padding: '6px 14px', borderRadius: '10px',
+          border: '1px solid #e2e8f0', fontSize: '0.82rem', color: '#475569'
+        }}>
+          <div>
+            Đã ghim vị trí: <strong style={{ color: '#2563eb' }}>{pinnedCount}</strong> / {households.length} hộ
+          </div>
+          <div style={{
+            width: '80px', height: '6px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${households.length > 0 ? (pinnedCount / households.length) * 100 : 0}%`,
+              height: '100%', background: '#2563eb', borderRadius: '4px'
+            }} />
+          </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', background: '#f8fafc', padding: '12px 18px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b' }}>🔍 Phân loại hộ & Bộ lọc nhanh:</span>
+      {/* Thanh bộ lọc chính sách & tìm kiếm tổng quan */}
+      <div style={{ 
+        display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', 
+        alignItems: 'center', background: '#f8fafc', padding: '10px 16px', 
+        borderRadius: '12px', border: '1px solid var(--border)' 
+      }}>
+        <span style={{ fontSize: '0.82rem', fontWeight: 'bold', color: '#64748b' }}>
+          🔍 Phân loại hộ:
+        </span>
         {[
           { key: 'all', label: 'Tất cả các hộ', color: '#2563eb' },
           { key: 'none', label: 'Hộ bình thường', color: '#64748b' },
@@ -209,81 +365,226 @@ const CitizenMap = () => {
               background: 'white',
               border: policyFilter === item.key ? '2px solid ' + item.color : '1px solid #e2e8f0',
               borderRadius: '20px',
-              padding: '6px 14px',
-              fontSize: '0.82rem',
+              padding: '5px 12px',
+              fontSize: '0.8rem',
               fontWeight: '700',
               color: policyFilter === item.key ? '#0f172a' : '#64748b',
               cursor: 'pointer',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: policyFilter === item.key 
-                ? `0 4px 12px ${item.color}40` 
-                : '0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04)'
-            }}
-            onMouseOver={(e) => {
-              if (policyFilter !== item.key) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
-                e.currentTarget.style.borderColor = '#cbd5e1';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (policyFilter !== item.key) {
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04)';
-                e.currentTarget.style.borderColor = '#e2e8f0';
-              }
+              transition: 'all 0.15s ease',
+              boxShadow: policyFilter === item.key ? `0 2px 8px ${item.color}35` : 'none'
             }}
           >
-            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: item.color }}></span>
+            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }}></span>
             {item.label}
           </button>
         ))}
       </div>
 
       <div className="map-main">
+        {/* Cột danh sách & Tìm kiếm bên trái */}
         <div className="map-sidebar">
-           <h3>Danh sách hộ dân ({filteredSidebarHouseholds.length})</h3>
-           
-           <div className="search-box" style={{ width: '100%', marginBottom: '12px' }}>
-             <Search size={14} />
-             <input
-               type="text"
-               placeholder="Tìm tên chủ hộ, địa chỉ..."
-               value={mapSearchTerm}
-               onChange={(e) => setMapSearchTerm(e.target.value)}
-             />
-           </div>
-
-           <div className="household-mini-list">
-              {filteredSidebarHouseholds.map(h => {
-                 const hasC = h.latitude !== null && h.latitude !== undefined && 
-                              h.longitude !== null && h.longitude !== undefined;
-                return (
-                  <div 
-                    key={h.id} 
-                    className={`mini-card ${hasC ? 'positioned' : 'unpositioned'}`}
-                    onClick={() => handleMiniCardClick(h)}
-                  >
-                     <Home size={18} />
-                     <div style={{flex: 1}}>
-                        <div className="h-name">{getHeadName(h)}</div>
-                        <div className="h-addr">{h.address}</div>
-                     </div>
-                     <span className={`pos-badge ${hasC ? 'yes' : 'no'}`}>
-                       {hasC ? 'Đã ghim' : 'Chưa ghim'}
-                     </span>
-                  </div>
-                );
-              })}
-              {filteredSidebarHouseholds.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8', fontSize: '0.85rem', fontStyle: 'italic' }}>
-                  Không tìm thấy hộ dân nào
-                </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#1e293b' }}>
+              Danh sách hộ dân ({filteredSidebarHouseholds.length})
+            </h3>
+            {mapSearchTerm && (
+              <button 
+                onClick={() => setMapSearchTerm('')}
+                style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Xóa tìm
+              </button>
+            )}
+          </div>
+          
+          {/* Ô tìm kiếm thông minh: Tìm tên nhân khẩu hoặc tên chủ hộ */}
+          <div style={{ position: 'relative', width: '100%', marginBottom: '12px' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search size={15} style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Tìm tên nhân khẩu, tên chủ hộ, đ/c..."
+                value={mapSearchTerm}
+                onChange={(e) => {
+                  setMapSearchTerm(e.target.value);
+                  setShowSearchDropdown(true);
+                }}
+                onFocus={() => setShowSearchDropdown(true)}
+                style={{
+                  width: '100%',
+                  padding: '9px 32px 9px 36px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.84rem',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  background: 'white',
+                  transition: 'border-color 0.2s',
+                  fontFamily: 'inherit'
+                }}
+              />
+              {mapSearchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setMapSearchTerm('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex'
+                  }}
+                >
+                  <X size={15} />
+                </button>
               )}
-           </div>
+            </div>
+
+            {/* Gợi ý xổ xuống tức thì khi gõ tìm kiếm */}
+            {showSearchDropdown && searchSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '4px',
+                background: 'white',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
+                zIndex: 2000,
+                maxHeight: '260px',
+                overflowY: 'auto'
+              }}>
+                <div style={{ padding: '6px 12px', fontSize: '0.72rem', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', fontWeight: 'bold' }}>
+                  Gợi ý kết quả ({searchSuggestions.length} hộ):
+                </div>
+                {searchSuggestions.map(h => {
+                  const hasC = h.latitude !== null && h.latitude !== undefined && 
+                               h.longitude !== null && h.longitude !== undefined;
+                  const matchInfo = getHouseholdMatchInfo(h, mapSearchTerm);
+                  return (
+                    <div
+                      key={h.id}
+                      onClick={() => handleSelectHousehold(h)}
+                      style={{
+                        padding: '8px 12px',
+                        borderBottom: '1px solid #f1f5f9',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.backgroundColor = '#eff6ff'}
+                      onMouseOut={e => e.currentTarget.style.backgroundColor = 'white'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>{getHeadName(h)}</strong>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          fontWeight: '700',
+                          background: hasC ? '#dcfce7' : '#f1f5f9',
+                          color: hasC ? '#16a34a' : '#94a3b8'
+                        }}>
+                          {hasC ? '📍 Đã ghim' : 'Chưa ghim'}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                        {h.address || 'Địa bàn TDP'}
+                      </div>
+                      {matchInfo.reason && (
+                        <div style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: '600' }}>
+                          👉 {matchInfo.reason}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Danh sách cuộn mini-cards */}
+          <div className="household-mini-list">
+            {filteredSidebarHouseholds.map(h => {
+              const hasC = h.latitude !== null && h.latitude !== undefined && 
+                           h.longitude !== null && h.longitude !== undefined;
+              const matchInfo = getHouseholdMatchInfo(h, mapSearchTerm);
+              const isSelected = selectedHouseholdId === h.id;
+
+              return (
+                <div 
+                  key={h.id} 
+                  className={`mini-card ${hasC ? 'positioned' : 'unpositioned'} ${isSelected ? 'selected' : ''}`}
+                  onClick={() => handleSelectHousehold(h)}
+                  style={{
+                    backgroundColor: isSelected ? '#eff6ff' : undefined,
+                    borderColor: isSelected ? '#3b82f6' : undefined
+                  }}
+                >
+                  <Home size={18} style={{ color: hasC ? '#2563eb' : '#94a3b8', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="h-name" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {getHeadName(h)}
+                    </div>
+                    <div className="h-addr" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {h.address || 'Địa bàn TDP'}
+                    </div>
+                    {matchInfo.reason && (
+                      <div style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '600', marginTop: '2px' }}>
+                        {matchInfo.reason}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <span className={`pos-badge ${hasC ? 'yes' : 'no'}`}>
+                      {hasC ? 'Đã ghim' : 'Chưa'}
+                    </span>
+                    {hasC && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyLocation(h);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: '2px',
+                          color: '#64748b',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="Sao chép link vị trí"
+                      >
+                        <Share2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredSidebarHouseholds.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                <div style={{ fontSize: '1.8rem', marginBottom: '6px' }}>🔍</div>
+                Không tìm thấy hộ dân hoặc nhân khẩu nào phù hợp với từ khóa: <strong>"{mapSearchTerm}"</strong>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Khung bản đồ tương tác */}
         <div className="map-wrapper">
+          {/* Nút chuyển đổi 2 chế độ xem: Xem bản đồ & Xem vệ tinh */}
           <div 
             className="map-layer-toggle-container"
             style={{
@@ -293,165 +594,342 @@ const CitizenMap = () => {
               zIndex: 1000,
               padding: '4px',
               backgroundColor: 'white',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '10px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-              transition: 'all 0.2s',
-              outline: 'none',
-              fontFamily: 'inherit'
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              transition: 'all 0.2s'
             }}
           >
             <button
               type="button"
               style={{
-                padding: '6px 12px',
+                padding: '7px 14px',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 fontWeight: '700',
-                fontSize: '0.8rem',
+                fontSize: '0.82rem',
                 cursor: 'pointer',
-                backgroundColor: mapLayer === 'street' ? 'var(--primary)' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: mapLayer === 'street' ? '#2563eb' : 'transparent',
                 color: mapLayer === 'street' ? 'white' : '#475569',
-                transition: 'all 0.2s',
-                fontFamily: 'inherit'
+                transition: 'all 0.15s ease',
+                boxShadow: mapLayer === 'street' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none'
               }}
               onClick={(e) => { e.stopPropagation(); setMapLayer('street'); }}
             >
-              🗺️ Bản đồ 2D
+              <span>🗺️ Xem bản đồ</span>
             </button>
+
             <button
               type="button"
               style={{
-                padding: '6px 12px',
+                padding: '7px 14px',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 fontWeight: '700',
-                fontSize: '0.8rem',
+                fontSize: '0.82rem',
                 cursor: 'pointer',
-                backgroundColor: mapLayer === 'satellite' ? 'var(--primary)' : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: mapLayer === 'satellite' ? '#2563eb' : 'transparent',
                 color: mapLayer === 'satellite' ? 'white' : '#475569',
-                transition: 'all 0.2s',
-                fontFamily: 'inherit'
+                transition: 'all 0.15s ease',
+                boxShadow: mapLayer === 'satellite' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none'
               }}
               onClick={(e) => { e.stopPropagation(); setMapLayer('satellite'); }}
             >
-              🛰️ Xem vệ tinh
-            </button>
-            <button
-              type="button"
-              style={{
-                padding: '6px 12px',
-                border: 'none',
-                borderRadius: '6px',
-                fontWeight: '700',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                backgroundColor: mapLayer === 'terrain' ? 'var(--primary)' : 'transparent',
-                color: mapLayer === 'terrain' ? 'white' : '#475569',
-                transition: 'all 0.2s',
-                fontFamily: 'inherit'
-              }}
-              onClick={(e) => { e.stopPropagation(); setMapLayer('terrain'); }}
-            >
-              ⛰️ Xem 3D
+              <span>🛰️ Xem vệ tinh</span>
             </button>
           </div>
+
           <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+            {/* Lớp bản đồ 1: Bản đồ đường phố 2D chuẩn */}
             {mapLayer === 'street' && (
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
             )}
+
+            {/* Lớp bản đồ 2: Ảnh chụp vệ tinh độ phân giải cao Esri */}
             {mapLayer === 'satellite' && (
               <TileLayer
                 attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               />
             )}
-            {mapLayer === 'terrain' && (
-              <TileLayer
-                attribution='Map data &copy; <a href="https://opentopomap.org">OpenTopoMap</a> contributors'
-                url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
-              />
-            )}
+
             <ChangeView center={mapCenter} zoom={mapZoom} />
             {!isGuest && <MapClickHandler onMapClick={handleMapClick} />}
             
-            {mappedHouseholds.map(h => (
-              <Marker 
-                key={h.id} 
-                position={[h.latitude!, h.longitude!]} 
-                icon={getMarkerIcon(h.policy_type)}
-              >
-                <Popup>
-                  <div className="popup-content">
-                    <h4>{getHeadName(h)}</h4>
-                    <p style={{fontSize: '0.85rem', color: '#64748b', margin: '4px 0'}}><MapPin size={12} style={{display: 'inline', marginRight: '4px'}} />{h.address}</p>
-                    <p style={{fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)'}}>Sổ hộ khẩu: {h.household_number}</p>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+            {/* Render các ghim hộ dân */}
+            {mappedHouseholds.map(h => {
+              const isSelected = selectedHouseholdId === h.id;
+              const householdMembers = residents.filter(r => r.household_id === h.id);
+
+              return (
+                <Marker 
+                  key={h.id} 
+                  position={[h.latitude!, h.longitude!]} 
+                  icon={getMarkerIcon(h.policy_type, isSelected)}
+                  ref={(el) => {
+                    if (el) markerRefs.current[h.id] = el;
+                    else delete markerRefs.current[h.id];
+                  }}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedHouseholdId(h.id);
+                    }
+                  }}
+                >
+                  <Popup>
+                    <div className="popup-content" style={{ minWidth: '250px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+                        <h4 style={{ margin: 0, color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>
+                          {getHeadName(h)}
+                        </h4>
+                        <span style={{
+                          fontSize: '0.68rem',
+                          padding: '2px 6px',
+                          borderRadius: '6px',
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          fontWeight: '700'
+                        }}>
+                          {h.policy_type === 'poor' ? 'Hộ nghèo' : h.policy_type === 'near_poor' ? 'Cận nghèo' : h.policy_type === 'policy_family' ? 'Chính sách' : 'Hộ dân'}
+                        </span>
+                      </div>
+
+                      <p style={{ fontSize: '0.82rem', color: '#475569', margin: '3px 0', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                        <MapPin size={13} style={{ flexShrink: 0, marginTop: '2px', color: '#64748b' }} />
+                        <span>{h.address || 'Địa bàn TDP'}</span>
+                      </p>
+                      
+                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 6px 0' }}>
+                        <strong>Sổ hộ khẩu:</strong> {h.household_number || 'Chưa cập nhật'}
+                      </p>
+
+                      {/* Danh sách thành viên trong hộ */}
+                      {householdMembers.length > 0 && (
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#475569',
+                          background: '#f8fafc',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          marginBottom: '8px',
+                          border: '1px solid #e2e8f0',
+                          maxHeight: '75px',
+                          overflowY: 'auto'
+                        }}>
+                          <div style={{ fontWeight: '700', color: '#334155', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Users size={12} />
+                            <span>Thành viên trong hộ ({householdMembers.length}):</span>
+                          </div>
+                          <div>
+                            {householdMembers.map((r, idx) => (
+                              <span key={r.id}>
+                                {r.full_name} {r.relationship_with_head ? `(${r.relationship_with_head})` : ''}
+                                {idx < householdMembers.length - 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tiện ích chia sẻ vị trí & Chỉ đường qua Zalo, Facebook, Google Maps */}
+                      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', marginTop: '6px' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: '700', color: '#475569', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Share2 size={12} color="#2563eb" />
+                          <span>Chia sẻ vị trí & Chỉ đường:</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          {/* Chia sẻ qua Zalo */}
+                          <button
+                            type="button"
+                            onClick={() => handleShareZalo(h)}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #0068ff',
+                              background: '#0068ff',
+                              color: 'white',
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                            title="Gửi vị trí qua Zalo"
+                          >
+                            <span>💬 Gửi Zalo</span>
+                          </button>
+
+                          {/* Chia sẻ qua Facebook */}
+                          <button
+                            type="button"
+                            onClick={() => handleShareFacebook(h)}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #1877f2',
+                              background: '#1877f2',
+                              color: 'white',
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                            title="Chia sẻ lên Facebook"
+                          >
+                            <span>🌐 Facebook</span>
+                          </button>
+
+                          {/* Google Maps Chỉ đường */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenGoogleMaps(h)}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #10b981',
+                              background: '#10b981',
+                              color: 'white',
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                            title="Mở chỉ đường Google Maps"
+                          >
+                            <span>🧭 Chỉ đường</span>
+                          </button>
+
+                          {/* Copy Link vị trí */}
+                          <button
+                            type="button"
+                            onClick={() => handleCopyLocation(h)}
+                            style={{
+                              padding: '6px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #cbd5e1',
+                              background: '#ffffff',
+                              color: '#334155',
+                              fontSize: '0.72rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                            title="Sao chép link vị trí"
+                          >
+                            <span>📋 Copy link</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
           </MapContainer>
         </div>
       </div>
 
-      {/* Click Map Location Assignment Pop-up form */}
+      {/* Modal ghim vị trí khi click lên bản đồ (Dành cho Quản trị viên / Tổ trưởng) */}
       {!isGuest && clickedCoords && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>Định vị hộ gia đình</h2>
-              <button className="close-btn" onClick={() => setClickedCoords(null)}><X size={24} /></button>
+        <div className="modal-overlay" style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(4px)' }}>
+          <div className="modal-content" style={{ maxWidth: '440px', borderRadius: '16px' }}>
+            <div className="modal-header" style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.3rem' }}>📍</span>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>Định vị hộ gia đình</h2>
+              </div>
+              <button className="close-btn" onClick={() => setClickedCoords(null)}><X size={20} /></button>
             </div>
-            <p style={{fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '14px'}}>
-              Tọa độ đã chọn: Lat: {clickedCoords.lat.toFixed(5)}, Lng: {clickedCoords.lng.toFixed(5)}
-            </p>
-            <form onSubmit={handleAssignCoordsSubmit} className="modal-form">
-              <div className="form-group">
-                <label>Chọn hộ gia đình muốn ghim vào vị trí này:</label>
-                <div style={{ marginBottom: '8px', position: 'relative' }}>
-                  <input
-                    type="text"
-                    placeholder="Gõ tìm tên chủ hộ hoặc địa chỉ để lọc nhanh..."
-                    value={popupSearchTerm}
-                    onChange={(e) => setPopupSearchTerm(e.target.value)}
+            
+            <div style={{ padding: '20px' }}>
+              <p style={{ fontSize: '0.86rem', color: '#64748b', margin: '0 0 14px 0', lineHeight: '1.5' }}>
+                Tọa độ đã chọn trên bản đồ: <strong style={{ color: '#2563eb' }}>{clickedCoords.lat.toFixed(6)}, {clickedCoords.lng.toFixed(6)}</strong>
+              </p>
+              
+              <form onSubmit={handleAssignCoordsSubmit} className="modal-form">
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#334155' }}>
+                    Chọn hộ gia đình cần ghim vào vị trí này:
+                  </label>
+                  
+                  {/* Ô tìm kiếm hộ để ghim nhanh */}
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      placeholder="Gõ tìm tên chủ hộ hoặc nhân khẩu..."
+                      value={popupSearchTerm}
+                      onChange={(e) => setPopupSearchTerm(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px 8px 32px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border)',
+                        fontSize: '0.84rem',
+                        outline: 'none',
+                        fontFamily: 'inherit',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <select 
+                    value={selectedHouseholdToMove} 
+                    onChange={(e) => setSelectedHouseholdToMove(e.target.value)}
+                    required
                     style={{
                       width: '100%',
-                      padding: '8px 12px 8px 32px',
+                      padding: '9px 12px',
                       borderRadius: '8px',
                       border: '1px solid var(--border)',
                       fontSize: '0.85rem',
-                      outline: 'none',
                       fontFamily: 'inherit',
-                      boxSizing: 'border-box'
+                      outline: 'none'
                     }}
-                  />
-                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: '#94a3b8' }} />
+                  >
+                    <option value="">-- Chọn hộ dân từ danh sách ({filteredPopupHouseholds.length} hộ) --</option>
+                    {filteredPopupHouseholds.map(h => (
+                      <option key={h.id} value={h.id}>
+                        {getHeadName(h)} - {h.address || 'Chưa rõ đ/c'} {h.latitude ? '(Đã có tọa độ cũ)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <select 
-                  value={selectedHouseholdToMove} 
-                  onChange={(e) => setSelectedHouseholdToMove(e.target.value)}
-                  required
-                >
-                  <option value="">-- Chọn hộ dân từ danh sách ({filteredPopupHouseholds.length} hộ) --</option>
-                  {filteredPopupHouseholds.map(h => (
-                    <option key={h.id} value={h.id}>
-                      {getHeadName(h)} - {h.address}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
-              <div className="form-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setClickedCoords(null)}>Hủy</button>
-                <button type="submit" className="btn btn-primary"><MapPin size={16} /> Xác nhận ghim vị trí</button>
-              </div>
-            </form>
+                <div className="form-actions" style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setClickedCoords(null)}>
+                    Hủy bỏ
+                  </button>
+                  <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={15} />
+                    <span>Xác nhận ghim vị trí</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -468,25 +946,17 @@ const CitizenMap = () => {
         .map-header {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 24px;
+          margin-bottom: 16px;
           align-items: center;
-        }
-
-        .map-select {
-          padding: 8px 16px;
-          border-radius: 8px;
-          border: 1px solid var(--border);
-          font-weight: 600;
-          font-size: 0.95rem;
-          outline: none;
-          background: white;
+          flex-wrap: wrap;
+          gap: 12px;
         }
 
         .map-main {
           flex: 1;
           display: flex;
-          gap: 20px;
-          min-height: 480px;
+          gap: 16px;
+          min-height: 520px;
         }
 
         .map-sidebar {
@@ -494,17 +964,11 @@ const CitizenMap = () => {
           background: white;
           border: 1px solid var(--border);
           border-radius: var(--radius-lg);
-          padding: 20px;
+          padding: 16px;
           display: flex;
           flex-direction: column;
-          max-height: 550px;
-        }
-
-        .map-sidebar h3 {
-          margin-bottom: 16px;
-          font-size: 1.1rem;
-          border-bottom: 1px solid var(--border);
-          padding-bottom: 10px;
+          max-height: 600px;
+          box-shadow: var(--shadow-sm);
         }
 
         .map-wrapper {
@@ -515,84 +979,87 @@ const CitizenMap = () => {
           overflow: hidden;
           position: relative;
           box-shadow: var(--shadow-sm);
+          min-height: 480px;
         }
 
         .household-mini-list {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
           overflow-y: auto;
           flex: 1;
+          padding-right: 4px;
         }
 
         .mini-card {
           display: flex;
-          gap: 12px;
-          padding: 12px;
+          gap: 10px;
+          padding: 10px 12px;
           border-radius: var(--radius-md);
           background-color: #f8fafc;
           border: 1px solid #e2e8f0;
           cursor: pointer;
           align-items: center;
-          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: all 0.2s ease;
         }
 
         .mini-card:hover {
           background-color: #ffffff;
-          border-color: var(--primary);
+          border-color: #3b82f6;
           box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
-          transform: translateY(-2px);
+          transform: translateY(-1px);
         }
         
         .mini-card.positioned {
-          border-left: 4px solid var(--primary);
+          border-left: 3.5px solid #2563eb;
         }
 
         .mini-card.unpositioned {
-          border-left: 4px solid #cbd5e1;
+          border-left: 3.5px solid #cbd5e1;
           opacity: 0.85;
         }
 
-        .h-name { font-weight: 700; font-size: 0.92rem; color: var(--text-main); }
-        .h-addr { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+        .mini-card.selected {
+          border-color: #2563eb !important;
+          background-color: #eff6ff !important;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
+        }
+
+        .h-name { font-weight: 700; font-size: 0.88rem; color: #0f172a; }
+        .h-addr { font-size: 0.76rem; color: #64748b; margin-top: 1px; }
 
         .pos-badge {
-          font-size: 0.7rem;
+          font-size: 0.68rem;
           padding: 2px 6px;
-          border-radius: 10px;
+          border-radius: 8px;
           font-weight: 700;
+          white-space: nowrap;
         }
-        .pos-badge.yes { background-color: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .pos-badge.no { background-color: #f1f5f9; color: var(--text-muted); }
+        .pos-badge.yes { background-color: rgba(16, 185, 129, 0.12); color: #059669; }
+        .pos-badge.no { background-color: #f1f5f9; color: #94a3b8; }
 
-        /* Leaflet Glassmorphism styling override */
+        @keyframes markerPulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+          70% { transform: scale(1.15); box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+
+        /* Leaflet popup customization */
         .leaflet-popup-content-wrapper {
-          background: rgba(255, 255, 255, 0.82) !important;
-          backdrop-filter: blur(12px) !important;
-          -webkit-backdrop-filter: blur(12px) !important;
-          border: 1.5px solid rgba(255, 255, 255, 0.45) !important;
-          border-radius: 16px !important;
-          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+          background: rgba(255, 255, 255, 0.96) !important;
+          backdrop-filter: blur(8px) !important;
+          border-radius: 14px !important;
+          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16) !important;
+          border: 1px solid #e2e8f0 !important;
         }
         .leaflet-popup-tip {
-          background: rgba(255, 255, 255, 0.82) !important;
-          backdrop-filter: blur(12px) !important;
-          box-shadow: none !important;
-        }
-        .popup-content h4 { 
-          margin: 0 0 6px 0; 
-          font-weight: 800; 
-          font-size: 1.05rem; 
-          color: #0f172a; 
-        }
-        .popup-content p { 
-          margin: 4px 0; 
-          font-size: 0.82rem;
-          color: #475569;
+          background: rgba(255, 255, 255, 0.96) !important;
         }
 
         @media (max-width: 1024px) {
-          .map-sidebar { display: none; }
+          .map-main { flex-direction: column; }
+          .map-sidebar { width: 100%; max-height: 280px; }
+          .map-wrapper { height: 450px; }
         }
       `}</style>
     </div>
