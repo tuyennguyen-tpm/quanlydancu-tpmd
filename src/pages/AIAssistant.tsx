@@ -45,7 +45,12 @@ import {
   List,
   Type,
   Minus,
-  Save
+  Save,
+  Lock,
+  Unlock,
+  KeyRound,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { db, partyDb } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -982,12 +987,107 @@ const AIAssistant = () => {
   const [wordEditorDocType, setWordEditorDocType] = useState<'admin'|'party'|'front'>('admin');
   const [wordEditorHtml, setWordEditorHtml] = useState('');
 
-  // Phân quyền vai trò
+  // Phân quyền vai trò & bảo vệ tab mẫu văn bản bằng mã PIN
   const [currentRole, setCurrentRole] = useState(localStorage.getItem('current_role') || 'mat_tran');
+  const userRole = localStorage.getItem('user_role') || '';
+  const isAdmin = currentRole === 'admin' || currentRole === 'super_admin' || currentRole === 'ward_admin' || userRole === 'admin' || userRole === 'super_admin' || userRole === 'ward_admin';
+
+  // Lấy nhóm ban mặc định phù hợp với vai trò của người dùng
+  const getInitialActiveGroup = (): 'to_truong' | 'party' | 'front' => {
+    const role = localStorage.getItem('current_role') || 'mat_tran';
+    if (role === 'bi_thu') return 'party';
+    if (role === 'mat_tran' || role === 'front') return 'front';
+    return 'to_truong';
+  };
+
+  const [activeGroup, setActiveGroup] = useState<'to_truong' | 'party' | 'front'>(getInitialActiveGroup);
+
+  // State các tab được mở khóa trong phiên làm việc
+  const [unlockedTabs, setUnlockedTabs] = useState<{ to_truong: boolean; party: boolean; front: boolean }>(() => ({
+    to_truong: sessionStorage.getItem('ai_unlocked_to_truong') === 'true',
+    party: sessionStorage.getItem('ai_unlocked_party') === 'true',
+    front: sessionStorage.getItem('ai_unlocked_front') === 'true',
+  }));
+
+  // State modal nhập PIN mở khóa tab
+  const [tabPinPrompt, setTabPinPrompt] = useState<{ tabKey: 'to_truong' | 'party' | 'front'; tabLabel: string } | null>(null);
+  const [tabPinInput, setTabPinInput] = useState('');
+  const [tabPinError, setTabPinError] = useState('');
+  const [showPinPassword, setShowPinPassword] = useState(false);
+
+  // Kiểm tra quyền xem tab: Quản trị viên hoặc đúng vai trò được mở tự động không cần PIN
+  const isTabUnlocked = (tabKey: 'to_truong' | 'party' | 'front') => {
+    if (isAdmin) return true;
+    if (tabKey === 'to_truong' && currentRole === 'to_truong') return true;
+    if (tabKey === 'party' && currentRole === 'bi_thu') return true;
+    if (tabKey === 'front' && currentRole === 'mat_tran') return true;
+    return !!unlockedTabs[tabKey];
+  };
+
+  const tabNames: Record<'to_truong' | 'party' | 'front', string> = {
+    to_truong: 'Tổ trưởng dân phố',
+    party: 'Bí thư Chi bộ',
+    front: 'Ban Công tác Mặt trận'
+  };
+
+  const handleTabClick = (tabKey: 'to_truong' | 'party' | 'front', tabLabel: string) => {
+    if (isTabUnlocked(tabKey)) {
+      setActiveGroup(tabKey);
+    } else {
+      setTabPinPrompt({ tabKey, tabLabel });
+      setTabPinInput('');
+      setTabPinError('');
+      setShowPinPassword(false);
+    }
+  };
+
+  const handleVerifyTabPin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!tabPinPrompt) return;
+
+    const roleKeyMap: Record<string, string> = {
+      to_truong: 'to_truong',
+      party: 'bi_thu',
+      front: 'mat_tran'
+    };
+
+    const defaultPins: Record<string, string> = {
+      to_truong: '0000',
+      bi_thu: '1111',
+      mat_tran: '2222'
+    };
+
+    const targetRole = roleKeyMap[tabPinPrompt.tabKey];
+    const correctRolePin = localStorage.getItem(`role_pin_${targetRole}`) || defaultPins[targetRole] || '0000';
+    const adminMasterPin = localStorage.getItem('role_pin_admin') || '9999';
+
+    if (tabPinInput.trim() === correctRolePin || tabPinInput.trim() === adminMasterPin) {
+      const key = tabPinPrompt.tabKey;
+      setUnlockedTabs(prev => ({ ...prev, [key]: true }));
+      sessionStorage.setItem(`ai_unlocked_${key}`, 'true');
+      setActiveGroup(key);
+      setTabPinPrompt(null);
+      setTabPinInput('');
+      setTabPinError('');
+      showToast(`Đã mở khóa tab ${tabPinPrompt.tabLabel}!`, 'success');
+    } else {
+      setTabPinError('❌ Mã PIN không chính xác! Vui lòng nhập đúng PIN của bộ phận hoặc PIN Quản trị viên.');
+    }
+  };
+
   useEffect(() => {
     const handleRoleChange = (e: Event) => {
       const customEvent = e as CustomEvent;
-      setCurrentRole(customEvent.detail || 'mat_tran');
+      const newRole = customEvent.detail || 'mat_tran';
+      setCurrentRole(newRole);
+      // Tự động chuyển và mở khóa tab tương ứng với vai trò mới
+      if (newRole === 'bi_thu') {
+        setActiveGroup('party');
+      } else if (newRole === 'mat_tran' || newRole === 'front') {
+        setActiveGroup('front');
+      } else if (newRole === 'to_truong') {
+        setActiveGroup('to_truong');
+      }
     };
     window.addEventListener('role-changed', handleRoleChange);
     return () => window.removeEventListener('role-changed', handleRoleChange);
@@ -2484,8 +2584,6 @@ ${strippedContent}
     return 'In văn bản (A4)';
   };
 
-  const [activeGroup, setActiveGroup] = useState<'to_truong' | 'party' | 'front'>('to_truong');
-
   // Lọc danh sách mẫu theo ban đang active
   const activeTemplates = templates.filter(t => t.group === activeGroup);
 
@@ -2674,7 +2772,7 @@ ${strippedContent}
 
       <div className="ai-grid">
         <div className="ai-input-section">
-          {/* === 3 TAB CHỌN BAN === */}
+          {/* === 3 TAB CHỌN BAN (BẢO VỆ BẰNG MÃ PIN TỪNG BỘ PHẬN) === */}
           <div style={{
             display: 'flex', gap: '8px', marginBottom: '14px',
             background: '#f8fafc', borderRadius: '12px', padding: '6px'
@@ -2683,27 +2781,38 @@ ${strippedContent}
               { key: 'to_truong', label: '🏠 Tổ trưởng', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
               { key: 'party',     label: '⭐ Bí thư Chi bộ', color: '#991b1b', bg: '#fef2f2', border: '#fecaca' },
               { key: 'front',     label: '🤝 Mặt trận',    color: '#92400e', bg: '#fffbeb', border: '#fde68a' },
-            ] as const).map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveGroup(tab.key)}
-                style={{
-                  flex: 1,
-                  padding: '8px 6px',
-                  borderRadius: '8px',
-                  border: activeGroup === tab.key ? `1.5px solid ${tab.border}` : '1.5px solid transparent',
-                  background: activeGroup === tab.key ? tab.bg : 'transparent',
-                  color: activeGroup === tab.key ? tab.color : '#64748b',
-                  fontWeight: activeGroup === tab.key ? '700' : '500',
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                }}
-              >{tab.label}</button>
-            ))}
+            ] as const).map(tab => {
+              const unlocked = isTabUnlocked(tab.key);
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleTabClick(tab.key, tab.label)}
+                  title={unlocked ? tab.label : `${tab.label} (Yêu cầu mã PIN)`}
+                  style={{
+                    flex: 1,
+                    padding: '8px 6px',
+                    borderRadius: '8px',
+                    border: activeGroup === tab.key ? `1.5px solid ${tab.border}` : '1.5px solid transparent',
+                    background: activeGroup === tab.key ? tab.bg : 'transparent',
+                    color: activeGroup === tab.key ? tab.color : '#64748b',
+                    fontWeight: activeGroup === tab.key ? '700' : '500',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>{tab.label}</span>
+                  {!unlocked && <Lock size={12} style={{ opacity: 0.65, flexShrink: 0 }} />}
+                </button>
+              );
+            })}
           </div>
 
           {/* Label mô tả nhóm */}
@@ -2714,19 +2823,82 @@ ${strippedContent}
           </div>
 
           <div className="template-grid">
-            {activeTemplates.map((t) => (
-              <button key={t.id} className="template-card" onClick={() => handleGenerate(t.prompt, t.id)}>
-                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{t.icon}</span>
-                <div style={{textAlign: 'left', width: 'calc(100% - 24px)'}}>
-                  <div style={{fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{t.title}</div>
-                  <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{t.prompt}</div>
+            {!isTabUnlocked(activeGroup) ? (
+              <div style={{
+                gridColumn: 'span 2',
+                padding: '36px 20px',
+                textAlign: 'center',
+                background: '#f8fafc',
+                borderRadius: '12px',
+                border: '1.5px dashed #cbd5e1',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Lock size={24} />
                 </div>
-              </button>
-            ))}
-            {activeTemplates.length === 0 && (
-              <div style={{ gridColumn: 'span 2', padding: '20px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px', fontSize: '0.85rem' }}>
-                Chưa có mẫu nào trong nhóm này. Hãy bấm vào "Cài đặt mẫu văn bản" để thêm!
+                <div>
+                  <div style={{ fontWeight: '700', color: '#1e293b', fontSize: '0.98rem', marginBottom: '4px' }}>
+                    Mẫu văn bản của {tabNames[activeGroup]} đang được khóa
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', maxWidth: '380px', lineHeight: 1.5 }}>
+                    Bộ phận này yêu cầu mã PIN bảo mật để xem mẫu văn bản. Hãy nhập mã PIN của {tabNames[activeGroup]} (hoặc mã PIN Quản trị viên) để tiếp tục.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleTabClick(activeGroup, tabNames[activeGroup])}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#2563eb',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                >
+                  <KeyRound size={15} />
+                  <span>Nhập mã PIN mở khóa</span>
+                </button>
               </div>
+            ) : (
+              <>
+                {activeTemplates.map((t) => (
+                  <button key={t.id} className="template-card" onClick={() => handleGenerate(t.prompt, t.id)}>
+                    <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{t.icon}</span>
+                    <div style={{textAlign: 'left', width: 'calc(100% - 24px)'}}>
+                      <div style={{fontWeight: '700', fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{t.title}</div>
+                      <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{t.prompt}</div>
+                    </div>
+                  </button>
+                ))}
+                {activeTemplates.length === 0 && (
+                  <div style={{ gridColumn: 'span 2', padding: '20px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    Chưa có mẫu nào trong nhóm này. Hãy bấm vào "Cài đặt mẫu văn bản" để thêm!
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -3688,6 +3860,190 @@ ${strippedContent}
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+           MODAL NHẬP PIN MỞ KHÓA TAB BỘ PHẬN
+          ═══════════════════════════════════════════════ */}
+      {tabPinPrompt && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.55)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px'
+        }}>
+          <form
+            onSubmit={handleVerifyTabPin}
+            style={{
+              background: '#f0f9ff',
+              border: '1.5px solid #bae6fd',
+              borderRadius: '16px',
+              boxShadow: '0 20px 25px -5px rgba(3, 105, 161, 0.15), 0 10px 10px -5px rgba(3, 105, 161, 0.08)',
+              width: '100%',
+              maxWidth: '420px',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+              padding: '16px 20px',
+              borderBottom: '1px solid #bae6fd',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.3rem' }}>🔒</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', color: '#0369a1', fontWeight: '800' }}>
+                    Xác nhận mã PIN bộ phận
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: '600' }}>
+                    {tabPinPrompt.tabLabel}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTabPinPrompt(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px', display: 'flex' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', background: 'white' }}>
+              <p style={{ margin: 0, fontSize: '0.88rem', color: '#334155', lineHeight: '1.5' }}>
+                Vui lòng nhập mã PIN bảo mật của <strong>{tabPinPrompt.tabLabel}</strong> hoặc mã PIN Quản trị viên để xem danh sách mẫu văn bản:
+              </p>
+
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPinPassword ? 'text' : 'password'}
+                  autoFocus
+                  value={tabPinInput}
+                  onChange={(e) => {
+                    setTabPinInput(e.target.value);
+                    if (tabPinError) setTabPinError('');
+                  }}
+                  placeholder="Nhập mã PIN..."
+                  maxLength={15}
+                  style={{
+                    width: '100%',
+                    padding: '12px 42px 12px 14px',
+                    border: tabPinError ? '1.5px solid #ef4444' : '1.5px solid #bae6fd',
+                    borderRadius: '10px',
+                    fontSize: '1.1rem',
+                    outline: 'none',
+                    textAlign: 'center',
+                    letterSpacing: showPinPassword ? '2px' : '6px',
+                    fontWeight: 'bold',
+                    color: '#0369a1',
+                    backgroundColor: '#f8fafc',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPinPassword(v => !v)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#94a3b8',
+                    padding: '4px',
+                    display: 'flex'
+                  }}
+                  title={showPinPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                >
+                  {showPinPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {tabPinError && (
+                <div style={{
+                  padding: '8px 12px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  color: '#dc2626',
+                  fontSize: '0.82rem',
+                  fontWeight: '500'
+                }}>
+                  {tabPinError}
+                </div>
+              )}
+
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>
+                💡 Nhập đúng mã PIN một lần, tab này sẽ tự động mở khóa trong suốt phiên làm việc hiện tại của bạn.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '14px 20px',
+              backgroundColor: '#f8fafc',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '10px'
+            }}>
+              <button
+                type="button"
+                onClick={() => setTabPinPrompt(null)}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: 'white',
+                  color: '#475569',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                style={{
+                  padding: '9px 22px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#0284c7',
+                  color: 'white',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 4px 6px -1px rgba(2, 132, 199, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#0369a1'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#0284c7'}
+              >
+                <Unlock size={15} />
+                <span>Mở khóa tab</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
