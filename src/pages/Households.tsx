@@ -179,6 +179,72 @@ const Households = () => {
   const [targetHouseholdIdForTransfer, setTargetHouseholdIdForTransfer] = useState<string>('');
   const [transferType, setTransferType] = useState<'internal' | 'external'>('internal');
   const [transferReason, setTransferReason] = useState<string>('');
+  const [transferSearchQuery, setTransferSearchQuery] = useState<string>('');
+
+  // Danh sách các hộ gia đình đích (kèm thông tin chi tiết chủ hộ để tìm kiếm và phân biệt)
+  const targetHouseholdsList = useMemo(() => {
+    if (!transferringMember) return [];
+    return households
+      .filter(h => h.id !== transferringMember.household_id && h.status !== 'moved_out')
+      .map(h => {
+        const head = residents.find(r => r.id === h.head_of_household_id);
+        const memberCount = residents.filter(r => r.household_id === h.id && r.status !== 'moved_out' && r.status !== 'deceased').length;
+        
+        let headBirthYear = '';
+        if (head?.dob) {
+          const parts = head.dob.split(/[-/]/);
+          headBirthYear = parts[0]?.length === 4 ? parts[0] : parts[parts.length - 1];
+        }
+        
+        const cccdLast4 = head?.cccd ? head.cccd.slice(-4) : '';
+        
+        return {
+          ...h,
+          head,
+          headName: head ? head.full_name : 'Chưa rõ chủ hộ',
+          headDob: head?.dob || '',
+          headBirthYear,
+          headCccd: head?.cccd || '',
+          cccdLast4,
+          headPhone: head?.phone || '',
+          memberCount,
+          groupName: h.self_management_group || h.fire_safety_group || ''
+        };
+      });
+  }, [households, residents, transferringMember]);
+
+  const filteredTargetHouseholds = useMemo(() => {
+    const query = transferSearchQuery.trim().toLowerCase();
+    if (!query) return targetHouseholdsList;
+    
+    const removeAccents = (str: string) => 
+      str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    
+    const queryNoAccents = removeAccents(query);
+
+    return targetHouseholdsList.filter(item => {
+      const nameNoAccents = removeAccents(item.headName);
+      const addressNoAccents = removeAccents(item.address || '');
+      const hkNoAccents = removeAccents(item.household_number || '');
+      const groupNoAccents = removeAccents(item.groupName || '');
+      const cccd = item.headCccd;
+      const birthYear = item.headBirthYear;
+      const phone = item.headPhone;
+
+      return nameNoAccents.includes(queryNoAccents) ||
+             addressNoAccents.includes(queryNoAccents) ||
+             hkNoAccents.includes(queryNoAccents) ||
+             groupNoAccents.includes(queryNoAccents) ||
+             cccd.includes(query) ||
+             birthYear.includes(query) ||
+             phone.includes(query);
+    });
+  }, [targetHouseholdsList, transferSearchQuery]);
+
+  const selectedTargetHousehold = useMemo(() => {
+    if (!targetHouseholdIdForTransfer) return null;
+    return targetHouseholdsList.find(h => h.id === targetHouseholdIdForTransfer) || null;
+  }, [targetHouseholdsList, targetHouseholdIdForTransfer]);
 
   const [splittingMember, setSplittingMember] = useState<Resident | null>(null);
   const [newHkNumberForSplit, setNewHkNumberForSplit] = useState<string>('');
@@ -696,6 +762,7 @@ const Households = () => {
       setTransferringMember(null);
       setTargetHouseholdIdForTransfer('');
       setTransferReason('');
+      setTransferSearchQuery('');
       setTransferType('internal');
       setViewingMembersHousehold(null);
       loadData();
@@ -2791,6 +2858,7 @@ const Households = () => {
                                   setTargetHouseholdIdForTransfer('');
                                   setTransferType('internal');
                                   setTransferReason('');
+                                  setTransferSearchQuery('');
                                 }}
                                 title="Chuyển sang hộ gia đình khác"
                               >
@@ -2839,15 +2907,16 @@ const Households = () => {
       {/* Transfer Member Modal */}
       {transferringMember && (
         <div className="modal-overlay" style={{ zIndex: 1100 }}>
-          <div className="modal-content" style={{ maxWidth: '450px' }}>
+          <div className="modal-content" style={{ maxWidth: '540px' }}>
             <div className="modal-header">
-              <h2>Chuyển hộ khẩu</h2>
-              <button className="close-btn" onClick={() => setTransferringMember(null)}><X size={24} /></button>
+              <h2>Chuyển nhân khẩu sang hộ khác</h2>
+              <button className="close-btn" onClick={() => { setTransferringMember(null); setTransferSearchQuery(''); }}><X size={24} /></button>
             </div>
             <div className="modal-form" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                Chuyển nhân khẩu <strong>{transferringMember.full_name}</strong>:
-              </p>
+              <div style={{ background: '#f1f5f9', padding: '10px 14px', borderRadius: '8px', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                👤 Nhân khẩu cần chuyển: <strong style={{ color: '#1d4ed8' }}>{transferringMember.full_name}</strong>
+                {transferringMember.cccd ? ` (CCCD: ${transferringMember.cccd})` : ''}
+              </div>
 
               <div className="form-group">
                 <label>Hình thức chuyển *</label>
@@ -2877,25 +2946,112 @@ const Households = () => {
               
               {transferType === 'internal' ? (
                 <div className="form-group">
-                  <label>Chọn hộ gia đình chuyển đến *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ margin: 0, fontWeight: '700', fontSize: '13px' }}>
+                      Chọn hộ gia đình chuyển đến *
+                    </label>
+                    <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                      {transferSearchQuery ? `Khớp: ${filteredTargetHouseholds.length} hộ` : `Tổng: ${targetHouseholdsList.length} hộ`}
+                    </span>
+                  </div>
+
+                  {/* Ô tìm kiếm thông minh */}
+                  <div style={{ position: 'relative', marginBottom: '8px' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input 
+                      type="text"
+                      value={transferSearchQuery}
+                      onChange={(e) => setTransferSearchQuery(e.target.value)}
+                      placeholder="🔍 Gõ tên chủ hộ, năm sinh, 4 số cuối CCCD, số nhà, số sổ..."
+                      style={{
+                        width: '100%',
+                        padding: '8px 30px 8px 32px',
+                        borderRadius: '6px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '12.5px',
+                        boxSizing: 'border-box',
+                        background: '#f8fafc',
+                        outline: 'none',
+                        transition: 'border-color 0.2s'
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = '#ffffff'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                    />
+                    {transferSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setTransferSearchQuery('')}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          padding: '2px 4px'
+                        }}
+                        title="Xóa tìm kiếm"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Dropdown danh sách hộ */}
                   <select 
                     value={targetHouseholdIdForTransfer} 
                     onChange={(e) => setTargetHouseholdIdForTransfer(e.target.value)}
                     required
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border)', fontSize: '13px' }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '8px 10px', 
+                      borderRadius: '6px', 
+                      border: '1.5px solid #94a3b8', 
+                      fontSize: '12.5px',
+                      backgroundColor: '#fff',
+                      cursor: 'pointer'
+                    }}
                   >
-                    <option value="">-- Chọn hộ gia đình --</option>
-                    {households
-                      .filter(h => h.id !== transferringMember.household_id)
-                      .map(h => {
-                        const head = residents.find(r => r.id === h.head_of_household_id);
-                        return (
-                          <option key={h.id} value={h.id}>
-                            Sổ: {h.household_number} - {h.address} (Chủ hộ: {head ? head.full_name : 'Chưa rõ'})
-                          </option>
-                        );
-                      })}
+                    <option value="">-- Bấm vào đây để chọn hộ gia đình ({filteredTargetHouseholds.length} hộ) --</option>
+                    {filteredTargetHouseholds.map(h => (
+                      <option key={h.id} value={h.id}>
+                        {h.headName.toUpperCase()}{h.headBirthYear ? ` (SN: ${h.headBirthYear}` : ''}{h.cccdLast4 ? ` | CCCD: ...${h.cccdLast4})` : ')'} | Sổ: {h.household_number} | {h.address}
+                      </option>
+                    ))}
                   </select>
+
+                  {/* Thẻ xác nhận thông tin hộ đã chọn */}
+                  {selectedTargetHousehold && (
+                    <div style={{
+                      marginTop: '10px',
+                      background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                      border: '1.5px solid #86efac',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      fontSize: '12px',
+                      color: '#166534'
+                    }}>
+                      <div style={{ fontWeight: '800', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>🏡 Thông tin hộ nhận:</span> 
+                        <span style={{ color: '#15803d' }}>{selectedTargetHousehold.headName}</span>
+                        {selectedTargetHousehold.headBirthYear && (
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#047857' }}>(Sinh năm: {selectedTargetHousehold.headBirthYear})</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', color: '#374151', fontSize: '12px', marginTop: '3px' }}>
+                        <div><strong>Số sổ hộ:</strong> {selectedTargetHousehold.household_number}</div>
+                        <div><strong>CCCD chủ hộ:</strong> {selectedTargetHousehold.headCccd || 'Chưa có'}</div>
+                        <div><strong>Địa chỉ:</strong> {selectedTargetHousehold.address}</div>
+                        <div><strong>Quy mô hộ:</strong> {selectedTargetHousehold.memberCount} nhân khẩu</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="form-group">
@@ -2919,7 +3075,7 @@ const Households = () => {
               )}
 
               <div className="form-actions" style={{ marginTop: '10px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setTransferringMember(null)}>Hủy</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setTransferringMember(null); setTransferSearchQuery(''); }}>Hủy</button>
                 <button 
                   type="button" 
                   className="btn btn-primary" 
