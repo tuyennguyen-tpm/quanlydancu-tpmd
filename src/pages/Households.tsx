@@ -2962,10 +2962,10 @@ const Households = () => {
                       type="text"
                       value={transferSearchQuery}
                       onChange={(e) => setTransferSearchQuery(e.target.value)}
-                      placeholder="🔍 Gõ tên chủ hộ, năm sinh, 4 số cuối CCCD, số nhà, số sổ..."
+                      placeholder="Gõ tên chủ hộ, năm sinh, 4 số cuối CCCD, số nhà, số sổ..."
                       style={{
                         width: '100%',
-                        padding: '8px 30px 8px 32px',
+                        padding: '9px 30px 9px 34px',
                         borderRadius: '6px',
                         border: '1.5px solid #cbd5e1',
                         fontSize: '12.5px',
@@ -3000,28 +3000,78 @@ const Households = () => {
                     )}
                   </div>
 
-                  {/* Dropdown danh sách hộ */}
-                  <select 
-                    value={targetHouseholdIdForTransfer} 
-                    onChange={(e) => setTargetHouseholdIdForTransfer(e.target.value)}
-                    required
-                    style={{ 
-                      width: '100%', 
-                      padding: '8px 10px', 
-                      borderRadius: '6px', 
-                      border: '1.5px solid #94a3b8', 
-                      fontSize: '12.5px',
-                      backgroundColor: '#fff',
-                      cursor: 'pointer'
+                  {/* Danh sách gợi ý hiển thị trực tiếp (Không cần bấm mở dropdown) */}
+                  <div 
+                    style={{
+                      border: '1.5px solid #cbd5e1',
+                      borderRadius: '8px',
+                      backgroundColor: '#ffffff',
+                      maxHeight: '220px',
+                      overflowY: 'auto',
+                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)'
                     }}
                   >
-                    <option value="">-- Bấm vào đây để chọn hộ gia đình ({filteredTargetHouseholds.length} hộ) --</option>
-                    {filteredTargetHouseholds.map(h => (
-                      <option key={h.id} value={h.id}>
-                        {h.headName.toUpperCase()}{h.headBirthYear ? ` (SN: ${h.headBirthYear}` : ''}{h.cccdLast4 ? ` | CCCD: ...${h.cccdLast4})` : ')'} | Sổ: {h.household_number} | {h.address}
-                      </option>
-                    ))}
-                  </select>
+                    {filteredTargetHouseholds.length === 0 ? (
+                      <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12.5px' }}>
+                        {transferSearchQuery ? `❌ Không tìm thấy hộ nào khớp với "${transferSearchQuery}"` : 'Chưa có dữ liệu hộ gia đình'}
+                      </div>
+                    ) : (
+                      filteredTargetHouseholds.slice(0, 100).map((h) => {
+                        const isSelected = targetHouseholdIdForTransfer === h.id;
+                        return (
+                          <div
+                            key={h.id}
+                            onClick={() => setTargetHouseholdIdForTransfer(h.id)}
+                            style={{
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #f1f5f9',
+                              backgroundColor: isSelected ? '#ecfdf5' : 'transparent',
+                              borderLeft: isSelected ? '4px solid #10b981' : '4px solid transparent',
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) e.currentTarget.style.backgroundColor = '#f8fafc';
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ fontWeight: '700', fontSize: '13px', color: isSelected ? '#047857' : '#1e293b' }}>
+                                {isSelected ? '✅ ' : '👤 '}{h.headName.toUpperCase()}
+                                {h.headBirthYear && (
+                                  <span style={{ fontWeight: '600', color: '#64748b', fontSize: '12px', marginLeft: '6px' }}>
+                                    (SN: {h.headBirthYear})
+                                  </span>
+                                )}
+                                {h.cccdLast4 && (
+                                  <span style={{ fontWeight: '500', color: '#0284c7', fontSize: '12px', marginLeft: '6px' }}>
+                                    CCCD: ...{h.cccdLast4}
+                                  </span>
+                                )}
+                              </div>
+                              {isSelected && (
+                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#059669', background: '#d1fae5', padding: '2px 8px', borderRadius: '10px' }}>
+                                  Đã chọn
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', fontSize: '11.5px', color: '#64748b', marginTop: '3px', flexWrap: 'wrap' }}>
+                              <span>📜 Sổ: <strong style={{ color: '#334155' }}>{h.household_number}</strong></span>
+                              <span>📍 {h.address}</span>
+                              <span>👥 {h.memberCount} nhân khẩu</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                  {filteredTargetHouseholds.length > 100 && (
+                    <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '4px' }}>
+                      * Hiển thị trước 100/{filteredTargetHouseholds.length} hộ. Gõ thêm từ khóa để tìm chính xác hơn.
+                    </div>
+                  )}
 
                   {/* Thẻ xác nhận thông tin hộ đã chọn */}
                   {selectedTargetHousehold && (
