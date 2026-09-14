@@ -2839,8 +2839,8 @@ const App = () => {
   const menuItems = [
     { id: 'Bảng điều khiển', icon: PieChart, label: 'Bảng điều khiển', group: 'Tổng quan' },
     { id: 'households', icon: Home, label: 'Hộ gia đình', group: 'Quản lý dân cư', badge: householdCount, badgeColor: '#22c55e' },
-    { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư', group: 'Quản lý dân cư' },
     { id: 'residents', icon: Users, label: 'Nhân khẩu', group: 'Quản lý dân cư', badge: residentCount, badgeColor: '#22c55e' },
+    { id: 'map', icon: MapIcon, label: 'Bản đồ số dân cư', group: 'Quản lý dân cư' },
     { id: 'residents-temp', icon: MapPin, label: 'Tạm trú – Tạm vắng', group: 'Quản lý dân cư', badge: temporaryResidentCount, badgeColor: '#f97316' },
     { id: 'residents-changes', icon: TrendingUp, label: 'Biến động dân cư', group: 'Quản lý dân cư' },
     { id: 'policy', icon: Shield, label: 'Gia đình chính sách', group: 'Quản lý dân cư' },
