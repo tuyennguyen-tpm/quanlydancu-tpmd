@@ -23,6 +23,7 @@ import { formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
 import type { Household, Resident } from '../types';
 import ExcelJS from 'exceljs';
 import { VoiceInputButton } from '../components/VoiceInputButton';
+import { parseCoordinatesFromText } from '../utils/geoUtils';
 
 
 const formatToDisplayDate = (dateStr: string) => {
@@ -278,6 +279,27 @@ const Households = () => {
   const [lng, setLng] = useState('105.9230');
   const [fireSafetyGroup, setFireSafetyGroup] = useState('');
   const [selfManagementGroup, setSelfManagementGroup] = useState('');
+  const [quickCoordInput, setQuickCoordInput] = useState('');
+
+  const handleGetGpsInHouseholdModal = () => {
+    if (!navigator.geolocation) {
+      showToast('Trình duyệt hoặc thiết bị của bạn không hỗ trợ định vị GPS!', 'warning');
+      return;
+    }
+    showToast('Đang kết nối GPS...', 'info');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(6));
+        setLng(pos.coords.longitude.toFixed(6));
+        showToast(`Đã lấy tọa độ GPS thực tế (±${Math.round(pos.coords.accuracy)}m)!`, 'success');
+      },
+      (err) => {
+        console.error('GPS error:', err);
+        showToast('Không thể lấy vị trí GPS. Vui lòng cấp quyền truy cập vị trí trong trình duyệt!', 'warning');
+      },
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
 
   // State cho thông tin Gia đình liệt sỹ 27/07
   const [martyrName, setMartyrName] = useState('');
@@ -438,6 +460,7 @@ const Households = () => {
     setAddress('');
     setPolicyType('none');
     setHeadId('');
+    setQuickCoordInput('');
     setLat((19.740 + Math.random() * 0.005).toFixed(4));
     setLng((105.920 + Math.random() * 0.005).toFixed(4));
     setFireSafetyGroup('');
@@ -465,6 +488,7 @@ const Households = () => {
     setAddress(h.address);
     setPolicyType(h.policy_type);
     setHeadId(h.head_of_household_id || '');
+    setQuickCoordInput('');
     setLat(h.latitude?.toString() || '19.7420');
     setLng(h.longitude?.toString() || '105.9230');
     setFireSafetyGroup(h.fire_safety_group || '');
@@ -2491,6 +2515,62 @@ const Households = () => {
                   onChange={(e) => setAddress(e.target.value)} 
                   placeholder="Ví dụ: Số 45, Nam Sầm Sơn" 
                   required
+                />
+              </div>
+
+              {/* Tiện ích nhập nhanh tọa độ từ link Zalo/Google Maps hoặc GPS */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px dashed #cbd5e1',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                marginBottom: '10px'
+              }}>
+                <div style={{ fontSize: '0.76rem', fontWeight: '700', color: '#334155', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                  <span>📍 Nhập nhanh từ Zalo / Google Maps hoặc GPS:</span>
+                  <button
+                    type="button"
+                    onClick={handleGetGpsInHouseholdModal}
+                    style={{
+                      border: '1px solid #2563eb',
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Lấy tọa độ GPS thực tế của bạn ngay bây giờ"
+                  >
+                    <span>🛰️ Lấy GPS hiện tại</span>
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Dán link Zalo, Google Maps hoặc tọa độ (ví dụ: 19.742351, 105.923412)..."
+                  value={quickCoordInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setQuickCoordInput(val);
+                    const parsed = parseCoordinatesFromText(val);
+                    if (parsed) {
+                      setLat(parsed.lat.toFixed(6));
+                      setLng(parsed.lng.toFixed(6));
+                      showToast('Đã trích xuất và điền tọa độ thành công!', 'success');
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    fontSize: '0.78rem',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    boxSizing: 'border-box'
+                  }}
                 />
               </div>
 

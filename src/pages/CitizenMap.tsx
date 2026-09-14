@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useDeferredValue, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { 
@@ -9,11 +9,16 @@ import {
   Search, 
   Share2, 
   Users,
-  Check
+  Check,
+  LocateFixed,
+  Navigation,
+  ClipboardPaste,
+  Link as LinkIcon
 } from 'lucide-react';
 import { db } from '../services/db';
 import { showToast } from '../utils/toast';
 import type { Household, Resident } from '../types';
+import { parseCoordinatesFromText, type ParsedCoordinates } from '../utils/geoUtils';
 
 // Fix for default marker icons in Leaflet with Vite
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -27,6 +32,19 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+// Custom pulsing GPS marker icon cho vị trí người dùng
+const userGpsIcon = L.divIcon({
+  className: 'user-gps-marker',
+  html: `
+    <div style="position: relative; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+      <div style="position: absolute; width: 24px; height: 24px; border-radius: 50%; background: rgba(37, 99, 235, 0.4); animation: gpsPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+      <div style="position: relative; width: 14px; height: 14px; border-radius: 50%; background: #2563eb; border: 2.5px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.5);"></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
+});
 
 // Child component to control map viewport flying/centering
 const ChangeView = ({ center, zoom }: { center: [number, number]; zoom: number }) => {
@@ -99,6 +117,7 @@ interface MapViewProps {
   onShareFacebook: (h: Household) => void;
   onOpenGoogleMaps: (h: Household) => void;
   onCopyLocation: (h: Household) => void;
+  userLocation: { lat: number; lng: number; accuracy: number } | null;
 }
 
 const InteractiveMapView = React.memo(({
@@ -117,7 +136,8 @@ const InteractiveMapView = React.memo(({
   onShareZalo,
   onShareFacebook,
   onOpenGoogleMaps,
-  onCopyLocation
+  onCopyLocation,
+  userLocation
 }: MapViewProps) => {
   return (
     <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
@@ -158,6 +178,38 @@ const InteractiveMapView = React.memo(({
       <MapResizeHandler />
       {!isGuest && <MapClickHandler onMapClick={onMapClick} />}
       
+      {/* Vị trí GPS của người dùng khi bật theo dõi thực địa */}
+      {userLocation && (
+        <>
+          <Circle
+            center={[userLocation.lat, userLocation.lng]}
+            radius={Math.max(userLocation.accuracy || 15, 8)}
+            pathOptions={{
+              color: '#2563eb',
+              fillColor: '#3b82f6',
+              fillOpacity: 0.15,
+              weight: 1.5,
+              dashArray: '4, 4'
+            }}
+          />
+          <Marker position={[userLocation.lat, userLocation.lng]} icon={userGpsIcon} zIndexOffset={1000}>
+            <Popup>
+              <div style={{ padding: '4px', textAlign: 'center', minWidth: '170px' }}>
+                <strong style={{ color: '#2563eb', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                  <span>📍</span> Vị trí GPS của bạn
+                </strong>
+                <p style={{ margin: '4px 0 0', fontSize: '0.78rem', color: '#475569' }}>
+                  Độ chính xác: <strong>±{Math.round(userLocation.accuracy)}m</strong>
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                  {userLocation.lat.toFixed(6)}, {userLocation.lng.toFixed(6)}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        </>
+      )}
+
       {/* Render các ghim hộ dân */}
       {mappedHouseholds.map(h => {
         const isSelected = selectedHouseholdId === h.id;
@@ -384,6 +436,19 @@ const CitizenMap = () => {
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
 
+  // ─── ĐỊNH VỊ GPS THỰC ĐỊA ───
+  const [isTrackingGps, setIsTrackingGps] = useState<boolean>(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const watchIdRef = useRef<number | null>(null);
+
+  // ─── NHẬP TỪ ZALO / GOOGLE MAPS ───
+  const [showZaloImportModal, setShowZaloImportModal] = useState<boolean>(false);
+  const [importInputText, setImportInputText] = useState<string>('');
+  const [parsedCoords, setParsedCoords] = useState<ParsedCoordinates | null>(null);
+  const [selectedHouseholdForImport, setSelectedHouseholdForImport] = useState<string>('');
+  const [importSearchTerm, setImportSearchTerm] = useState<string>('');
+
   // Lưu trữ tham chiếu các Leaflet Markers để mở Popup theo lập trình
   const markerRefs = useRef<Record<string, L.Marker | null>>({});
 
@@ -601,6 +666,143 @@ const CitizenMap = () => {
     }
   }, [getHeadName, tdpName]);
 
+  // ─── TỰ ĐỘNG PHÂN TÍCH TỌA ĐỘ TỪ LINK ZALO / GOOGLE MAPS KHI DÁN ───
+  useEffect(() => {
+    if (!importInputText.trim()) {
+      setParsedCoords(null);
+      return;
+    }
+    const res = parseCoordinatesFromText(importInputText);
+    setParsedCoords(res);
+  }, [importInputText]);
+
+  // ─── BẬT / TẮT THEO DÕI GPS THỰC ĐỊA ───
+  const toggleGpsTracking = useCallback(() => {
+    if (!navigator.geolocation) {
+      showToast('Trình duyệt hoặc thiết bị của bạn không hỗ trợ định vị GPS!', 'warning');
+      return;
+    }
+
+    if (isTrackingGps) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setIsTrackingGps(false);
+      showToast('Đã tắt định vị GPS thực địa', 'info');
+    } else {
+      setIsLocating(true);
+      showToast('Đang kết nối GPS...', 'info');
+
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          setUserLocation({ lat: latitude, lng: longitude, accuracy });
+          setIsTrackingGps(true);
+          setIsLocating(false);
+        },
+        (err) => {
+          console.error('Lỗi Geolocation:', err);
+          setIsLocating(false);
+          setIsTrackingGps(false);
+          if (err.code === err.PERMISSION_DENIED) {
+            showToast('Quyền truy cập vị trí bị từ chối. Vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt!', 'danger');
+          } else if (err.code === err.POSITION_UNAVAILABLE) {
+            showToast('Không thể xác định vị trí GPS. Vui lòng kiểm tra GPS trên thiết bị!', 'warning');
+          } else {
+            showToast('Quá thời gian lấy vị trí GPS. Vui lòng thử lại!', 'warning');
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 3000
+        }
+      );
+    }
+  }, [isTrackingGps]);
+
+  // Dọn dẹp watchPosition khi unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  // Căn giữa bản đồ vào vị trí GPS của tôi
+  const handleCenterOnMe = useCallback(() => {
+    if (userLocation) {
+      setMapCenter([userLocation.lat, userLocation.lng]);
+      setMapZoom(18);
+      showToast(`Đã căn giữa vị trí GPS của bạn (±${Math.round(userLocation.accuracy)}m)`, 'success');
+    } else {
+      toggleGpsTracking();
+    }
+  }, [userLocation, toggleGpsTracking]);
+
+  // Ghim hộ dân tại vị trí GPS hiện tại của tôi
+  const handlePinAtCurrentLocation = useCallback((householdId?: string) => {
+    if (!userLocation) {
+      showToast('Chưa có vị trí GPS. Vui lòng bấm "Bật GPS của tôi" trước!', 'warning');
+      return;
+    }
+    setClickedCoords({ lat: userLocation.lat, lng: userLocation.lng });
+    if (householdId) {
+      setSelectedHouseholdToMove(householdId);
+    }
+  }, [userLocation]);
+
+  // Lưu tọa độ từ Zalo / Google Maps
+  const handleSaveImportCoords = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!parsedCoords || !selectedHouseholdForImport) return;
+
+    const hh = households.find(h => h.id === selectedHouseholdForImport);
+    if (!hh) return;
+
+    const updated: Household = {
+      ...hh,
+      latitude: parsedCoords.lat,
+      longitude: parsedCoords.lng
+    };
+
+    try {
+      await db.saveHousehold(updated);
+      showToast(`Đã ghim vị trí thành công cho hộ của ${getHeadName(hh)}!`, 'success');
+      setShowZaloImportModal(false);
+      setImportInputText('');
+      setSelectedHouseholdForImport('');
+      setMapCenter([parsedCoords.lat, parsedCoords.lng]);
+      setMapZoom(18);
+      setSelectedHouseholdId(hh.id);
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+
+      setTimeout(() => {
+        const marker = markerRefs.current[hh.id];
+        if (marker) marker.openPopup();
+      }, 400);
+    } catch (e) {
+      showToast('Lỗi khi lưu tọa độ định vị!', 'danger');
+    }
+  };
+
+  // Lọc danh sách hộ trong modal nhập từ Zalo / Google Maps
+  const filteredImportHouseholds = useMemo(() => {
+    const s = importSearchTerm.trim().toLowerCase();
+    if (!s) return householdSearchIndex;
+    return householdSearchIndex.filter(item => item.searchTarget.includes(s));
+  }, [householdSearchIndex, importSearchTerm]);
+
+  // Tự động chọn nếu kết quả tìm kiếm đúng 1 hộ trong modal Zalo
+  useEffect(() => {
+    if (importSearchTerm.trim() && filteredImportHouseholds.length === 1) {
+      setSelectedHouseholdForImport(filteredImportHouseholds[0].household.id);
+    }
+  }, [importSearchTerm, filteredImportHouseholds]);
+
   // Lọc danh sách hộ trong popup ghim tọa độ
   const filteredPopupHouseholds = useMemo(() => {
     const s = popupSearchTerm.trim().toLowerCase();
@@ -655,6 +857,136 @@ const CitizenMap = () => {
             }} />
           </div>
         </div>
+      </div>
+
+      {/* Thanh công cụ định vị GPS thực địa & Dán link Zalo / Google Maps */}
+      <div style={{
+        display: 'flex', gap: '10px', marginBottom: '14px', flexWrap: 'wrap',
+        alignItems: 'center', justifyContent: 'space-between',
+        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+        padding: '10px 16px', borderRadius: '12px',
+        border: '1px solid #bae6fd', boxShadow: '0 2px 6px rgba(14, 165, 233, 0.08)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span>🧭</span> Công cụ định vị:
+          </span>
+
+          {/* Nút bật/tắt GPS */}
+          <button
+            type="button"
+            onClick={toggleGpsTracking}
+            disabled={isLocating}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: isTrackingGps ? '#10b981' : '#ffffff',
+              color: isTrackingGps ? '#ffffff' : '#0284c7',
+              border: isTrackingGps ? '1px solid #059669' : '1px solid #7dd3fc',
+              borderRadius: '20px',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: '700',
+              cursor: isLocating ? 'wait' : 'pointer',
+              boxShadow: isTrackingGps ? '0 2px 8px rgba(16, 185, 129, 0.35)' : '0 1px 3px rgba(0,0,0,0.05)',
+              transition: 'all 0.2s'
+            }}
+          >
+            <LocateFixed size={15} className={isLocating ? 'spin-icon' : ''} />
+            <span>
+              {isLocating 
+                ? 'Đang kết nối GPS...' 
+                : isTrackingGps 
+                  ? `Đang bật GPS (±${userLocation ? Math.round(userLocation.accuracy) : '?'}m)` 
+                  : '📍 Bật GPS của tôi'}
+            </span>
+          </button>
+
+          {/* Nút Căn giữa vào vị trí của tôi */}
+          {userLocation && (
+            <button
+              type="button"
+              onClick={handleCenterOnMe}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: '#ffffff',
+                color: '#0369a1',
+                border: '1px solid #bae6fd',
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Căn giữa màn hình vào vị trí của bạn"
+            >
+              <Navigation size={13} />
+              <span>Đến vị trí tôi</span>
+            </button>
+          )}
+
+          {/* Nút Ghim tại vị trí tôi đang đứng */}
+          {!isGuest && userLocation && (
+            <button
+              type="button"
+              onClick={() => handlePinAtCurrentLocation()}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: '#2563eb',
+                color: '#ffffff',
+                border: '1px solid #1d4ed8',
+                borderRadius: '20px',
+                padding: '6px 14px',
+                fontSize: '0.82rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.3)'
+              }}
+              title="Ghim hộ dân tại vị trí bạn đang đứng"
+            >
+              <MapPin size={14} />
+              <span>Ghim hộ tại vị trí đang đứng</span>
+            </button>
+          )}
+        </div>
+
+        {/* Nút Nhập từ Zalo / Google Maps */}
+        {!isGuest && (
+          <button
+            type="button"
+            onClick={() => {
+              setShowZaloImportModal(true);
+              setImportInputText('');
+              setParsedCoords(null);
+              setSelectedHouseholdForImport('');
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#ffffff',
+              color: '#047857',
+              border: '1px solid #6ee7b7',
+              borderRadius: '20px',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              boxShadow: '0 1px 4px rgba(5, 150, 105, 0.1)',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = '#ecfdf5'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = '#ffffff'; }}
+          >
+            <ClipboardPaste size={15} color="#059669" />
+            <span>📋 Dán link Zalo / Google Maps</span>
+          </button>
+        )}
       </div>
 
       {/* Thanh bộ lọc chính sách & tìm kiếm tổng quan */}
@@ -862,28 +1194,57 @@ const CitizenMap = () => {
                   </div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                    <span className={`pos-badge ${hasC ? 'yes' : 'no'}`}>
-                      {hasC ? 'Đã ghim' : 'Chưa'}
-                    </span>
-                    {hasC && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span className={`pos-badge ${hasC ? 'yes' : 'no'}`}>
+                        {hasC ? 'Đã ghim' : 'Chưa'}
+                      </span>
+                      {hasC && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyLocation(h);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '2px',
+                            color: '#64748b',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                          title="Sao chép link vị trí"
+                        >
+                          <Share2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                    {!isGuest && userLocation && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleCopyLocation(h);
+                          handlePinAtCurrentLocation(h.id);
                         }}
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          padding: '2px',
-                          color: '#64748b',
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '5px',
+                          padding: '2px 6px',
+                          color: '#1d4ed8',
+                          fontSize: '0.66rem',
+                          fontWeight: '700',
                           cursor: 'pointer',
                           display: 'flex',
-                          alignItems: 'center'
+                          alignItems: 'center',
+                          gap: '3px',
+                          whiteSpace: 'nowrap'
                         }}
-                        title="Sao chép link vị trí"
+                        title="Ghim hộ này tại vị trí GPS bạn đang đứng"
                       >
-                        <Share2 size={13} />
+                        <MapPin size={10} />
+                        <span>Ghim vị trí tôi</span>
                       </button>
                     )}
                   </div>
@@ -1005,14 +1366,15 @@ const CitizenMap = () => {
             onShareFacebook={handleShareFacebook}
             onOpenGoogleMaps={handleOpenGoogleMaps}
             onCopyLocation={handleCopyLocation}
+            userLocation={userLocation}
           />
         </div>
       </div>
 
-      {/* Modal ghim vị trí khi click lên bản đồ (Dành cho Quản trị viên / Tổ trưởng) */}
+      {/* Modal ghim vị trí khi click lên bản đồ hoặc lấy từ GPS (Dành cho Quản trị viên / Tổ trưởng) */}
       {!isGuest && clickedCoords && (
         <div className="modal-overlay" style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(4px)' }}>
-          <div className="modal-content" style={{ maxWidth: '440px', borderRadius: '16px' }}>
+          <div className="modal-content" style={{ maxWidth: '450px', borderRadius: '16px' }}>
             <div className="modal-header" style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '1.3rem' }}>📍</span>
@@ -1022,9 +1384,52 @@ const CitizenMap = () => {
             </div>
             
             <div style={{ padding: '20px' }}>
-              <p style={{ fontSize: '0.86rem', color: '#64748b', margin: '0 0 14px 0', lineHeight: '1.5' }}>
-                Tọa độ đã chọn trên bản đồ: <strong style={{ color: '#2563eb' }}>{clickedCoords.lat.toFixed(6)}, {clickedCoords.lng.toFixed(6)}</strong>
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
+                <p style={{ fontSize: '0.86rem', color: '#64748b', margin: 0 }}>
+                  Tọa độ: <strong style={{ color: '#2563eb' }}>{clickedCoords.lat.toFixed(6)}, {clickedCoords.lng.toFixed(6)}</strong>
+                </p>
+                {userLocation && Math.abs(clickedCoords.lat - userLocation.lat) < 0.0001 && Math.abs(clickedCoords.lng - userLocation.lng) < 0.0001 && (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: '#dcfce7',
+                    color: '#15803d',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700'
+                  }}>
+                    🛰️ GPS thực tế (±{Math.round(userLocation.accuracy)}m)
+                  </span>
+                )}
+              </div>
+
+              {/* Tùy chọn đổi tọa độ bằng dán link */}
+              <div style={{ marginBottom: '14px', background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                <div style={{ fontSize: '0.74rem', color: '#475569', marginBottom: '4px', fontWeight: '600' }}>
+                  🔗 Hoặc dán link Zalo / Google Maps để đổi sang tọa độ mới:
+                </div>
+                <input
+                  type="text"
+                  placeholder="Dán link Zalo, Google Maps hoặc tọa độ mới..."
+                  onChange={(e) => {
+                    const parsed = parseCoordinatesFromText(e.target.value);
+                    if (parsed) {
+                      setClickedCoords({ lat: parsed.lat, lng: parsed.lng });
+                      showToast('Đã trích xuất và đổi tọa độ thành công!', 'success');
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.78rem',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
               
               <form onSubmit={handleAssignCoordsSubmit} className="modal-form">
                 <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1227,6 +1632,232 @@ const CitizenMap = () => {
         </div>
       )}
 
+      {/* Modal Dán link Zalo / Google Maps (Dành cho Quản trị viên / Tổ trưởng) */}
+      {!isGuest && showZaloImportModal && (
+        <div className="modal-overlay" style={{ zIndex: 10000, background: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(4px)' }}>
+          <div className="modal-content" style={{ maxWidth: '480px', borderRadius: '16px' }}>
+            <div className="modal-header" style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.3rem' }}>📋</span>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0f172a' }}>
+                  Ghim vị trí từ Zalo / Google Maps
+                </h2>
+              </div>
+              <button className="close-btn" onClick={() => setShowZaloImportModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <form onSubmit={handleSaveImportCoords} className="modal-form">
+                {/* Ô dán đường link hoặc tọa độ */}
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#334155', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                    <LinkIcon size={14} />
+                    <span>Dán tin nhắn Zalo, link Google Maps hoặc tọa độ người dân gửi:</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Ví dụ: dán link chia sẻ vị trí Zalo, link https://maps.google.com/?q=... hoặc số tọa độ: 19.742351, 105.923412"
+                    value={importInputText}
+                    onChange={(e) => setImportInputText(e.target.value)}
+                    autoFocus
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1.5px solid ' + (parsedCoords ? '#10b981' : importInputText.trim() ? '#f59e0b' : '#cbd5e1'),
+                      fontSize: '0.84rem',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box',
+                      background: parsedCoords ? '#f0fdf4' : '#ffffff'
+                    }}
+                  />
+
+                  {/* Trạng thái nhận diện tọa độ */}
+                  {parsedCoords ? (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      background: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      fontSize: '0.8rem',
+                      color: '#065f46',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <span style={{ fontSize: '1.1rem' }}>✅</span>
+                      <div>
+                        <strong>Nhận diện tọa độ thành công:</strong>
+                        <div style={{ marginTop: '2px', fontFamily: 'monospace', fontWeight: '700', color: '#047857' }}>
+                          Vĩ độ: {parsedCoords.lat.toFixed(6)} | Kinh độ: {parsedCoords.lng.toFixed(6)}
+                        </div>
+                      </div>
+                    </div>
+                  ) : importInputText.trim() ? (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      fontSize: '0.78rem',
+                      color: '#92400e',
+                      lineHeight: '1.4'
+                    }}>
+                      ⚠️ Chưa nhận diện được tọa độ trong văn bản. Bạn hãy dán link Google Maps hoặc chuỗi số tọa độ (Ví dụ: <code>19.742351, 105.923412</code>).
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '4px' }}>
+                      💡 Mẹo: Bạn có thể copy trực tiếp tin nhắn chia sẻ vị trí từ Zalo hoặc link từ Google Maps dán vào đây.
+                    </div>
+                  )}
+                </div>
+
+                {/* Chọn hộ gia đình cần ghim */}
+                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#334155' }}>
+                    Chọn hộ gia đình cần ghim vào vị trí này:
+                  </label>
+
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '11px', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      placeholder="Tìm theo tên chủ hộ, nhân khẩu, số nhà..."
+                      value={importSearchTerm}
+                      onChange={(e) => setImportSearchTerm(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 30px 8px 32px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border)',
+                        fontSize: '0.84rem',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    {importSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setImportSearchTerm('')}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '7px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#94a3b8',
+                          padding: '2px',
+                          display: 'flex'
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Danh sách hộ */}
+                  <div style={{
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    background: '#ffffff',
+                    maxHeight: '190px',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    {filteredImportHouseholds.length === 0 ? (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
+                        Không có hộ nào trùng khớp với "{importSearchTerm}"
+                      </div>
+                    ) : (
+                      filteredImportHouseholds.map(item => {
+                        const h = item.household;
+                        const isSelected = selectedHouseholdForImport === h.id;
+                        return (
+                          <div
+                            key={h.id}
+                            onClick={() => setSelectedHouseholdForImport(h.id)}
+                            style={{
+                              padding: '8px 12px',
+                              borderBottom: '1px solid #f1f5f9',
+                              cursor: 'pointer',
+                              background: isSelected ? '#eff6ff' : '#ffffff',
+                              borderLeft: isSelected ? '4px solid #2563eb' : '4px solid transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px'
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.86rem', fontWeight: isSelected ? '700' : '600', color: isSelected ? '#1d4ed8' : '#0f172a' }}>
+                                  {item.headName}
+                                </span>
+                                {h.household_number && (
+                                  <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '3px', background: '#f1f5f9', color: '#475569' }}>
+                                    Số: {h.household_number}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                                🏠 {h.address || 'Chưa rõ địa chỉ'}
+                                {h.latitude ? (
+                                  <span style={{ color: '#d97706', marginLeft: '6px' }}>• Đã có tọa độ cũ</span>
+                                ) : (
+                                  <span style={{ color: '#16a34a', marginLeft: '6px' }}>• Chưa ghim</span>
+                                )}
+                              </div>
+                            </div>
+                            <input
+                              type="radio"
+                              name="selectedHouseholdForImport"
+                              checked={isSelected}
+                              onChange={() => setSelectedHouseholdForImport(h.id)}
+                              style={{ accentColor: '#2563eb', cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Nút hành động */}
+                <div className="form-actions" style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowZaloImportModal(false)}>
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={!parsedCoords || !selectedHouseholdForImport}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      opacity: parsedCoords && selectedHouseholdForImport ? 1 : 0.6,
+                      cursor: parsedCoords && selectedHouseholdForImport ? 'pointer' : 'not-allowed',
+                      background: '#059669',
+                      borderColor: '#059669'
+                    }}
+                  >
+                    <Check size={15} />
+                    <span>Lưu ghim vị trí</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         .map-page-container {
           height: 100%;
@@ -1335,6 +1966,19 @@ const CitizenMap = () => {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
           70% { transform: scale(1.15); box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+
+        @keyframes gpsPing {
+          0% { transform: scale(0.8); opacity: 0.9; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+
+        .spin-icon {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          100% { transform: rotate(360deg); }
         }
 
         /* Leaflet popup customization */
