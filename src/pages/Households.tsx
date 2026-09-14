@@ -461,8 +461,8 @@ const Households = () => {
     setPolicyType('none');
     setHeadId('');
     setQuickCoordInput('');
-    setLat((19.740 + Math.random() * 0.005).toFixed(4));
-    setLng((105.920 + Math.random() * 0.005).toFixed(4));
+    setLat('');
+    setLng('');
     setFireSafetyGroup('');
     setSelfManagementGroup('');
     setMartyrName('');
@@ -489,8 +489,8 @@ const Households = () => {
     setPolicyType(h.policy_type);
     setHeadId(h.head_of_household_id || '');
     setQuickCoordInput('');
-    setLat(h.latitude?.toString() || '19.7420');
-    setLng(h.longitude?.toString() || '105.9230');
+    setLat(h.latitude !== undefined && h.latitude !== null ? h.latitude.toString() : '');
+    setLng(h.longitude !== undefined && h.longitude !== null ? h.longitude.toString() : '');
     setFireSafetyGroup(h.fire_safety_group || '');
     setSelfManagementGroup(h.self_management_group || '');
     setMartyrName(h.martyr_name || '');
@@ -518,7 +518,7 @@ const Households = () => {
       return;
     }
 
-    if (!editingHousehold && createNewHead) {
+    if (createNewHead) {
       if (!newHeadName.trim()) {
         showToast('Vui lòng nhập họ tên chủ hộ mới!', 'warning');
         return;
@@ -538,14 +538,17 @@ const Households = () => {
       let finalHeadId = headId;
 
       // Bước 1: Tạo hộ gia đình TRƯỚC (vì nhân khẩu có ràng buộc FK tới households)
+      const parsedLat = lat.trim() ? parseFloat(lat) : NaN;
+      const parsedLng = lng.trim() ? parseFloat(lng) : NaN;
+
       const payload: Household = {
         id: hhId,
         household_number: householdNumber,
         address,
         head_of_household_id: finalHeadId || null,
         group_id: db.getGroupId(),
-        latitude: parseFloat(lat) || 19.7420,
-        longitude: parseFloat(lng) || 105.9230,
+        latitude: !isNaN(parsedLat) ? parsedLat : undefined,
+        longitude: !isNaN(parsedLng) ? parsedLng : undefined,
         policy_type: policyType,
         fire_safety_group: fireSafetyGroup || undefined,
         self_management_group: selfManagementGroup || undefined,
@@ -2528,26 +2531,55 @@ const Households = () => {
               }}>
                 <div style={{ fontSize: '0.76rem', fontWeight: '700', color: '#334155', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                   <span>📍 Nhập nhanh từ Zalo / Google Maps hoặc GPS:</span>
-                  <button
-                    type="button"
-                    onClick={handleGetGpsInHouseholdModal}
-                    style={{
-                      border: '1px solid #2563eb',
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      borderRadius: '6px',
-                      padding: '2px 8px',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    title="Lấy tọa độ GPS thực tế của bạn ngay bây giờ"
-                  >
-                    <span>🛰️ Lấy GPS hiện tại</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {(lat || lng) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLat('');
+                          setLng('');
+                          setQuickCoordInput('');
+                          showToast('Đã xóa tọa độ (gỡ ghim khỏi bản đồ)!', 'info');
+                        }}
+                        style={{
+                          border: '1px solid #fca5a5',
+                          background: '#fef2f2',
+                          color: '#dc2626',
+                          borderRadius: '6px',
+                          padding: '2px 8px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                        title="Xóa tọa độ để gỡ hộ này khỏi bản đồ"
+                      >
+                        <span>🗑️ Xóa tọa độ</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleGetGpsInHouseholdModal}
+                      style={{
+                        border: '1px solid #2563eb',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        borderRadius: '6px',
+                        padding: '2px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Lấy tọa độ GPS thực tế của bạn ngay bây giờ"
+                    >
+                      <span>🛰️ Lấy GPS hiện tại</span>
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="text"

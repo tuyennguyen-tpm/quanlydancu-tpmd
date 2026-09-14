@@ -13,7 +13,9 @@ import {
   LocateFixed,
   Navigation,
   ClipboardPaste,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Trash2,
+  Edit2
 } from 'lucide-react';
 import { db } from '../services/db';
 import { showToast } from '../utils/toast';
@@ -118,6 +120,9 @@ interface MapViewProps {
   onOpenGoogleMaps: (h: Household) => void;
   onCopyLocation: (h: Household) => void;
   userLocation: { lat: number; lng: number; accuracy: number } | null;
+  onUnpinHousehold: (h: Household) => void;
+  onEditHouseholdPin: (h: Household) => void;
+  onUpdateHouseholdCoords: (h: Household, lat: number, lng: number) => void;
 }
 
 const InteractiveMapView = React.memo(({
@@ -137,7 +142,10 @@ const InteractiveMapView = React.memo(({
   onShareFacebook,
   onOpenGoogleMaps,
   onCopyLocation,
-  userLocation
+  userLocation,
+  onUnpinHousehold,
+  onEditHouseholdPin,
+  onUpdateHouseholdCoords
 }: MapViewProps) => {
   return (
     <MapContainer center={defaultPosition} zoom={16} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
@@ -222,6 +230,7 @@ const InteractiveMapView = React.memo(({
             key={h.id} 
             position={[h.latitude!, h.longitude!]} 
             icon={getMarkerIcon(h.policy_type, isSelected)}
+            draggable={!isGuest}
             ref={(el) => {
               if (el) markerRefs.current[h.id] = el;
               else delete markerRefs.current[h.id];
@@ -229,6 +238,11 @@ const InteractiveMapView = React.memo(({
             eventHandlers={{
               click: () => {
                 onSelectHouseholdId(h.id);
+              },
+              dragend: (e: L.LeafletEvent) => {
+                const marker = e.target as L.Marker;
+                const pos = marker.getLatLng();
+                onUpdateHouseholdCoords(h, pos.lat, pos.lng);
               }
             }}
           >
@@ -387,6 +401,62 @@ const InteractiveMapView = React.memo(({
                     </button>
                   </div>
                 </div>
+
+                {/* Tiện ích Quản trị: Sửa ghim & Xóa ghim */}
+                {!isGuest && (
+                  <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '8px', marginTop: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => onEditHouseholdPin(h)}
+                        style={{
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #3b82f6',
+                          background: '#eff6ff',
+                          color: '#1d4ed8',
+                          fontSize: '0.74rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                        title="Đổi vị trí ghim của hộ này"
+                      >
+                        <Edit2 size={12} />
+                        <span>Sửa ghim</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onUnpinHousehold(h)}
+                        style={{
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #fca5a5',
+                          background: '#fef2f2',
+                          color: '#dc2626',
+                          fontSize: '0.74rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                        title="Gỡ vị trí hộ này khỏi bản đồ (dữ liệu nhân khẩu vẫn giữ nguyên)"
+                      >
+                        <Trash2 size={12} />
+                        <span>Xóa ghim</span>
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#64748b', textAlign: 'center', marginTop: '5px' }}>
+                      🖐️ Bạn có thể kéo rê ghim trực tiếp trên bản đồ
+                    </div>
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -817,6 +887,52 @@ const CitizenMap = () => {
     }
   }, [popupSearchTerm, filteredPopupHouseholds]);
 
+  // ─── XÓA / GỠ GHIM VỊ TRÍ CỦA HỘ DÂN ───
+  const handleUnpinHousehold = useCallback(async (h: Household) => {
+    const headName = getHeadName(h);
+    if (!window.confirm(`Bạn có chắc chắn muốn gỡ ghim vị trí của hộ "${headName}" khỏi bản đồ?\n(Toàn bộ thông tin nhân khẩu, sổ hộ khẩu vẫn giữ nguyên vẹn 100%)`)) {
+      return;
+    }
+    const updated: Household = {
+      ...h,
+      latitude: undefined,
+      longitude: undefined
+    };
+    try {
+      await db.saveHousehold(updated);
+      showToast(`Đã gỡ ghim vị trí của hộ ${headName}!`, 'success');
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Lỗi khi gỡ ghim vị trí!', 'danger');
+    }
+  }, [getHeadName]);
+
+  // ─── CẬP NHẬT TỌA ĐỘ KHI KÉO THẢ GHIM TRỰC TIẾP TRÊN BẢN ĐỒ ───
+  const handleUpdateHouseholdCoords = useCallback(async (h: Household, lat: number, lng: number) => {
+    const headName = getHeadName(h);
+    const updated: Household = {
+      ...h,
+      latitude: lat,
+      longitude: lng
+    };
+    try {
+      await db.saveHousehold(updated);
+      showToast(`Đã kéo đổi vị trí mới cho hộ của ${headName}!`, 'success');
+      loadData();
+      window.dispatchEvent(new CustomEvent('db-changed'));
+    } catch (e) {
+      showToast('Lỗi khi lưu vị trí kéo thả!', 'danger');
+    }
+  }, [getHeadName]);
+
+  // ─── MỞ MODAL SỬA GHIM CHO HỘ DÂN ───
+  const handleEditHouseholdPin = useCallback((h: Household) => {
+    setSelectedHouseholdForImport(h.id);
+    setImportInputText(h.latitude && h.longitude ? `${h.latitude.toFixed(6)}, ${h.longitude.toFixed(6)}` : '');
+    setShowZaloImportModal(true);
+  }, []);
+
   const pinnedCount = households.filter(h => h.latitude && h.longitude).length;
 
   return (
@@ -1219,6 +1335,27 @@ const CitizenMap = () => {
                           <Share2 size={13} />
                         </button>
                       )}
+                      {hasC && !isGuest && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnpinHousehold(h);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '2px',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                          title="Gỡ ghim vị trí của hộ này"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
                     {!isGuest && userLocation && (
                       <button
@@ -1367,6 +1504,9 @@ const CitizenMap = () => {
             onOpenGoogleMaps={handleOpenGoogleMaps}
             onCopyLocation={handleCopyLocation}
             userLocation={userLocation}
+            onUnpinHousehold={handleUnpinHousehold}
+            onEditHouseholdPin={handleEditHouseholdPin}
+            onUpdateHouseholdCoords={handleUpdateHouseholdCoords}
           />
         </div>
       </div>
