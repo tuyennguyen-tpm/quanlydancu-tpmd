@@ -137,6 +137,22 @@ const WardFunds = () => {
   const isCanBoChung = currentRole === 'chung' || currentRole === 'admin' || currentRole === 'to_truong' || currentRole === 'ke_toan' || currentRole === 'all' || currentRole === 'can_bo_chung';
   const canPrintExport = !isThuQuy && (isCanBoChung || isKeToan) && localStorage.getItem('guest_mode') !== 'true';
 
+  // Cấu hình hiển thị thống kê Quỹ cho Tổ trưởng
+  const [allowLeaderFundStats, setAllowLeaderFundStats] = useState<boolean>(() => {
+    return localStorage.getItem('show_leader_fund_stats') !== 'false';
+  });
+
+  useEffect(() => {
+    const handleStatsVisibility = () => {
+      setAllowLeaderFundStats(localStorage.getItem('show_leader_fund_stats') !== 'false');
+    };
+    window.addEventListener('leader-stats-visibility-changed', handleStatsVisibility);
+    return () => window.removeEventListener('leader-stats-visibility-changed', handleStatsVisibility);
+  }, []);
+
+  const isLeaderActing = currentRole === 'to_truong' || (userRole === 'to_truong' && currentRole !== 'admin');
+  const shouldHideFundStats = isLeaderActing && !allowLeaderFundStats;
+
   // Khóa quyền "Khởi tạo từ Hộ gia đình" và "Xóa hết danh sách năm nay" đối với vai trò Tổ trưởng (to_truong) và Kế toán (ke_toan)
   const canInitFromHouseholds = !isGuest && currentRole !== 'to_truong' && !isKeToan;
   const canClearYearData = !isGuest && currentRole !== 'to_truong' && !isKeToan;
@@ -8352,7 +8368,7 @@ const WardFunds = () => {
       </div>
 
       {/* Summary Dashboard (Dynamic summary cards) */}
-      {canPrintExport && (
+      {canPrintExport && !shouldHideFundStats && (
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 

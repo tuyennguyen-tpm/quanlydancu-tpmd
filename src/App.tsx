@@ -799,6 +799,7 @@ const App = () => {
   const [editingKey, setEditingKey] = useState<any | null>(null);
   const [newKeyExpiration, setNewKeyExpiration] = useState<string>('permanent');
   const [newKeyCustomExpirationDate, setNewKeyCustomExpirationDate] = useState<string>('');
+  const [showLeaderFundStats, setShowLeaderFundStats] = useState<boolean>(() => localStorage.getItem('show_leader_fund_stats') !== 'false');
 
   const currentKeyWardId = selectedKeyWardId || localStorage.getItem('user_ward_id') || '';
 
@@ -2235,6 +2236,7 @@ const App = () => {
     setRolePinAnNinhInput(localStorage.getItem('role_pin_an_ninh') || '6666');
     setRolePinThuQuyInput(localStorage.getItem('role_pin_thu_quy') || '7777');
     setLatestAppVersionInput(localStorage.getItem('latest_app_version') || APP_VERSION);
+    setShowLeaderFundStats(localStorage.getItem('show_leader_fund_stats') !== 'false');
     
     // Load groups configuration
     const savedGroups = localStorage.getItem('tdp_groups_config');
@@ -2433,6 +2435,11 @@ const App = () => {
     }
 
 
+    // Lưu cấu hình hiển thị thống kê Quỹ cho Tổ trưởng
+    const newShowLeaderStats = showLeaderFundStats ? 'true' : 'false';
+    localStorage.setItem('show_leader_fund_stats', newShowLeaderStats);
+    window.dispatchEvent(new CustomEvent('leader-stats-visibility-changed', { detail: showLeaderFundStats }));
+
     // Đồng bộ các cấu hình khác lên bảng app_config của Supabase
     if (supabase) {
       try {
@@ -2450,7 +2457,8 @@ const App = () => {
             { user_id: uId, key: 'logo_url', value: newLogo },
             { user_id: uId, key: 'fund_list', value: JSON.stringify(mappedFunds) },
             { user_id: uId, key: 'ward_fund_list', value: JSON.stringify(mappedWardFunds) },
-            { user_id: uId, key: 'latest_app_version', value: newVersion }
+            { user_id: uId, key: 'latest_app_version', value: newVersion },
+            { user_id: uId, key: 'show_leader_fund_stats', value: newShowLeaderStats }
           ];
           await supabase.from('app_config').upsert(configItems);
 
@@ -4173,6 +4181,68 @@ const App = () => {
                   >
                     {passwordLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
                   </button>
+                </div>
+              )}
+
+              {/* ─── Phần Cấu hình hiển thị thống kê Quỹ cho Tổ trưởng ─── */}
+              {userRole === 'admin' && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(5,150,105,0.03))',
+                  border: '1.5px solid rgba(16,185,129,0.25)',
+                  borderRadius: '12px',
+                  padding: '16px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  marginTop: '12px'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.85rem', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      📊 Hiển thị thống kê quỹ cho Tổ trưởng TDP
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: '1.45' }}>
+                      Khi <strong>bật (xanh)</strong>: Tổ trưởng được xem bảng thống kê tổng tiền, số dư quỹ, tiến độ thu và thu theo ngày.<br />
+                      Khi <strong>tắt</strong>: Vai trò Tổ trưởng TDP sẽ bị ẩn các mục thống kê này.
+                    </div>
+                  </div>
+                  <label style={{
+                    position: 'relative',
+                    display: 'inline-block',
+                    width: '52px',
+                    height: '28px',
+                    flexShrink: 0,
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={showLeaderFundStats}
+                      onChange={(e) => setShowLeaderFundStats(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      cursor: 'pointer',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundColor: showLeaderFundStats ? '#10b981' : '#cbd5e1',
+                      transition: '0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      borderRadius: '28px',
+                      boxShadow: showLeaderFundStats ? '0 0 10px rgba(16,185,129,0.45)' : 'none'
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        content: '""',
+                        height: '22px',
+                        width: '22px',
+                        left: showLeaderFundStats ? '26px' : '3px',
+                        bottom: '3px',
+                        backgroundColor: 'white',
+                        transition: '0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        borderRadius: '50%',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }} />
+                    </span>
+                  </label>
                 </div>
               )}
 

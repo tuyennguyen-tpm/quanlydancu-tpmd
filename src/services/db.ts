@@ -2272,6 +2272,7 @@ export const db = {
         window.dispatchEvent(new CustomEvent('fund-targets-changed'));
         window.dispatchEvent(new CustomEvent('official-signatures-changed'));
         window.dispatchEvent(new CustomEvent('tdp-groups-changed'));
+        window.dispatchEvent(new CustomEvent('leader-stats-visibility-changed'));
       }
     } catch (e) {
       console.error('Lỗi đồng bộ app_config từ Supabase:', e);
