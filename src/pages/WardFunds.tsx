@@ -19,7 +19,8 @@ import {
   Database,
   PlusCircle,
   UserPlus,
-  Calculator
+  Calculator,
+  CheckCircle
 } from 'lucide-react';
 import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID, supabase } from '../services/db';
