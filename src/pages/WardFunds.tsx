@@ -1117,8 +1117,10 @@ const WardFunds = () => {
     hhMap.forEach((members, hhId) => {
       let totalExp = 0;
       let totalAct = 0;
+      let hasMarkedPaid = false;
 
       members.forEach(m => {
+        if (m.note === 'Đã nộp đủ đợt tập trung') hasMarkedPaid = true;
         const compExp = computedExpectedMap.get(m.id) || {};
         activeFunds.forEach(fund => {
           const exp = compExp[fund.name] ?? 0;
@@ -1129,20 +1131,19 @@ const WardFunds = () => {
         });
       });
 
-      if (totalExp > 0 && totalAct >= totalExp) {
+      const isPaid = hasMarkedPaid || totalAct > 0 || (totalExp > 0 && totalAct >= totalExp);
+      if (isPaid) {
         paidFullHouseholds++;
         paidFullHhIds.push(hhId);
-      }
-      if (totalAct > 0) {
         paidAnyHouseholds++;
         paidAnyHhIds.push(hhId);
       }
     });
 
-    // Chuẩn xác 1.251 hộ khẩu chính thức của TDP
-    const totalHouseholds = households.length > 0 ? households.length : 1251;
-    const finalPaidFull = Math.min(paidFullHouseholds > 0 ? paidFullHouseholds : 532, totalHouseholds);
-    const finalPaidAny = Math.min(paidAnyHouseholds > 0 ? paidAnyHouseholds : 650, totalHouseholds);
+    // Chuẩn xác 1.251 hộ khẩu chính thức của TDP Quảng Giao
+    const totalHouseholds = 1251;
+    const finalPaidFull = paidFullHouseholds;
+    const finalPaidAny = paidAnyHouseholds;
     const unpaidHouseholds = Math.max(0, totalHouseholds - finalPaidAny);
 
     const paidFullPercent = totalHouseholds > 0 ? Math.round((finalPaidFull / totalHouseholds) * 100) : 0;
@@ -1178,7 +1179,7 @@ const WardFunds = () => {
       hhMap.get(hhId)!.push(f);
     });
 
-    const totalHhCount = hhMap.size > 0 ? hhMap.size : households.length;
+    const totalHhCount = 1251;
 
     return activeFunds.map(fund => {
       const isHouseholdScope = (fund as any).scope ? (fund as any).scope === 'household' : (fund.name.toLowerCase().includes('hộ gia đình') || fund.name.toLowerCase().includes('chủ hộ') || fund.name.toLowerCase().includes('người cao tuổi') || fund.name.toLowerCase().includes('cao tuổi'));
