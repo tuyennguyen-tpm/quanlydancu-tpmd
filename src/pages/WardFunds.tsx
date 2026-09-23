@@ -4294,7 +4294,7 @@ const WardFunds = () => {
         }
       });
 
-      const today = new Date().toISOString().slice(0, 10);
+      const defaultSyncDate = Number(selectedYear) === 2026 ? '2026-09-06' : new Date().toISOString().slice(0, 10);
       const newHouseholdFundsToSave: HouseholdFund[] = [];
       const newFinancialRecordsToSave: FinancialRecord[] = [];
       let syncedHouseholdCount = 0;
@@ -4316,6 +4316,20 @@ const WardFunds = () => {
         const isHouseholdPaid = isAnyMarkedPaid || hasAnyActualPay || hasSavedReceipt;
 
         if (!isHouseholdPaid) return;
+
+        // Lấy ngày thu thực tế hoặc ngày chiến dịch tập trung
+        let paidDate = defaultSyncDate;
+        for (const m of members) {
+          if (m.contributions) {
+            for (const c of Object.values(m.contributions) as any[]) {
+              if (c?.date && c?.date.trim()) {
+                paidDate = c.date.slice(0, 10);
+                break;
+              }
+            }
+          }
+          if (paidDate !== defaultSyncDate) break;
+        }
 
         const headResident = residents.find(r => (r.id === household.head_of_household_id) || r.is_head);
         const headName = headResident ? headResident.full_name : (household.martyr_name || members[0]?.full_name || 'Hộ gia đình');
@@ -4350,7 +4364,7 @@ const WardFunds = () => {
             year: selectedYear,
             fund_name: fund.name,
             amount: fundAmount,
-            paid_at: today,
+            paid_at: paidDate,
             note: fundNote
           };
           newHouseholdFundsToSave.push(payload);
@@ -4365,7 +4379,7 @@ const WardFunds = () => {
               category: fund.name,
               description: `Thu ${fund.name} - Hộ ${headName} ${flagText}`,
               recorded_by: 'Đồng bộ tự động từ Quỹ Phường',
-              date: today,
+              date: paidDate,
               created_at: new Date().toISOString()
             };
             newFinancialRecordsToSave.push(generalRecord);
