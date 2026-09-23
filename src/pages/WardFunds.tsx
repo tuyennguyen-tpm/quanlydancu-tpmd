@@ -300,6 +300,7 @@ const WardFunds = () => {
   }, [searchTerm, filterStatus, groupFilter, subTabMode, viewMode]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const auditFileInputRef = useRef<HTMLInputElement>(null);
 
   // Load danh sách cấu hình quỹ Phường
   const loadActiveFunds = () => {
@@ -2801,6 +2802,236 @@ const WardFunds = () => {
       } finally {
         setIsLoading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+  };
+
+  // ⚡ Đối soát & Thay thế danh sách hộ đã nộp theo file tự gõ (Phương án A)
+  const handleAuditImportPaidExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isGuest) {
+      showToast('Khách không có quyền sửa đổi dữ liệu đóng quỹ!', 'warning');
+      return;
+    }
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm('CẢNH BÁO PHƯƠNG ÁN A:\n\nBạn có chắc chắn muốn cập nhật đối soát theo file này?\n- Các hộ có trong file Excel sẽ được ghi nhận ĐÃ NỘP.\n- Toàn bộ các hộ còn lại trong TDP sẽ chuyển về trạng thái CHƯA NỘP.')) {
+      if (auditFileInputRef.current) auditFileInputRef.current.value = '';
+      return;
+    }
+
+    setIsLoading(true);
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onload = async (evt) => {
+      try {
+        const arrayBuffer = evt.target?.result as ArrayBuffer;
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          showToast('File Excel trống hoặc không đúng định dạng!', 'danger');
+          setIsLoading(false);
+          return;
+        }
+
+        let nameCol = 2;
+        let khauCol = 3;
+        let tienCol = 4;
+        let toCol = 5;
+        let startRow = 4;
+
+        for (let r = 1; r <= Math.min(10, worksheet.rowCount); r++) {
+          const row = worksheet.getRow(r);
+          let foundHeader = false;
+          row.eachCell((cell, colNum) => {
+            const val = (cell.value || '').toString().toLowerCase().trim();
+            if (val.includes('họ tên') || val.includes('họ và tên') || val.includes('chủ hộ')) {
+              nameCol = colNum;
+              foundHeader = true;
+            } else if (val.includes('khẩu') || val.includes('khấu')) {
+              khauCol = colNum;
+            } else if (val.includes('tiền') || val.includes('số tiền') || val.includes('nộp')) {
+              tienCol = colNum;
+            } else if (val.includes('tổ') || val.includes('cụm')) {
+              toCol = colNum;
+            }
+          });
+          if (foundHeader) {
+            startRow = r + 1;
+            break;
+          }
+        }
+
+        const normalizeVN = (str: string) => {
+          if (!str) return '';
+          let s = str.toString().toLowerCase().normalize('NFC');
+          s = s.replace(/oà/g, 'òa').replace(/oá/g, 'óa').replace(/oả/g, 'ỏa').replace(/oã/g, 'õa').replace(/oạ/g, 'ọa')
+               .replace(/uỳ/g, 'ụy').replace(/uý/g, 'úy').replace(/uỷ/g, 'ủy').replace(/uỹ/g, 'ũy').replace(/uỵ/g, 'ụy')
+               .replace(/oè/g, 'òe').replace(/oé/g, 'óe').replace(/oẻ/g, 'ỏe').replace(/oẽ/g, 'õe').replace(/oẹ/g, 'ọe');
+          return s.replace(/\s+/g, ' ').trim();
+        };
+
+        const cleanName = (str: string) => {
+          let s = normalizeVN(str);
+          s = s.replace(/\(.*?\)/g, '');
+          return s.replace(/\s+/g, ' ').trim();
+        };
+
+        const cleanGroup = (g: string) => {
+          if (!g) return '';
+          return g.toString().toLowerCase().replace(/\s+/g, '').replace('tổ', '').replace('cụm', '');
+        };
+
+        const excelRows: Array<{ name: string; cleanName: string; to: string; cleanTo: string; khau: number; tien: number }> = [];
+        for (let r = startRow; r <= worksheet.rowCount; r++) {
+          const row = worksheet.getRow(r);
+          let name = row.getCell(nameCol).value?.toString().trim();
+          if (!name) continue;
+          if (name === 'Nguyễn Thi Hương') name = 'Nguyễn Thị Hương';
+          if (name === 'Đới Thị Trện') name = 'Đới Thị Trệnh';
+          const to = row.getCell(toCol).value?.toString().trim() || '';
+          const khau = parseInt(row.getCell(khauCol).value?.toString() || '0', 10);
+          const tienRaw = row.getCell(tienCol).value;
+          const tien = typeof tienRaw === 'number' ? tienRaw : parseInt((tienRaw || '').toString().replace(/\D/g, ''), 10) || 0;
+
+          excelRows.push({
+            name,
+            cleanName: cleanName(name),
+            to,
+            cleanTo: cleanGroup(to),
+            khau,
+            tien
+          });
+        }
+
+        if (excelRows.length === 0) {
+          showToast('Không tìm thấy dòng dữ liệu nào trong file Excel!', 'warning');
+          setIsLoading(false);
+          return;
+        }
+
+        const resMap = new Map<string, Resident>();
+        residents.forEach(r => resMap.set(r.id, r));
+
+        const hhList = households.map(h => {
+          const head = resMap.get(h.head_of_household_id || '');
+          const members = residents.filter(r => r.household_id === h.id);
+          const grp = h.self_management_group || h.address || '';
+          return {
+            id: h.id,
+            group: grp,
+            cleanGroup: cleanGroup(grp),
+            cleanHeadName: head ? cleanName(head.full_name) : '',
+            members: members.map(m => ({ id: m.id, name: m.full_name, cleanName: cleanName(m.full_name) }))
+          };
+        });
+
+        const paidHhIds = new Set<string>();
+        const paidWfIds = new Set<string>();
+
+        excelRows.forEach(er => {
+          let matchedHh: any = null;
+          const headCands = hhList.filter(h => h.cleanHeadName === er.cleanName);
+          if (headCands.length === 1) {
+            matchedHh = headCands[0];
+          } else if (headCands.length > 1) {
+            const gMatch = headCands.filter(h => h.cleanGroup.includes(er.cleanTo) || er.cleanTo.includes(h.cleanGroup));
+            matchedHh = gMatch.length > 0 ? gMatch[0] : headCands[0];
+          }
+
+          if (!matchedHh) {
+            const memCands = hhList.filter(h => h.members.some(m => m.cleanName === er.cleanName));
+            if (memCands.length === 1) {
+              matchedHh = memCands[0];
+            } else if (memCands.length > 1) {
+              const gMatch = memCands.filter(h => h.cleanGroup.includes(er.cleanTo) || er.cleanTo.includes(h.cleanGroup));
+              matchedHh = gMatch.length > 0 ? gMatch[0] : memCands[0];
+            }
+          }
+
+          let matchedWf = funds.filter(w => cleanName(w.full_name) === er.cleanName);
+          if (matchedWf.length > 1) {
+            const gMatch = matchedWf.filter(w => cleanGroup(w.address || '').includes(er.cleanTo) || er.cleanTo.includes(cleanGroup(w.address || '')));
+            if (gMatch.length > 0) matchedWf = gMatch;
+          }
+
+          if (matchedHh) paidHhIds.add(matchedHh.id);
+          if (matchedWf.length > 0) {
+            matchedWf.forEach(w => paidWfIds.add(w.id));
+          }
+        });
+
+        paidHhIds.forEach(hhId => {
+          const hh = hhList.find(h => h.id === hhId);
+          if (hh) {
+            hh.members.forEach(m => {
+              funds.filter(w => cleanName(w.full_name) === m.cleanName).forEach(w => paidWfIds.add(w.id));
+            });
+          }
+        });
+
+        const today = new Date().toISOString().slice(0, 10);
+        const updatedFunds: WardFund[] = funds.map(w => {
+          const isPaid = paidWfIds.has(w.id);
+          const newContribs = { ...(w.contributions || {}) };
+          Object.keys(newContribs).forEach(k => {
+            const item = newContribs[k] || {};
+            const exp = item.expected !== undefined ? item.expected : 0;
+            newContribs[k] = {
+              ...item,
+              expected: exp,
+              actual: isPaid ? exp : 0,
+              date: isPaid ? (item.date || today) : ''
+            };
+          });
+          return {
+            ...w,
+            note: isPaid ? 'Đã nộp đủ đợt tập trung' : '',
+            contributions: newContribs
+          };
+        });
+
+        await db.saveWardFundsBatch(updatedFunds);
+        await db.deleteHouseholdFundsByYear(selectedYear);
+
+        const tdpFundsConfig = (db as any).getFundList() || [];
+        const newHfList: HouseholdFund[] = [];
+
+        paidHhIds.forEach(hhId => {
+          const hh = hhList.find(h => h.id === hhId);
+          const isGroup8 = hh && (hh.cleanGroup.includes('8') || hh.group.toLowerCase().includes('tổ 8'));
+
+          tdpFundsConfig.forEach((fund: any) => {
+            const isKhuyenHoc = fund.name.toLowerCase().includes('khuyến học');
+            const amount = (isGroup8 && isKhuyenHoc) ? 0 : fund.target;
+            const note = (isGroup8 && isKhuyenHoc) ? 'Đã thu trước' : 'Đã thu đủ theo thông báo';
+
+            newHfList.push({
+              id: generateUUID(),
+              household_id: hhId,
+              year: selectedYear,
+              fund_name: fund.name,
+              amount,
+              paid_at: today,
+              note
+            });
+          });
+        });
+
+        if (newHfList.length > 0) {
+          await db.saveHouseholdFundsBatch(newHfList);
+        }
+
+        showToast(`✅ Đã đối soát và thay thế thành công ${excelRows.length} hộ đã nộp theo file Excel!`, 'success');
+        await loadData(false, true);
+        window.dispatchEvent(new CustomEvent('db-changed'));
+      } catch (err) {
+        console.error('Lỗi khi đối soát file Excel:', err);
+        showToast('Có lỗi xảy ra khi đọc file Excel!', 'danger');
+      } finally {
+        setIsLoading(false);
+        if (auditFileInputRef.current) auditFileInputRef.current.value = '';
       }
     };
   };
@@ -8959,6 +9190,33 @@ const WardFunds = () => {
                         <Upload size={14} /> Nhập Excel Phường
                       </button>
                     )}
+                    {!isGuest && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDataMenu(false);
+                          auditFileInputRef.current?.click();
+                        }}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: '#16a34a',
+                          fontWeight: '600',
+                          fontSize: '0.82rem',
+                          textAlign: 'left',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      >
+                        <CheckCircle size={14} /> Nhập đối soát đã nộp (Phương án A)
+                      </button>
+                    )}
                     {canPrintExport && (
                       <button
                         type="button"
@@ -10347,6 +10605,13 @@ const WardFunds = () => {
         type="file"
         ref={fileInputRef}
         onChange={handleImportExcel}
+        style={{ display: 'none' }}
+        accept=".xlsx, .xls"
+      />
+      <input
+        type="file"
+        ref={auditFileInputRef}
+        onChange={handleAuditImportPaidExcel}
         style={{ display: 'none' }}
         accept=".xlsx, .xls"
       />
