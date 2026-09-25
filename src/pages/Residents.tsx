@@ -757,13 +757,13 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
 
     const headers = showTdpCol ? [
-      'STT', 'Tổ dân phố', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
+      'STT', 'Tổ dân phố', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'Ngày cấp CCCD', 'SĐT', 
       'Nghề nghiệp', 'Cụm/Tổ', 'Thường trú', 
       'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
       'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
       'Ngày mất', 'Tuổi khi mất', 'Ghi chú'
     ] : [
-      'STT', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'SĐT', 
+      'STT', 'Số sổ hộ khẩu', 'Họ tên', 'Giới tính', 'Ngày sinh', 'Quan hệ chủ hộ', 'CCCD / Định danh', 'Ngày cấp CCCD', 'SĐT', 
       'Nghề nghiệp', 'Cụm/Tổ', 'Thường trú', 
       'Nơi sinh', 'Quê quán', 'Dân tộc', 'Tôn giáo', 'Quốc tịch', 
       'Trình độ học vấn', 'Nghĩa vụ quân sự', 'Bảo hiểm y tế', 'Thời hạn tạm trú', 'Trạng thái cư trú', 
@@ -836,6 +836,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             r.dob ? formatToDisplayDate(r.dob) : '',
             r.relationship_with_head,
             r.cccd || '',
+            r.cccd_issue_date ? formatToDisplayDate(r.cccd_issue_date) : '',
             r.phone || '',
             r.occupation || '',
             hh?.self_management_group || '', // Cụm/Tổ
@@ -1040,7 +1041,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     showToast('Đang khởi tạo file Excel mừng thọ...', 'info');
 
     const headers = [
-      'STT', 'Họ tên', 'Ngày sinh', 'Tuổi mừng thọ', 'Cụm/Tổ', 'Địa chỉ', 'CCCD / Định danh', 'SĐT', 'Ghi chú'
+      'STT', 'Họ tên', 'Ngày sinh', 'Tuổi mừng thọ', 'Cụm/Tổ', 'Địa chỉ', 'CCCD / Định danh', 'Ngày cấp CCCD', 'SĐT', 'Ghi chú'
     ];
 
     const rows = longevityResidents.map((r, idx) => {
@@ -1054,6 +1055,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
         hh?.self_management_group || '',
         hh?.address || '',
         r.cccd || '',
+        r.cccd_issue_date ? formatToDisplayDate(r.cccd_issue_date) : '',
         r.phone || '',
         r.notes || ''
       ];
@@ -1064,7 +1066,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       const worksheet = workbook.addWorksheet(`Mừng thọ năm ${longevityYear}`);
 
       // Tiêu đề lớn của bảng
-      worksheet.mergeCells('A1:I1');
+      worksheet.mergeCells('A1:J1');
       const titleCell = worksheet.getCell('A1');
       titleCell.value = `DANH SÁCH CÁC CỤ MỪNG THỌ NĂM ${longevityYear}`;
       titleCell.font = { bold: true, name: 'Segoe UI', size: 16, color: { argb: 'FF1E3A8A' } };
@@ -1242,6 +1244,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             <td style="text-align: center;">${hh?.self_management_group || '—'}</td>
             <td>${hh?.address || '—'}</td>
             <td style="text-align: center;">${r.cccd || ''}</td>
+            <td style="text-align: center;">${r.cccd_issue_date ? formatToDisplayDate(r.cccd_issue_date) : ''}</td>
             <td style="text-align: center;">${r.phone || ''}</td>
             <td>${r.notes || ''}</td>
           </tr>
@@ -1259,6 +1262,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             <td style="text-align: center;">${formattedDob}</td>
             <td style="text-align: center;">${r.relationship_with_head}</td>
             <td style="text-align: center;">${r.cccd || ''}</td>
+            <td style="text-align: center;">${r.cccd_issue_date ? formatToDisplayDate(r.cccd_issue_date) : ''}</td>
             <td style="text-align: center;">${r.phone || ''}</td>
             <td>${r.pob || ''}</td>
             <td>${r.permanent_address || ''}</td>
@@ -1433,30 +1437,32 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
             ${isLongevity ? `
               <tr>
                 <th style="width: 3%;">STT</th>
-                ${showTdpCol ? '<th style="width: 10%;">Tổ dân phố</th>' : ''}
-                <th style="width: 18%;">Họ và tên</th>
-                <th style="width: 10%;">Ngày sinh</th>
-                <th style="width: 10%;">Tuổi mừng thọ</th>
-                <th style="width: 10%;">Cụm/Tổ</th>
-                <th style="width: 20%;">Địa chỉ thường trú</th>
-                <th style="width: 10%;">Số CCCD</th>
-                <th style="width: 10%;">Số điện thoại</th>
+                ${showTdpCol ? '<th style="width: 9%;">Tổ dân phố</th>' : ''}
+                <th style="width: 17%;">Họ và tên</th>
+                <th style="width: 9%;">Ngày sinh</th>
+                <th style="width: 9%;">Tuổi mừng thọ</th>
+                <th style="width: 9%;">Cụm/Tổ</th>
+                <th style="width: 18%;">Địa chỉ thường trú</th>
+                <th style="width: 9%;">Số CCCD</th>
+                <th style="width: 8%;">Ngày cấp</th>
+                <th style="width: 9%;">Số điện thoại</th>
                 <th style="width: 9%;">Ghi chú</th>
               </tr>
             ` : `
               <tr>
                 <th style="width: 3%;">STT</th>
-                ${showTdpCol ? '<th style="width: 10%;">Tổ dân phố</th>' : ''}
+                ${showTdpCol ? '<th style="width: 9%;">Tổ dân phố</th>' : ''}
                 <th style="width: 14%;">Họ và tên</th>
                 <th style="width: 5%;">Giới tính</th>
                 <th style="width: 8%;">Ngày sinh</th>
                 <th style="width: 8%;">Quan hệ với chủ hộ</th>
                 <th style="width: 9%;">Số CCCD</th>
+                <th style="width: 8%;">Ngày cấp</th>
                 <th style="width: 8%;">Số điện thoại</th>
-                <th style="width: 13%;">Nơi sinh</th>
-                <th style="width: 15%;">Thường trú</th>
-                <th style="width: 8%;">Trạng thái</th>
-                <th style="width: 9%;">Ghi chú</th>
+                <th style="width: 12%;">Nơi sinh</th>
+                <th style="width: 14%;">Thường trú</th>
+                <th style="width: 7%;">Trạng thái</th>
+                <th style="width: 8%;">Ghi chú</th>
               </tr>
             `}
           </thead>

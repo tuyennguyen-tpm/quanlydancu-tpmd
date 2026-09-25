@@ -3,6 +3,7 @@ import { db } from '../services/db';
 import type { Resident, Household } from '../types';
 import ExcelJS from 'exceljs';
 import { FileUp, FileDown, Printer, UserPlus, X, Search } from 'lucide-react';
+import { formatDateVN } from '../utils/dateUtils';
 
 const MILESTONE_AGES = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150];
 
@@ -413,6 +414,7 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
         'Tuổi', 
         'Điện thoại', 
         'CCCD', 
+        'Ngày cấp CCCD',
         selectedTab === 'seniors' ? 'Danh hiệu Mừng thọ' : 'Chức vụ / Công việc', 
         'Địa chỉ cư trú', 
         'Trạng thái'
@@ -456,6 +458,7 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
           `${age} tuổi`,
           m.phone || '',
           m.cccd || '',
+          m.cccd_issue_date ? formatDateVN(m.cccd_issue_date) : '',
           detailVal,
           m.permanent_address || 'TDP Quảng Giao',
           statusText
@@ -468,7 +471,7 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
           cell.font = { name: 'Segoe UI', size: 11 };
           cell.alignment = {
             vertical: 'middle',
-            horizontal: [1, 3, 4, 5, 6, 7, 10].includes(colNumber) ? 'center' : 'left'
+            horizontal: [1, 3, 4, 5, 6, 7, 8, 11].includes(colNumber) ? 'center' : 'left'
           };
           cell.border = {
             top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
@@ -552,6 +555,7 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
           <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${age} tuổi</td>
           <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${m.phone || ''}</td>
           <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${m.cccd || ''}</td>
+          <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${m.cccd_issue_date ? formatDateVN(m.cccd_issue_date) : ''}</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${detailVal}</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${m.permanent_address || 'TDP Quảng Giao'}</td>
           <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${statusText}</td>
@@ -606,13 +610,14 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
                 <th style="width: 70px;">Tuổi</th>
                 <th style="width: 110px;">Số điện thoại</th>
                 <th style="width: 110px;">CCCD</th>
+                <th style="width: 100px;">Ngày cấp</th>
                 <th>${selectedTab === 'seniors' ? 'Danh hiệu Mừng thọ' : 'Chức vụ / Công việc'}</th>
                 <th>Địa chỉ cư trú</th>
                 <th style="width: 90px;">Trạng thái</th>
               </tr>
             </thead>
             <tbody>
-              ${rowsHtml || `<tr><td colspan="10" style="text-align: center; padding: 20px;">Không có dữ liệu.</td></tr>`}
+              ${rowsHtml || `<tr><td colspan="11" style="text-align: center; padding: 20px;">Không có dữ liệu.</td></tr>`}
             </tbody>
           </table>
           <div style="display: flex; justify-content: space-between; margin-top: 50px; padding: 0 40px;">

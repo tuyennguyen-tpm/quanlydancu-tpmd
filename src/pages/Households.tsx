@@ -1167,6 +1167,7 @@ const Households = () => {
           <td style="text-align: center;">${formattedDob}</td>
           <td style="text-align: center;">${r.relationship_with_head}</td>
           <td style="text-align: center;">${r.cccd || ''}</td>
+          <td style="text-align: center;">${r.cccd_issue_date ? formatToDisplayDate(r.cccd_issue_date) : ''}</td>
           <td style="text-align: center;">${r.phone || ''}</td>
           <td>${r.occupation || ''}</td>
           <td style="text-align: center;">${statusText}</td>
@@ -1370,20 +1371,21 @@ const Households = () => {
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width: 5%;">STT</th>
-              <th style="width: 20%;">Họ và tên</th>
-              <th style="width: 8%;">Giới tính</th>
-              <th style="width: 12%;">Ngày sinh</th>
+              <th style="width: 4%;">STT</th>
+              <th style="width: 17%;">Họ và tên</th>
+              <th style="width: 7%;">Giới tính</th>
+              <th style="width: 10%;">Ngày sinh</th>
               <th style="width: 10%;">Quan hệ chủ hộ</th>
-              <th style="width: 12%;">Số CCCD</th>
-              <th style="width: 12%;">Số điện thoại</th>
-              <th style="width: 12%;">Nghề nghiệp</th>
+              <th style="width: 11%;">Số CCCD</th>
+              <th style="width: 10%;">Ngày cấp</th>
+              <th style="width: 10%;">Số điện thoại</th>
+              <th style="width: 11%;">Nghề nghiệp</th>
               <th style="width: 10%;">Trạng thái</th>
               <th>Ghi chú</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="10" style="text-align: center; padding: 20px;">Hộ gia đình chưa khai báo nhân khẩu</td></tr>'}
+            ${rowsHtml.length > 0 ? rowsHtml : '<tr><td colspan="11" style="text-align: center; padding: 20px;">Hộ gia đình chưa khai báo nhân khẩu</td></tr>'}
           </tbody>
         </table>
 
@@ -1707,6 +1709,11 @@ const Households = () => {
     if (policyFilter === 'martyr_family') {
       const martyrRows = filteredHouseholds.map((h, idx) => {
         const headName = getHeadName(h);
+        const headRes = h.head_of_household_id ? residents.find(r => r.id === h.head_of_household_id) : undefined;
+        const cccdVal = h.bank_account_holder_cccd || headRes?.cccd || '';
+        const cccdDateVal = (headRes && headRes.cccd === h.bank_account_holder_cccd && headRes.cccd_issue_date) 
+          ? formatToDisplayDate(headRes.cccd_issue_date) 
+          : (headRes?.cccd_issue_date ? formatToDisplayDate(headRes.cccd_issue_date) : '');
         return `<tr style="border-bottom:1px solid #e2e8f0">
           <td style="padding:7px 8px;text-align:center;color:#64748b">${idx + 1}</td>
           <td style="padding:7px 8px;font-weight:600">${headName}</td>
@@ -1716,7 +1723,8 @@ const Households = () => {
           <td style="padding:7px 8px;font-family:monospace">${h.bank_account_number || ''}</td>
           <td style="padding:7px 8px">${h.bank_name || ''}</td>
           <td style="padding:7px 8px">${h.bank_account_holder || ''}</td>
-          <td style="padding:7px 8px;font-family:monospace">${h.bank_account_holder_cccd || ''}</td>
+          <td style="padding:7px 8px;font-family:monospace">${cccdVal}</td>
+          <td style="padding:7px 8px;text-align:center">${cccdDateVal}</td>
           <td style="padding:7px 8px;text-align:center">${h.martyr_relation || ''}</td>
         </tr>`;
       }).join('');
@@ -1744,13 +1752,14 @@ const Households = () => {
           <th style="width:35px">STT</th>
           <th>Họ và tên<br/>(chủ hộ)</th>
           <th>Trú quán</th>
-          <th style="width:100px">Loại đối tượng</th>
+          <th style="width:90px">Loại đối tượng</th>
           <th>Họ và tên<br/>liệt sỹ</th>
-          <th style="width:130px">Số tài khoản</th>
-          <th style="width:110px">Tên Ngân hàng</th>
+          <th style="width:120px">Số tài khoản</th>
+          <th style="width:100px">Tên Ngân hàng</th>
           <th>Họ và tên người<br/>đứng tên tài khoản</th>
-          <th style="width:120px">Số CCCD<br/>của chủ TK</th>
-          <th style="width:90px">Mối quan hệ</th>
+          <th style="width:110px">Số CCCD<br/>của chủ TK</th>
+          <th style="width:95px">Ngày cấp</th>
+          <th style="width:80px">Mối quan hệ</th>
         </tr></thead>
         <tbody>${martyrRows}</tbody>
       </table>
@@ -1778,6 +1787,9 @@ const Households = () => {
     // ── Bảng thông thường (không phải liệt sỹ) ──
     const rows = filteredHouseholds.map((h, idx) => {
       const headName = getHeadName(h);
+      const headRes = h.head_of_household_id ? residents.find(r => r.id === h.head_of_household_id) : undefined;
+      const headCccd = headRes?.cccd || '';
+      const headCccdIssueDate = headRes?.cccd_issue_date ? formatToDisplayDate(headRes.cccd_issue_date) : '';
       const members = getHouseholdMembers(h.id);
       const memberCount = members.filter(m => m.status !== 'deceased').length;
       const pLabel = getPolicyLabel(h.policy_type);
@@ -1789,6 +1801,8 @@ const Households = () => {
         ${showTdpCol ? `<td style="padding:7px 8px;font-weight:600;color:#1e3a8a">${h.user_id ? (tdpMap[h.user_id] || '—') : '—'}</td>` : ''}
         <td style="padding:7px 8px;font-weight:600">${h.household_number}</td>
         <td style="padding:7px 8px;white-space:nowrap">${headName}</td>
+        <td style="padding:7px 8px;text-align:center;font-family:monospace">${headCccd}</td>
+        <td style="padding:7px 8px;text-align:center">${headCccdIssueDate}</td>
         <td style="padding:7px 8px">${h.address}</td>
         <td style="padding:7px 8px;text-align:center">${memberCount}</td>
         <td style="padding:7px 8px;text-align:center">${h.self_management_group || '—'}</td>
@@ -1824,15 +1838,17 @@ const Households = () => {
     <div class="subtitle">${tdpNameVal} – ${wardNameVal} &nbsp;|&nbsp; Ngày in: ${today} &nbsp;|&nbsp; Tổng số: <strong>${formatNumber(filteredHouseholds.length)}</strong> hộ</div>
     <table>
       <thead><tr>
-        <th style="width:40px">STT</th>
-        ${showTdpCol ? '<th style="width:120px">Tổ dân phố</th>' : ''}
-        <th style="width:100px">Số hộ khẩu</th>
+        <th style="width:35px">STT</th>
+        ${showTdpCol ? '<th style="width:110px">Tổ dân phố</th>' : ''}
+        <th style="width:90px">Số hộ khẩu</th>
         <th>Chủ hộ</th>
+        <th style="width:110px">Số CCCD</th>
+        <th style="width:95px">Ngày cấp</th>
         <th>Địa chỉ</th>
-        <th style="width:60px">Số NK</th>
-        <th style="width:100px">Tổ tự quản</th>
-        <th style="width:130px">Diện chính sách</th>
-        <th style="width:120px">Ghi chú</th>
+        <th style="width:55px">Số NK</th>
+        <th style="width:95px">Tổ tự quản</th>
+        <th style="width:120px">Diện chính sách</th>
+        <th style="width:100px">Ghi chú</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -1884,7 +1900,7 @@ const Households = () => {
       // ── Xuất Excel chuyên biệt cho Gia đình liệt sỹ 27/07 ──
       if (policyFilter === 'martyr_family') {
         const ws = workbook.addWorksheet('DS Gia dinh liet sy');
-        const totalCols = 'J'; // 10 cột: A→J
+        const totalCols = 'K'; // 11 cột: A→K
 
         // Tiêu đề
         ws.mergeCells(`A1:${totalCols}1`);
@@ -1901,7 +1917,7 @@ const Households = () => {
         subCell.alignment = { horizontal: 'center', vertical: 'middle' };
         ws.getRow(2).height = 22;
 
-        // Header row – 10 cột
+        // Header row – 11 cột
         const martyrHeaders = [
           'STT',
           'Họ và tên (chủ hộ)',
@@ -1912,6 +1928,7 @@ const Households = () => {
           'Tên Ngân hàng',
           'Họ và tên người đứng tên tài khoản',
           'Số CCCD của chủ TK',
+          'Ngày cấp CCCD',
           'Mối quan hệ'
         ];
         const martyrHeaderRow = ws.addRow(martyrHeaders);
@@ -1929,6 +1946,11 @@ const Households = () => {
         // Data rows
         filteredHouseholds.forEach((h, idx) => {
           const headName = getHeadName(h);
+          const headRes = h.head_of_household_id ? residents.find(r => r.id === h.head_of_household_id) : undefined;
+          const cccdVal = h.bank_account_holder_cccd || headRes?.cccd || '';
+          const cccdDateVal = (headRes && headRes.cccd === h.bank_account_holder_cccd && headRes.cccd_issue_date) 
+            ? formatToDisplayDate(headRes.cccd_issue_date) 
+            : (headRes?.cccd_issue_date ? formatToDisplayDate(headRes.cccd_issue_date) : '');
           const rowData = [
             idx + 1,
             headName,
@@ -1938,7 +1960,8 @@ const Households = () => {
             h.bank_account_number || '',
             h.bank_name || '',
             h.bank_account_holder || '',
-            h.bank_account_holder_cccd || '',
+            cccdVal,
+            cccdDateVal,
             h.martyr_relation || ''
           ];
           const dataRow = ws.addRow(rowData);
@@ -1953,6 +1976,7 @@ const Households = () => {
           dataRow.getCell(8).alignment = { horizontal: 'left', vertical: 'middle' };
           dataRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
           dataRow.getCell(10).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(11).alignment = { horizontal: 'center', vertical: 'middle' };
 
           dataRow.eachCell(cell => {
             if (!cell.font) cell.font = { name: 'Times New Roman', size: 11 };
@@ -1982,6 +2006,7 @@ const Households = () => {
           { width: 18 },  // Tên NH
           { width: 32 },  // Tên người đứng tên
           { width: 18 },  // CCCD chủ TK
+          { width: 15 },  // Ngày cấp CCCD
           { width: 16 }   // Mối quan hệ
         ];
 
@@ -1999,7 +2024,7 @@ const Households = () => {
       const ws = workbook.addWorksheet('Danh sach ho dan');
       const isAllView = !localStorage.getItem('selected_tdp_user_id') || localStorage.getItem('selected_tdp_user_id') === 'all';
       const showTdpCol = isAllView && (localStorage.getItem('user_role') === 'ward_admin' || localStorage.getItem('user_role') === 'super_admin');
-      const maxCol = showTdpCol ? 'I' : 'H';
+      const maxCol = showTdpCol ? 'K' : 'J';
 
       // Tiêu đề
       ws.mergeCells(`A1:${maxCol}1`);
@@ -2018,8 +2043,8 @@ const Households = () => {
 
       // Header row
       const headers = showTdpCol 
-        ? ['STT', 'Tổ dân phố', 'Số hộ khẩu', 'Chủ hộ', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú']
-        : ['STT', 'Số hộ khẩu', 'Chủ hộ', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú'];
+        ? ['STT', 'Tổ dân phố', 'Số hộ khẩu', 'Chủ hộ', 'Số CCCD', 'Ngày cấp CCCD', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú']
+        : ['STT', 'Số hộ khẩu', 'Chủ hộ', 'Số CCCD', 'Ngày cấp CCCD', 'Địa chỉ', 'Số nhân khẩu', 'Tổ tự quản', 'Diện chính sách', 'Ghi chú'];
       const headerRow = ws.addRow(headers);
       headerRow.height = 26;
       headerRow.eachCell(cell => {
@@ -2035,6 +2060,9 @@ const Households = () => {
       // Data rows
       filteredHouseholds.forEach((h, idx) => {
         const headName = getHeadName(h);
+        const headRes = h.head_of_household_id ? residents.find(r => r.id === h.head_of_household_id) : undefined;
+        const headCccd = headRes?.cccd || '';
+        const headCccdIssueDate = headRes?.cccd_issue_date ? formatToDisplayDate(headRes.cccd_issue_date) : '';
         const memberCount = getHouseholdMembers(h.id).filter(m => m.status !== 'deceased').length;
         const pLabel = getPolicyLabel(h.policy_type);
         const rowData = showTdpCol ? [
@@ -2042,6 +2070,8 @@ const Households = () => {
           h.user_id ? (tdpMap[h.user_id] || '—') : '—',
           h.household_number,
           headName,
+          headCccd,
+          headCccdIssueDate,
           h.address,
           memberCount,
           h.self_management_group || '',
@@ -2051,6 +2081,8 @@ const Households = () => {
           idx + 1,
           h.household_number,
           headName,
+          headCccd,
+          headCccdIssueDate,
           h.address,
           memberCount,
           h.self_management_group || '',
@@ -2065,31 +2097,35 @@ const Households = () => {
           dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
           dataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
           dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
-          dataRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
           dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
-          dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(7).alignment = { horizontal: 'left', vertical: 'middle' };
           dataRow.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(10).alignment = { horizontal: 'center', vertical: 'middle' };
           if (h.policy_type !== 'none') {
             const color = h.policy_type === 'poor' ? 'FFEF4444'
               : h.policy_type === 'near_poor' ? 'FFF97316'
               : h.policy_type === 'policy_family' ? 'FF3B82F6'
               : 'FF8B5CF6';
-            dataRow.getCell(8).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
+            dataRow.getCell(10).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
           }
         } else {
           dataRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
           dataRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
           dataRow.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
-          dataRow.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
+          dataRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
           dataRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
-          dataRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(6).alignment = { horizontal: 'left', vertical: 'middle' };
           dataRow.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(8).alignment = { horizontal: 'center', vertical: 'middle' };
+          dataRow.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
           if (h.policy_type !== 'none') {
             const color = h.policy_type === 'poor' ? 'FFEF4444'
               : h.policy_type === 'near_poor' ? 'FFF97316'
               : h.policy_type === 'policy_family' ? 'FF3B82F6'
               : 'FF8B5CF6';
-            dataRow.getCell(7).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
+            dataRow.getCell(9).font = { color: { argb: color }, bold: true, name: 'Times New Roman', size: 11 };
           }
         }
 
@@ -2115,12 +2151,12 @@ const Households = () => {
       // Column widths
       if (showTdpCol) {
         ws.columns = [
-          { width: 6 }, { width: 18 }, { width: 14 }, { width: 26 }, { width: 32 },
+          { width: 6 }, { width: 18 }, { width: 14 }, { width: 24 }, { width: 16 }, { width: 14 }, { width: 30 },
           { width: 12 }, { width: 16 }, { width: 22 }, { width: 20 }
         ];
       } else {
         ws.columns = [
-          { width: 6 }, { width: 14 }, { width: 26 }, { width: 32 },
+          { width: 6 }, { width: 14 }, { width: 24 }, { width: 16 }, { width: 14 }, { width: 32 },
           { width: 12 }, { width: 16 }, { width: 22 }, { width: 20 }
         ];
       }
