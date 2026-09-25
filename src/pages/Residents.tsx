@@ -368,6 +368,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
   const [temporaryResidenceExpiry, setTemporaryResidenceExpiry] = useState('');
   const [associationMembership, setAssociationMembership] = useState('');
   const [deathDate, setDeathDate] = useState('');
+  const [cccdIssueDate, setCccdIssueDate] = useState('');
 
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -529,6 +530,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     setGender('male');
     setDob('');
     setCccd('');
+    setCccdIssueDate('');
     setPhone('');
     setOccupation('');
     setPermanentAddress('Quảng Giao, Sầm Sơn, Thanh Hóa');
@@ -564,6 +566,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     setGender(r.gender);
     setDob(formatToDisplayDate(r.dob));
     setCccd(r.cccd || '');
+    setCccdIssueDate(r.cccd_issue_date ? formatToDisplayDate(r.cccd_issue_date) : '');
     setPhone(r.phone || '');
     setOccupation(r.occupation || '');
     setPermanentAddress(r.permanent_address);
@@ -615,6 +618,13 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       return;
     }
 
+    if (cccdIssueDate && !isValidDate(cccdIssueDate)) {
+      showToast('Ngày cấp CCCD không đúng định dạng dd/mm/yyyy (Ví dụ: 10/05/2021)!', 'warning');
+      return;
+    }
+
+    const dbCccdIssueDate = cccdIssueDate ? formatToDbDate(cccdIssueDate) : '';
+
     if (status === 'temporary_resident' && temporaryResidenceExpiry && !isValidDate(temporaryResidenceExpiry)) {
       showToast('Thời hạn tạm trú không đúng định dạng dd/mm/yyyy!', 'warning');
       return;
@@ -634,6 +644,7 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
       gender,
       dob: dbDob,
       cccd,
+      cccd_issue_date: dbCccdIssueDate || undefined,
       phone,
       occupation,
       permanent_address: permanentAddress,
@@ -2561,7 +2572,14 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     </span>
                   </td>
                   <td>{formatToDisplayDate(resident.dob)}</td>
-                  <td><code className="cccd-code">{resident.cccd || 'Chưa cấp'}</code></td>
+                  <td>
+                    <code className="cccd-code">{resident.cccd || 'Chưa cấp'}</code>
+                    {resident.cccd_issue_date && (
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                        Cấp: {formatToDisplayDate(resident.cccd_issue_date)}
+                      </div>
+                    )}
+                  </td>
                   <td>
                     <span className={`relation-badge ${resident.is_head ? 'head' : ''}`}>
                       {resident.relationship_with_head}
@@ -2753,18 +2771,6 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>CCCD / Định danh cá nhân</label>
-                  <input 
-                    type="text" 
-                    value={cccd} 
-                    onChange={(e) => setCccd(e.target.value)} 
-                    placeholder="12 chữ số" 
-                  />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
                   <label>Dân tộc</label>
                   <input 
                     type="text" 
@@ -2773,6 +2779,31 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     placeholder="Ví dụ: Kinh" 
                   />
                 </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>CCCD / Định danh cá nhân</label>
+                  <input 
+                    type="text" 
+                    value={cccd} 
+                    onChange={(e) => setCccd(e.target.value)} 
+                    placeholder="12 chữ số" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Ngày cấp CCCD</label>
+                  <input 
+                    type="text" 
+                    value={cccdIssueDate} 
+                    onChange={(e) => setCccdIssueDate(autoFormatDateInput(e.target.value))} 
+                    placeholder="Ví dụ: 10/05/2021" 
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
                   <label>Tôn giáo</label>
                   <input 
@@ -2782,9 +2813,6 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     placeholder="Ví dụ: Không, Phật giáo..." 
                   />
                 </div>
-              </div>
-
-              <div className="form-row">
                 <div className="form-group">
                   <label>Quốc tịch</label>
                   <input 
@@ -2794,23 +2822,24 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                     placeholder="Ví dụ: Việt Nam" 
                   />
                 </div>
-                <div className="form-group">
-                  <label>Trình độ học vấn</label>
-                  <select value={educationLevel} onChange={(e) => setEducationLevel(e.target.value)}>
-                    <option value="12/12">12/12</option>
-                    <option value="9/12">9/12</option>
-                    <option value="Cấp I">Cấp I</option>
-                    <option value="Cấp II">Cấp II</option>
-                    <option value="Đại học">Đại học</option>
-                    <option value="Cao đẳng">Cao đẳng</option>
-                    <option value="Trung cấp">Trung cấp</option>
-                    <option value="Thạc sĩ">Thạc sĩ</option>
-                    <option value="Tiến sĩ">Tiến sĩ</option>
-                    <option value="Chưa đi học">Chưa đi học</option>
-                    <option value="Còn nhỏ">Còn nhỏ</option>
-                    <option value="Khác">Khác</option>
-                  </select>
-                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Trình độ học vấn</label>
+                <select value={educationLevel} onChange={(e) => setEducationLevel(e.target.value)}>
+                  <option value="12/12">12/12</option>
+                  <option value="9/12">9/12</option>
+                  <option value="Cấp I">Cấp I</option>
+                  <option value="Cấp II">Cấp II</option>
+                  <option value="Đại học">Đại học</option>
+                  <option value="Cao đẳng">Cao đẳng</option>
+                  <option value="Trung cấp">Trung cấp</option>
+                  <option value="Thạc sĩ">Thạc sĩ</option>
+                  <option value="Tiến sĩ">Tiến sĩ</option>
+                  <option value="Chưa đi học">Chưa đi học</option>
+                  <option value="Còn nhỏ">Còn nhỏ</option>
+                  <option value="Khác">Khác</option>
+                </select>
               </div>
 
               <h3 style={{ margin: '16px 0 12px 0', fontSize: '0.95rem', color: 'var(--primary)', borderBottom: '1px solid var(--border)', paddingBottom: '4px' }}>2. Cư trú & Liên hệ</h3>
@@ -3082,6 +3111,9 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#0f766e', borderBottom: '1px solid var(--border)', paddingBottom: '6px', fontWeight: '700' }}>Giấy tờ & Liên lạc</h3>
                   <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Số CCCD/Định danh:</span> <span className="val" style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--text-main)' }}>{selectedResident.cccd || 'Chưa cấp'}</span></div>
+                  {selectedResident.cccd_issue_date && (
+                    <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Ngày cấp CCCD:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{formatToDisplayDate(selectedResident.cccd_issue_date)}</span></div>
+                  )}
                   <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Số điện thoại:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.phone || '—'}</span></div>
                   <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Trình độ học vấn:</span> <span className="val" style={{ color: 'var(--text-main)' }}>{selectedResident.education_level || '12/12'}</span></div>
                   <div className="detail-item" style={{ fontSize: '0.95rem' }}><span className="label" style={{ fontWeight: '600', color: 'var(--text-muted)' }}>Nghĩa vụ quân sự:</span> <span className="val" style={{ color: 'var(--text-main)' }}>

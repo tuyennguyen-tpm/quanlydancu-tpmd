@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS residents (
     gender TEXT CHECK (gender IN ('male', 'female', 'other')),
     dob DATE NOT NULL,
     cccd TEXT,
+    cccd_issue_date DATE,
     phone TEXT,
     occupation TEXT,
     permanent_address TEXT,

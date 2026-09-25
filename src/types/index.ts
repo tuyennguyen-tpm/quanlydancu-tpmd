@@ -42,6 +42,7 @@ export interface Resident {
   gender: 'male' | 'female' | 'other';
   dob: string;
   cccd: string;
+  cccd_issue_date?: string; // Ngày cấp CCCD (YYYY-MM-DD)
   phone?: string;
   occupation?: string;
   permanent_address: string;

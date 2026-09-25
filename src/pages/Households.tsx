@@ -145,6 +145,7 @@ const Households = () => {
   const [mGender, setMGender] = useState<'male' | 'female' | 'other'>('male');
   const [mDob, setMDob] = useState('');
   const [mCccd, setMCccd] = useState('');
+  const [mCccdIssueDate, setMCccdIssueDate] = useState('');
   const [mPhone, setMPhone] = useState('');
   const [mOccupation, setMOccupation] = useState('');
   const [mRelationship, setMRelationship] = useState('Con');
@@ -267,6 +268,7 @@ const Households = () => {
   const [newHeadGender, setNewHeadGender] = useState<'male' | 'female' | 'other'>('male');
   const [newHeadDob, setNewHeadDob] = useState('');
   const [newHeadCccd, setNewHeadCccd] = useState('');
+  const [newHeadCccdIssueDate, setNewHeadCccdIssueDate] = useState('');
   const [newHeadPhone, setNewHeadPhone] = useState('');
   const [newHeadOccupation, setNewHeadOccupation] = useState('');
 
@@ -477,6 +479,7 @@ const Households = () => {
     setNewHeadGender('male');
     setNewHeadDob('');
     setNewHeadCccd('');
+    setNewHeadCccdIssueDate('');
     setNewHeadPhone('');
     setNewHeadOccupation('');
     setIsFormOpen(true);
@@ -708,6 +711,7 @@ const Households = () => {
       if (!editingHousehold && createNewHead) {
         const generatedHeadId = generateUUID();
         const dbNewHeadDob = formatToDbDate(newHeadDob);
+        const dbNewHeadCccdIssueDate = newHeadCccdIssueDate && isValidDate(newHeadCccdIssueDate) ? formatToDbDate(newHeadCccdIssueDate) : undefined;
         const headPayload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
           id: generatedHeadId,
           household_id: hhId,
@@ -715,6 +719,7 @@ const Households = () => {
           gender: newHeadGender,
           dob: dbNewHeadDob,
           cccd: newHeadCccd.trim(),
+          cccd_issue_date: dbNewHeadCccdIssueDate,
           phone: newHeadPhone.trim(),
           occupation: newHeadOccupation.trim(),
           permanent_address: address.trim(),
@@ -1431,6 +1436,7 @@ const Households = () => {
     setMGender('male');
     setMDob('');
     setMCccd('');
+    setMCccdIssueDate('');
     setMPhone('');
     setMOccupation('');
     setMRelationship('Con');
@@ -1449,6 +1455,7 @@ const Households = () => {
     setMGender(member.gender);
     setMDob(member.dob ? formatToDisplayDate(member.dob) : '');
     setMCccd(member.cccd || '');
+    setMCccdIssueDate(member.cccd_issue_date ? formatToDisplayDate(member.cccd_issue_date) : '');
     setMPhone(member.phone || '');
     setMOccupation(member.occupation || '');
     setMRelationship(member.relationship_with_head || 'Thành viên');
@@ -1471,7 +1478,13 @@ const Households = () => {
       return;
     }
 
+    if (mCccdIssueDate && !isValidDate(mCccdIssueDate)) {
+      showToast('Ngày cấp CCCD không đúng định dạng dd/mm/yyyy (Ví dụ: 10/05/2021)!', 'warning');
+      return;
+    }
+
     const dbMDob = formatToDbDate(mDob);
+    const dbMCccdIssueDate = mCccdIssueDate ? formatToDbDate(mCccdIssueDate) : '';
 
     const payload: Omit<Resident, 'is_senior' | 'created_at'> & { is_senior?: boolean; created_at?: string } = {
       id: editingMember ? editingMember.id : generateUUID(),
@@ -1480,6 +1493,7 @@ const Households = () => {
       gender: mGender,
       dob: dbMDob,
       cccd: mCccd.trim(),
+      cccd_issue_date: dbMCccdIssueDate || undefined,
       phone: mPhone.trim(),
       occupation: mOccupation.trim(),
       permanent_address: targetHouseholdForMember.address,
@@ -2814,6 +2828,19 @@ const Households = () => {
                           />
                         </div>
                         <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                          <label>Ngày cấp CCCD</label>
+                          <input 
+                            type="text" 
+                            value={newHeadCccdIssueDate} 
+                            onChange={(e) => setNewHeadCccdIssueDate(autoFormatDateInput(e.target.value))} 
+                            placeholder="Ví dụ: 10/05/2021"
+                            maxLength={10}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-row" style={{ display: 'flex', gap: '12px', margin: 0 }}>
+                        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                           <label>Số điện thoại</label>
                           <input 
                             type="text" 
@@ -2822,16 +2849,15 @@ const Households = () => {
                             placeholder="Số điện thoại"
                           />
                         </div>
-                      </div>
-
-                      <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Nghề nghiệp chủ hộ</label>
-                        <input 
-                          type="text" 
-                          value={newHeadOccupation} 
-                          onChange={(e) => setNewHeadOccupation(e.target.value)} 
-                          placeholder="Ví dụ: Kinh doanh, Ngư dân..."
-                        />
+                        <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                          <label>Nghề nghiệp chủ hộ</label>
+                          <input 
+                            type="text" 
+                            value={newHeadOccupation} 
+                            onChange={(e) => setNewHeadOccupation(e.target.value)} 
+                            placeholder="Ví dụ: Kinh doanh, Ngư dân..."
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2934,7 +2960,14 @@ const Households = () => {
                         </td>
 
                         <td style={{ color: '#475569' }}>{formatToDisplayDate(member.dob)}</td>
-                        <td><code style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#334155' }}>{member.cccd || '—'}</code></td>
+                        <td>
+                          <code style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#334155' }}>{member.cccd || '—'}</code>
+                          {member.cccd_issue_date && (
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                              Cấp: {formatToDisplayDate(member.cccd_issue_date)}
+                            </div>
+                          )}
+                        </td>
                         <td style={{ color: '#475569' }}>{member.phone || '—'}</td>
                         <td style={{ color: '#475569' }}>{member.occupation || 'Tự do'}</td>
                         <td>
@@ -3462,6 +3495,19 @@ const Households = () => {
                   />
                 </div>
                 <div className="form-group">
+                  <label>Ngày cấp CCCD</label>
+                  <input 
+                    type="text" 
+                    value={mCccdIssueDate} 
+                    onChange={(e) => setMCccdIssueDate(autoFormatDateInput(e.target.value))} 
+                    placeholder="Ví dụ: 10/05/2021"
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
                   <label>Số điện thoại</label>
                   <input 
                     type="text" 
@@ -3469,17 +3515,6 @@ const Households = () => {
                     onChange={(e) => setMPhone(e.target.value)} 
                     placeholder="Ví dụ: 0912345678"
                   />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Quan hệ với chủ hộ *</label>
-                  <select value={mRelationship} onChange={(e) => setMRelationship(e.target.value)} required>
-                    {RELATIONSHIP_OPTIONS.map(opt => (
-                      <option key={opt} value={opt}>{opt === 'Khác' ? 'Quan hệ khác' : opt}</option>
-                    ))}
-                  </select>
                 </div>
                 <div className="form-group">
                   <label>Nghề nghiệp</label>
@@ -3494,6 +3529,14 @@ const Households = () => {
 
               <div className="form-row">
                 <div className="form-group">
+                  <label>Quan hệ với chủ hộ *</label>
+                  <select value={mRelationship} onChange={(e) => setMRelationship(e.target.value)} required>
+                    {RELATIONSHIP_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>{opt === 'Khác' ? 'Quan hệ khác' : opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
                   <label>Trạng thái cư trú *</label>
                   <select value={mStatus} onChange={(e: any) => setMStatus(e.target.value)} required>
                     <option value="resident">Thường trú</option>
@@ -3503,15 +3546,16 @@ const Households = () => {
                     <option value="deceased">Đã mất</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Nơi sinh</label>
-                  <input 
-                    type="text" 
-                    value={mPob} 
-                    onChange={(e) => setMPob(e.target.value)} 
-                    placeholder="Ví dụ: Bệnh viện Thanh Hóa"
-                  />
-                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Nơi sinh</label>
+                <input 
+                  type="text" 
+                  value={mPob} 
+                  onChange={(e) => setMPob(e.target.value)} 
+                  placeholder="Ví dụ: Bệnh viện Thanh Hóa"
+                />
               </div>
 
               <div className="form-group">

@@ -1051,7 +1051,19 @@ export const db = {
         ward_id: fullResident.ward_id || localStorage.getItem('user_ward_id') || undefined,
         household_id: fullResident.household_id || null
       });
-      const { data, error } = await supabase.from('residents').upsert(dbPayload).select().single();
+      let { data, error } = await supabase.from('residents').upsert(dbPayload).select().single();
+      if (error) {
+        const isMissingColumn = error.message?.toLowerCase().includes('column') || 
+                                error.code === '42703' ||
+                                error.message?.toLowerCase().includes('does not exist');
+        if (isMissingColumn && (dbPayload as any).cccd_issue_date) {
+          console.warn('Cột cccd_issue_date chưa được tạo trên Supabase. Lưu tạm không có ngày cấp CCCD. Hãy chạy SQL migration.');
+          const { cccd_issue_date, ...basePayload } = dbPayload as any;
+          const retryRes = await supabase.from('residents').upsert(basePayload).select().single();
+          data = retryRes.data;
+          error = retryRes.error;
+        }
+      }
       if (error) {
         handleDbError('lưu nhân khẩu', error);
         throw new Error(`Không thể lưu nhân khẩu: ${error.message}`);
@@ -1059,6 +1071,7 @@ export const db = {
       if (data) {
         const fullRes = {
           ...data,
+          cccd_issue_date: fullResident.cccd_issue_date,
           is_senior: fullResident.is_senior
         } as Resident;
         const residents = getStorageItem<Resident[]>('residents', seedResidents);
