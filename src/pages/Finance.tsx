@@ -264,16 +264,74 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     };
   }, []);
 
+  // Tối ưu hóa hiệu năng: Map tra cứu nhân khẩu theo Hộ gia đình
+  const residentsByHhMap = useMemo(() => {
+    const map = new Map<string, Resident[]>();
+    residents.forEach(r => {
+      if (r.household_id) {
+        if (!map.has(r.household_id)) map.set(r.household_id, []);
+        map.get(r.household_id)!.push(r);
+      }
+    });
+    return map;
+  }, [residents]);
+
+  // Chuẩn hóa chính xác 1-1 từng Hộ vào đúng Tổ tự quản (không thể bị lẫn lộn giữa các tổ)
+  const getCanonicalHouseholdGroup = (hh: Household): string => {
+    const rawSmg = (hh.self_management_group || '').trim();
+    if (rawSmg && rawSmg !== 'Chưa phân tổ' && rawSmg.toLowerCase() !== 'chua phan to') {
+      const exact = groups.find(g => g.trim().toLowerCase() === rawSmg.toLowerCase());
+      if (exact) return exact;
+
+      if (/việt\s*trung|viet\s*trung|\bvt\b/i.test(rawSmg)) {
+        const vt = groups.find(g => /việt\s*trung|viet\s*trung/i.test(g));
+        if (vt) return vt;
+      }
+
+      const numMatch = rawSmg.match(/\b(?:tổ|to|cụm|cum|xóm|xom)?\s*0?([4-9])\b/i);
+      if (numMatch) {
+        const matched = groups.find(g => g.includes(numMatch[1]));
+        if (matched) return matched;
+      }
+    }
+
+    const rawAddr = (hh.address || '').trim();
+    if (rawAddr) {
+      if (/việt\s*trung|viet\s*trung|\bvt\b/i.test(rawAddr)) {
+        const vt = groups.find(g => /việt\s*trung|viet\s*trung/i.test(g));
+        if (vt) return vt;
+      }
+      const numMatch = rawAddr.match(/\b(?:tổ|to|cụm|cum|xóm|xom|t)\s*:?\s*0?([4-9])\b/i);
+      if (numMatch) {
+        const matched = groups.find(g => g.includes(numMatch[1]));
+        if (matched) return matched;
+      }
+    }
+
+    const hhResidents = residentsByHhMap.get(hh.id) || [];
+    for (const r of hhResidents) {
+      const rAddr = ((r.permanent_address || '') + ' ' + (r.temporary_address || '')).trim();
+      if (rAddr) {
+        if (/việt\s*trung|viet\s*trung|\bvt\b/i.test(rAddr)) {
+          const vt = groups.find(g => /việt\s*trung|viet\s*trung/i.test(g));
+          if (vt) return vt;
+        }
+        const numMatch = rAddr.match(/\b(?:tổ|to|cụm|cum|xóm|xom|t)\s*:?\s*0?([4-9])\b/i);
+        if (numMatch) {
+          const matched = groups.find(g => g.includes(numMatch[1]));
+          if (matched) return matched;
+        }
+      }
+    }
+
+    return 'Chưa phân tổ';
+  };
+
   // 0. Tối ưu hóa hiệu năng: Tạo Map tra cứu nhanh tên chủ hộ của từng hộ gia đình (hỗ trợ đa tầng fallback)
   const headNameMap = useMemo(() => {
     const resMap = new Map<string, Resident>();
-    const resByHh = new Map<string, Resident[]>();
     residents.forEach(r => {
       resMap.set(r.id, r);
-      if (r.household_id) {
-        if (!resByHh.has(r.household_id)) resByHh.set(r.household_id, []);
-        resByHh.get(r.household_id)!.push(r);
-      }
     });
     
     const map = new Map<string, string>();
@@ -284,7 +342,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         if (head?.full_name) headName = head.full_name;
       }
       if (!headName) {
-        const hhResidents = resByHh.get(hh.id) || [];
+        const hhResidents = residentsByHhMap.get(hh.id) || [];
         const headRes = hhResidents.find(r => r.is_head || (r.relationship_with_head && r.relationship_with_head.trim().toLowerCase() === 'chủ hộ')) || hhResidents[0];
         if (headRes?.full_name) headName = headRes.full_name;
       }
@@ -299,7 +357,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       }
     });
     return map;
-  }, [residents, households]);
+  }, [residents, households, residentsByHhMap]);
 
   const getHouseholdHeadName = (hh: Household) => {
     return headNameMap.get(hh.id) || (hh.martyr_name ? hh.martyr_name : ('Hộ số: ' + (hh.household_number || '')));
@@ -1147,30 +1205,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       });
 
       const matchHouseholdGroup = (hh: Household, groupName: string) => {
-        const smg = (hh.self_management_group || '').trim().toLowerCase();
-        const filterVal = groupName.trim().toLowerCase();
-        if (smg === filterVal) return true;
-        if (smg.includes(filterVal) || filterVal.includes(smg)) return true;
-
-        const extractNum = (s: string) => {
-          const m = s.match(/(\d+)\s*$/);
-          return m ? m[1] : null;
-        };
-        const extractName = (s: string) => {
-          const lower = s.toLowerCase();
-          if (lower.includes('việt trung')) return 'việt trung';
-          return null;
-        };
-
-        const numFilter = extractNum(filterVal);
-        const numSmg = extractNum(smg);
-        const nameFilter = extractName(filterVal);
-        const nameSmg = extractName(smg);
-
-        if (nameFilter && nameSmg) return nameFilter === nameSmg;
-        if (nameFilter) return smg.includes(nameFilter);
-        if (numFilter && numSmg) return numFilter === numSmg;
-        return false;
+        return getCanonicalHouseholdGroup(hh) === groupName;
       };
 
       const addFundWorksheet = (sheetName: string, rawList: Household[], headerColorArgb = 'FF0F766E', isSummarySheet = false) => {
@@ -1240,10 +1275,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
         // 4. Sắp xếp danh sách hộ theo tổ rồi đến tên chủ hộ
         const sortedList = [...list].sort((a, b) => {
-          const gA = a.self_management_group || '';
-          const gB = b.self_management_group || '';
-          const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
-          const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+          const gA = getCanonicalHouseholdGroup(a);
+          const gB = getCanonicalHouseholdGroup(b);
+          const idxA = groups.indexOf(gA);
+          const idxB = groups.indexOf(gB);
           const rankA = idxA !== -1 ? idxA : 999;
           const rankB = idxB !== -1 ? idxB : 999;
           if (rankA !== rankB) return rankA - rankB;
@@ -1256,10 +1291,22 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         sortedList.forEach((hh, idx) => {
           const headName = getHouseholdHeadName(hh);
           const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
-          const group = hh.self_management_group || '';
+          const group = getCanonicalHouseholdGroup(hh);
 
           let displayAddress = hh.address || '';
-          if (group) {
+          if (!displayAddress) {
+            const hhResidents = residentsByHhMap.get(hh.id) || [];
+            for (const r of hhResidents) {
+              if (r.permanent_address) {
+                displayAddress = r.permanent_address;
+                break;
+              } else if (r.temporary_address) {
+                displayAddress = r.temporary_address;
+                break;
+              }
+            }
+          }
+          if (group && group !== 'Chưa phân tổ') {
             const cleanGroup = group.replace(/^(tổ|cụm)\s*/gi, '').trim();
             const groupRegex = new RegExp(`\\b(tổ|cụm)?\\s*${cleanGroup}\\b`, 'gi');
             displayAddress = displayAddress.replace(groupRegex, '');
@@ -1273,7 +1320,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
           const rowData: (string | number)[] = [
             idx + 1,
-            ...(isSummarySheet ? [group || '—'] : []),
+            ...(isSummarySheet ? [group] : []),
             headName,
             displayAddress,
             totalPaid
@@ -1419,13 +1466,13 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       const groupHeaderColors = ['FF1E3A8A', 'FF1E40AF', 'FF1D4ED8', 'FF2563EB', 'FF0284C7', 'FF0369A1', 'FF0D9488', 'FF115E59'];
 
       groups.forEach((groupName, idx) => {
-        const groupHouseholds = exportHouseholds.filter(hh => matchHouseholdGroup(hh, groupName));
+        const groupHouseholds = exportHouseholds.filter(hh => getCanonicalHouseholdGroup(hh) === groupName);
         const color = groupHeaderColors[idx % groupHeaderColors.length];
         addFundWorksheet(groupName, groupHouseholds, color, false);
       });
 
       // 3. Sheet cho hộ chưa phân tổ (nếu có)
-      const unassignedHouseholds = exportHouseholds.filter(hh => !groups.some(g => matchHouseholdGroup(hh, g)));
+      const unassignedHouseholds = exportHouseholds.filter(hh => getCanonicalHouseholdGroup(hh) === 'Chưa phân tổ');
       if (unassignedHouseholds.length > 0) {
         addFundWorksheet('Chưa Phân Tổ', unassignedHouseholds, 'FF475569', false);
       }
@@ -4792,17 +4839,18 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
       // Lọc theo phân quyền Tổ (cấp TDP) hoặc TDP (cấp phường)
       const matchesTdp = !isWardUser || tdpFilter === 'all' || hh.user_id === tdpFilter;
-      const matchesGroup = isWardUser || fundGroupFilter === 'all' || hh.self_management_group === fundGroupFilter;
+      const hhGroup = getCanonicalHouseholdGroup(hh);
+      const matchesGroup = isWardUser || fundGroupFilter === 'all' || hhGroup === fundGroupFilter;
       
       return matchesTdp && matchesGroup;
     });
 
     return list.sort((a, b) => {
-      const gA = a.self_management_group || '';
-      const gB = b.self_management_group || '';
+      const gA = getCanonicalHouseholdGroup(a);
+      const gB = getCanonicalHouseholdGroup(b);
       
-      const idxA = groups.findIndex(g => g.trim().toLowerCase() === gA.trim().toLowerCase());
-      const idxB = groups.findIndex(g => g.trim().toLowerCase() === gB.trim().toLowerCase());
+      const idxA = groups.indexOf(gA);
+      const idxB = groups.indexOf(gB);
       
       const rankA = idxA !== -1 ? idxA : 999;
       const rankB = idxB !== -1 ? idxB : 999;
@@ -4816,7 +4864,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       const nameB = getHouseholdHeadName(b).toLowerCase();
       return nameA.localeCompare(nameB, 'vi');
     });
-  }, [households, householdPaymentStatusMap, totalPaidLookup, fundSearchTerm, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups, fundYear]);
+  }, [households, householdPaymentStatusMap, totalPaidLookup, fundSearchTerm, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups, fundYear, residentsByHhMap]);
 
   // Thống kê tổng quan số Hộ nộp Quỹ Tổ dân phố (khớp chuẩn tuyệt đối với Quỹ Phường: 1.352 hộ — 532 nộp đủ, 650 đã nộp, 702 chưa nộp)
   const householdOverallStats = useMemo(() => {
@@ -4831,7 +4879,8 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       if (!matchesSearch) return false;
 
       const matchesTdp = !isWardUser || tdpFilter === 'all' || hh.user_id === tdpFilter;
-      const matchesGroup = isWardUser || fundGroupFilter === 'all' || hh.self_management_group === fundGroupFilter;
+      const hhGroup = getCanonicalHouseholdGroup(hh);
+      const matchesGroup = isWardUser || fundGroupFilter === 'all' || hhGroup === fundGroupFilter;
       return matchesTdp && matchesGroup;
     });
 
@@ -4867,7 +4916,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       paidFullPercent,
       paidAnyPercent
     };
-  }, [households, householdPaymentStatusMap, fundSearchTerm, fundGroupFilter, tdpFilter, isWardUser]);
+  }, [households, householdPaymentStatusMap, fundSearchTerm, fundGroupFilter, tdpFilter, isWardUser, groups, residentsByHhMap]);
 
   const totalHhCount = householdOverallStats.totalHouseholds;
   const paidHhCount = householdOverallStats.paidAnyHouseholds;
@@ -5830,6 +5879,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     {groups.map(g => (
                       <option key={g} value={g}>{g}</option>
                     ))}
+                    <option value="Chưa phân tổ">Chưa phân tổ</option>
                   </select>
                 </div>
               )}
@@ -6116,7 +6166,12 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   return (
                     <tr key={hh.id}>
                       <td>
-                        <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{headName}</div>
+                        <div style={{ fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {headName}
+                          <span style={{ fontSize: '0.7rem', padding: '1px 6px', borderRadius: '4px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontWeight: '600' }}>
+                            {getCanonicalHouseholdGroup(hh)}
+                          </span>
+                        </div>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>{hh.address}</div>
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: '700', color: totalPaid > 0 || isAllTdpPaid ? 'var(--success)' : 'var(--text-muted)' }}>
@@ -6133,8 +6188,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                         const fundConfig = fundList.find(f => f.name === fundName);
                         const targetAmt = fundConfig ? fundConfig.target : 0;
                         const isKhuyenHoc = fundName.toLowerCase().includes('khuyến học') || fundName.toLowerCase().includes('khuyen hoc');
-                        const hhAddr = ((hh.address || '') + ' ' + ((hh as any).self_management_group || '')).toLowerCase();
-                        const isGroup8 = hhAddr.includes('tổ 8') || hhAddr.includes('to 8') || ((hh as any).self_management_group || '').trim() === 'Tổ 8';
+                        const isGroup8 = getCanonicalHouseholdGroup(hh) === 'Tổ 8';
                         const isExemptTdpGroup8 = isKhuyenHoc && isGroup8 && Number(fundYear) === 2026;
 
                         const isEffectivePaid = amountPaid > 0 || (isAllTdpPaid && !isExemptTdpGroup8);
