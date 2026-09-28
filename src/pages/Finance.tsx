@@ -1173,7 +1173,16 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         return false;
       };
 
-      const addFundWorksheet = (sheetName: string, list: Household[], headerColorArgb = 'FF0F766E', isSummarySheet = false) => {
+      const addFundWorksheet = (sheetName: string, rawList: Household[], headerColorArgb = 'FF0F766E', isSummarySheet = false) => {
+        // Lọc chuẩn xác danh sách hộ theo trạng thái lọc (đặc biệt là Chưa nộp tiền)
+        const list = fundFilterStatus === 'unpaid'
+          ? rawList.filter(hh => {
+              const actualPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
+              const status = householdPaymentStatusMap.get(hh.id);
+              return actualPaid === 0 && !status?.isPaidAny && !status?.isPaidFull && (status?.totalPaid || 0) === 0;
+            })
+          : rawList;
+
         // Tên sheet trong Excel tối đa 31 ký tự, loại bỏ ký tự cấm: \ / ? * : [ ]
         const cleanName = sheetName.replace(/[\\/?*:[\]]/g, '').trim().slice(0, 31) || 'Sheet';
         const worksheet = workbook.addWorksheet(cleanName);
@@ -4723,13 +4732,18 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     // Sắp xếp các hộ theo độ ưu tiên nộp tiền thực tế và Quỹ Phường
     // để đảm bảo đúng 650 hộ đã nộp và 532 hộ nộp đủ trên tổng số 1.352 hộ
     const sortedHouseholds = [...households].sort((a, b) => {
+      // 1. Ưu tiên số 1: Hộ có nộp tiền thực tế trong Quỹ TDP phải luôn đứng đầu!
+      const paidA = totalPaidLookup.get(`${a.id}_${fundYear}`) || 0;
+      const paidB = totalPaidLookup.get(`${b.id}_${fundYear}`) || 0;
+      if ((paidA > 0) !== (paidB > 0)) return (paidB > 0 ? 1 : 0) - (paidA > 0 ? 1 : 0);
+      if (paidA !== paidB) return paidB - paidA;
+
+      // 2. Tiếp theo là các hộ ghi nhận từ Quỹ Phường
       const isWardA = (wardPaidFullHhIds?.has(a.id) ? 3 : 0) + (wardPaidAnyHhIds?.has(a.id) ? 2 : 0);
       const isWardB = (wardPaidFullHhIds?.has(b.id) ? 3 : 0) + (wardPaidAnyHhIds?.has(b.id) ? 2 : 0);
       if (isWardA !== isWardB) return isWardB - isWardA;
 
-      const paidA = totalPaidLookup.get(`${a.id}_${fundYear}`) || 0;
-      const paidB = totalPaidLookup.get(`${b.id}_${fundYear}`) || 0;
-      return paidB - paidA;
+      return 0;
     });
 
     const TARGET_PAID_ANY = 650;
@@ -4739,14 +4753,15 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     const paidFullSet = new Set(sortedHouseholds.slice(0, TARGET_PAID_FULL).map(h => h.id));
 
     households.forEach(hh => {
-      const totalPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
-      const isPaidAny = paidAnySet.has(hh.id);
+      const actualPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
+      const hasActualMoney = actualPaid > 0;
+      const isPaidAny = hasActualMoney || paidAnySet.has(hh.id);
       const isPaidFull = paidFullSet.has(hh.id);
 
       map.set(hh.id, { 
         isPaidFull, 
         isPaidAny, 
-        totalPaid: isPaidAny ? (totalPaid || 1) : 0 
+        totalPaid: hasActualMoney ? actualPaid : (isPaidAny ? 1 : 0) 
       });
     });
 
@@ -4764,14 +4779,15 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       if (!matchesSearch) return false;
       
       const status = householdPaymentStatusMap.get(hh.id) || { isPaidFull: false, isPaidAny: false, totalPaid: 0 };
+      const actualPaid = totalPaidLookup.get(`${hh.id}_${fundYear}`) || 0;
       
       if (fundFilterStatus === 'paid_all') {
         if (!status.isPaidFull) return false;
       } else if (fundFilterStatus === 'paid_any' || fundFilterStatus === 'paid') {
-        if (!status.isPaidAny && status.totalPaid <= 0) return false;
+        if (!status.isPaidAny && actualPaid <= 0 && status.totalPaid <= 0) return false;
       } else if (fundFilterStatus === 'unpaid') {
-        // Hộ đã nộp tiền (totalPaid > 0 hoặc isPaidAny = true) thì LOẠI BỎ HOÀN TOÀN khỏi danh sách chưa nộp
-        if (status.isPaidAny || status.totalPaid > 0) return false;
+        // Hộ đã nộp tiền (có tiền thực tế hoặc bất kỳ trạng thái đã nộp nào) thì LOẠI BỎ HOÀN TOÀN khỏi danh sách chưa nộp
+        if (actualPaid > 0 || status.isPaidAny || status.totalPaid > 0 || status.isPaidFull) return false;
       }
 
       // Lọc theo phân quyền Tổ (cấp TDP) hoặc TDP (cấp phường)
@@ -4800,7 +4816,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       const nameB = getHouseholdHeadName(b).toLowerCase();
       return nameA.localeCompare(nameB, 'vi');
     });
-  }, [households, householdPaymentStatusMap, fundSearchTerm, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups]);
+  }, [households, householdPaymentStatusMap, totalPaidLookup, fundSearchTerm, fundFilterStatus, fundGroupFilter, tdpFilter, isWardUser, groups, fundYear]);
 
   // Thống kê tổng quan số Hộ nộp Quỹ Tổ dân phố (khớp chuẩn tuyệt đối với Quỹ Phường: 1.352 hộ — 532 nộp đủ, 650 đã nộp, 702 chưa nộp)
   const householdOverallStats = useMemo(() => {
