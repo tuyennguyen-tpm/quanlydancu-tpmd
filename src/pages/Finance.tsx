@@ -1964,7 +1964,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           @media print {
             @page {
               size: A4 portrait;
-              margin: 8mm 12mm;
+              margin: 6mm 10mm;
             }
             html, body {
               margin: 0;
@@ -1974,18 +1974,25 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               display: none !important;
             }
             body {
-              padding-top: 5px !important;
+              padding-top: 0 !important;
             }
             .receipt-lien-wrapper {
               page-break-inside: avoid !important;
+              page-break-after: always !important;
+            }
+            .receipt-details-table th, .receipt-details-table td {
+              padding: 2.5px 5px !important;
+            }
+            .receipt-signatures-table {
+              margin-top: 4px !important;
             }
           }
           body {
             font-family: "Times New Roman", Times, serif;
-            font-size: 10pt;
-            line-height: 1.35;
+            font-size: 9.5pt;
+            line-height: 1.3;
             color: #000;
-            padding: 5px;
+            padding: 2px;
             padding-top: 55px;
           }
           .receipt-container {
@@ -2003,49 +2010,49 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           }
           .receipt-org-title {
             font-weight: bold;
-            font-size: 10pt !important;
-            line-height: 1.3;
-          }
-          .receipt-form-title {
-            text-align: right;
             font-size: 9.5pt !important;
             line-height: 1.25;
           }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9pt !important;
+            line-height: 1.2;
+          }
           .receipt-title-container {
             text-align: center;
-            margin-top: 6px !important;
-            margin-bottom: 6px !important;
+            margin-top: 3px !important;
+            margin-bottom: 3px !important;
           }
           .receipt-title {
-            font-size: 15.5pt !important;
+            font-size: 14pt !important;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 2px !important;
+            margin-bottom: 1px !important;
           }
           .receipt-subtitle {
             font-style: italic;
-            font-size: 9.5pt !important;
+            font-size: 9pt !important;
           }
           .receipt-info-table {
             width: 100%;
-            margin-bottom: 4px !important;
+            margin-bottom: 3px !important;
             border-collapse: collapse;
           }
           .receipt-info-table td {
-            padding: 2px 0 !important;
-            font-size: 10pt !important;
+            padding: 1.5px 0 !important;
+            font-size: 9.5pt !important;
           }
           .receipt-details-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 4px !important;
-            margin-bottom: 4px !important;
+            margin-top: 3px !important;
+            margin-bottom: 3px !important;
           }
           .receipt-details-table th, .receipt-details-table td {
             border: 1px solid #000 !important;
-            padding: 4px 6px !important;
-            font-size: 9.5pt !important;
+            padding: 3px 5px !important;
+            font-size: 9pt !important;
             vertical-align: middle;
           }
           .receipt-details-table th {
@@ -2056,15 +2063,15 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           .receipt-signatures-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px !important;
+            margin-top: 4px !important;
             page-break-inside: avoid !important;
           }
           .receipt-signatures-table td {
             border: none;
             text-align: center;
-            font-size: 9.5pt !important;
+            font-size: 9pt !important;
             vertical-align: top;
-            padding: 2px !important;
+            padding: 1px !important;
           }
           
           .print-toolbar {
