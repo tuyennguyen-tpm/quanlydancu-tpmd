@@ -74,9 +74,11 @@ import {
   FolderOpen,
   Sprout,
   Zap,
+  HeartHandshake,
   Mail,
-  HeartHandshake
+  QrCode
 } from 'lucide-react';
+import { POPULAR_VIETNAMESE_BANKS, type PaymentQrConfig } from './utils/vietQrHelper';
 import './App.css';
 
 interface NavItemProps {
@@ -1326,6 +1328,32 @@ const App = () => {
     return () => window.removeEventListener('official-signatures-changed', handleSigChange);
   }, []);
 
+  // Payment QR Config State
+  const [qrBankBin, setQrBankBin] = useState('');
+  const [qrBankName, setQrBankName] = useState('');
+  const [qrAccountNumber, setQrAccountNumber] = useState('');
+  const [qrAccountHolder, setQrAccountHolder] = useState('');
+  const [qrCustomUrl, setQrCustomUrl] = useState('');
+
+  useEffect(() => {
+    const loadQrCfg = () => {
+      try {
+        const raw = localStorage.getItem('payment_qr_config');
+        if (raw) {
+          const cfg: PaymentQrConfig = JSON.parse(raw);
+          setQrBankBin(cfg.bankBin || '');
+          setQrBankName(cfg.bankName || '');
+          setQrAccountNumber(cfg.accountNumber || '');
+          setQrAccountHolder(cfg.accountHolder || '');
+          setQrCustomUrl(cfg.customQrUrl || '');
+        }
+      } catch {}
+    };
+    loadQrCfg();
+    window.addEventListener('payment-qr-config-changed', loadQrCfg);
+    return () => window.removeEventListener('payment-qr-config-changed', loadQrCfg);
+  }, []);
+
   // Password change states
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -2254,6 +2282,25 @@ const App = () => {
       } catch {}
     }
 
+    // Load payment QR configuration
+    try {
+      const savedQr = localStorage.getItem('payment_qr_config');
+      if (savedQr) {
+        const parsed = JSON.parse(savedQr);
+        setQrBankBin(parsed.bankBin || '');
+        setQrBankName(parsed.bankName || '');
+        setQrAccountNumber(parsed.accountNumber || '');
+        setQrAccountHolder(parsed.accountHolder || '');
+        setQrCustomUrl(parsed.customQrUrl || '');
+      } else {
+        setQrBankBin('');
+        setQrBankName('');
+        setQrAccountNumber('');
+        setQrAccountHolder('');
+        setQrCustomUrl('');
+      }
+    } catch {}
+
     const isSuper = localStorage.getItem('user_role') === 'super_admin' || (localStorage.getItem('user_role') === 'ward_admin' && localStorage.getItem('user_full_name') === 'Nguyễn Kim Tuyến');
     const isWardOrSuper = localStorage.getItem('user_role') === 'super_admin' || localStorage.getItem('user_role') === 'ward_admin';
     if (isWardOrSuper) {
@@ -2395,6 +2442,17 @@ const App = () => {
     // Lưu chữ ký & tên cán bộ
     await (db as any).saveOfficialSignatures(officialSignatures);
     window.dispatchEvent(new CustomEvent('official-signatures-changed'));
+
+    // Lưu cấu hình Tài khoản / Mã QR ngân hàng
+    const qrConfigToSave: PaymentQrConfig = {
+      bankBin: qrBankBin.trim(),
+      bankName: qrBankName.trim(),
+      accountNumber: qrAccountNumber.trim(),
+      accountHolder: qrAccountHolder.trim().toUpperCase(),
+      customQrUrl: qrCustomUrl.trim()
+    };
+    await (db as any).savePaymentQrConfig(qrConfigToSave);
+    window.dispatchEvent(new CustomEvent('payment-qr-config-changed'));
     
     // Lưu phiên bản mới nhất
     const newVersion = latestAppVersionInput.trim() || APP_VERSION;
@@ -4114,6 +4172,232 @@ const App = () => {
                 <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
                   * Tải ảnh chữ ký nền trong suốt (PNG) để hiển thị đẹp hơn. Tối đa 2MB mỗi ảnh.
                 </div>
+              </div>
+
+              {/* ─── Phần 1c: Cấu hình Tài khoản Ngân hàng / Mã VietQR In Biên lai ─── */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(2,132,199,0.06), rgba(2,132,199,0.02))',
+                border: '1.5px solid rgba(2,132,199,0.22)',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginTop: '12px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.82rem', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <QrCode size={18} /> 💳 Tài khoản Ngân hàng & Mã VietQR (In Biên lai gộp)
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: '#0369a1', background: '#e0f2fe', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>
+                    Tự động tạo số tiền chuẩn
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: '1.5' }}>
+                  Cấu hình tài khoản nhận tiền thu nộp quỹ. Khi in <strong>Biên lai gộp</strong> (hoặc phiếu thu quỹ), mã QR sẽ tự động sinh ra kèm chính xác số tiền thực thu và nội dung nộp tiền để người dân quét chuyển khoản nhanh.
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                  {/* Chọn ngân hàng */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '4px', display: 'block' }}>
+                      Ngân hàng nhận tiền
+                    </label>
+                    <select
+                      value={qrBankBin}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setQrBankBin(val);
+                        const found = POPULAR_VIETNAMESE_BANKS.find(b => b.bin === val || b.code === val);
+                        if (found) {
+                          setQrBankName(found.shortName);
+                        } else if (!val) {
+                          setQrBankName('');
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.85rem',
+                        background: 'white',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="">-- Chọn ngân hàng --</option>
+                      {POPULAR_VIETNAMESE_BANKS.map(b => (
+                        <option key={b.bin} value={b.bin}>
+                          {b.shortName} - {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Số tài khoản */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '4px', display: 'block' }}>
+                      Số tài khoản ngân hàng
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: 10287388484"
+                      value={qrAccountNumber}
+                      onChange={(e) => setQrAccountNumber(e.target.value.replace(/\s+/g, ''))}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.85rem',
+                        fontFamily: 'monospace',
+                        fontWeight: 'bold',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Tên chủ tài khoản */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '4px', display: 'block' }}>
+                      Tên chủ tài khoản (In hoa không dấu)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: NGUYEN VAN A"
+                      value={qrAccountHolder}
+                      onChange={(e) => setQrAccountHolder(e.target.value.toUpperCase())}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Tuỳ chọn: Tải ảnh QR tĩnh riêng */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '4px', display: 'block' }}>
+                      (Tùy chọn) Hoặc tải file ảnh QR tĩnh
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <label style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '7px 12px',
+                        background: '#f1f5f9',
+                        border: '1px dashed #94a3b8',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        color: '#475569',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        <Upload size={14} /> Tải ảnh QR
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 2 * 1024 * 1024) {
+                                window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: 'Ảnh QR tối đa 2MB!', type: 'warning' } }));
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                setQrCustomUrl(ev.target?.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                      {qrCustomUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setQrCustomUrl('')}
+                          style={{
+                            padding: '6px 10px',
+                            background: '#fee2e2',
+                            color: '#dc2626',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.78rem',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Xóa ảnh tĩnh
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview VietQR demo */}
+                {(qrBankBin && qrAccountNumber) ? (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '10px 14px',
+                    background: '#ffffff',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px'
+                  }}>
+                    <img
+                      src={`https://img.vietqr.io/image/${encodeURIComponent(qrBankBin)}-${encodeURIComponent(qrAccountNumber)}-compact2.png?amount=100000&addInfo=DEMO%20NOP%20QUY&accountName=${encodeURIComponent(qrAccountHolder)}`}
+                      alt="Demo VietQR"
+                      style={{ width: '64px', height: '64px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                    />
+                    <div style={{ fontSize: '0.78rem', color: '#1e293b', lineHeight: '1.4' }}>
+                      <div style={{ fontWeight: 'bold', color: '#0369a1' }}>✅ Mã VietQR hoạt động tốt!</div>
+                      <div>Ngân hàng: <strong>{qrBankName || qrBankBin}</strong> — STK: <strong>{qrAccountNumber}</strong></div>
+                      <div>Chủ tài khoản: <strong>{qrAccountHolder || 'CHƯA ĐIỀN'}</strong></div>
+                      <div style={{ color: '#059669', fontSize: '0.72rem', marginTop: '2px' }}>
+                        * Khi in biên lai, mã sẽ tự động gán chính xác số tiền của biên lai đó.
+                      </div>
+                    </div>
+                  </div>
+                ) : qrCustomUrl ? (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '10px 14px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px'
+                  }}>
+                    <img
+                      src={qrCustomUrl}
+                      alt="Ảnh QR Tĩnh"
+                      style={{ width: '64px', height: '64px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                    />
+                    <div style={{ fontSize: '0.78rem', color: '#475569' }}>
+                      <div>✅ Đang sử dụng file ảnh QR tải lên.</div>
+                      <div style={{ fontSize: '0.72rem', color: '#eab308' }}>
+                        * Lưu ý: Ảnh QR tĩnh không thể tự động đổi số tiền theo biên lai.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '4px' }}>
+                    💡 Điền Ngân hàng và Số tài khoản ở trên để kích hoạt tính năng in mã VietQR kèm số tiền chuẩn.
+                  </div>
+                )}
               </div>
 
               {/* ─── Phần 1d: Đổi mật khẩu tài khoản (Chỉ hiển thị khi đã đăng nhập Supabase) ─── */}

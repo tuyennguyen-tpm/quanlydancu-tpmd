@@ -2237,6 +2237,33 @@ export const db = {
       }
     }
   },
+  getPaymentQrConfig: (): any => {
+    const raw = localStorage.getItem('payment_qr_config');
+    if (raw) {
+      try { return JSON.parse(raw); } catch {}
+    }
+    return null;
+  },
+  savePaymentQrConfig: async (config: any): Promise<void> => {
+    const valueStr = JSON.stringify(config);
+    localStorage.setItem('payment_qr_config', valueStr);
+    if (supabase) {
+      try {
+        const uId = await getSessionUserId();
+        if (uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+          const now = new Date().toISOString();
+          await supabase.from('app_config').upsert({
+            user_id: uId,
+            key: 'payment_qr_config',
+            value: valueStr,
+            updated_at: now
+          }, { onConflict: 'user_id,key' });
+        }
+      } catch (err) {
+        console.error('Failed to sync payment_qr_config to Supabase:', err);
+      }
+    }
+  },
   getTdpGroupsConfig: (): string[] => {
     const stored = localStorage.getItem('tdp_groups_config') || localStorage.getItem('tdp_groups');
     if (stored) {
@@ -2286,6 +2313,7 @@ export const db = {
         window.dispatchEvent(new CustomEvent('official-signatures-changed'));
         window.dispatchEvent(new CustomEvent('tdp-groups-changed'));
         window.dispatchEvent(new CustomEvent('leader-stats-visibility-changed'));
+        window.dispatchEvent(new CustomEvent('payment-qr-config-changed'));
       }
     } catch (e) {
       console.error('Lỗi đồng bộ app_config từ Supabase:', e);

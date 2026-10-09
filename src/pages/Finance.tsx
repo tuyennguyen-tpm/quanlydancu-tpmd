@@ -2421,6 +2421,44 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
                   }
                 }
+
+                // Cập nhật mã VietQR tương ứng với số tiền mới sau khi chỉnh sửa
+                try {
+                  const qrBlocks = container.querySelectorAll('.receipt-qr-payment-block');
+                  qrBlocks.forEach(function(qrBlock) {
+                    const amtSpan = qrBlock.querySelector('.receipt-qr-amount-text');
+                    if (amtSpan && effectiveTotal > 0) {
+                      amtSpan.textContent = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                    }
+                    const isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+                    const bankBin = qrBlock.getAttribute('data-bank-bin');
+                    const accNo = qrBlock.getAttribute('data-account-no');
+                    const accHolder = qrBlock.getAttribute('data-account-holder') || '';
+                    const payerName = qrBlock.getAttribute('data-payer-name') || '';
+                    const hhNo = qrBlock.getAttribute('data-household-no') || '';
+
+                    if (!isCustomOnly && bankBin && accNo && effectiveTotal > 0) {
+                      const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
+                      if (qrImg) {
+                        const cleanBank = encodeURIComponent(bankBin.trim());
+                        const cleanAcc = encodeURIComponent(accNo.replace(/\\s+/g, ''));
+                        const desc = ('NOP QUY ' + (hhNo ? 'HO ' + hhNo : '') + ' ' + payerName).trim()
+                          .normalize('NFD')
+                          .replace(/[\\u0300-\\u036f]/g, '')
+                          .replace(/đ/g, 'd')
+                          .replace(/Đ/g, 'D')
+                          .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                          .trim()
+                          .substring(0, 50);
+
+                        let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png?amount=' + Math.round(effectiveTotal);
+                        if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
+                        if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
+                        qrImg.src = newUrl;
+                      }
+                    }
+                  });
+                } catch (qrErr) {}
               });
             } catch (err) {
               console.error('Error recalculating totals:', err);

@@ -5,6 +5,7 @@
 
 import type { Resident, Household, WardFund, HouseholdFund, FinancialRecord } from '../types';
 import { calculateExactAge } from './dateUtils';
+import { generateReceiptQrBlockHtml } from './vietQrHelper';
 
 export interface AgeLimits {
   maleMin: number;
@@ -870,6 +871,22 @@ export function generateUnifiedHouseholdReceiptHtml(
         <div class="receipt-amount-words" style="font-size: 9.5pt; font-style: italic; margin-top: 3px; margin-bottom: 4px; text-align: left;">
           Số tiền bằng chữ: <strong>${_textAmountWords}</strong>
         </div>
+
+        ${generateReceiptQrBlockHtml({
+          amount: _grandTotal,
+          payerName: summary.headName,
+          householdNumber: summary.householdNumber,
+          tdpName: tdpNameVal
+        }) ? `
+        <div style="margin: 4px 0 6px 0; display: flex; justify-content: flex-start;">
+          ${generateReceiptQrBlockHtml({
+            amount: _grandTotal,
+            payerName: summary.headName,
+            householdNumber: summary.householdNumber,
+            tdpName: tdpNameVal
+          })}
+        </div>
+        ` : ''}
 
         <table class="receipt-signatures-table" style="width:100%; border-collapse:collapse;">
           <tr>
