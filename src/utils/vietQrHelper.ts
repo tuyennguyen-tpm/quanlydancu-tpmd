@@ -162,22 +162,18 @@ export function generateReceiptQrBlockHtml(params: {
       data-payer-name="${params.payerName || ''}"
       data-household-no="${params.householdNumber || ''}"
       data-has-custom-qr="${hasCustomImg && !hasDynamicBank ? '1' : '0'}"
-      style="display: flex; align-items: center; gap: 8px; border: 1px dashed #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; page-break-inside: avoid; max-width: 320px;">
+      style="display: inline-flex; align-items: center; gap: 6px; border: 1px dashed #0284c7; background: #f0f9ff; padding: 2px 6px; border-radius: 5px; page-break-inside: avoid; vertical-align: middle; max-width: 290px;">
       <div style="flex-shrink: 0; text-align: center;">
-        <img class="receipt-qr-code-img" src="${qrImgSrc}" alt="Mã VietQR nộp tiền" style="width: 82px; height: 82px; object-fit: contain; border: 1px solid #bae6fd; background: #ffffff; border-radius: 4px; padding: 2px; display: block;" />
+        <img class="receipt-qr-code-img" src="${qrImgSrc}" alt="Mã VietQR nộp tiền" style="width: 48px; height: 48px; object-fit: contain; border: 1px solid #bae6fd; background: #ffffff; border-radius: 3px; padding: 1px; display: block;" />
       </div>
-      <div style="font-size: 7.5pt; line-height: 1.25; color: #0f172a; text-align: left; overflow: hidden;">
-        <div style="font-weight: bold; color: #0369a1; text-transform: uppercase; font-size: 7.8pt; margin-bottom: 1px; display: flex; align-items: center; gap: 3px;">
+      <div style="font-size: 7pt; line-height: 1.15; color: #0f172a; text-align: left; overflow: hidden;">
+        <div style="font-weight: bold; color: #0369a1; text-transform: uppercase; font-size: 7.2pt; display: flex; align-items: center; gap: 3px;">
           <span>📱</span> Chuyển khoản VietQR
         </div>
-        ${bankDisplay ? `<div><strong>NH:</strong> ${bankDisplay}</div>` : ''}
-        ${accNumDisplay ? `<div><strong>STK:</strong> <span style="font-family: monospace; font-weight: bold; color: #1e40af;">${accNumDisplay}</span></div>` : ''}
-        ${accHolderDisplay ? `<div><strong>Chủ TK:</strong> ${accHolderDisplay.toUpperCase()}</div>` : ''}
-        <div style="color: #047857; font-weight: bold; margin-top: 1px;">
+        ${bankDisplay ? `<div><strong>NH:</strong> ${bankDisplay} — <span style="font-family: monospace; font-weight: bold; color: #1e40af;">${accNumDisplay}</span></div>` : ''}
+        ${accHolderDisplay ? `<div><strong>CTK:</strong> ${accHolderDisplay.toUpperCase()}</div>` : ''}
+        <div style="color: #047857; font-weight: bold;">
           Số tiền: <span class="receipt-qr-amount-text">${params.amount > 0 ? params.amount.toLocaleString('vi-VN') + ' đ' : 'Theo biên lai'}</span>
-        </div>
-        <div style="font-size: 6.8pt; color: #64748b; font-style: italic; margin-top: 1px;">
-          * Quét bằng App ngân hàng để tự động điền đúng số tiền
         </div>
       </div>
     </div>
