@@ -5,7 +5,7 @@
 
 import type { Resident, Household, WardFund, HouseholdFund, FinancialRecord } from '../types';
 import { calculateExactAge } from './dateUtils';
-import { generateReceiptQrBlockHtml } from './vietQrHelper';
+import { generateReceiptQrBlockHtml, getPaymentQrConfig } from './vietQrHelper';
 
 export interface AgeLimits {
   maleMin: number;
