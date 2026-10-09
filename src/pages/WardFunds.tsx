@@ -6709,8 +6709,15 @@ const WardFunds = () => {
           <button class="toolbar-btn btn-close" id="btn-close">❌ Đóng</button>
         </div>
 
-        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
+        <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:8px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
           ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây của bạn đã được giữ nguyên. (Bấm <strong>🔄 Đặt lại mẫu phiếu in gốc</strong> nếu muốn hủy bỏ chỉnh sửa và khôi phục dữ liệu ban đầu).
+        </div>
+
+        <div class="no-print" style="background:#eff6ff;border:1.5px dashed #3b82f6;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12.5px;color:#1e40af;display:flex;align-items:center;gap:10px;line-height:1.4;">
+          <span style="font-size:18px;">💡</span>
+          <div>
+            <strong>Hướng dẫn sửa trước khi in ra giấy:</strong> Bạn có thể bấm chuột trực tiếp vào <strong>các ô số tiền trong bảng</strong> hoặc ô <strong>[Số tiền: ... đ]</strong> cạnh mã QR bên dưới để gõ số tiền mong muốn. Mã VietQR sẽ <strong>tự động đổi theo số tiền mới ngay lập tức</strong> để khi in ra giấy quét luôn đúng số tiền!
+          </div>
         </div>
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
@@ -7210,11 +7217,34 @@ const WardFunds = () => {
             }, 2800);
           }
 
+          async function waitForAllQrImages() {
+            const imgs = Array.from(document.querySelectorAll('.receipt-qr-code-img'));
+            if (imgs.length === 0) return;
+            await Promise.all(imgs.map(function(img) {
+              if (!img.src) return Promise.resolve();
+              if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+              if (typeof img.decode === 'function') {
+                return img.decode().catch(function() {});
+              }
+              return new Promise(function(resolve) {
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 2000);
+              });
+            }));
+          }
+
           // === NUT LUU & IN: luu vao CSDL roi in ===
           var btnSaveAndPrint = document.getElementById('btn-save-and-print');
           if (btnSaveAndPrint) {
             btnSaveAndPrint.addEventListener('click', async function() {
+              var oldBtnText = btnSaveAndPrint.innerHTML;
+              btnSaveAndPrint.disabled = true;
+              btnSaveAndPrint.innerHTML = '⏳ Đang chuẩn bị in...';
+
               recalculateReceiptTotals();
+              await waitForAllQrImages();
+
               safeSaveStorage(SAVE_KEY, editor.innerHTML);
               try {
                 if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
@@ -7227,9 +7257,9 @@ const WardFunds = () => {
                 saveNotice.style.background = '#dcfce7';
                 saveNotice.style.border = '1.5px solid #16a34a';
                 saveNotice.style.color = '#14532d';
-                saveNotice.innerHTML = '\u2705 <strong>\u0110\u00e3 l\u01b0u v\u0129nh vi\u1ec5n v\u00e0o CSDL th\u00e0nh c\u00f4ng!</strong> \u0110ang ti\u1ebfn h\u00e0nh in...';
+                saveNotice.innerHTML = '✅ <strong>Đã cập nhật mã QR mới và lưu vĩnh viễn vào CSDL thành công!</strong> Đang mở hộp thoại in...';
               }
-              show2DToast('\u2705 \u0110\u00e3 l\u01b0u phi\u1ebfu thu v\u00e0o CSDL. \u0110ang m\u1edf h\u1ed9p tho\u1ea1i in...', 'success');
+              show2DToast('✅ Đã nạp mã QR mới và lưu CSDL. Đang mở hộp thoại in...', 'success');
               try {
                 if (window.opener && window.opener.postMessage) {
                   window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: '${householdId}', headName: '${headName.replace(/'/g, "\\'").replace(/"/g, '&quot;')}' }, '*');
@@ -7238,19 +7268,27 @@ const WardFunds = () => {
               setTimeout(function() {
                 var t = document.getElementById('custom-2d-toast');
                 if (t) t.style.display = 'none';
+                btnSaveAndPrint.disabled = false;
+                btnSaveAndPrint.innerHTML = oldBtnText;
                 window.print();
-              }, 400);
+              }, 250);
             });
           }
 
           btnSave.addEventListener('click', async function() {
+            var oldBtnText = btnSave.innerHTML;
+            btnSave.disabled = true;
+            btnSave.innerHTML = '⏳ Đang lưu...';
             recalculateReceiptTotals();
+            await waitForAllQrImages();
             const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
             try {
               if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
                 await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
               }
             } catch (err) {}
+            btnSave.disabled = false;
+            btnSave.innerHTML = oldBtnText;
 
             const notice = document.getElementById('saved-notice');
             if (notice) {
@@ -7288,6 +7326,10 @@ const WardFunds = () => {
               try { top.close(); } catch (e) {}
             });
           }
+
+          window.addEventListener('beforeprint', function() {
+            recalculateReceiptTotals();
+          });
 
           (function initPrintCalc3D() {
             var b = document.getElementById('btn-calc');
