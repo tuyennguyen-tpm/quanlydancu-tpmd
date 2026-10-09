@@ -2360,9 +2360,100 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             } catch (e) { /* ignore */ }
           }
 
+          function updateAllQrCodes(newAmount) {
+            if (isNaN(newAmount) || newAmount <= 0) return;
+            const qrBlocks = document.querySelectorAll('.receipt-qr-payment-block');
+            qrBlocks.forEach(function(qrBlock) {
+              qrBlock.setAttribute('data-amount', String(newAmount));
+
+              const amtSpan = qrBlock.querySelector('.receipt-qr-amount-text');
+              if (amtSpan && document.activeElement !== amtSpan) {
+                amtSpan.textContent = newAmount.toLocaleString('vi-VN') + ' đ';
+              }
+
+              const isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+              const bankBin = qrBlock.getAttribute('data-bank-bin');
+              const accNo = qrBlock.getAttribute('data-account-no');
+              const accHolder = qrBlock.getAttribute('data-account-holder') || '';
+              const payerName = qrBlock.getAttribute('data-payer-name') || '';
+              const hhNo = qrBlock.getAttribute('data-household-no') || '';
+              const transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+
+              if (!isCustomOnly && bankBin && accNo) {
+                const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
+                if (qrImg) {
+                  const cleanBank = encodeURIComponent(bankBin.trim());
+                  const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+                  let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+                  if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                    desc = (desc + ' ' + payerName).trim();
+                  }
+                  desc = desc
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/đ/g, 'd')
+                    .replace(/Đ/g, 'D')
+                    .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                    .trim()
+                    .substring(0, 35);
+
+                  let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(newAmount);
+                  if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
+                  if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
+                  newUrl += '&_t=' + Date.now();
+                  qrImg.src = newUrl;
+                }
+              }
+            });
+
+            // Đồng bộ modal phóng to nếu đang mở
+            const zoomInput = document.getElementById('qr-zoom-amount-input');
+            if (zoomInput && document.activeElement !== zoomInput) {
+              zoomInput.value = newAmount.toLocaleString('vi-VN');
+            }
+            const zoomImg = document.getElementById('qr-zoom-img');
+            const firstBlock = document.querySelector('.receipt-qr-payment-block');
+            if (zoomImg && firstBlock) {
+              const isCustomOnly = firstBlock.getAttribute('data-has-custom-qr') === '1';
+              const bankBin = firstBlock.getAttribute('data-bank-bin') || '';
+              const accNo = firstBlock.getAttribute('data-account-no') || '';
+              const accHolder = firstBlock.getAttribute('data-account-holder') || '';
+              const payerName = firstBlock.getAttribute('data-payer-name') || '';
+              const hhNo = firstBlock.getAttribute('data-household-no') || '';
+              const transferPrefix = firstBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+
+              if (!isCustomOnly && bankBin && accNo) {
+                const cleanBank = encodeURIComponent(bankBin.trim());
+                const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+                let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+                if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                  desc = (desc + ' ' + payerName).trim();
+                }
+                desc = desc
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .replace(/đ/g, 'd')
+                  .replace(/Đ/g, 'D')
+                  .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                  .trim()
+                  .substring(0, 35);
+
+                let bigUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png?amount=' + Math.round(newAmount);
+                if (desc) bigUrl += '&addInfo=' + encodeURIComponent(desc);
+                if (accHolder) bigUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
+                bigUrl += '&_t=' + Date.now();
+                zoomImg.src = bigUrl;
+              }
+            }
+          }
+
           let isRecalculating = false;
           function recalculateReceiptTotals() {
             if (isRecalculating) return;
+            const activeEl = document.activeElement ? (document.activeElement.nodeType === 3 ? document.activeElement.parentElement : document.activeElement) : null;
+            if (activeEl && (activeEl.classList.contains('receipt-qr-amount-text') || (activeEl.closest && activeEl.closest('.receipt-qr-amount-text')))) {
+              return;
+            }
             isRecalculating = true;
             try {
               syncReceiptFields();
@@ -2462,50 +2553,11 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   }
                 }
 
-                // Cập nhật mã VietQR tương ứng với số tiền mới sau khi chỉnh sửa
-                try {
-                  const qrBlocks = container.querySelectorAll('.receipt-qr-payment-block');
-                  qrBlocks.forEach(function(qrBlock) {
-                    const amtSpan = qrBlock.querySelector('.receipt-qr-amount-text');
-                    if (amtSpan && effectiveTotal > 0) {
-                      amtSpan.textContent = effectiveTotal.toLocaleString('vi-VN') + ' đ';
-                    }
-                    const isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
-                    const bankBin = qrBlock.getAttribute('data-bank-bin');
-                    const accNo = qrBlock.getAttribute('data-account-no');
-                    const accHolder = qrBlock.getAttribute('data-account-holder') || '';
-                    const payerName = qrBlock.getAttribute('data-payer-name') || '';
-                    const hhNo = qrBlock.getAttribute('data-household-no') || '';
-                    const transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
-
-                    if (!isCustomOnly && bankBin && accNo && effectiveTotal > 0) {
-                      const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
-                      if (qrImg) {
-                        const cleanBank = encodeURIComponent(bankBin.trim());
-                        const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-                        let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
-                        if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
-                          desc = (desc + ' ' + payerName).trim();
-                        }
-                        desc = desc
-                          .normalize('NFD')
-                          .replace(/[\u0300-\u036f]/g, '')
-                          .replace(/đ/g, 'd')
-                          .replace(/Đ/g, 'D')
-                          .replace(/[^a-zA-Z0-9 -]/g, ' ')
-                          .trim()
-                          .substring(0, 35);
-
-                        let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(effectiveTotal);
-                        if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
-                        if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
-                        qrImg.src = newUrl;
-                        qrBlock.setAttribute('data-amount', String(effectiveTotal));
-                      }
-                    }
-                  });
-                } catch (qrErr) {}
               });
+
+              if (effectiveTotal > 0) {
+                updateAllQrCodes(effectiveTotal);
+              }
             } catch (err) {
               console.error('Error recalculating totals:', err);
             } finally {
@@ -2608,6 +2660,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           var btnSaveAndPrint = document.getElementById('btn-save-and-print');
           if (btnSaveAndPrint) {
             btnSaveAndPrint.addEventListener('click', async function() {
+              recalculateReceiptTotals();
               safeSaveStorage(SAVE_KEY, editor.innerHTML);
               try {
                 if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
@@ -2632,6 +2685,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           }
 
           btnSave.addEventListener('click', async function() {
+            recalculateReceiptTotals();
             const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
             try {
               if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
@@ -2854,49 +2908,32 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             if (aInput) {
               aInput.oninput = function() {
                 var newNum = parseInt(aInput.value.replace(/[^0-9]/g, '')) || 0;
-                var qrBlock = document.querySelector('.receipt-qr-payment-block');
-                if (!qrBlock) return;
-                var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
-                var accNo = qrBlock.getAttribute('data-account-no') || '';
-                var accHolder = qrBlock.getAttribute('data-account-holder') || '';
-                var payerName = qrBlock.getAttribute('data-payer-name') || '';
-                var hhNo = qrBlock.getAttribute('data-household-no') || '';
-                var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
-                var cleanBank = encodeURIComponent(bankBin.trim());
-                var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-                var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
-                if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
-                  desc = (desc + ' ' + payerName).trim();
+                if (newNum > 0) {
+                  updateAllQrCodes(newNum);
+                  document.querySelectorAll('.receipt-container').forEach(function(container) {
+                    const table = container.querySelector('.receipt-details-table');
+                    if (table) {
+                      const rows = Array.from(table.querySelectorAll('tbody tr'));
+                      if (rows.length >= 2) {
+                        const totalRow = rows[rows.length - 1];
+                        const totalTds = totalRow.querySelectorAll('td');
+                        if (totalTds.length >= 2) {
+                          totalTds[1].innerHTML = newNum.toLocaleString('vi-VN') + ' đ';
+                        }
+                      }
+                    }
+                    const wordsContainer = container.querySelector('.receipt-amount-words') 
+                      || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                    if (wordsContainer) {
+                      const strongEl = wordsContainer.querySelector('strong');
+                      if (strongEl) {
+                        strongEl.innerText = docSoTien(newNum);
+                      } else {
+                        wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(newNum) + '</strong>';
+                      }
+                    }
+                  });
                 }
-                desc = desc
-                  .normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, '')
-                  .replace(/đ/g, 'd')
-                  .replace(/Đ/g, 'D')
-                  .replace(/[^a-zA-Z0-9 -]/g, ' ')
-                  .trim()
-                  .substring(0, 35);
-
-                // Cập nhật ngay ảnh QR phóng to
-                var bigUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
-                var qp = [];
-                if (newNum > 0) qp.push('amount=' + Math.round(newNum));
-                if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
-                if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
-                if (qp.length > 0) bigUrl += '?' + qp.join('&');
-                var imgEl = document.getElementById('qr-zoom-img');
-                if (imgEl) imgEl.src = bigUrl;
-
-                // Đồng bộ ngược lại mã QR và số tiền trên biên lai (cả 2 liên)
-                var smallUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png';
-                if (qp.length > 0) smallUrl += '?' + qp.join('&');
-                document.querySelectorAll('.receipt-qr-payment-block').forEach(function(b) {
-                  b.setAttribute('data-amount', String(newNum));
-                  var sImg = b.querySelector('.receipt-qr-code-img');
-                  if (sImg) sImg.src = smallUrl;
-                  var t = b.querySelector('.receipt-qr-amount-text');
-                  if (t) t.textContent = newNum > 0 ? newNum.toLocaleString('vi-VN') + ' đ' : '0 đ';
-                });
               };
 
               aInput.onblur = function() {
@@ -2924,72 +2961,75 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             function syncInlineQrAmount(amtEl) {
               var raw = amtEl.innerText || amtEl.textContent || '';
               var num = parseInt(raw.replace(/[^0-9]/g, '')) || 0;
-              var qrBlock = amtEl.closest('.receipt-qr-payment-block');
-              if (!qrBlock) return;
-              var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
-              var accNo = qrBlock.getAttribute('data-account-no') || '';
-              var accHolder = qrBlock.getAttribute('data-account-holder') || '';
-              var payerName = qrBlock.getAttribute('data-payer-name') || '';
-              var hhNo = qrBlock.getAttribute('data-household-no') || '';
-              var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
-              var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
-
-              if (!isCustomOnly && bankBin && accNo) {
-                var cleanBank = encodeURIComponent(bankBin.trim());
-                var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-                var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
-                if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
-                  desc = (desc + ' ' + payerName).trim();
-                }
-                desc = desc
-                  .normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, '')
-                  .replace(/đ/g, 'd')
-                  .replace(/Đ/g, 'D')
-                  .replace(/[^a-zA-Z0-9 -]/g, ' ')
-                  .trim()
-                  .substring(0, 35);
-
-                var smallUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png';
-                var qp = [];
-                if (num > 0) qp.push('amount=' + Math.round(num));
-                if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
-                if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
-                if (qp.length > 0) smallUrl += '?' + qp.join('&');
-
-                document.querySelectorAll('.receipt-qr-payment-block').forEach(function(b) {
-                  b.setAttribute('data-amount', String(num));
-                  var sImg = b.querySelector('.receipt-qr-code-img');
-                  if (sImg) sImg.src = smallUrl;
-                  var t = b.querySelector('.receipt-qr-amount-text');
-                  if (t && t !== amtEl) {
-                    t.textContent = num > 0 ? num.toLocaleString('vi-VN') + ' đ' : '0 đ';
+              if (num > 0) {
+                updateAllQrCodes(num);
+                document.querySelectorAll('.receipt-container').forEach(function(container) {
+                  const table = container.querySelector('.receipt-details-table');
+                  if (table) {
+                    const rows = Array.from(table.querySelectorAll('tbody tr'));
+                    if (rows.length >= 2) {
+                      const totalRow = rows[rows.length - 1];
+                      const totalTds = totalRow.querySelectorAll('td');
+                      if (totalTds.length >= 2) {
+                        totalTds[1].innerHTML = num.toLocaleString('vi-VN') + ' đ';
+                      }
+                    }
+                  }
+                  const wordsContainer = container.querySelector('.receipt-amount-words') 
+                    || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                  if (wordsContainer) {
+                    const strongEl = wordsContainer.querySelector('strong');
+                    if (strongEl) {
+                      strongEl.innerText = docSoTien(num);
+                    } else {
+                      wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(num) + '</strong>';
+                    }
                   }
                 });
               }
             }
 
+            function getAmountTextTarget(e) {
+              var t = e.target;
+              if (!t) return null;
+              if (t.nodeType === 3) t = t.parentElement;
+              if (!t) return null;
+              if (t.classList && t.classList.contains('receipt-qr-amount-text')) return t;
+              if (t.closest) return t.closest('.receipt-qr-amount-text');
+              return null;
+            }
+
             document.addEventListener('input', function(e) {
-              if (e.target && (e.target.classList.contains('receipt-qr-amount-text') || e.target.closest('.receipt-qr-amount-text'))) {
-                var el = e.target.classList.contains('receipt-qr-amount-text') ? e.target : e.target.closest('.receipt-qr-amount-text');
+              var el = getAmountTextTarget(e);
+              if (el) {
+                syncInlineQrAmount(el);
+              }
+            }, true);
+
+            document.addEventListener('keyup', function(e) {
+              var el = getAmountTextTarget(e);
+              if (el) {
                 syncInlineQrAmount(el);
               }
             }, true);
 
             document.addEventListener('blur', function(e) {
-              if (e.target && e.target.classList && e.target.classList.contains('receipt-qr-amount-text')) {
-                var n = parseInt(e.target.textContent.replace(/[^0-9]/g, '')) || 0;
-                e.target.textContent = n > 0 ? n.toLocaleString('vi-VN') + ' đ' : '0 đ';
-                syncInlineQrAmount(e.target);
+              var el = getAmountTextTarget(e);
+              if (el) {
+                var n = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
+                el.textContent = n > 0 ? n.toLocaleString('vi-VN') + ' đ' : '0 đ';
+                syncInlineQrAmount(el);
               }
             }, true);
 
             document.addEventListener('click', function(e) {
-              if (e.target && (e.target.classList.contains('receipt-qr-amount-text') || e.target.closest('.receipt-qr-amount-text'))) {
+              var el = getAmountTextTarget(e);
+              if (el) {
                 // Người dùng click vào số tiền để chỉnh sửa, không mở modal phóng to
                 return;
               }
-              if (e.target && e.target.closest && e.target.closest('.receipt-qr-payment-block')) {
+              var t = e.target ? (e.target.nodeType === 3 ? e.target.parentElement : e.target) : null;
+              if (t && t.closest && t.closest('.receipt-qr-payment-block')) {
                 e.preventDefault();
                 openZoom();
               }
