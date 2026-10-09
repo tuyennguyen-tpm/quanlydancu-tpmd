@@ -5471,7 +5471,7 @@ const WardFunds = () => {
                   }
 
                   const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
-                  const digits = cellText.replace(/[^\d]/g, '');
+                  const digits = cellText.replace(/[^0-9]/g, '');
                   const num = digits ? parseInt(digits, 10) : 0;
 
                   const fundTypeAttr = row.getAttribute('data-fund-type');
@@ -5507,14 +5507,14 @@ const WardFunds = () => {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
                     const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
-                    const existingDigits = existingText.replace(/[^\d]/g, '');
+                    const existingDigits = existingText.replace(/[^0-9]/g, '');
                     const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
 
                     if (effectiveTotal === 0 && existingNum > 0) {
                       const hasAnyNonEmptyRow = rows.some(r => {
                         if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
                         const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
-                        const cellDigits = cell ? (cell.textContent || '').replace(/[^\d]/g, '') : '';
+                        const cellDigits = cell ? (cell.textContent || '').replace(/[^0-9]/g, '') : '';
                         return cellDigits.length > 0;
                       });
                       if (hasAnyNonEmptyRow) {
@@ -6945,7 +6945,7 @@ const WardFunds = () => {
             }
             let finalStr = parts.join(" ").trim();
             if (!finalStr) return 'Không đồng';
-            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/\s+/g, ' ');
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/[ \t\r\n]+/g, ' ');
           }
 
           let lastEditedContainerIndex = 0;
@@ -7146,8 +7146,8 @@ const WardFunds = () => {
                 const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
                 if (qrImg) {
                   const cleanBank = encodeURIComponent(bankBin.trim());
-                  const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-                  let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+                  const cleanAcc = encodeURIComponent(accNo.replace(/[ \t\r\n]+/g, ''));
+                  let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/[ \t\r\n]+/g, ' ').trim();
                   if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
                     desc = (desc + ' ' + payerName).trim();
                   }
@@ -7187,8 +7187,8 @@ const WardFunds = () => {
 
               if (!isCustomOnly && bankBin && accNo) {
                 const cleanBank = encodeURIComponent(bankBin.trim());
-                const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-                let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+                const cleanAcc = encodeURIComponent(accNo.replace(/[ \t\r\n]+/g, ''));
+                let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/[ \t\r\n]+/g, ' ').trim();
                 if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
                   desc = (desc + ' ' + payerName).trim();
                 }
@@ -7255,7 +7255,7 @@ const WardFunds = () => {
                   }
 
                   const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
-                  const digits = cellText.replace(/[^\d]/g, '');
+                  const digits = cellText.replace(/[^0-9]/g, '');
                   const num = digits ? parseInt(digits, 10) : 0;
 
                   const fundTypeAttr = row.getAttribute('data-fund-type');
@@ -7283,14 +7283,14 @@ const WardFunds = () => {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
                     const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
-                    const existingDigits = existingText.replace(/[^\d]/g, '');
+                    const existingDigits = existingText.replace(/[^0-9]/g, '');
                     const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
 
                     if (effectiveTotal === 0 && existingNum > 0) {
                       const hasAnyNonEmptyRow = rows.some(r => {
                         if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
                         const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
-                        const cellDigits = cell ? (cell.textContent || '').replace(/[^\d]/g, '') : '';
+                        const cellDigits = cell ? (cell.textContent || '').replace(/[^0-9]/g, '') : '';
                         return cellDigits.length > 0;
                       });
                       if (hasAnyNonEmptyRow) {
@@ -8200,7 +8200,7 @@ const WardFunds = () => {
                 }
 
                 const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
-                const digits = cellText.replace(/[^\d]/g, '');
+                const digits = cellText.replace(/[^0-9]/g, '');
                 const num = digits ? parseInt(digits, 10) : 0;
 
                 const fundTypeAttr = row.getAttribute('data-fund-type');
