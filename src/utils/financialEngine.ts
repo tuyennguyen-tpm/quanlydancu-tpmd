@@ -889,7 +889,7 @@ export function generateUnifiedHouseholdReceiptHtml(
                <td colspan="4" style="text-align: center; border: 1px solid #000; padding: 3px 5px; background-color: #f9fbe7;">
                  TỔNG CỘNG THỰC THU ${_totalLabelText}
                </td>
-               <td style="text-align: right; color: #15803d; font-size: 11pt; border: 1px solid #000; padding: 3px 5px; background-color: #f9fbe7;">${_grandTotal.toLocaleString('vi-VN')} đ</td>
+               <td class="receipt-total-amount-cell" style="text-align: right; color: #15803d; font-size: 11pt; border: 1px solid #000; padding: 3px 5px; background-color: #f9fbe7;">${_grandTotal.toLocaleString('vi-VN')} đ</td>
                <td style="border: 1px solid #000; padding: 3px 5px; background-color: #f9fbe7;"></td>
              </tr>
           </tbody>
