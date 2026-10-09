@@ -2292,79 +2292,164 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/\s+/g, ' ');
           }
 
-          function syncReceiptFields() {
-            try {
-              const containers = document.querySelectorAll('.receipt-container');
-              if (containers.length <= 1) return;
+          let lastEditedContainerIndex = 0;
 
-              let activeEl = null;
+          function getActiveReceiptTarget(e) {
+            let target = null;
+            try {
               const sel = window.getSelection();
               if (sel && sel.anchorNode) {
-                activeEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+                target = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
               }
-              if (!activeEl || !editor.contains(activeEl)) {
-                activeEl = document.activeElement;
-                if (activeEl && activeEl.nodeType === 3) {
-                  activeEl = activeEl.parentElement;
+            } catch (err) {}
+
+            if (!target || !target.closest || !target.closest('.receipt-container')) {
+              if (e && e.target) {
+                const el = e.target.nodeType === 3 ? e.target.parentElement : e.target;
+                if (el && el.closest && el.closest('.receipt-container')) {
+                  target = el;
                 }
               }
+            }
 
-              if (activeEl && typeof activeEl.closest === 'function' && typeof editor !== 'undefined' && editor && editor.contains(activeEl)) {
-                const activeContainer = activeEl.closest('.receipt-container');
-                const activeRow = activeEl.closest('tr');
-                const activeTd = activeEl.closest('td');
+            if (!target || !target.closest || !target.closest('.receipt-container')) {
+              const el = document.activeElement ? (document.activeElement.nodeType === 3 ? document.activeElement.parentElement : document.activeElement) : null;
+              if (el && el.closest && el.closest('.receipt-container')) {
+                target = el;
+              }
+            }
+            return target;
+          }
 
-                if (activeContainer && activeRow && activeTd && !activeRow.classList.contains('receipt-total-row')) {
-                  const sourceContainerIndex = Array.from(containers).indexOf(activeContainer);
-                  
-                  const activeDetailsTable = activeEl.closest('.receipt-details-table');
-                  if (activeDetailsTable) {
-                    const sourceRows = Array.from(activeContainer.querySelectorAll('.receipt-details-table tbody tr'));
-                    const rowIndex = sourceRows.indexOf(activeRow);
-                    if (rowIndex >= 0) {
-                      const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                      const newValue = activeTd.innerHTML || activeTd.textContent || '';
-                      if (cellIndex >= 0 && newValue !== undefined) {
-                        containers.forEach((cnt, idx) => {
-                          if (idx !== sourceContainerIndex) {
-                            const targetRows = cnt.querySelectorAll('.receipt-details-table tbody tr');
-                            if (targetRows[rowIndex]) {
-                              const targetTd = targetRows[rowIndex].children[cellIndex];
-                              if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
-                                targetTd.innerHTML = newValue;
+          function syncReceiptFields(e) {
+            try {
+              const containers = Array.from(document.querySelectorAll('.receipt-container'));
+              if (containers.length <= 1) return;
+
+              const activeEl = getActiveReceiptTarget(e);
+              if (!activeEl || typeof activeEl.closest !== 'function') return;
+
+              const activeContainer = activeEl.closest('.receipt-container');
+              if (!activeContainer) return;
+
+              const sourceContainerIndex = containers.indexOf(activeContainer);
+              if (sourceContainerIndex < 0) return;
+              lastEditedContainerIndex = sourceContainerIndex;
+
+              // 1. Đồng bộ nếu đang sửa trong ô bảng (td hoặc th)
+              const activeCell = activeEl.closest('td, th');
+              const activeRow = activeEl.closest('tr');
+              const activeTable = activeEl.closest('table');
+
+              if (activeCell && activeRow && activeTable) {
+                const isTotalRow = activeRow.classList.contains('receipt-total-row') || 
+                  (activeRow.innerText || activeRow.textContent || '').toUpperCase().includes('TỔNG CỘNG');
+                if (isTotalRow) return;
+
+                if (activeCell.querySelector('.receipt-qr-payment-block') || activeCell.classList.contains('receipt-qr-payment-block')) {
+                  return;
+                }
+
+                const sourceTables = Array.from(activeContainer.querySelectorAll('table'));
+                const tableIndex = sourceTables.indexOf(activeTable);
+                if (tableIndex >= 0) {
+                  const sourceRows = Array.from(activeTable.querySelectorAll('tr'));
+                  const rowIndex = sourceRows.indexOf(activeRow);
+                  if (rowIndex >= 0) {
+                    const cellIndex = Array.from(activeRow.children).indexOf(activeCell);
+                    if (cellIndex >= 0) {
+                      const newValue = activeCell.innerHTML;
+                      containers.forEach((cnt, idx) => {
+                        if (idx !== sourceContainerIndex) {
+                          const targetTables = Array.from(cnt.querySelectorAll('table'));
+                          const targetTable = targetTables[tableIndex];
+                          if (targetTable) {
+                            const targetRows = Array.from(targetTable.querySelectorAll('tr'));
+                            const targetRow = targetRows[rowIndex];
+                            if (targetRow && targetRow.children[cellIndex]) {
+                              const targetCell = targetRow.children[cellIndex];
+                              if (targetCell !== activeCell && targetCell.innerHTML !== newValue) {
+                                targetCell.innerHTML = newValue;
                               }
                             }
                           }
-                        });
-                      }
-                    }
-                  }
-
-                  const activeInfoTable = activeEl.closest('.receipt-info-table');
-                  if (activeInfoTable) {
-                    const sourceRows = Array.from(activeInfoTable.querySelectorAll('tr'));
-                    const rowIndex = sourceRows.indexOf(activeRow);
-                    if (rowIndex >= 0) {
-                      const cellIndex = Array.from(activeRow.children).indexOf(activeTd);
-                      const newValue = activeTd.innerHTML || activeTd.textContent || '';
-                      if (cellIndex >= 0 && newValue !== undefined) {
-                        containers.forEach((cnt, idx) => {
-                          if (idx !== sourceContainerIndex) {
-                            const targetRows = cnt.querySelectorAll('.receipt-info-table tr');
-                            if (targetRows[rowIndex]) {
-                              const targetTd = targetRows[rowIndex].children[cellIndex];
-                              if (targetTd && targetTd !== activeTd && targetTd.innerHTML !== newValue) {
-                                targetTd.innerHTML = newValue;
-                              }
-                            }
-                          }
-                        });
-                      }
+                        }
+                      });
                     }
                   }
                 }
+                return;
               }
-            } catch (e) { /* ignore */ }
+
+              // 2. Đồng bộ các khối tiêu đề ngoài bảng
+              const activeTitle = activeEl.closest('.receipt-title');
+              if (activeTitle) {
+                const val = activeTitle.innerHTML;
+                containers.forEach((cnt, idx) => {
+                  if (idx !== sourceContainerIndex) {
+                    const t = cnt.querySelector('.receipt-title');
+                    if (t && t.innerHTML !== val) t.innerHTML = val;
+                  }
+                });
+                return;
+              }
+
+              const activeOrg = activeEl.closest('.receipt-org-title');
+              if (activeOrg) {
+                const val = activeOrg.innerHTML;
+                containers.forEach((cnt, idx) => {
+                  if (idx !== sourceContainerIndex) {
+                    const t = cnt.querySelector('.receipt-org-title');
+                    if (t && t.innerHTML !== val) t.innerHTML = val;
+                  }
+                });
+                return;
+              }
+            } catch (err) {
+              console.warn('syncReceiptFields error:', err);
+            }
+          }
+
+          function syncAllLienContent(sourceIdx) {
+            try {
+              const containers = Array.from(document.querySelectorAll('.receipt-container'));
+              if (containers.length <= 1) return;
+              const srcIdx = typeof sourceIdx === 'number' && sourceIdx >= 0 ? sourceIdx : lastEditedContainerIndex;
+              const src = containers[srcIdx];
+              if (!src) return;
+
+              containers.forEach((tgt, idx) => {
+                if (idx === srcIdx) return;
+                const srcTables = Array.from(src.querySelectorAll('table'));
+                const tgtTables = Array.from(tgt.querySelectorAll('table'));
+
+                srcTables.forEach((sTable, tIdx) => {
+                  const tTable = tgtTables[tIdx];
+                  if (!tTable) return;
+                  const sRows = Array.from(sTable.querySelectorAll('tr'));
+                  const tRows = Array.from(tTable.querySelectorAll('tr'));
+
+                  sRows.forEach((sRow, rIdx) => {
+                    const tRow = tRows[rIdx];
+                    if (!tRow) return;
+                    const isTotal = sRow.classList.contains('receipt-total-row') || 
+                      (sRow.innerText || sRow.textContent || '').toUpperCase().includes('TỔNG CỘNG');
+                    if (isTotal) return;
+
+                    Array.from(sRow.children).forEach((sCell, cIdx) => {
+                      const tCell = tRow.children[cIdx];
+                      if (tCell && !sCell.querySelector('.receipt-qr-payment-block') && !tCell.querySelector('.receipt-qr-payment-block')) {
+                        if (tCell.innerHTML !== sCell.innerHTML) {
+                          tCell.innerHTML = sCell.innerHTML;
+                        }
+                      }
+                    });
+                  });
+                });
+              });
+            } catch (err) {
+              console.warn('syncAllLienContent error:', err);
+            }
           }
 
           function updateAllQrCodes(newAmount) {
@@ -2579,7 +2664,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           });
 
           ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
-            document.addEventListener(evtType, recalculateReceiptTotals, true);
+            document.addEventListener(evtType, function(e) {
+              syncReceiptFields(e);
+              recalculateReceiptTotals();
+            }, true);
           });
 
           try {
@@ -2688,6 +2776,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               btnSaveAndPrint.disabled = true;
               btnSaveAndPrint.innerHTML = '⏳ Đang chuẩn bị in...';
 
+              syncAllLienContent();
               recalculateReceiptTotals();
               await waitForAllQrImages();
 
@@ -2720,6 +2809,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             var oldBtnText = btnSave.innerHTML;
             btnSave.disabled = true;
             btnSave.innerHTML = '⏳ Đang lưu...';
+            syncAllLienContent();
             recalculateReceiptTotals();
             await waitForAllQrImages();
             const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
@@ -2752,6 +2842,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               }
               if (saved) {
                 editor.innerHTML = saved;
+                syncAllLienContent();
                 recalculateReceiptTotals();
                 const notice = document.getElementById('saved-notice');
                 if (notice) {
@@ -2777,6 +2868,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                 }
               } catch (err) {}
               editor.innerHTML = freshHtml;
+              syncAllLienContent();
               recalculateReceiptTotals();
               const notice = document.getElementById('saved-notice');
               if (notice) notice.style.display = 'none';
@@ -2794,6 +2886,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           }
 
           window.addEventListener('beforeprint', function() {
+            syncAllLienContent();
             recalculateReceiptTotals();
           });
 
