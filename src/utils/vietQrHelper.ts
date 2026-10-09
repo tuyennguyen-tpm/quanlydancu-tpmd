@@ -41,7 +41,42 @@ export interface PaymentQrConfig {
   bankName: string;
   accountNumber: string;
   accountHolder: string;
+  transferContent?: string; // Nội dung / Tiền tố chuyển khoản do người dùng cấu hình trong Cài đặt
   customQrUrl?: string; // Nếu người dùng tải ảnh QR tĩnh
+}
+
+/**
+ * Xử lý chuỗi nội dung chuyển khoản:
+ * Bắt buộc luôn luôn có TÊN NGƯỜI NỘP, nội dung bổ sung/tiền tố được cấu hình trong Cài đặt
+ */
+export function formatTransferDescription(customPrefix: string | undefined, householdNumber?: string, payerName?: string): string {
+  const prefix = (customPrefix && customPrefix.trim()) || 'NOP QUY';
+  const cleanPayer = (payerName || '').trim();
+  const hhPart = householdNumber ? 'H' + householdNumber : '';
+  
+  let desc = '';
+  if (prefix.includes('{TEN}') || prefix.includes('{HO}')) {
+    desc = prefix
+      .replace('{HO}', hhPart)
+      .replace('{TEN}', cleanPayer)
+      .trim();
+  } else {
+    desc = `${prefix} ${hhPart} ${cleanPayer}`.replace(/\s+/g, ' ').trim();
+  }
+
+  // Đảm bảo tên người nộp bắt buộc có trong nội dung
+  if (cleanPayer && !desc.toUpperCase().includes(cleanPayer.toUpperCase())) {
+    desc = `${desc} ${cleanPayer}`.trim();
+  }
+
+  return desc
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-zA-Z0-9 -]/g, ' ')
+    .trim()
+    .substring(0, 35);
 }
 
 export function getPaymentQrConfig(): PaymentQrConfig | null {
@@ -141,7 +176,7 @@ export function generateReceiptQrBlockHtml(params: {
   let accHolderDisplay = cfg.accountHolder || '';
 
   if (hasDynamicBank) {
-    const desc = `NOP QUY ${params.householdNumber ? 'H' + params.householdNumber + ' ' : ''}${params.payerName || ''}`.trim();
+    const desc = formatTransferDescription(cfg.transferContent, params.householdNumber, params.payerName);
     qrImgSrc = buildVietQrImageUrl({
       bankBinOrCode: cfg.bankBin,
       accountNumber: cfg.accountNumber,
@@ -163,6 +198,7 @@ export function generateReceiptQrBlockHtml(params: {
       data-payer-name="${params.payerName || ''}"
       data-household-no="${params.householdNumber || ''}"
       data-amount="${params.amount || 0}"
+      data-transfer-template="${(cfg.transferContent || '').replace(/"/g, '&quot;')}"
       data-has-custom-qr="${hasCustomImg && !hasDynamicBank ? '1' : '0'}"
       style="display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid #0284c7; background: #ffffff; padding: 4px 8px; border-radius: 6px; page-break-inside: avoid; vertical-align: middle; max-width: 320px; cursor: pointer; text-decoration: none;"
       title="Bấm vào để phóng to mã QR quét ngay trên màn hình máy tính">

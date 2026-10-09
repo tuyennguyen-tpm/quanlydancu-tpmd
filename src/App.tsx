@@ -1333,6 +1333,7 @@ const App = () => {
   const [qrBankName, setQrBankName] = useState('');
   const [qrAccountNumber, setQrAccountNumber] = useState('');
   const [qrAccountHolder, setQrAccountHolder] = useState('');
+  const [qrTransferPrefix, setQrTransferPrefix] = useState('NOP QUY');
   const [qrCustomUrl, setQrCustomUrl] = useState('');
 
   useEffect(() => {
@@ -1345,6 +1346,7 @@ const App = () => {
           setQrBankName(cfg.bankName || '');
           setQrAccountNumber(cfg.accountNumber || '');
           setQrAccountHolder(cfg.accountHolder || '');
+          setQrTransferPrefix(cfg.transferContent || 'NOP QUY');
           setQrCustomUrl(cfg.customQrUrl || '');
         }
       } catch {}
@@ -2291,12 +2293,14 @@ const App = () => {
         setQrBankName(parsed.bankName || '');
         setQrAccountNumber(parsed.accountNumber || '');
         setQrAccountHolder(parsed.accountHolder || '');
+        setQrTransferPrefix(parsed.transferContent || 'NOP QUY');
         setQrCustomUrl(parsed.customQrUrl || '');
       } else {
         setQrBankBin('');
         setQrBankName('');
         setQrAccountNumber('');
         setQrAccountHolder('');
+        setQrTransferPrefix('NOP QUY');
         setQrCustomUrl('');
       }
     } catch {}
@@ -2449,6 +2453,7 @@ const App = () => {
       bankName: qrBankName.trim(),
       accountNumber: qrAccountNumber.trim(),
       accountHolder: qrAccountHolder.trim().toUpperCase(),
+      transferContent: qrTransferPrefix.trim() || 'NOP QUY',
       customQrUrl: qrCustomUrl.trim()
     };
     await (db as any).savePaymentQrConfig(qrConfigToSave);
@@ -4280,6 +4285,31 @@ const App = () => {
                     />
                   </div>
 
+                  {/* Nội dung chuyển khoản bổ sung */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '4px', display: 'block' }}>
+                      Nội dung chuyển khoản thêm (Tên người nộp luôn tự động đi kèm)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: NOP QUY hoặc NOP TIEN TDP..."
+                      value={qrTransferPrefix}
+                      onChange={(e) => setQrTransferPrefix(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        outline: 'none'
+                      }}
+                    />
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px' }}>
+                      * Tên người nộp bắt buộc luôn có trong nội dung. Cú pháp: <strong>"{qrTransferPrefix.trim() || 'NOP QUY'} H01 NGUYEN VAN A"</strong>
+                    </div>
+                  </div>
+
                   {/* Tuỳ chọn: Tải ảnh QR tĩnh riêng */}
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#334155', marginBottom: '4px', display: 'block' }}>
@@ -4358,7 +4388,7 @@ const App = () => {
                   }}>
                     <div style={{ flexShrink: 0, background: '#ffffff', padding: '4px', border: '1px solid #bae6fd', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
                       <img
-                        src={`https://img.vietqr.io/image/${encodeURIComponent(qrBankBin)}-${encodeURIComponent(qrAccountNumber)}-compact2.png?amount=100000&addInfo=DEMO%20NOP%20QUY&accountName=${encodeURIComponent(qrAccountHolder)}`}
+                        src={`https://img.vietqr.io/image/${encodeURIComponent(qrBankBin)}-${encodeURIComponent(qrAccountNumber)}-compact2.png?amount=100000&addInfo=${encodeURIComponent(((qrTransferPrefix.trim() || 'NOP QUY') + ' H01 NGUYEN VAN A').substring(0, 35))}&accountName=${encodeURIComponent(qrAccountHolder)}`}
                         alt="Demo VietQR"
                         style={{ width: '120px', height: '120px', objectFit: 'contain', display: 'block' }}
                       />
@@ -4367,8 +4397,9 @@ const App = () => {
                       <div style={{ fontWeight: 'bold', color: '#0369a1', fontSize: '0.9rem' }}>✅ Cấu hình VietQR hợp lệ!</div>
                       <div>Ngân hàng: <strong>{qrBankName || qrBankBin}</strong> — STK: <strong style={{ color: '#1e40af', fontFamily: 'monospace' }}>{qrAccountNumber}</strong></div>
                       <div>Chủ tài khoản: <strong>{qrAccountHolder || 'CHƯA ĐIỀN'}</strong></div>
+                      <div>Nội dung CK mẫu: <strong style={{ color: '#0369a1', fontFamily: 'monospace' }}>{(qrTransferPrefix.trim() || 'NOP QUY')} H01 NGUYEN VAN A</strong></div>
                       <div style={{ color: '#059669', fontSize: '0.75rem', marginTop: '4px' }}>
-                        * Bạn có thể mở ứng dụng ngân hàng hoặc Zalo quét thử trực tiếp mã bên cạnh trên màn hình!
+                        * Tên người nộp sẽ tự động thay đổi theo từng người nộp khi in biên lai!
                       </div>
                     </div>
                   </div>

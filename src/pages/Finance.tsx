@@ -2470,20 +2470,25 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     const accHolder = qrBlock.getAttribute('data-account-holder') || '';
                     const payerName = qrBlock.getAttribute('data-payer-name') || '';
                     const hhNo = qrBlock.getAttribute('data-household-no') || '';
+                    const transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
 
                     if (!isCustomOnly && bankBin && accNo && effectiveTotal > 0) {
                       const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
                       if (qrImg) {
                         const cleanBank = encodeURIComponent(bankBin.trim());
                         const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-                        const desc = ('NOP QUY ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).trim()
+                        let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+                        if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                          desc = (desc + ' ' + payerName).trim();
+                        }
+                        desc = desc
                           .normalize('NFD')
                           .replace(/[\u0300-\u036f]/g, '')
                           .replace(/đ/g, 'd')
                           .replace(/Đ/g, 'D')
                           .replace(/[^a-zA-Z0-9 -]/g, ' ')
                           .trim()
-                          .substring(0, 30);
+                          .substring(0, 35);
 
                         let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(effectiveTotal);
                         if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
@@ -2791,19 +2796,24 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               var accHolder = qrBlock.getAttribute('data-account-holder') || '';
               var payerName = qrBlock.getAttribute('data-payer-name') || '';
               var hhNo = qrBlock.getAttribute('data-household-no') || '';
+              var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
               var amountVal = parseFloat(qrBlock.getAttribute('data-amount') || '0') || 0;
               var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
 
               var cleanBank = encodeURIComponent(bankBin.trim());
               var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-              var desc = ('NOP QUY ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).trim()
+              var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+              if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                desc = (desc + ' ' + payerName).trim();
+              }
+              desc = desc
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
                 .replace(/đ/g, 'd')
                 .replace(/Đ/g, 'D')
                 .replace(/[^a-zA-Z0-9 -]/g, ' ')
                 .trim()
-                .substring(0, 30);
+                .substring(0, 35);
 
               var bigQrSrc = '';
               if (!isCustomOnly && bankBin && accNo) {
