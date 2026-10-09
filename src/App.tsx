@@ -4356,17 +4356,19 @@ const App = () => {
                     alignItems: 'center',
                     gap: '14px'
                   }}>
-                    <img
-                      src={`https://img.vietqr.io/image/${encodeURIComponent(qrBankBin)}-${encodeURIComponent(qrAccountNumber)}-compact2.png?amount=100000&addInfo=DEMO%20NOP%20QUY&accountName=${encodeURIComponent(qrAccountHolder)}`}
-                      alt="Demo VietQR"
-                      style={{ width: '64px', height: '64px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '4px' }}
-                    />
-                    <div style={{ fontSize: '0.78rem', color: '#1e293b', lineHeight: '1.4' }}>
-                      <div style={{ fontWeight: 'bold', color: '#0369a1' }}>✅ Mã VietQR hoạt động tốt!</div>
-                      <div>Ngân hàng: <strong>{qrBankName || qrBankBin}</strong> — STK: <strong>{qrAccountNumber}</strong></div>
+                    <div style={{ flexShrink: 0, background: '#ffffff', padding: '4px', border: '1px solid #bae6fd', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+                      <img
+                        src={`https://img.vietqr.io/image/${encodeURIComponent(qrBankBin)}-${encodeURIComponent(qrAccountNumber)}-compact2.png?amount=100000&addInfo=DEMO%20NOP%20QUY&accountName=${encodeURIComponent(qrAccountHolder)}`}
+                        alt="Demo VietQR"
+                        style={{ width: '120px', height: '120px', objectFit: 'contain', display: 'block' }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#1e293b', lineHeight: '1.45' }}>
+                      <div style={{ fontWeight: 'bold', color: '#0369a1', fontSize: '0.9rem' }}>✅ Cấu hình VietQR hợp lệ!</div>
+                      <div>Ngân hàng: <strong>{qrBankName || qrBankBin}</strong> — STK: <strong style={{ color: '#1e40af', fontFamily: 'monospace' }}>{qrAccountNumber}</strong></div>
                       <div>Chủ tài khoản: <strong>{qrAccountHolder || 'CHƯA ĐIỀN'}</strong></div>
-                      <div style={{ color: '#059669', fontSize: '0.72rem', marginTop: '2px' }}>
-                        * Khi in biên lai, mã sẽ tự động gán chính xác số tiền của biên lai đó.
+                      <div style={{ color: '#059669', fontSize: '0.75rem', marginTop: '4px' }}>
+                        * Bạn có thể mở ứng dụng ngân hàng hoặc Zalo quét thử trực tiếp mã bên cạnh trên màn hình!
                       </div>
                     </div>
                   </div>

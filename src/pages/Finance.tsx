@@ -1970,7 +1970,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               margin: 0;
               padding: 0;
             }
-            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"], #print-calc-3d {
+            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"], #print-calc-3d, #qr-zoom-modal, .qr-zoom-hint {
               display: none !important;
             }
             body {
@@ -2132,6 +2132,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       <body>
         <div class="print-toolbar">
           <button class="toolbar-btn" id="btn-calc" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
+          <button class="toolbar-btn" id="btn-zoom-qr" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">📱 Phóng to mã QR</button>
           <button class="toolbar-btn btn-print" id="btn-save-and-print">💾🖨️ Lưu & In</button>
           <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
           <button class="toolbar-btn btn-load" id="btn-load">📂 Mở bản đã lưu</button>
@@ -2158,6 +2159,32 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         
         <div class="editor-area" contenteditable="true" style="outline: none;">
           ${receiptHtml}
+        </div>
+
+        <!-- Modal Phóng to QR Quét trên Màn hình -->
+        <div id="qr-zoom-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.8); z-index:9999999; align-items:center; justify-content:center; backdrop-filter:blur(4px); font-family:sans-serif;">
+          <div style="background:#ffffff; border-radius:16px; padding:20px 24px; max-width:390px; width:92%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center; position:relative; border:1px solid #cbd5e1;">
+            <button id="qr-zoom-close" style="position:absolute; top:12px; right:12px; background:#f1f5f9; border:none; width:30px; height:30px; border-radius:50%; font-size:15px; cursor:pointer; color:#475569; font-weight:bold; display:flex; align-items:center; justify-content:center;">✕</button>
+            <div style="font-size:13.5pt; font-weight:800; color:#0284c7; margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:6px;">
+              <span>📱</span> QUÉT MÃ VIETQR THANH TOÁN
+            </div>
+            <div style="background:#ffffff; padding:10px; border-radius:12px; display:inline-block; border:2px solid #0284c7; box-shadow:0 4px 14px rgba(2,132,199,0.18); margin-bottom:12px;">
+              <img id="qr-zoom-img" src="" alt="Mã VietQR" style="width:250px; height:250px; object-fit:contain; display:block; border-radius:4px;" />
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; text-align:left; font-size:11.5px; line-height:1.6; color:#1e293b; margin-bottom:12px;">
+              <div>Ngân hàng: <strong id="qr-zoom-bank" style="color:#0369a1;"></strong></div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <span>STK: <strong id="qr-zoom-stk" style="font-family:monospace; font-size:13.5px; color:#1e40af;"></strong></span>
+                <button id="qr-zoom-copy-btn" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; border-radius:6px; padding:2px 8px; font-size:10.5px; cursor:pointer; font-weight:600;">📋 Sao chép</button>
+              </div>
+              <div>Chủ TK: <strong id="qr-zoom-holder" style="text-transform:uppercase;"></strong></div>
+              <div>Số tiền: <strong id="qr-zoom-amount" style="color:#059669; font-size:13px;"></strong></div>
+              <div style="font-size:10px; color:#64748b;">Nội dung: <span id="qr-zoom-desc" style="font-family:monospace; color:#334155;"></span></div>
+            </div>
+            <div style="font-size:11px; color:#475569; line-height:1.4;">
+              💡 <em>Mở ứng dụng ngân hàng (Agribank, MB, VCB...) hoặc Zalo quét mã QR trên màn hình máy tính để nộp tiền ngay!</em>
+            </div>
+          </div>
         </div>
 
         <!-- Draggable 3D Mini Calculator Widget for Print Window -->
@@ -2448,20 +2475,21 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                       const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
                       if (qrImg) {
                         const cleanBank = encodeURIComponent(bankBin.trim());
-                        const cleanAcc = encodeURIComponent(accNo.replace(/\\s+/g, ''));
-                        const desc = ('NOP QUY ' + (hhNo ? 'HO ' + hhNo : '') + ' ' + payerName).trim()
+                        const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+                        const desc = ('NOP QUY ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).trim()
                           .normalize('NFD')
-                          .replace(/[\\u0300-\\u036f]/g, '')
+                          .replace(/[\u0300-\u036f]/g, '')
                           .replace(/đ/g, 'd')
                           .replace(/Đ/g, 'D')
                           .replace(/[^a-zA-Z0-9 -]/g, ' ')
                           .trim()
-                          .substring(0, 50);
+                          .substring(0, 30);
 
                         let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(effectiveTotal);
                         if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
                         if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
                         qrImg.src = newUrl;
+                        qrBlock.setAttribute('data-amount', String(effectiveTotal));
                       }
                     }
                   });
@@ -2742,6 +2770,91 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                 }
               };
             }
+          })();
+
+          (function initQrZoomModal() {
+            var modal = document.getElementById('qr-zoom-modal');
+            var btnZoom = document.getElementById('btn-zoom-qr');
+            var btnClose = document.getElementById('qr-zoom-close');
+            var btnCopy = document.getElementById('qr-zoom-copy-btn');
+            if (!modal) return;
+
+            function openZoom() {
+              var qrBlock = document.querySelector('.receipt-qr-payment-block');
+              if (!qrBlock) {
+                alert('Chưa có thông tin mã QR / tài khoản ngân hàng trên biên lai!');
+                return;
+              }
+              var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
+              var bankName = qrBlock.getAttribute('data-bank-name') || qrBlock.getAttribute('data-bank-bin') || 'Ngân hàng';
+              var accNo = qrBlock.getAttribute('data-account-no') || '';
+              var accHolder = qrBlock.getAttribute('data-account-holder') || '';
+              var payerName = qrBlock.getAttribute('data-payer-name') || '';
+              var hhNo = qrBlock.getAttribute('data-household-no') || '';
+              var amountVal = parseFloat(qrBlock.getAttribute('data-amount') || '0') || 0;
+              var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+
+              var cleanBank = encodeURIComponent(bankBin.trim());
+              var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+              var desc = ('NOP QUY ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).trim()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/Đ/g, 'D')
+                .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                .trim()
+                .substring(0, 30);
+
+              var bigQrSrc = '';
+              if (!isCustomOnly && bankBin && accNo) {
+                bigQrSrc = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
+                var qp = [];
+                if (amountVal > 0) qp.push('amount=' + Math.round(amountVal));
+                if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
+                if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
+                if (qp.length > 0) bigQrSrc += '?' + qp.join('&');
+              } else {
+                var img = qrBlock.querySelector('.receipt-qr-code-img');
+                bigQrSrc = img ? img.src : '';
+              }
+
+              var imgEl = document.getElementById('qr-zoom-img');
+              if (imgEl) imgEl.src = bigQrSrc;
+              var bEl = document.getElementById('qr-zoom-bank');
+              if (bEl) bEl.innerText = bankName;
+              var stkEl = document.getElementById('qr-zoom-stk');
+              if (stkEl) stkEl.innerText = accNo;
+              var hEl = document.getElementById('qr-zoom-holder');
+              if (hEl) hEl.innerText = accHolder;
+              var aEl = document.getElementById('qr-zoom-amount');
+              if (aEl) aEl.innerText = amountVal > 0 ? amountVal.toLocaleString('vi-VN') + ' đ' : 'Theo biên lai';
+              var dEl = document.getElementById('qr-zoom-desc');
+              if (dEl) dEl.innerText = desc || 'Nộp tiền quỹ';
+
+              modal.style.display = 'flex';
+            }
+
+            if (btnZoom) btnZoom.onclick = openZoom;
+            if (btnClose) btnClose.onclick = function() { modal.style.display = 'none'; };
+            modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+            if (btnCopy) {
+              btnCopy.onclick = function() {
+                var s = document.getElementById('qr-zoom-stk');
+                if (s && s.innerText) {
+                  navigator.clipboard.writeText(s.innerText).then(function() {
+                    btnCopy.innerText = '✅ Đã chép!';
+                    setTimeout(function() { btnCopy.innerText = '📋 Sao chép'; }, 1500);
+                  });
+                }
+              };
+            }
+
+            document.addEventListener('click', function(e) {
+              if (e.target && e.target.closest && e.target.closest('.receipt-qr-payment-block')) {
+                e.preventDefault();
+                openZoom();
+              }
+            });
           })();
         </script>
       </body>

@@ -103,7 +103,7 @@ export function buildVietQrImageUrl(params: {
       .replace(/Đ/g, 'D')
       .replace(/[^a-zA-Z0-9 -]/g, ' ')
       .trim()
-      .substring(0, 50);
+      .substring(0, 30); // Rút ngắn nội dung để giảm mật độ ma trận QR, giúp quét cực nhạy
     queryParams.push(`addInfo=${encodeURIComponent(cleanDesc)}`);
   }
   if (accountName) {
@@ -141,7 +141,7 @@ export function generateReceiptQrBlockHtml(params: {
   let accHolderDisplay = cfg.accountHolder || '';
 
   if (hasDynamicBank) {
-    const desc = `NOP QUY ${params.householdNumber ? 'HO ' + params.householdNumber : ''} ${params.payerName || ''}`.trim();
+    const desc = `NOP QUY ${params.householdNumber ? 'H' + params.householdNumber + ' ' : ''}${params.payerName || ''}`.trim();
     qrImgSrc = buildVietQrImageUrl({
       bankBinOrCode: cfg.bankBin,
       accountNumber: cfg.accountNumber,
@@ -157,14 +157,17 @@ export function generateReceiptQrBlockHtml(params: {
   return `
     <div class="receipt-qr-payment-block" 
       data-bank-bin="${cfg.bankBin || ''}" 
+      data-bank-name="${bankDisplay}"
       data-account-no="${cfg.accountNumber || ''}" 
       data-account-holder="${cfg.accountHolder || ''}"
       data-payer-name="${params.payerName || ''}"
       data-household-no="${params.householdNumber || ''}"
+      data-amount="${params.amount || 0}"
       data-has-custom-qr="${hasCustomImg && !hasDynamicBank ? '1' : '0'}"
-      style="display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid #0284c7; background: #ffffff; padding: 3px 7px; border-radius: 5px; page-break-inside: avoid; vertical-align: middle; max-width: 310px;">
-      <div style="flex-shrink: 0; text-align: center; background: #ffffff; padding: 2px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
-        <img class="receipt-qr-code-img" src="${qrImgSrc}" alt="Mã VietQR nộp tiền" style="width: 68px; height: 68px; min-width: 68px; min-height: 68px; object-fit: contain; image-rendering: crisp-edges; image-rendering: -webkit-optimize-contrast; display: block;" />
+      style="display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid #0284c7; background: #ffffff; padding: 4px 8px; border-radius: 6px; page-break-inside: avoid; vertical-align: middle; max-width: 320px; cursor: pointer; text-decoration: none;"
+      title="Bấm vào để phóng to mã QR quét ngay trên màn hình máy tính">
+      <div style="flex-shrink: 0; text-align: center; background: #ffffff; padding: 4px; border-radius: 4px; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.06);">
+        <img class="receipt-qr-code-img" src="${qrImgSrc}" alt="Mã VietQR nộp tiền" style="width: 78px; height: 78px; min-width: 78px; min-height: 78px; object-fit: contain; display: block;" />
       </div>
       <div style="font-size: 7.2pt; line-height: 1.25; color: #0f172a; text-align: left; overflow: hidden;">
         <div style="font-weight: bold; color: #0369a1; text-transform: uppercase; font-size: 7.5pt; display: flex; align-items: center; gap: 3px;">
@@ -174,6 +177,9 @@ export function generateReceiptQrBlockHtml(params: {
         ${accHolderDisplay ? `<div>CTK: <strong>${accHolderDisplay.toUpperCase()}</strong></div>` : ''}
         <div style="color: #047857; font-weight: bold; font-size: 7.8pt;">
           Số tiền: <span class="receipt-qr-amount-text">${params.amount > 0 ? params.amount.toLocaleString('vi-VN') + ' đ' : 'Theo biên lai'}</span>
+        </div>
+        <div class="qr-zoom-hint" style="margin-top: 2px; font-size: 6.8pt; color: #0284c7; font-style: italic;">
+          🔍 (Bấm để phóng to quét)
         </div>
       </div>
     </div>
