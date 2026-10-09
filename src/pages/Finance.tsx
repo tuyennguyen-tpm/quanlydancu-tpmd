@@ -2178,7 +2178,13 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                 <button id="qr-zoom-copy-btn" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; border-radius:6px; padding:2px 8px; font-size:10.5px; cursor:pointer; font-weight:600;">📋 Sao chép</button>
               </div>
               <div>Chủ TK: <strong id="qr-zoom-holder" style="text-transform:uppercase;"></strong></div>
-              <div>Số tiền: <strong id="qr-zoom-amount" style="color:#059669; font-size:13px;"></strong></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin:4px 0;">
+                <span style="font-weight:600;">Số tiền nộp (có thể sửa):</span>
+                <div style="display:flex; align-items:center; gap:3px;">
+                  <input id="qr-zoom-amount-input" type="text" style="width:130px; text-align:right; font-weight:800; font-size:13px; color:#059669; border:1.5px solid #10b981; border-radius:6px; padding:2px 8px; outline:none; background:#ffffff;" placeholder="0" />
+                  <span style="font-weight:700; color:#059669; font-size:12px;">đ</span>
+                </div>
+              </div>
               <div style="font-size:10px; color:#64748b;">Nội dung: <span id="qr-zoom-desc" style="font-family:monospace; color:#334155;"></span></div>
             </div>
             <div style="font-size:11px; color:#475569; line-height:1.4;">
@@ -2836,12 +2842,67 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               if (stkEl) stkEl.innerText = accNo;
               var hEl = document.getElementById('qr-zoom-holder');
               if (hEl) hEl.innerText = accHolder;
-              var aEl = document.getElementById('qr-zoom-amount');
-              if (aEl) aEl.innerText = amountVal > 0 ? amountVal.toLocaleString('vi-VN') + ' đ' : 'Theo biên lai';
+              var aInput = document.getElementById('qr-zoom-amount-input');
+              if (aInput) aInput.value = amountVal > 0 ? amountVal.toLocaleString('vi-VN') : '0';
               var dEl = document.getElementById('qr-zoom-desc');
               if (dEl) dEl.innerText = desc || 'Nộp tiền quỹ';
 
               modal.style.display = 'flex';
+            }
+
+            var aInput = document.getElementById('qr-zoom-amount-input');
+            if (aInput) {
+              aInput.oninput = function() {
+                var newNum = parseInt(aInput.value.replace(/[^0-9]/g, '')) || 0;
+                var qrBlock = document.querySelector('.receipt-qr-payment-block');
+                if (!qrBlock) return;
+                var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
+                var accNo = qrBlock.getAttribute('data-account-no') || '';
+                var accHolder = qrBlock.getAttribute('data-account-holder') || '';
+                var payerName = qrBlock.getAttribute('data-payer-name') || '';
+                var hhNo = qrBlock.getAttribute('data-household-no') || '';
+                var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+                var cleanBank = encodeURIComponent(bankBin.trim());
+                var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+                var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+                if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                  desc = (desc + ' ' + payerName).trim();
+                }
+                desc = desc
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .replace(/đ/g, 'd')
+                  .replace(/Đ/g, 'D')
+                  .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                  .trim()
+                  .substring(0, 35);
+
+                // Cập nhật ngay ảnh QR phóng to
+                var bigUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
+                var qp = [];
+                if (newNum > 0) qp.push('amount=' + Math.round(newNum));
+                if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
+                if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
+                if (qp.length > 0) bigUrl += '?' + qp.join('&');
+                var imgEl = document.getElementById('qr-zoom-img');
+                if (imgEl) imgEl.src = bigUrl;
+
+                // Đồng bộ ngược lại mã QR và số tiền trên biên lai (cả 2 liên)
+                var smallUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png';
+                if (qp.length > 0) smallUrl += '?' + qp.join('&');
+                document.querySelectorAll('.receipt-qr-payment-block').forEach(function(b) {
+                  b.setAttribute('data-amount', String(newNum));
+                  var sImg = b.querySelector('.receipt-qr-code-img');
+                  if (sImg) sImg.src = smallUrl;
+                  var t = b.querySelector('.receipt-qr-amount-text');
+                  if (t) t.textContent = newNum > 0 ? newNum.toLocaleString('vi-VN') + ' đ' : '0 đ';
+                });
+              };
+
+              aInput.onblur = function() {
+                var n = parseInt(aInput.value.replace(/[^0-9]/g, '')) || 0;
+                aInput.value = n > 0 ? n.toLocaleString('vi-VN') : '0';
+              };
             }
 
             if (btnZoom) btnZoom.onclick = openZoom;
@@ -2859,7 +2920,75 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               };
             }
 
+            // Đồng bộ khi người dùng gõ sửa số tiền trực tiếp trên biên lai
+            function syncInlineQrAmount(amtEl) {
+              var raw = amtEl.innerText || amtEl.textContent || '';
+              var num = parseInt(raw.replace(/[^0-9]/g, '')) || 0;
+              var qrBlock = amtEl.closest('.receipt-qr-payment-block');
+              if (!qrBlock) return;
+              var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
+              var accNo = qrBlock.getAttribute('data-account-no') || '';
+              var accHolder = qrBlock.getAttribute('data-account-holder') || '';
+              var payerName = qrBlock.getAttribute('data-payer-name') || '';
+              var hhNo = qrBlock.getAttribute('data-household-no') || '';
+              var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+              var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+
+              if (!isCustomOnly && bankBin && accNo) {
+                var cleanBank = encodeURIComponent(bankBin.trim());
+                var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+                var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+                if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                  desc = (desc + ' ' + payerName).trim();
+                }
+                desc = desc
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .replace(/đ/g, 'd')
+                  .replace(/Đ/g, 'D')
+                  .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                  .trim()
+                  .substring(0, 35);
+
+                var smallUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png';
+                var qp = [];
+                if (num > 0) qp.push('amount=' + Math.round(num));
+                if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
+                if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
+                if (qp.length > 0) smallUrl += '?' + qp.join('&');
+
+                document.querySelectorAll('.receipt-qr-payment-block').forEach(function(b) {
+                  b.setAttribute('data-amount', String(num));
+                  var sImg = b.querySelector('.receipt-qr-code-img');
+                  if (sImg) sImg.src = smallUrl;
+                  var t = b.querySelector('.receipt-qr-amount-text');
+                  if (t && t !== amtEl) {
+                    t.textContent = num > 0 ? num.toLocaleString('vi-VN') + ' đ' : '0 đ';
+                  }
+                });
+              }
+            }
+
+            document.addEventListener('input', function(e) {
+              if (e.target && (e.target.classList.contains('receipt-qr-amount-text') || e.target.closest('.receipt-qr-amount-text'))) {
+                var el = e.target.classList.contains('receipt-qr-amount-text') ? e.target : e.target.closest('.receipt-qr-amount-text');
+                syncInlineQrAmount(el);
+              }
+            }, true);
+
+            document.addEventListener('blur', function(e) {
+              if (e.target && e.target.classList && e.target.classList.contains('receipt-qr-amount-text')) {
+                var n = parseInt(e.target.textContent.replace(/[^0-9]/g, '')) || 0;
+                e.target.textContent = n > 0 ? n.toLocaleString('vi-VN') + ' đ' : '0 đ';
+                syncInlineQrAmount(e.target);
+              }
+            }, true);
+
             document.addEventListener('click', function(e) {
+              if (e.target && (e.target.classList.contains('receipt-qr-amount-text') || e.target.closest('.receipt-qr-amount-text'))) {
+                // Người dùng click vào số tiền để chỉnh sửa, không mở modal phóng to
+                return;
+              }
               if (e.target && e.target.closest && e.target.closest('.receipt-qr-payment-block')) {
                 e.preventDefault();
                 openZoom();

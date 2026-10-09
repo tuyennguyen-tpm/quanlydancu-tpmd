@@ -211,11 +211,11 @@ export function generateReceiptQrBlockHtml(params: {
         </div>
         <div>STK: <span style="font-family: monospace; font-weight: bold; color: #1e40af; font-size: 8pt;">${accNumDisplay}</span></div>
         ${accHolderDisplay ? `<div>CTK: <strong>${accHolderDisplay.toUpperCase()}</strong></div>` : ''}
-        <div style="color: #047857; font-weight: bold; font-size: 7.8pt;">
-          Số tiền: <span class="receipt-qr-amount-text">${params.amount > 0 ? params.amount.toLocaleString('vi-VN') + ' đ' : 'Theo biên lai'}</span>
+        <div style="color: #047857; font-weight: bold; font-size: 7.8pt; display: flex; align-items: center; gap: 2px;">
+          <span>Số tiền:</span> <span class="receipt-qr-amount-text" contenteditable="true" style="color: #059669; font-weight: 800; border-bottom: 1px dashed #059669; padding: 0 2px; cursor: text; outline: none; background: rgba(5,150,105,0.06); border-radius: 3px;" title="Bấm vào đây để chỉnh sửa trực tiếp số tiền mã QR">${params.amount > 0 ? params.amount.toLocaleString('vi-VN') + ' đ' : '0 đ'}</span>
         </div>
         <div class="qr-zoom-hint" style="margin-top: 2px; font-size: 6.8pt; color: #0284c7; font-style: italic;">
-          🔍 (Bấm để phóng to quét)
+          🔍 (Bấm mã để phóng to)
         </div>
       </div>
     </div>
