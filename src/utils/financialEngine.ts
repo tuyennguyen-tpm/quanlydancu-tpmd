@@ -668,7 +668,14 @@ export function sanitizeReceiptHtmlAddresses(
 
   let result = receiptHtml
     .replace(/<div style="page-break-before:\s*always;\s*margin-top:\s*20px;\s*"><\/div>/gi, '')
-    .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;');
+    .replace(/margin-bottom:\s*25px;\s*padding-bottom:\s*15px;\s*border-bottom:\s*1px dashed #777;/gi, 'margin-bottom: 0; padding-bottom: 0;')
+    // Tự động dọn dẹp khối QR độc lập cũ nằm chen giữa dòng số tiền và bảng chữ ký
+    .replace(/<div[^>]*class="receipt-amount-words"[^>]*>[\s\S]*?<\/div>\s*<div[^>]*style="[^"]*margin:\s*4px\s+0\s+6px\s+0[^"]*"[^>]*>[\s\S]*?<\/div>\s*(?=<table[^>]*class="receipt-signatures-table")/gi, (_m) => {
+      // Giữ lại chỉ dòng số tiền bằng chữ
+      const wordsMatch = _m.match(/<div[^>]*class="receipt-amount-words"[^>]*>[\s\S]*?<\/div>/i);
+      return wordsMatch ? wordsMatch[0] : '';
+    })
+    .replace(/<div[^>]*style="[^"]*margin:\s*4px\s+0\s+6px\s+0[^"]*"[^>]*>\s*<div[^>]*class="receipt-qr-payment-block"[\s\S]*?<\/div>\s*<\/div>/gi, '');
 
   // Khôi phục lại ô nhãn Địa chỉ: nếu lỡ bị nhồi văn bản lỗi từ trước
   result = result.replace(/(<td[^>]*class="receipt-info-label"[^>]*>)\s*Địa chỉ:[\s\S]*?(<\/td>)/gi, '$1Địa chỉ:$2');
@@ -690,6 +697,26 @@ export function sanitizeReceiptHtmlAddresses(
   result = result.replace(/(<div[^>]*class="receipt-org-title"[^>]*>[\s\S]*?Địa chỉ:\s*)([^\n<]*)/gi, (_m, p1) => {
     return `${p1}${formattedAddress}`;
   });
+
+  // 3. Nếu bản lưu cũ chưa có mã QR trong hàng ngày tháng (hoặc có khối QR cũ), chuyển đổi đưa mã QR vào đúng hàng ngày tháng
+  if (result.includes('receipt-signatures-table') && !result.includes('receipt-qr-payment-block')) {
+    const qrCfg = getPaymentQrConfig();
+    if (qrCfg && (qrCfg.accountNumber || qrCfg.customQrUrl)) {
+      const qrHtml = generateReceiptQrBlockHtml({
+        amount: 0,
+        payerName: '',
+        tdpName: tdpNameVal,
+        qrConfig: qrCfg
+      });
+      if (qrHtml) {
+        // Thay thế hàng ngày tháng cũ <td colspan="4"></td><td ...>ngày ... tháng ... năm ...</td>
+        result = result.replace(
+          /(<table[^>]*class="receipt-signatures-table"[^>]*>[\s\S]*?<tr>)\s*<td[^>]*colspan="4"[^>]*><\/td>\s*(<td[^>]*>[\s\S]*?<\/td>)\s*(<\/tr>)/gi,
+          `$1<td colspan="3" style="text-align: left; vertical-align: middle; padding-bottom: 2px;">${qrHtml}</td>$2$3`
+        );
+      }
+    }
+  }
 
   return result;
 }
