@@ -162,17 +162,17 @@ export function generateReceiptQrBlockHtml(params: {
       data-payer-name="${params.payerName || ''}"
       data-household-no="${params.householdNumber || ''}"
       data-has-custom-qr="${hasCustomImg && !hasDynamicBank ? '1' : '0'}"
-      style="display: inline-flex; align-items: center; gap: 6px; border: 1px dashed #0284c7; background: #f0f9ff; padding: 2px 6px; border-radius: 4px; page-break-inside: avoid; vertical-align: middle; max-width: 280px;">
-      <div style="flex-shrink: 0; text-align: center;">
-        <img class="receipt-qr-code-img" src="${qrImgSrc}" alt="Mã VietQR nộp tiền" style="width: 52px; height: 52px; object-fit: contain; border: 1px solid #bae6fd; background: #ffffff; border-radius: 3px; padding: 1px; display: block;" />
+      style="display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid #0284c7; background: #ffffff; padding: 3px 7px; border-radius: 5px; page-break-inside: avoid; vertical-align: middle; max-width: 310px;">
+      <div style="flex-shrink: 0; text-align: center; background: #ffffff; padding: 2px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+        <img class="receipt-qr-code-img" src="${qrImgSrc}" alt="Mã VietQR nộp tiền" style="width: 68px; height: 68px; min-width: 68px; min-height: 68px; object-fit: contain; image-rendering: crisp-edges; image-rendering: -webkit-optimize-contrast; display: block;" />
       </div>
-      <div style="font-size: 6.8pt; line-height: 1.18; color: #0f172a; text-align: left; overflow: hidden;">
-        <div style="font-weight: bold; color: #0369a1; text-transform: uppercase; font-size: 7.2pt; display: flex; align-items: center; gap: 2px;">
+      <div style="font-size: 7.2pt; line-height: 1.25; color: #0f172a; text-align: left; overflow: hidden;">
+        <div style="font-weight: bold; color: #0369a1; text-transform: uppercase; font-size: 7.5pt; display: flex; align-items: center; gap: 3px;">
           <span>📱</span> VietQR: ${bankDisplay || ''}
         </div>
-        <div>STK: <span style="font-family: monospace; font-weight: bold; color: #1e40af;">${accNumDisplay}</span></div>
+        <div>STK: <span style="font-family: monospace; font-weight: bold; color: #1e40af; font-size: 8pt;">${accNumDisplay}</span></div>
         ${accHolderDisplay ? `<div>CTK: <strong>${accHolderDisplay.toUpperCase()}</strong></div>` : ''}
-        <div style="color: #047857; font-weight: bold;">
+        <div style="color: #047857; font-weight: bold; font-size: 7.8pt;">
           Số tiền: <span class="receipt-qr-amount-text">${params.amount > 0 ? params.amount.toLocaleString('vi-VN') + ' đ' : 'Theo biên lai'}</span>
         </div>
       </div>
