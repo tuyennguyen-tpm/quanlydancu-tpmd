@@ -6998,7 +6998,7 @@ const WardFunds = () => {
                           .trim()
                           .substring(0, 50);
 
-                        let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png?amount=' + Math.round(grandTotal);
+                        let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(grandTotal);
                         if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
                         if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
                         qrImg.src = newUrl;
@@ -7699,7 +7699,7 @@ const WardFunds = () => {
                         .trim()
                         .substring(0, 50);
 
-                      let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png?amount=' + Math.round(grandTotal);
+                      let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(grandTotal);
                       if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
                       if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
                       qrImg.src = newUrl;

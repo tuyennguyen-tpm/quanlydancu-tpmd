@@ -2458,7 +2458,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                           .trim()
                           .substring(0, 50);
 
-                        let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png?amount=' + Math.round(effectiveTotal);
+                        let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(effectiveTotal);
                         if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
                         if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
                         qrImg.src = newUrl;
