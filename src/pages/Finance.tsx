@@ -2201,7 +2201,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         </div>
 
         <!-- Draggable 3D Mini Calculator Widget for Print Window -->
-        <div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+        <div id="print-calc-3d" style="display:none; position:fixed; top:65px; right:25px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
           <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
             <div style="display:flex; flex-direction:column; pointer-events:none;">
               <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
@@ -2610,135 +2610,156 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             return target;
           }
 
-          function syncReceiptFields(e) {
+          function syncTwoLiens(sourceHint) {
             try {
               const containers = Array.from(document.querySelectorAll('.receipt-container'));
               if (containers.length <= 1) return;
 
-              const activeEl = getActiveReceiptTarget(e);
-              if (!activeEl || typeof activeEl.closest !== 'function') return;
-
-              const activeContainer = activeEl.closest('.receipt-container');
-              if (!activeContainer) return;
-
-              const sourceContainerIndex = containers.indexOf(activeContainer);
-              if (sourceContainerIndex < 0) return;
-              lastEditedContainerIndex = sourceContainerIndex;
-
-              // 1. Đồng bộ nếu đang sửa trong ô bảng (td hoặc th)
-              const activeCell = activeEl.closest('td, th');
-              const activeRow = activeEl.closest('tr');
-              const activeTable = activeEl.closest('table');
-
-              if (activeCell && activeRow && activeTable) {
-                const isTotalRow = activeRow.classList.contains('receipt-total-row') || 
-                  (activeRow.innerText || activeRow.textContent || '').toUpperCase().includes('TỔNG CỘNG');
-                if (isTotalRow) return;
-
-                if (activeCell.querySelector('.receipt-qr-payment-block') || activeCell.classList.contains('receipt-qr-payment-block')) {
-                  return;
-                }
-
-                const sourceTables = Array.from(activeContainer.querySelectorAll('table'));
-                const tableIndex = sourceTables.indexOf(activeTable);
-                if (tableIndex >= 0) {
-                  const sourceRows = Array.from(activeTable.querySelectorAll('tr'));
-                  const rowIndex = sourceRows.indexOf(activeRow);
-                  if (rowIndex >= 0) {
-                    const cellIndex = Array.from(activeRow.children).indexOf(activeCell);
-                    if (cellIndex >= 0) {
-                      const newValue = activeCell.innerHTML;
-                      containers.forEach((cnt, idx) => {
-                        if (idx !== sourceContainerIndex) {
-                          const targetTables = Array.from(cnt.querySelectorAll('table'));
-                          const targetTable = targetTables[tableIndex];
-                          if (targetTable) {
-                            const targetRows = Array.from(targetTable.querySelectorAll('tr'));
-                            const targetRow = targetRows[rowIndex];
-                            if (targetRow && targetRow.children[cellIndex]) {
-                              const targetCell = targetRow.children[cellIndex];
-                              if (targetCell !== activeCell && targetCell.innerHTML !== newValue) {
-                                targetCell.innerHTML = newValue;
-                              }
-                            }
-                          }
-                        }
-                      });
+              let srcIdx = 0;
+              if (typeof sourceHint === 'number' && sourceHint >= 0 && sourceHint < containers.length) {
+                srcIdx = sourceHint;
+              } else {
+                try {
+                  const sel = window.getSelection();
+                  if (sel && sel.anchorNode) {
+                    const node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+                    if (node && node.closest) {
+                      const c = node.closest('.receipt-container');
+                      const idx = containers.indexOf(c);
+                      if (idx >= 0) {
+                        srcIdx = idx;
+                        lastEditedContainerIndex = idx;
+                      }
                     }
+                  } else if (sourceHint && sourceHint.target) {
+                    const el = sourceHint.target.nodeType === 3 ? sourceHint.target.parentElement : sourceHint.target;
+                    if (el && el.closest) {
+                      const c = el.closest('.receipt-container');
+                      const idx = containers.indexOf(c);
+                      if (idx >= 0) {
+                        srcIdx = idx;
+                        lastEditedContainerIndex = idx;
+                      }
+                    }
+                  } else {
+                    srcIdx = lastEditedContainerIndex || 0;
                   }
+                } catch (e) {
+                  srcIdx = lastEditedContainerIndex || 0;
                 }
-                return;
               }
 
-              // 2. Đồng bộ các khối tiêu đề ngoài bảng
-              const activeTitle = activeEl.closest('.receipt-title');
-              if (activeTitle) {
-                const val = activeTitle.innerHTML;
-                containers.forEach((cnt, idx) => {
-                  if (idx !== sourceContainerIndex) {
-                    const t = cnt.querySelector('.receipt-title');
-                    if (t && t.innerHTML !== val) t.innerHTML = val;
-                  }
-                });
-                return;
-              }
-
-              const activeOrg = activeEl.closest('.receipt-org-title');
-              if (activeOrg) {
-                const val = activeOrg.innerHTML;
-                containers.forEach((cnt, idx) => {
-                  if (idx !== sourceContainerIndex) {
-                    const t = cnt.querySelector('.receipt-org-title');
-                    if (t && t.innerHTML !== val) t.innerHTML = val;
-                  }
-                });
-                return;
-              }
-            } catch (err) {
-              console.warn('syncReceiptFields error:', err);
-            }
-          }
-
-          function syncAllLienContent(sourceIdx) {
-            try {
-              const containers = Array.from(document.querySelectorAll('.receipt-container'));
-              if (containers.length <= 1) return;
-              const srcIdx = typeof sourceIdx === 'number' && sourceIdx >= 0 ? sourceIdx : lastEditedContainerIndex;
               const src = containers[srcIdx];
               if (!src) return;
 
-              containers.forEach((tgt, idx) => {
-                if (idx === srcIdx) return;
-                const srcTables = Array.from(src.querySelectorAll('table'));
-                const tgtTables = Array.from(tgt.querySelectorAll('table'));
+              containers.forEach((tgt, tIdx) => {
+                if (tIdx === srcIdx) return;
 
-                srcTables.forEach((sTable, tIdx) => {
-                  const tTable = tgtTables[tIdx];
-                  if (!tTable) return;
-                  const sRows = Array.from(sTable.querySelectorAll('tr'));
-                  const tRows = Array.from(tTable.querySelectorAll('tr'));
+                // 1. Đồng bộ bảng tiêu đề đơn vị (receipt-header-table)
+                const sHdr = src.querySelector('.receipt-header-table');
+                const tHdr = tgt.querySelector('.receipt-header-table');
+                if (sHdr && tHdr) {
+                  const sCells = Array.from(sHdr.querySelectorAll('td, th'));
+                  const tCells = Array.from(tHdr.querySelectorAll('td, th'));
+                  sCells.forEach((sC, idx) => {
+                    const tC = tCells[idx];
+                    if (tC && tC.innerHTML !== sC.innerHTML) tC.innerHTML = sC.innerHTML;
+                  });
+                }
 
-                  sRows.forEach((sRow, rIdx) => {
-                    const tRow = tRows[rIdx];
-                    if (!tRow) return;
-                    const isTotal = sRow.classList.contains('receipt-total-row') || 
-                      (sRow.innerText || sRow.textContent || '').toUpperCase().includes('TỔNG CỘNG');
-                    if (isTotal) return;
+                // 2. Đồng bộ tiêu đề chính & ngày tháng, giữ nguyên tên riêng của từng liên
+                const sTitle = src.querySelector('.receipt-title');
+                const tTitle = tgt.querySelector('.receipt-title');
+                if (sTitle && tTitle && sTitle.innerHTML !== tTitle.innerHTML) {
+                  tTitle.innerHTML = sTitle.innerHTML;
+                }
 
-                    Array.from(sRow.children).forEach((sCell, cIdx) => {
-                      const tCell = tRow.children[cIdx];
-                      if (tCell && !sCell.querySelector('.receipt-qr-payment-block') && !tCell.querySelector('.receipt-qr-payment-block')) {
-                        if (tCell.innerHTML !== sCell.innerHTML) {
-                          tCell.innerHTML = sCell.innerHTML;
-                        }
+                const sSubtitles = Array.from(src.querySelectorAll('.receipt-subtitle'));
+                const tSubtitles = Array.from(tgt.querySelectorAll('.receipt-subtitle'));
+                for (let i = 1; i < Math.min(sSubtitles.length, tSubtitles.length); i++) {
+                  if (sSubtitles[i].innerHTML !== tSubtitles[i].innerHTML) {
+                    tSubtitles[i].innerHTML = sSubtitles[i].innerHTML;
+                  }
+                }
+
+                // 3. Đồng bộ toàn diện bảng thông tin người nộp (receipt-info-table)
+                const sInfo = src.querySelector('.receipt-info-table');
+                const tInfo = tgt.querySelector('.receipt-info-table');
+                if (sInfo && tInfo) {
+                  const sRows = Array.from(sInfo.querySelectorAll('tr'));
+                  const tRows = Array.from(tInfo.querySelectorAll('tr'));
+                  sRows.forEach((sR, rI) => {
+                    const tR = tRows[rI];
+                    if (!tR) return;
+                    const sCells = Array.from(sR.children);
+                    const tCells = Array.from(tR.children);
+                    sCells.forEach((sC, cI) => {
+                      const tC = tCells[cI];
+                      if (tC && tC.innerHTML !== sC.innerHTML) {
+                        tC.innerHTML = sC.innerHTML;
                       }
                     });
                   });
-                });
+                }
+
+                // 4. Đồng bộ bảng chi tiết các khoản thu (receipt-details-table)
+                const sDetails = src.querySelector('.receipt-details-table');
+                const tDetails = tgt.querySelector('.receipt-details-table');
+                if (sDetails && tDetails) {
+                  const sRows = Array.from(sDetails.querySelectorAll('tbody tr'));
+                  const tRows = Array.from(tDetails.querySelectorAll('tbody tr'));
+                  sRows.forEach((sR, rI) => {
+                    const tR = tRows[rI];
+                    if (!tR) return;
+                    const isTotal = sR.classList.contains('receipt-total-row') || 
+                      (sR.textContent || sR.innerText || '').toUpperCase().includes('TỔNG CỘNG');
+                    if (isTotal) return;
+                    const sCells = Array.from(sR.children);
+                    const tCells = Array.from(tR.children);
+                    sCells.forEach((sC, cI) => {
+                      const tC = tCells[cI];
+                      if (tC && tC.innerHTML !== sC.innerHTML) {
+                        tC.innerHTML = sC.innerHTML;
+                      }
+                    });
+                  });
+                }
+
+                // 5. Đồng bộ bảng chữ ký (receipt-signatures-table)
+                const sSig = src.querySelector('.receipt-signatures-table');
+                const tSig = tgt.querySelector('.receipt-signatures-table');
+                if (sSig && tSig) {
+                  const sRows = Array.from(sSig.querySelectorAll('tr'));
+                  const tRows = Array.from(tSig.querySelectorAll('tr'));
+                  sRows.forEach((sR, rI) => {
+                    const tR = tRows[rI];
+                    if (!tR) return;
+                    const sCells = Array.from(sR.children);
+                    const tCells = Array.from(tR.children);
+                    sCells.forEach((sC, cI) => {
+                      const tC = tCells[cI];
+                      if (!tC) return;
+                      if (sC.querySelector('.receipt-qr-payment-block') || tC.querySelector('.receipt-qr-payment-block')) {
+                        return;
+                      }
+                      if (tC.innerHTML !== sC.innerHTML) {
+                        tC.innerHTML = sC.innerHTML;
+                      }
+                    });
+                  });
+                }
               });
             } catch (err) {
-              console.warn('syncAllLienContent error:', err);
+              console.warn('syncTwoLiens error:', err);
             }
+          }
+
+          function syncReceiptFields(e) {
+            syncTwoLiens(e);
+          }
+
+          function syncAllLienContent(sourceIdx) {
+            syncTwoLiens(sourceIdx);
           }
 
           function updateAllQrCodes(newAmount) {
@@ -3249,15 +3270,34 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
           window.toggleCalc = function() {
             var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
             if (m) {
-              var isHidden = m.style.display === 'none' || !m.style.display;
-              m.style.display = isHidden ? 'block' : 'none';
+              var isHidden = (m.style.display === 'none' || !m.style.display);
+              if (isHidden) {
+                m.style.display = 'block';
+                m.style.zIndex = '999999';
+                if (b) {
+                  b.style.boxShadow = '0 0 0 3px #38bdf8, 0 0 12px rgba(14,165,233,0.8)';
+                  b.style.transform = 'scale(1.04)';
+                }
+              } else {
+                m.style.display = 'none';
+                if (b) {
+                  b.style.boxShadow = 'none';
+                  b.style.transform = 'none';
+                }
+              }
             }
           };
 
           window.closeCalc = function() {
             var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
             if (m) m.style.display = 'none';
+            if (b) {
+              b.style.boxShadow = 'none';
+              b.style.transform = 'none';
+            }
           };
 
           window.calcQuickAdd = function(aV) {
