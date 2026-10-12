@@ -2248,30 +2248,298 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         </div>
 
         <script>
-          // === KHỞI TẠO CÁC HÀM TOÀN CỤC NGAY LẬP TỨC CHO CÁC NÚT BẤM TRÊN THANH CÔNG CỤ ===
-          window.toggleCalc = function() {
-            var m = document.getElementById('print-calc-3d');
-            if (m) {
-              var isHidden = m.style.display === 'none' || !m.style.display;
-              m.style.display = isHidden ? 'block' : 'none';
-            }
-          };
-          window.closeCalc = function() {
-            var m = document.getElementById('print-calc-3d');
-            if (m) m.style.display = 'none';
-          };
-          window.openQrZoom = function() {
-            var m = document.getElementById('qr-zoom-modal');
-            if (m) m.style.display = 'flex';
-          };
-          window.closeQrZoom = function() {
-            var m = document.getElementById('qr-zoom-modal');
-            if (m) m.style.display = 'none';
-          };
-
           const SAVE_KEY = '${SAVE_KEY}';
           const currentPrintMode = '${printMode}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
+
+          // === KHỞI TẠO CÁC HÀM TOÀN CỤC NGAY LẬP TỨC CHO CÁC NÚT BẤM TRÊN THANH CÔNG CỤ ===
+          window.toggleCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
+            if (m) {
+              var isHidden = (m.style.display === 'none' || !m.style.display);
+              if (isHidden) {
+                m.style.display = 'block';
+                m.style.zIndex = '999999';
+                if (b) {
+                  b.style.boxShadow = '0 0 0 3px #38bdf8, 0 0 12px rgba(14,165,233,0.8)';
+                  b.style.transform = 'scale(1.04)';
+                }
+              } else {
+                m.style.display = 'none';
+                if (b) {
+                  b.style.boxShadow = 'none';
+                  b.style.transform = 'none';
+                }
+              }
+            }
+          };
+
+          window.closeCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
+            if (m) m.style.display = 'none';
+            if (b) {
+              b.style.boxShadow = 'none';
+              b.style.transform = 'none';
+            }
+          };
+
+          window.openQrZoom = function() {
+            var modal = document.getElementById('qr-zoom-modal');
+            if (!modal) return;
+            var qrBlock = document.querySelector('.receipt-qr-payment-block');
+            if (!qrBlock) {
+              alert('Chưa có thông tin mã QR / tài khoản ngân hàng trên biên lai!');
+              return;
+            }
+            var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
+            var bankName = qrBlock.getAttribute('data-bank-name') || qrBlock.getAttribute('data-bank-bin') || 'Ngân hàng';
+            var accNo = qrBlock.getAttribute('data-account-no') || '';
+            var accHolder = qrBlock.getAttribute('data-account-holder') || '';
+            var payerName = qrBlock.getAttribute('data-payer-name') || '';
+            var hhNo = qrBlock.getAttribute('data-household-no') || '';
+            var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+            var amountVal = parseFloat(qrBlock.getAttribute('data-amount') || '0') || 0;
+            var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+
+            var cleanBank = encodeURIComponent(bankBin.trim());
+            var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+            var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+            if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+              desc = (desc + ' ' + payerName).trim();
+            }
+            desc = desc
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd')
+              .replace(/Đ/g, 'D')
+              .replace(/[^a-zA-Z0-9 -]/g, ' ')
+              .trim()
+              .substring(0, 35);
+
+            var bigQrSrc = '';
+            if (!isCustomOnly && bankBin && accNo) {
+              bigQrSrc = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
+              var qp = [];
+              if (amountVal > 0) qp.push('amount=' + Math.round(amountVal));
+              if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
+              if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
+              if (qp.length > 0) bigQrSrc += '?' + qp.join('&');
+            } else {
+              var img = qrBlock.querySelector('.receipt-qr-code-img');
+              bigQrSrc = img ? img.src : '';
+            }
+
+            var imgEl = document.getElementById('qr-zoom-img');
+            if (imgEl) imgEl.src = bigQrSrc;
+            var bEl = document.getElementById('qr-zoom-bank');
+            if (bEl) bEl.innerText = bankName;
+            var stkEl = document.getElementById('qr-zoom-stk');
+            if (stkEl) stkEl.innerText = accNo;
+            var hEl = document.getElementById('qr-zoom-holder');
+            if (hEl) hEl.innerText = accHolder;
+            var aInput = document.getElementById('qr-zoom-amount-input');
+            if (aInput) aInput.value = amountVal > 0 ? amountVal.toLocaleString('vi-VN') : '0';
+            var dEl = document.getElementById('qr-zoom-desc');
+            if (dEl) dEl.innerText = desc || 'Nộp tiền quỹ';
+
+            modal.style.display = 'flex';
+          };
+
+          window.closeQrZoom = function() {
+            var modal = document.getElementById('qr-zoom-modal');
+            if (modal) modal.style.display = 'none';
+          };
+
+          window.handleSaveReceipt = async function() {
+            var b = document.getElementById('btn-save');
+            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang lưu...';
+            }
+            try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
+            try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
+
+            var editor = document.querySelector('.editor-area');
+            var htmlToSave = editor ? editor.innerHTML : '';
+
+            try { localStorage.setItem(SAVE_KEY, htmlToSave); } catch(e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(SAVE_KEY, htmlToSave);
+                var customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                customs[SAVE_KEY] = htmlToSave;
+                window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+              }
+            } catch(e) {}
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, htmlToSave);
+              }
+            } catch(e) {}
+
+            if (b) {
+              b.disabled = false;
+              b.innerHTML = oldBtnText;
+            }
+            var notice = document.getElementById('saved-notice');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
+            }
+            alert('✅ Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!');
+          };
+
+          window.handleSaveAndPrint = async function() {
+            var b = document.getElementById('btn-save-and-print');
+            var oldBtnText = b ? b.innerHTML : '💾🖨️ Lưu & In';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang chuẩn bị in...';
+            }
+            try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
+            try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
+
+            var editor = document.querySelector('.editor-area');
+            var htmlToSave = editor ? editor.innerHTML : '';
+
+            try { localStorage.setItem(SAVE_KEY, htmlToSave); } catch(e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(SAVE_KEY, htmlToSave);
+              }
+            } catch(e) {}
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, htmlToSave);
+              }
+            } catch(e) {}
+
+            var notice = document.getElementById('saved-notice');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu vào CSDL thành công!</strong> Đang mở hộp thoại in...';
+            }
+            setTimeout(function() {
+              if (b) {
+                b.disabled = false;
+                b.innerHTML = oldBtnText;
+              }
+              window.print();
+            }, 250);
+          };
+
+          window.handleLoadReceipt = async function() {
+            let saved = null;
+            try { saved = localStorage.getItem(SAVE_KEY); } catch(e) {}
+            if (!saved && window.opener && window.opener.localStorage) {
+              try { saved = window.opener.localStorage.getItem(SAVE_KEY); } catch(e) {}
+            }
+            if (!saved && window.opener && window.opener.db && window.opener.db.getReceiptCustomization) {
+              try { saved = await window.opener.db.getReceiptCustomization(SAVE_KEY); } catch (err) {}
+            }
+            var editor = document.querySelector('.editor-area');
+            if (saved && editor) {
+              editor.innerHTML = saved;
+              try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
+              try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
+              var notice = document.getElementById('saved-notice');
+              if (notice) {
+                notice.style.display = 'flex';
+                notice.style.background = '#dcfce7';
+                notice.style.border = '1.5px solid #16a34a';
+                notice.style.color = '#14532d';
+                notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó từ CSDL</strong>.';
+              }
+              alert('✅ Đã mở bản chỉnh sửa đã lưu trước đó!');
+            } else {
+              alert('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này.');
+            }
+          };
+
+          window.handleResetReceipt = function() {
+            if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
+              try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+              try {
+                if (window.opener && window.opener.localStorage) window.opener.localStorage.removeItem(SAVE_KEY);
+                if (window.opener && window.opener.db && window.opener.db.deleteReceiptCustomization) {
+                  window.opener.db.deleteReceiptCustomization(SAVE_KEY);
+                }
+              } catch(e) {}
+              var editor = document.querySelector('.editor-area');
+              if (editor) editor.innerHTML = freshHtml;
+              try {
+                if (typeof syncAllLienContent === 'function') syncAllLienContent();
+                if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals();
+              } catch(e) {}
+              var notice = document.getElementById('saved-notice');
+              if (notice) notice.style.display = 'none';
+              alert('✅ Đã khôi phục về mẫu phiếu ban đầu từ hệ thống!');
+            }
+          };
+
+          var dV = "0", eV = "", nN = true;
+          function uUI() {
+            var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq');
+            var num = parseFloat(dV);
+            if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
+            if (eE) eE.innerText = eV;
+          }
+          window.calcQuickAdd = function(aV) {
+            var numVal = parseFloat(aV) || 0;
+            var cV = parseFloat(dV) || 0;
+            dV = String(nN ? numVal : cV + numVal);
+            nN = false;
+            uUI();
+          };
+          window.calcKey = function(k) {
+            if (!k) return;
+            if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
+            else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
+            else if (['+', '-', '*', '/'].includes(k)) {
+              var op = k === '*' ? '×' : k === '/' ? '÷' : k;
+              eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
+            } else if (k === '=') {
+              if (eV) {
+                try {
+                  var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
+                  dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
+                } catch(err) { dV = "Error"; eV = ""; }
+              }
+            } else if (k === '000') {
+              if (!nN && dV !== '0') dV += '000';
+            } else {
+              if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
+            }
+            uUI();
+          };
+          window.calcCopy = function() {
+            var num = parseFloat(dV);
+            if (!isNaN(num)) {
+              navigator.clipboard.writeText(String(num));
+              var cp = document.getElementById('calc-copy-btn');
+              if (cp) {
+                cp.innerText = '✅ Đã sao chép!';
+                setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
+              }
+            }
+          };
+
+          // Lắng nghe phím ESC để đóng nhanh máy tính và phóng to QR
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              window.closeCalc();
+              window.closeQrZoom();
+            }
+          });
           const btnSave = document.getElementById('btn-save');
           const btnReset = document.getElementById('btn-reset');
           const btnLoad = document.getElementById('btn-load');
