@@ -2131,12 +2131,12 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       </head>
       <body>
         <div class="print-toolbar">
-          <button class="toolbar-btn" id="btn-calc" onclick="window.toggleCalc && window.toggleCalc(); return false;" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
-          <button class="toolbar-btn" id="btn-zoom-qr" onclick="window.openQrZoom && window.openQrZoom(); return false;" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">📱 Phóng to mã QR</button>
-          <button class="toolbar-btn btn-print" id="btn-save-and-print" onclick="window.handleSaveAndPrint && window.handleSaveAndPrint(); return false;">💾🖨️ Lưu & In</button>
-          <button class="toolbar-btn btn-save" id="btn-save" onclick="window.handleSaveReceipt && window.handleSaveReceipt(); return false;">💾 Lưu chỉnh sửa</button>
-          <button class="toolbar-btn btn-load" id="btn-load" onclick="window.handleLoadReceipt && window.handleLoadReceipt(); return false;">📂 Mở bản đã lưu</button>
-          <button class="toolbar-btn btn-reset" id="btn-reset" onclick="window.handleResetReceipt && window.handleResetReceipt(); return false;">🔄 Đặt lại mẫu phiếu in gốc</button>
+          <button type="button" class="toolbar-btn" id="btn-calc" onclick="window.toggleCalc && window.toggleCalc();" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
+          <button type="button" class="toolbar-btn" id="btn-zoom-qr" onclick="window.openQrZoom && window.openQrZoom();" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">📱 Phóng to mã QR</button>
+          <button type="button" class="toolbar-btn btn-print" id="btn-save-and-print" onclick="window.handleSaveAndPrint && window.handleSaveAndPrint();">💾🖨️ Lưu &amp; In</button>
+          <button type="button" class="toolbar-btn btn-save" id="btn-save" onclick="window.handleSaveReceipt && window.handleSaveReceipt();">💾 Lưu chỉnh sửa</button>
+          <button type="button" class="toolbar-btn btn-load" id="btn-load" onclick="window.handleLoadReceipt && window.handleLoadReceipt();">📂 Mở bản đã lưu</button>
+          <button type="button" class="toolbar-btn btn-reset" id="btn-reset" onclick="window.handleResetReceipt && window.handleResetReceipt();">🔄 Đặt lại mẫu phiếu in gốc</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
           <select class="font-size-select" id="font-size-select" onchange="var sz=this.value; document.querySelectorAll('.receipt-container').forEach(function(el){ el.style.fontSize=sz; });">
             <option value="7pt">7pt</option>
@@ -2150,7 +2150,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             <option value="11pt">11pt</option>
             <option value="12pt">12pt</option>
           </select>
-          <button class="toolbar-btn btn-close" id="btn-close" onclick="try{window.close();}catch(e){} try{self.close();}catch(e){} try{top.close();}catch(e){} return false;">❌ Đóng</button>
+          <button type="button" class="toolbar-btn btn-close" id="btn-close" onclick="try{window.close();}catch(e){} try{self.close();}catch(e){} try{top.close();}catch(e){}">❌ Đóng</button>
         </div>
 
         <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 16px;margin-bottom:8px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#92400e;">
@@ -2248,6 +2248,27 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
         </div>
 
         <script>
+          // === KHỞI TẠO CÁC HÀM TOÀN CỤC NGAY LẬP TỨC CHO CÁC NÚT BẤM TRÊN THANH CÔNG CỤ ===
+          window.toggleCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            if (m) {
+              var isHidden = m.style.display === 'none' || !m.style.display;
+              m.style.display = isHidden ? 'block' : 'none';
+            }
+          };
+          window.closeCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            if (m) m.style.display = 'none';
+          };
+          window.openQrZoom = function() {
+            var m = document.getElementById('qr-zoom-modal');
+            if (m) m.style.display = 'flex';
+          };
+          window.closeQrZoom = function() {
+            var m = document.getElementById('qr-zoom-modal');
+            if (m) m.style.display = 'none';
+          };
+
           const SAVE_KEY = '${SAVE_KEY}';
           const currentPrintMode = '${printMode}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
