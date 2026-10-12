@@ -1835,15 +1835,3 @@
         </script>
       </body>
       </html>
-    `;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      showToast('Không thể mở cửa sổ in. Vui lòng cho phép popup trình duyệt!', 'danger');
-      return;
-    }
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-  };
-
- 

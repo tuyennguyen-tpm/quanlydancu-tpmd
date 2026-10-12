@@ -1,0 +1,1837 @@
+
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Phiếu thu - Hộ NGUYỄN VĂN AN</title>
+        <meta charset="utf-8" />
+        <style>
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin-top: 6mm;
+              margin-bottom: 6mm;
+              margin-left: 10mm;
+              margin-right: 10mm;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+            }
+            .print-toolbar, #saved-notice, #custom-2d-toast, .no-print, [id*="toast"], #print-calc-3d, #qr-zoom-modal, .qr-zoom-hint {
+              display: none !important;
+            }
+            body {
+              padding-top: 0 !important;
+              margin-top: 0 !important;
+            }
+            .receipt-lien-wrapper {
+              page-break-inside: avoid !important;
+              page-break-after: always !important;
+            }
+            .receipt-details-table th, .receipt-details-table td {
+              padding: 2.5px 5px !important;
+            }
+            .receipt-signatures-table {
+              margin-top: 4px !important;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 9.5pt;
+            line-height: 1.3;
+            color: #000;
+            padding: 2px;
+            padding-top: 0;
+          }
+          .receipt-container {
+            width: 100%;
+            box-sizing: border-box;
+          }
+          .receipt-header-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .receipt-header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: top !important;
+          }
+          .receipt-org-title {
+            font-weight: bold;
+            font-size: 9.5pt !important;
+            line-height: 1.25;
+          }
+          .receipt-form-title {
+            text-align: right;
+            font-size: 9pt !important;
+            line-height: 1.2;
+          }
+          .receipt-title-container {
+            text-align: center;
+            margin-top: 3px !important;
+            margin-bottom: 3px !important;
+          }
+          .receipt-title {
+            font-size: 14pt !important;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1px !important;
+          }
+          .receipt-subtitle {
+            font-style: italic;
+            font-size: 9pt !important;
+          }
+          .receipt-info-table {
+            width: 100%;
+            margin-bottom: 3px !important;
+            border-collapse: collapse;
+          }
+          .receipt-info-table td {
+            padding: 1.5px 0 !important;
+            font-size: 9.5pt !important;
+          }
+          .receipt-details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 3px !important;
+            margin-bottom: 3px !important;
+          }
+          .receipt-details-table th, .receipt-details-table td {
+            border: 1px solid #000 !important;
+            padding: 3px 5px !important;
+            font-size: 9pt !important;
+            vertical-align: middle;
+          }
+          .receipt-details-table th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #f2f2f2;
+          }
+          .receipt-signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px !important;
+            page-break-inside: avoid !important;
+          }
+          .receipt-signatures-table td {
+            border: none;
+            text-align: center;
+            font-size: 9pt !important;
+            vertical-align: top;
+            padding: 1px !important;
+          }
+          .print-toolbar {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 6px 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 10px;
+            z-index: 99999;
+          }
+          .toolbar-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 9pt;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+          }
+          .btn-print { background: #10b981; color: white; }
+          .btn-print:hover { background: #059669; }
+          .btn-save { background: #3b82f6; color: white; }
+          .btn-save:hover { background: #2563eb; }
+          .btn-load { background: #8b5cf6; color: white; }
+          .btn-load:hover { background: #7c3aed; }
+          .btn-reset { background: #f59e0b; color: white; }
+          .btn-reset:hover { background: #d97706; }
+          .btn-close { background: #ef4444; color: white; }
+          .btn-close:hover { background: #dc2626; }
+          .font-size-select {
+            padding: 5px 8px;
+            border-radius: 6px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 8.5pt;
+            font-weight: 600;
+            cursor: pointer;
+            background: #f8fafc;
+            color: #334155;
+          }
+          .toolbar-label {
+            font-size: 8pt;
+            color: #64748b;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-toolbar">
+          <button type="button" class="toolbar-btn" id="btn-calc" onclick="window.toggleCalc && window.toggleCalc();" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
+          <button type="button" class="toolbar-btn" id="btn-zoom-qr" onclick="window.openQrZoom && window.openQrZoom();" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">📱 Phóng to mã QR</button>
+          <button type="button" class="toolbar-btn btn-print" id="btn-save-and-print" onclick="window.handleSaveAndPrint && window.handleSaveAndPrint();">💾🖨️ Lưu &amp; In</button>
+          <button type="button" class="toolbar-btn btn-save" id="btn-save" onclick="window.handleSaveReceipt && window.handleSaveReceipt();">💾 Lưu chỉnh sửa</button>
+          <button type="button" class="toolbar-btn btn-reset" id="btn-reset" onclick="window.handleResetReceipt && window.handleResetReceipt();">🔄 Đặt lại mẫu phiếu in gốc</button>
+          <span class="toolbar-label">📝 Cỡ chữ:</span>
+          <select class="font-size-select" id="font-size-select" onchange="var sz=this.value; document.querySelectorAll('.receipt-container').forEach(function(el){ el.style.fontSize=sz; });">
+            <option value="7pt">7pt</option>
+            <option value="7.5pt">7.5pt</option>
+            <option value="8pt">8pt</option>
+            <option value="8.5pt">8.5pt</option>
+            <option value="9pt" selected>9pt (mặc định)</option>
+            <option value="9.5pt">9.5pt</option>
+            <option value="10pt">10pt</option>
+            <option value="10.5pt">10.5pt</option>
+            <option value="11pt">11pt</option>
+            <option value="12pt">12pt</option>
+          </select>
+          <button type="button" class="toolbar-btn btn-close" id="btn-close" onclick="try{window.close();}catch(e){} try{self.close();}catch(e){} try{top.close();}catch(e){}">❌ Đóng</button>
+        </div>
+
+        <div id="saved-notice" style="display:none;background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:8px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
+          ✅ <strong>Đang hiển thị phiếu thu đã lưu chỉnh sửa của hộ này.</strong> Mọi chỉnh sửa trước đây của bạn đã được giữ nguyên. (Bấm <strong>🔄 Đặt lại mẫu phiếu in gốc</strong> nếu muốn hủy bỏ chỉnh sửa và khôi phục dữ liệu ban đầu).
+        </div>
+
+        <div class="no-print" style="background:#eff6ff;border:1.5px dashed #3b82f6;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:12.5px;color:#1e40af;display:flex;align-items:center;gap:10px;line-height:1.4;">
+          <span style="font-size:18px;">💡</span>
+          <div>
+            <strong>Hướng dẫn sửa trước khi in ra giấy:</strong> Bạn có thể bấm chuột trực tiếp vào <strong>các ô số tiền trong bảng</strong> hoặc ô <strong>[Số tiền: ... đ]</strong> cạnh mã QR bên dưới để gõ số tiền mong muốn. Mã VietQR sẽ <strong>tự động đổi theo số tiền mới ngay lập tức</strong> để khi in ra giấy quét luôn đúng số tiền!
+          </div>
+        </div>
+        
+        <div class="editor-area" contenteditable="true" style="outline: none;">
+          
+<div class="receipt-container" id="lien-1" style="box-sizing:border-box; padding:12px; border:1px solid #cbd5e1; margin-bottom:20px; background:#fff; font-family:Arial,sans-serif;">
+  <table class="receipt-header-table" style="width:100%; margin-bottom:4px;">
+    <tr>
+      <td style="text-align:left; font-size:9pt;">
+        <strong>UBND PHƯỜNG NAM SẦM SƠN</strong><br/>
+        <strong>TỔ DÂN PHỐ QUẢNG GIAO</strong>
+      </td>
+      <td style="text-align:right; font-size:8.5pt;">
+        <strong>Mẫu số 01 - TT</strong><br/>
+        <em>(Ban hành theo TT 200/2014/TT-BTC)</em><br/>
+        Số: 01/2026
+      </td>
+    </tr>
+  </table>
+
+  <div class="receipt-title-container" style="text-align:center; margin:6px 0;">
+    <h1 class="receipt-title" style="font-size:14pt; margin:2px 0; color:#1e3a8a;">PHIẾU THU TỔNG HỢP NĂM 2026</h1>
+    <p class="receipt-subtitle" style="font-weight:bold; color:#1e3a8a; margin:1px 0; font-size:9.5pt;">Liên 1: TDP lưu trữ</p>
+    <p class="receipt-subtitle" style="font-style:italic; margin:1px 0; font-size:8.5pt;">ngày 12 tháng 10 năm 2026</p>
+  </div>
+
+  <table class="receipt-info-table" style="width:100%; border-collapse:collapse; margin-bottom:6px; font-size:9pt;">
+    <tr>
+      <td style="width:160px; font-weight:bold;">Họ và tên người nộp:</td>
+      <td><strong>Nguyễn Văn An</strong> (Đại diện Hộ gia đình)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Địa chỉ:</td>
+      <td>Tổ dân phố Quảng Giao, Phường Nam Sầm Sơn</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Mã số hộ | Khẩu LĐ:</td>
+      <td><strong>H015</strong> | Số khẩu lao động: <strong>2 khẩu</strong></td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Lý do nộp:</td>
+      <td>Thu tổng hợp các khoản quỹ TDP và Phường năm 2026</td>
+    </tr>
+  </table>
+
+  <table class="receipt-details-table" style="width:100%; border-collapse:collapse; margin-bottom:6px; font-size:9pt;">
+    <thead>
+      <tr style="background:#f1f5f9;">
+        <th style="border:1px solid #334155; padding:4px;">STT</th>
+        <th style="border:1px solid #334155; padding:4px;">Nội dung đóng góp</th>
+        <th style="border:1px solid #334155; padding:4px;">Đối tượng</th>
+        <th style="border:1px solid #334155; padding:4px;">Định mức</th>
+        <th style="border:1px solid #334155; padding:4px;">Số tiền nộp</th>
+        <th style="border:1px solid #334155; padding:4px;">Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">1</td>
+        <td style="border:1px solid #334155; font-weight:bold; padding:4px;">[TDP] Quỹ Hoạt động TDP</td>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">Hộ gia đình</td>
+        <td style="border:1px solid #334155; text-align:right; padding:4px;">100.000 đ/hộ</td>
+        <td class="receipt-amount-cell" style="border:1px solid #334155; text-align:right; font-weight:bold; padding:4px;">100.000 đ</td>
+        <td style="border:1px solid #334155; padding:4px;">Đã hoàn thành</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">2</td>
+        <td style="border:1px solid #334155; font-weight:bold; padding:4px;">Quỹ Phòng chống thiên tai</td>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">Nhân khẩu LĐ</td>
+        <td style="border:1px solid #334155; text-align:right; padding:4px;">15.000 đ/khẩu</td>
+        <td class="receipt-amount-cell" style="border:1px solid #334155; text-align:right; font-weight:bold; padding:4px;">30.000 đ</td>
+        <td style="border:1px solid #334155; padding:4px;">2 khẩu LĐ</td>
+      </tr>
+      <tr class="receipt-total-row" style="font-weight:bold; background:#fef9c3;">
+        <td colspan="4" style="border:1px solid #334155; text-align:center; padding:4px;">TỔNG CỘNG THỰC THU</td>
+        <td class="receipt-total-amount-cell" style="border:1px solid #334155; text-align:right; color:#15803d; font-size:10.5pt; padding:4px;">130.000 đ</td>
+        <td style="border:1px solid #334155;"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="receipt-amount-words" style="font-size:9pt; font-style:italic; margin-bottom:6px;">
+    Số tiền bằng chữ: <strong>Một trăm ba mươi nghìn đồng chẵn</strong>
+  </div>
+
+  <table class="receipt-signatures-table" style="width:100%; border-collapse:collapse; margin-top:4px; font-size:8.5pt;">
+    <tr>
+      <td colspan="3" style="text-align:left;">
+        <div class="receipt-qr-payment-block" data-bank-bin="970422" data-bank-name="MB Bank" data-account-no="0987654321" data-account-holder="NGUYEN KIM TUYEN" data-payer-name="Nguyễn Văn An" data-amount="130000" data-transfer-template="NOP QUY" style="display:inline-flex; align-items:center; gap:8px; border:1.5px solid #0284c7; background:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;" title="Bấm để phóng to mã QR">
+          <img class="receipt-qr-code-img" src="https://img.vietqr.io/image/970422-0987654321-compact2.png?amount=130000&addInfo=NOP%20QUY%20H015%20Nguyen%20Van%20An" alt="VietQR" style="width:70px; height:70px; object-fit:contain;" />
+          <div>
+            <div style="font-weight:bold; color:#0369a1;">📱 VietQR: MB Bank</div>
+            <div>STK: <strong>0987654321</strong></div>
+            <div>Số tiền: <strong class="receipt-qr-amount-text" style="color:#059669;">130.000 đ</strong></div>
+          </div>
+        </div>
+      </td>
+      <td colspan="2" style="text-align:center; font-style:italic;">
+        Quảng Giao, ngày 12 tháng 10 năm 2026
+      </td>
+    </tr>
+    <tr style="font-weight:bold; text-align:center;">
+      <td style="width:20%;">Tổ trưởng TDP</td>
+      <td style="width:20%;">Kế toán</td>
+      <td style="width:20%;">Thủ quỹ</td>
+      <td style="width:20%;">Người lập phiếu</td>
+      <td style="width:20%;">Người nộp tiền</td>
+    </tr>
+    <tr style="text-align:center; height:45px; vertical-align:bottom; font-weight:bold;">
+      <td>Kim Tuyến</td>
+      <td>Lê Văn B</td>
+      <td>Trần Thị C</td>
+      <td>Nguyễn Kim Tuyến</td>
+      <td>Nguyễn Văn An</td>
+    </tr>
+  </table>
+</div>
+
+<div class="receipt-container" id="lien-2" style="box-sizing:border-box; padding:12px; border:1px solid #cbd5e1; margin-bottom:20px; background:#fff; font-family:Arial,sans-serif;">
+  <table class="receipt-header-table" style="width:100%; margin-bottom:4px;">
+    <tr>
+      <td style="text-align:left; font-size:9pt;">
+        <strong>UBND PHƯỜNG NAM SẦM SƠN</strong><br/>
+        <strong>TỔ DÂN PHỐ QUẢNG GIAO</strong>
+      </td>
+      <td style="text-align:right; font-size:8.5pt;">
+        <strong>Mẫu số 01 - TT</strong><br/>
+        <em>(Ban hành theo TT 200/2014/TT-BTC)</em><br/>
+        Số: 01/2026
+      </td>
+    </tr>
+  </table>
+
+  <div class="receipt-title-container" style="text-align:center; margin:6px 0;">
+    <h1 class="receipt-title" style="font-size:14pt; margin:2px 0; color:#1e3a8a;">PHIẾU THU TỔNG HỢP NĂM 2026</h1>
+    <p class="receipt-subtitle" style="font-weight:bold; color:#1e3a8a; margin:1px 0; font-size:9.5pt;">Liên 2: Giao cho người nộp tiền</p>
+    <p class="receipt-subtitle" style="font-style:italic; margin:1px 0; font-size:8.5pt;">ngày 12 tháng 10 năm 2026</p>
+  </div>
+
+  <table class="receipt-info-table" style="width:100%; border-collapse:collapse; margin-bottom:6px; font-size:9pt;">
+    <tr>
+      <td style="width:160px; font-weight:bold;">Họ và tên người nộp:</td>
+      <td><strong>Nguyễn Văn An</strong> (Đại diện Hộ gia đình)</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Địa chỉ:</td>
+      <td>Tổ dân phố Quảng Giao, Phường Nam Sầm Sơn</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Mã số hộ | Khẩu LĐ:</td>
+      <td><strong>H015</strong> | Số khẩu lao động: <strong>2 khẩu</strong></td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;">Lý do nộp:</td>
+      <td>Thu tổng hợp các khoản quỹ TDP và Phường năm 2026</td>
+    </tr>
+  </table>
+
+  <table class="receipt-details-table" style="width:100%; border-collapse:collapse; margin-bottom:6px; font-size:9pt;">
+    <thead>
+      <tr style="background:#f1f5f9;">
+        <th style="border:1px solid #334155; padding:4px;">STT</th>
+        <th style="border:1px solid #334155; padding:4px;">Nội dung đóng góp</th>
+        <th style="border:1px solid #334155; padding:4px;">Đối tượng</th>
+        <th style="border:1px solid #334155; padding:4px;">Định mức</th>
+        <th style="border:1px solid #334155; padding:4px;">Số tiền nộp</th>
+        <th style="border:1px solid #334155; padding:4px;">Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">1</td>
+        <td style="border:1px solid #334155; font-weight:bold; padding:4px;">[TDP] Quỹ Hoạt động TDP</td>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">Hộ gia đình</td>
+        <td style="border:1px solid #334155; text-align:right; padding:4px;">100.000 đ/hộ</td>
+        <td class="receipt-amount-cell" style="border:1px solid #334155; text-align:right; font-weight:bold; padding:4px;">100.000 đ</td>
+        <td style="border:1px solid #334155; padding:4px;">Đã hoàn thành</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">2</td>
+        <td style="border:1px solid #334155; font-weight:bold; padding:4px;">Quỹ Phòng chống thiên tai</td>
+        <td style="border:1px solid #334155; text-align:center; padding:4px;">Nhân khẩu LĐ</td>
+        <td style="border:1px solid #334155; text-align:right; padding:4px;">15.000 đ/khẩu</td>
+        <td class="receipt-amount-cell" style="border:1px solid #334155; text-align:right; font-weight:bold; padding:4px;">30.000 đ</td>
+        <td style="border:1px solid #334155; padding:4px;">2 khẩu LĐ</td>
+      </tr>
+      <tr class="receipt-total-row" style="font-weight:bold; background:#fef9c3;">
+        <td colspan="4" style="border:1px solid #334155; text-align:center; padding:4px;">TỔNG CỘNG THỰC THU</td>
+        <td class="receipt-total-amount-cell" style="border:1px solid #334155; text-align:right; color:#15803d; font-size:10.5pt; padding:4px;">130.000 đ</td>
+        <td style="border:1px solid #334155;"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="receipt-amount-words" style="font-size:9pt; font-style:italic; margin-bottom:6px;">
+    Số tiền bằng chữ: <strong>Một trăm ba mươi nghìn đồng chẵn</strong>
+  </div>
+
+  <table class="receipt-signatures-table" style="width:100%; border-collapse:collapse; margin-top:4px; font-size:8.5pt;">
+    <tr>
+      <td colspan="3" style="text-align:left;">
+        <div class="receipt-qr-payment-block" data-bank-bin="970422" data-bank-name="MB Bank" data-account-no="0987654321" data-account-holder="NGUYEN KIM TUYEN" data-payer-name="Nguyễn Văn An" data-amount="130000" data-transfer-template="NOP QUY" style="display:inline-flex; align-items:center; gap:8px; border:1.5px solid #0284c7; background:#fff; padding:4px 8px; border-radius:6px; cursor:pointer;" title="Bấm để phóng to mã QR">
+          <img class="receipt-qr-code-img" src="https://img.vietqr.io/image/970422-0987654321-compact2.png?amount=130000&addInfo=NOP%20QUY%20H015%20Nguyen%20Van%20An" alt="VietQR" style="width:70px; height:70px; object-fit:contain;" />
+          <div>
+            <div style="font-weight:bold; color:#0369a1;">📱 VietQR: MB Bank</div>
+            <div>STK: <strong>0987654321</strong></div>
+            <div>Số tiền: <strong class="receipt-qr-amount-text" style="color:#059669;">130.000 đ</strong></div>
+          </div>
+        </div>
+      </td>
+      <td colspan="2" style="text-align:center; font-style:italic;">
+        Quảng Giao, ngày 12 tháng 10 năm 2026
+      </td>
+    </tr>
+    <tr style="font-weight:bold; text-align:center;">
+      <td style="width:20%;">Tổ trưởng TDP</td>
+      <td style="width:20%;">Kế toán</td>
+      <td style="width:20%;">Thủ quỹ</td>
+      <td style="width:20%;">Người lập phiếu</td>
+      <td style="width:20%;">Người nộp tiền</td>
+    </tr>
+    <tr style="text-align:center; height:45px; vertical-align:bottom; font-weight:bold;">
+      <td>Kim Tuyến</td>
+      <td>Lê Văn B</td>
+      <td>Trần Thị C</td>
+      <td>Nguyễn Kim Tuyến</td>
+      <td>Nguyễn Văn An</td>
+    </tr>
+  </table>
+</div>
+
+        </div>
+
+        <!-- Modal Phóng to QR Quét trên Màn hình -->
+        <div id="qr-zoom-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.8); z-index:9999999; align-items:center; justify-content:center; backdrop-filter:blur(4px); font-family:sans-serif;">
+          <div style="background:#ffffff; border-radius:16px; padding:20px 24px; max-width:390px; width:92%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center; position:relative; border:1px solid #cbd5e1;">
+            <button id="qr-zoom-close" onclick="var m=document.getElementById('qr-zoom-modal'); if(m) m.style.display='none'; return false;" style="position:absolute; top:12px; right:12px; background:#f1f5f9; border:none; width:30px; height:30px; border-radius:50%; font-size:15px; cursor:pointer; color:#475569; font-weight:bold; display:flex; align-items:center; justify-content:center;">✕</button>
+            <div style="font-size:13.5pt; font-weight:800; color:#0284c7; margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:6px;">
+              <span>📱</span> QUÉT MÃ VIETQR THANH TOÁN
+            </div>
+            <div style="background:#ffffff; padding:10px; border-radius:12px; display:inline-block; border:2px solid #0284c7; box-shadow:0 4px 14px rgba(2,132,199,0.18); margin-bottom:12px;">
+              <img id="qr-zoom-img" src="" alt="Mã VietQR" style="width:250px; height:250px; object-fit:contain; display:block; border-radius:4px;" />
+            </div>
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; text-align:left; font-size:11.5px; line-height:1.6; color:#1e293b; margin-bottom:12px;">
+              <div>Ngân hàng: <strong id="qr-zoom-bank" style="color:#0369a1;"></strong></div>
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <span>STK: <strong id="qr-zoom-stk" style="font-family:monospace; font-size:13.5px; color:#1e40af;"></strong></span>
+                <button id="qr-zoom-copy-btn" onclick="var s=document.getElementById('qr-zoom-stk'); if(s&&s.innerText){ navigator.clipboard.writeText(s.innerText); this.innerText='✅ Đã chép!'; var btn=this; setTimeout(function(){ btn.innerText='📋 Sao chép'; }, 1500); }" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; border-radius:6px; padding:2px 8px; font-size:10.5px; cursor:pointer; font-weight:600;">📋 Sao chép</button>
+              </div>
+              <div>Chủ TK: <strong id="qr-zoom-holder" style="text-transform:uppercase;"></strong></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin:4px 0;">
+                <span style="font-weight:600;">Số tiền nộp (có thể sửa):</span>
+                <div style="display:flex; align-items:center; gap:3px;">
+                  <input id="qr-zoom-amount-input" type="text" style="width:130px; text-align:right; font-weight:800; font-size:13px; color:#059669; border:1.5px solid #10b981; border-radius:6px; padding:2px 8px; outline:none; background:#ffffff;" placeholder="0" />
+                  <span style="font-weight:700; color:#059669; font-size:12px;">đ</span>
+                </div>
+              </div>
+              <div style="font-size:10px; color:#64748b;">Nội dung: <span id="qr-zoom-desc" style="font-family:monospace; color:#334155;"></span></div>
+            </div>
+            <div style="font-size:11px; color:#475569; line-height:1.4;">
+              💡 <em>Mở ứng dụng ngân hàng (Agribank, MB, VCB...) hoặc Zalo quét mã QR trên màn hình máy tính để nộp tiền ngay!</em>
+            </div>
+          </div>
+        </div>
+
+        <!-- Draggable 3D Mini Calculator Widget for Print Window -->
+        <div id="print-calc-3d" style="display:none; position:fixed; top:65px; right:25px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+          <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
+            <div style="display:flex; flex-direction:column; pointer-events:none;">
+              <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
+              <span style="font-size:0.68rem; color:#94a3b8; font-weight:600;">Nguyễn Kim Tuyến</span>
+            </div>
+            <button id="calc-close-btn" onclick="window.closeCalc && window.closeCalc(); return false;" onmousedown="event.stopPropagation();" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:24px; height:24px; cursor:pointer; font-size:13px; font-weight:bold; display:flex; align-items:center; justify-content:center; z-index:10;" title="Đóng máy tính">✕</button>
+          </div>
+          <div style="background:linear-gradient(180deg,#022c22,#064e3b); border-radius:12px; padding:8px 10px; margin-bottom:8px; text-align:right;">
+            <div id="calc-eq" style="font-size:0.72rem; color:#6ee7b7; height:14px; font-family:monospace;"></div>
+            <div id="calc-disp" style="font-size:1.55rem; font-weight:900; color:#34d399; font-family:monospace;">0 đ</div>
+            <div id="calc-words" style="font-size:0.66rem; color:#d1fae5; font-style:italic; border-top:1px dashed rgba(52,211,153,0.3); margin-top:2px; text-align:left; display:none;"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-bottom:8px;">
+            <button class="c-quick" data-val="10000" onclick="window.calcQuickAdd && window.calcQuickAdd(10000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
+            <button class="c-quick" data-val="20000" onclick="window.calcQuickAdd && window.calcQuickAdd(20000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
+            <button class="c-quick" data-val="50000" onclick="window.calcQuickAdd && window.calcQuickAdd(50000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
+            <button class="c-quick" data-val="100000" onclick="window.calcQuickAdd && window.calcQuickAdd(100000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
+            <button class="c-quick" data-val="200000" onclick="window.calcQuickAdd && window.calcQuickAdd(200000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
+            <button class="c-quick" data-val="500000" onclick="window.calcQuickAdd && window.calcQuickAdd(500000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;">
+            <button class="c-btn" data-key="AC" onclick="window.calcKey && window.calcKey('AC'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
+            <button class="c-btn" data-key="DEL" onclick="window.calcKey && window.calcKey('DEL'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
+            <button class="c-btn" data-key="%" onclick="window.calcKey && window.calcKey('%'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
+            <button class="c-btn" data-key="/" onclick="window.calcKey && window.calcKey('/'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
+            <button class="c-btn" data-key="7" onclick="window.calcKey && window.calcKey('7'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
+            <button class="c-btn" data-key="8" onclick="window.calcKey && window.calcKey('8'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
+            <button class="c-btn" data-key="9" onclick="window.calcKey && window.calcKey('9'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
+            <button class="c-btn" data-key="*" onclick="window.calcKey && window.calcKey('*'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
+            <button class="c-btn" data-key="4" onclick="window.calcKey && window.calcKey('4'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
+            <button class="c-btn" data-key="5" onclick="window.calcKey && window.calcKey('5'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
+            <button class="c-btn" data-key="6" onclick="window.calcKey && window.calcKey('6'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
+            <button class="c-btn" data-key="-" onclick="window.calcKey && window.calcKey('-'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
+            <button class="c-btn" data-key="1" onclick="window.calcKey && window.calcKey('1'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
+            <button class="c-btn" data-key="2" onclick="window.calcKey && window.calcKey('2'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
+            <button class="c-btn" data-key="3" onclick="window.calcKey && window.calcKey('3'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
+            <button class="c-btn" data-key="+" onclick="window.calcKey && window.calcKey('+'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
+            <button class="c-btn" data-key="0" onclick="window.calcKey && window.calcKey('0'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
+            <button class="c-btn" data-key="000" onclick="window.calcKey && window.calcKey('000'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
+            <button class="c-btn" data-key="." onclick="window.calcKey && window.calcKey('.'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
+            <button class="c-btn" data-key="=" onclick="window.calcKey && window.calcKey('='); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
+          </div>
+          <button id="calc-copy-btn" onclick="window.calcCopy && window.calcCopy(); return false;" onmousedown="event.stopPropagation();" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
+        </div>
+
+        <script>
+          const SAVE_KEY = 'receipt_html_hh_sample_combined';
+          const currentPrintMode = 'combined';
+          const freshHtml = "<div>Fresh</div>";
+
+          // === KHỞI TẠO CÁC HÀM TOÀN CỤC NGAY LẬP TỨC CHO CÁC NÚT BẤM TRÊN THANH CÔNG CỤ ===
+          window.toggleCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
+            if (m) {
+              var isHidden = (m.style.display === 'none' || !m.style.display);
+              if (isHidden) {
+                m.style.display = 'block';
+                m.style.zIndex = '999999';
+                if (b) {
+                  b.style.boxShadow = '0 0 0 3px #38bdf8, 0 0 12px rgba(14,165,233,0.8)';
+                  b.style.transform = 'scale(1.04)';
+                }
+              } else {
+                m.style.display = 'none';
+                if (b) {
+                  b.style.boxShadow = 'none';
+                  b.style.transform = 'none';
+                }
+              }
+            }
+          };
+
+          window.closeCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
+            if (m) m.style.display = 'none';
+            if (b) {
+              b.style.boxShadow = 'none';
+              b.style.transform = 'none';
+            }
+          };
+
+          window.openQrZoom = function() {
+            var modal = document.getElementById('qr-zoom-modal');
+            if (!modal) return;
+            var qrBlock = document.querySelector('.receipt-qr-payment-block');
+            if (!qrBlock) {
+              alert('Chưa có thông tin mã QR / tài khoản ngân hàng trên biên lai!');
+              return;
+            }
+            var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
+            var bankName = qrBlock.getAttribute('data-bank-name') || qrBlock.getAttribute('data-bank-bin') || 'Ngân hàng';
+            var accNo = qrBlock.getAttribute('data-account-no') || '';
+            var accHolder = qrBlock.getAttribute('data-account-holder') || '';
+            var payerName = qrBlock.getAttribute('data-payer-name') || '';
+            var hhNo = qrBlock.getAttribute('data-household-no') || '';
+            var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+            var amountVal = parseFloat(qrBlock.getAttribute('data-amount') || '0') || 0;
+            var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+
+            var cleanBank = encodeURIComponent(bankBin.trim());
+            var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+            var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+            if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+              desc = (desc + ' ' + payerName).trim();
+            }
+            desc = desc
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd')
+              .replace(/Đ/g, 'D')
+              .replace(/[^a-zA-Z0-9 -]/g, ' ')
+              .trim()
+              .substring(0, 35);
+
+            var bigQrSrc = '';
+            if (!isCustomOnly && bankBin && accNo) {
+              bigQrSrc = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
+              var qp = [];
+              if (amountVal > 0) qp.push('amount=' + Math.round(amountVal));
+              if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
+              if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
+              if (qp.length > 0) bigQrSrc += '?' + qp.join('&');
+            } else {
+              var img = qrBlock.querySelector('.receipt-qr-code-img');
+              bigQrSrc = img ? img.src : '';
+            }
+
+            var imgEl = document.getElementById('qr-zoom-img');
+            if (imgEl) imgEl.src = bigQrSrc;
+            var bEl = document.getElementById('qr-zoom-bank');
+            if (bEl) bEl.innerText = bankName;
+            var stkEl = document.getElementById('qr-zoom-stk');
+            if (stkEl) stkEl.innerText = accNo;
+            var hEl = document.getElementById('qr-zoom-holder');
+            if (hEl) hEl.innerText = accHolder;
+            var aInput = document.getElementById('qr-zoom-amount-input');
+            if (aInput) aInput.value = amountVal > 0 ? amountVal.toLocaleString('vi-VN') : '0';
+            var dEl = document.getElementById('qr-zoom-desc');
+            if (dEl) dEl.innerText = desc || 'Nộp tiền quỹ';
+
+            modal.style.display = 'flex';
+          };
+
+          window.closeQrZoom = function() {
+            var modal = document.getElementById('qr-zoom-modal');
+            if (modal) modal.style.display = 'none';
+          };
+
+          window.handleSaveReceipt = async function() {
+            var b = document.getElementById('btn-save');
+            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang lưu...';
+            }
+            try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
+            try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
+
+            var editor = document.querySelector('.editor-area');
+            var htmlToSave = editor ? editor.innerHTML : '';
+
+            try { localStorage.setItem(SAVE_KEY, htmlToSave); } catch(e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(SAVE_KEY, htmlToSave);
+                var customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                customs[SAVE_KEY] = htmlToSave;
+                window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+              }
+            } catch(e) {}
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, htmlToSave);
+              }
+            } catch(e) {}
+
+            if (b) {
+              b.disabled = false;
+              b.innerHTML = oldBtnText;
+            }
+            var notice = document.getElementById('saved-notice');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
+            }
+            alert('✅ Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!');
+          };
+
+          window.handleSaveAndPrint = async function() {
+            var b = document.getElementById('btn-save-and-print');
+            var oldBtnText = b ? b.innerHTML : '💾🖨️ Lưu & In';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang chuẩn bị in...';
+            }
+            try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
+            try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
+
+            var editor = document.querySelector('.editor-area');
+            var htmlToSave = editor ? editor.innerHTML : '';
+
+            try { localStorage.setItem(SAVE_KEY, htmlToSave); } catch(e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(SAVE_KEY, htmlToSave);
+              }
+            } catch(e) {}
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, htmlToSave);
+              }
+            } catch(e) {}
+
+            var notice = document.getElementById('saved-notice');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu vào CSDL thành công!</strong> Đang mở hộp thoại in...';
+            }
+            setTimeout(function() {
+              if (b) {
+                b.disabled = false;
+                b.innerHTML = oldBtnText;
+              }
+              window.print();
+            }, 250);
+          };
+
+          window.handleResetReceipt = function() {
+            if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
+              try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+              try {
+                if (window.opener && window.opener.localStorage) window.opener.localStorage.removeItem(SAVE_KEY);
+                if (window.opener && window.opener.db && window.opener.db.deleteReceiptCustomization) {
+                  window.opener.db.deleteReceiptCustomization(SAVE_KEY);
+                }
+              } catch(e) {}
+              var editor = document.querySelector('.editor-area');
+              if (editor) editor.innerHTML = freshHtml;
+              try {
+                if (typeof syncAllLienContent === 'function') syncAllLienContent();
+                if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals();
+              } catch(e) {}
+              var notice = document.getElementById('saved-notice');
+              if (notice) notice.style.display = 'none';
+              alert('✅ Đã khôi phục về mẫu phiếu ban đầu từ hệ thống!');
+            }
+          };
+
+          var dV = "0", eV = "", nN = true;
+          function uUI() {
+            var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq');
+            var num = parseFloat(dV);
+            if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
+            if (eE) eE.innerText = eV;
+          }
+          window.calcQuickAdd = function(aV) {
+            var numVal = parseFloat(aV) || 0;
+            var cV = parseFloat(dV) || 0;
+            dV = String(nN ? numVal : cV + numVal);
+            nN = false;
+            uUI();
+          };
+          window.calcKey = function(k) {
+            if (!k) return;
+            if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
+            else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
+            else if (['+', '-', '*', '/'].includes(k)) {
+              var op = k === '*' ? '×' : k === '/' ? '÷' : k;
+              eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
+            } else if (k === '=') {
+              if (eV) {
+                try {
+                  var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
+                  dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
+                } catch(err) { dV = "Error"; eV = ""; }
+              }
+            } else if (k === '000') {
+              if (!nN && dV !== '0') dV += '000';
+            } else {
+              if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
+            }
+            uUI();
+          };
+          window.calcCopy = function() {
+            var num = parseFloat(dV);
+            if (!isNaN(num)) {
+              navigator.clipboard.writeText(String(num));
+              var cp = document.getElementById('calc-copy-btn');
+              if (cp) {
+                cp.innerText = '✅ Đã sao chép!';
+                setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
+              }
+            }
+          };
+
+          // Lắng nghe phím ESC để đóng nhanh máy tính và phóng to QR
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              window.closeCalc();
+              window.closeQrZoom();
+            }
+          });
+          const btnSave = document.getElementById('btn-save');
+          const btnReset = document.getElementById('btn-reset');
+          const btnLoad = document.getElementById('btn-load');
+          const editor = document.querySelector('.editor-area');
+          const fontSizeSelect = document.getElementById('font-size-select');
+
+          function docSoTien(number) {
+            if (isNaN(number) || !number || number <= 0) return 'Không đồng';
+            const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+            function readTriple(n, isHighestTriple) {
+              let tram = Math.floor(n / 100);
+              let chuc = Math.floor((n % 100) / 10);
+              let donvi = n % 10;
+              let res = "";
+              if (tram > 0 || !isHighestTriple) res += digits[tram] + " trăm ";
+              if (chuc === 0 && donvi > 0) {
+                if (tram > 0 || !isHighestTriple) res += "lẻ ";
+              } else if (chuc === 1) res += "mười ";
+              else if (chuc > 1) res += digits[chuc] + " mươi ";
+              if (donvi === 1) res += chuc > 1 ? "mốt" : "một";
+              else if (donvi === 5) res += chuc > 0 ? "lăm" : "năm";
+              else if (donvi > 0) res += digits[donvi];
+              return res.trim();
+            }
+            let n = Math.floor(Math.abs(number));
+            let triples = [];
+            while (n > 0) { triples.push(n % 1000); n = Math.floor(n / 1000); }
+            const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ"];
+            let parts = [];
+            for (let i = triples.length - 1; i >= 0; i--) {
+              let val = triples[i];
+              if (val === 0) continue;
+              let str = readTriple(val, i === triples.length - 1);
+              let unit = units[i] ? " " + units[i] : "";
+              parts.push(str + unit);
+            }
+            let finalStr = parts.join(" ").trim();
+            if (!finalStr) return 'Không đồng';
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/[ \t\r\n]+/g, ' ');
+          }
+
+          let lastEditedContainerIndex = 0;
+
+          function getActiveReceiptTarget(e) {
+            let target = null;
+            try {
+              const sel = window.getSelection();
+              if (sel && sel.anchorNode) {
+                target = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+              }
+            } catch (err) {}
+
+            if (!target || !target.closest || !target.closest('.receipt-container')) {
+              if (e && e.target) {
+                const el = e.target.nodeType === 3 ? e.target.parentElement : e.target;
+                if (el && el.closest && el.closest('.receipt-container')) {
+                  target = el;
+                }
+              }
+            }
+
+            if (!target || !target.closest || !target.closest('.receipt-container')) {
+              const el = document.activeElement ? (document.activeElement.nodeType === 3 ? document.activeElement.parentElement : document.activeElement) : null;
+              if (el && el.closest && el.closest('.receipt-container')) {
+                target = el;
+              }
+            }
+            return target;
+          }
+
+          function syncTwoLiens(sourceHint) {
+            try {
+              const containers = Array.from(document.querySelectorAll('.receipt-container'));
+              if (containers.length <= 1) return;
+
+              let srcIdx = 0;
+              if (typeof sourceHint === 'number' && sourceHint >= 0 && sourceHint < containers.length) {
+                srcIdx = sourceHint;
+              } else {
+                try {
+                  const sel = window.getSelection();
+                  if (sel && sel.anchorNode) {
+                    const node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+                    if (node && node.closest) {
+                      const c = node.closest('.receipt-container');
+                      const idx = containers.indexOf(c);
+                      if (idx >= 0) {
+                        srcIdx = idx;
+                        lastEditedContainerIndex = idx;
+                      }
+                    }
+                  } else if (sourceHint && sourceHint.target) {
+                    const el = sourceHint.target.nodeType === 3 ? sourceHint.target.parentElement : sourceHint.target;
+                    if (el && el.closest) {
+                      const c = el.closest('.receipt-container');
+                      const idx = containers.indexOf(c);
+                      if (idx >= 0) {
+                        srcIdx = idx;
+                        lastEditedContainerIndex = idx;
+                      }
+                    }
+                  } else {
+                    srcIdx = lastEditedContainerIndex || 0;
+                  }
+                } catch (e) {
+                  srcIdx = lastEditedContainerIndex || 0;
+                }
+              }
+
+              const src = containers[srcIdx];
+              if (!src) return;
+
+              containers.forEach((tgt, tIdx) => {
+                if (tIdx === srcIdx) return;
+
+                // 1. Đồng bộ bảng tiêu đề đơn vị (receipt-header-table)
+                const sHdr = src.querySelector('.receipt-header-table');
+                const tHdr = tgt.querySelector('.receipt-header-table');
+                if (sHdr && tHdr) {
+                  const sCells = Array.from(sHdr.querySelectorAll('td, th'));
+                  const tCells = Array.from(tHdr.querySelectorAll('td, th'));
+                  sCells.forEach((sC, idx) => {
+                    const tC = tCells[idx];
+                    if (tC && tC.innerHTML !== sC.innerHTML) tC.innerHTML = sC.innerHTML;
+                  });
+                }
+
+                // 2. Đồng bộ tiêu đề chính & ngày tháng, giữ nguyên tên riêng của từng liên
+                const sTitle = src.querySelector('.receipt-title');
+                const tTitle = tgt.querySelector('.receipt-title');
+                if (sTitle && tTitle && sTitle.innerHTML !== tTitle.innerHTML) {
+                  tTitle.innerHTML = sTitle.innerHTML;
+                }
+
+                const sSubtitles = Array.from(src.querySelectorAll('.receipt-subtitle'));
+                const tSubtitles = Array.from(tgt.querySelectorAll('.receipt-subtitle'));
+                for (let i = 1; i < Math.min(sSubtitles.length, tSubtitles.length); i++) {
+                  if (sSubtitles[i].innerHTML !== tSubtitles[i].innerHTML) {
+                    tSubtitles[i].innerHTML = sSubtitles[i].innerHTML;
+                  }
+                }
+
+                // 3. Đồng bộ toàn diện bảng thông tin người nộp (receipt-info-table)
+                const sInfo = src.querySelector('.receipt-info-table');
+                const tInfo = tgt.querySelector('.receipt-info-table');
+                if (sInfo && tInfo) {
+                  const sRows = Array.from(sInfo.querySelectorAll('tr'));
+                  const tRows = Array.from(tInfo.querySelectorAll('tr'));
+                  sRows.forEach((sR, rI) => {
+                    const tR = tRows[rI];
+                    if (!tR) return;
+                    const sCells = Array.from(sR.children);
+                    const tCells = Array.from(tR.children);
+                    sCells.forEach((sC, cI) => {
+                      const tC = tCells[cI];
+                      if (tC && tC.innerHTML !== sC.innerHTML) {
+                        tC.innerHTML = sC.innerHTML;
+                      }
+                    });
+                  });
+                }
+
+                // 4. Đồng bộ bảng chi tiết các khoản thu (receipt-details-table)
+                const sDetails = src.querySelector('.receipt-details-table');
+                const tDetails = tgt.querySelector('.receipt-details-table');
+                if (sDetails && tDetails) {
+                  const sRows = Array.from(sDetails.querySelectorAll('tbody tr'));
+                  const tRows = Array.from(tDetails.querySelectorAll('tbody tr'));
+                  sRows.forEach((sR, rI) => {
+                    const tR = tRows[rI];
+                    if (!tR) return;
+                    const isTotal = sR.classList.contains('receipt-total-row') || 
+                      (sR.textContent || sR.innerText || '').toUpperCase().includes('TỔNG CỘNG');
+                    if (isTotal) return;
+                    const sCells = Array.from(sR.children);
+                    const tCells = Array.from(tR.children);
+                    sCells.forEach((sC, cI) => {
+                      const tC = tCells[cI];
+                      if (tC && tC.innerHTML !== sC.innerHTML) {
+                        tC.innerHTML = sC.innerHTML;
+                      }
+                    });
+                  });
+                }
+
+                // 5. Đồng bộ bảng chữ ký (receipt-signatures-table)
+                const sSig = src.querySelector('.receipt-signatures-table');
+                const tSig = tgt.querySelector('.receipt-signatures-table');
+                if (sSig && tSig) {
+                  const sRows = Array.from(sSig.querySelectorAll('tr'));
+                  const tRows = Array.from(tSig.querySelectorAll('tr'));
+                  sRows.forEach((sR, rI) => {
+                    const tR = tRows[rI];
+                    if (!tR) return;
+                    const sCells = Array.from(sR.children);
+                    const tCells = Array.from(tR.children);
+                    sCells.forEach((sC, cI) => {
+                      const tC = tCells[cI];
+                      if (!tC) return;
+                      if (sC.querySelector('.receipt-qr-payment-block') || tC.querySelector('.receipt-qr-payment-block')) {
+                        return;
+                      }
+                      if (tC.innerHTML !== sC.innerHTML) {
+                        tC.innerHTML = sC.innerHTML;
+                      }
+                    });
+                  });
+                }
+              });
+            } catch (err) {
+              console.warn('syncTwoLiens error:', err);
+            }
+          }
+
+          function syncReceiptFields(e) {
+            syncTwoLiens(e);
+          }
+
+          function syncAllLienContent(sourceIdx) {
+            syncTwoLiens(sourceIdx);
+          }
+
+          function updateAllQrCodes(newAmount) {
+            if (isNaN(newAmount) || newAmount <= 0) return;
+            const qrBlocks = document.querySelectorAll('.receipt-qr-payment-block');
+            
+            // Tìm tên người nộp mới nhất từ bảng thông tin (nếu người dùng vừa sửa tên)
+            let currentPayerName = '';
+            const firstInfoTable = document.querySelector('.receipt-info-table');
+            if (firstInfoTable) {
+              const firstRowTd = firstInfoTable.querySelector('tr td:last-child');
+              if (firstRowTd) {
+                const rawTxt = firstRowTd.textContent || firstRowTd.innerText || '';
+                currentPayerName = rawTxt.split('(')[0].trim();
+              }
+            }
+
+            qrBlocks.forEach(function(qrBlock) {
+              qrBlock.setAttribute('data-amount', String(newAmount));
+              if (currentPayerName) {
+                qrBlock.setAttribute('data-payer-name', currentPayerName);
+              }
+
+              const amtSpan = qrBlock.querySelector('.receipt-qr-amount-text');
+              if (amtSpan && document.activeElement !== amtSpan) {
+                amtSpan.textContent = newAmount.toLocaleString('vi-VN') + ' đ';
+              }
+
+              const isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+              const bankBin = qrBlock.getAttribute('data-bank-bin');
+              const accNo = qrBlock.getAttribute('data-account-no');
+              const accHolder = qrBlock.getAttribute('data-account-holder') || '';
+              const payerName = currentPayerName || qrBlock.getAttribute('data-payer-name') || '';
+              const hhNo = qrBlock.getAttribute('data-household-no') || '';
+              const transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+
+              if (!isCustomOnly && bankBin && accNo) {
+                const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
+                if (qrImg) {
+                  const cleanBank = encodeURIComponent(bankBin.trim());
+                  const cleanAcc = encodeURIComponent(accNo.replace(/[ \t\r\n]+/g, ''));
+                  let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/[ \t\r\n]+/g, ' ').trim();
+                  if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                    desc = (desc + ' ' + payerName).trim();
+                  }
+                  desc = desc
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/đ/g, 'd')
+                    .replace(/Đ/g, 'D')
+                    .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                    .trim()
+                    .substring(0, 35);
+
+                  let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(newAmount);
+                  if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
+                  if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
+                  newUrl += '&_t=' + Date.now();
+                  qrImg.src = newUrl;
+                }
+              }
+            });
+
+            // Đồng bộ modal phóng to nếu đang mở
+            const zoomInput = document.getElementById('qr-zoom-amount-input');
+            if (zoomInput && document.activeElement !== zoomInput) {
+              zoomInput.value = newAmount.toLocaleString('vi-VN');
+            }
+            const zoomImg = document.getElementById('qr-zoom-img');
+            const firstBlock = document.querySelector('.receipt-qr-payment-block');
+            if (zoomImg && firstBlock) {
+              const isCustomOnly = firstBlock.getAttribute('data-has-custom-qr') === '1';
+              const bankBin = firstBlock.getAttribute('data-bank-bin') || '';
+              const accNo = firstBlock.getAttribute('data-account-no') || '';
+              const accHolder = firstBlock.getAttribute('data-account-holder') || '';
+              const payerName = currentPayerName || firstBlock.getAttribute('data-payer-name') || '';
+              const hhNo = firstBlock.getAttribute('data-household-no') || '';
+              const transferPrefix = firstBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+
+              if (!isCustomOnly && bankBin && accNo) {
+                const cleanBank = encodeURIComponent(bankBin.trim());
+                const cleanAcc = encodeURIComponent(accNo.replace(/[ \t\r\n]+/g, ''));
+                let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/[ \t\r\n]+/g, ' ').trim();
+                if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                  desc = (desc + ' ' + payerName).trim();
+                }
+                desc = desc
+                  .normalize('NFD')
+                  .replace(/[\u0300-\u036f]/g, '')
+                  .replace(/đ/g, 'd')
+                  .replace(/Đ/g, 'D')
+                  .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                  .trim()
+                  .substring(0, 35);
+
+                let bigUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png?amount=' + Math.round(newAmount);
+                if (desc) bigUrl += '&addInfo=' + encodeURIComponent(desc);
+                if (accHolder) bigUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
+                bigUrl += '&_t=' + Date.now();
+                zoomImg.src = bigUrl;
+              }
+            }
+          }
+
+          let isRecalculating = false;
+          function recalculateReceiptTotals() {
+            if (isRecalculating) return;
+            const activeEl = document.activeElement ? (document.activeElement.nodeType === 3 ? document.activeElement.parentElement : document.activeElement) : null;
+            if (activeEl && (activeEl.classList.contains('receipt-qr-amount-text') || (activeEl.closest && activeEl.closest('.receipt-qr-amount-text')))) {
+              return;
+            }
+            isRecalculating = true;
+            try {
+              const containers = document.querySelectorAll('.receipt-container');
+              let calculatedGrandTotal = 0;
+              containers.forEach(container => {
+                const table = container.querySelector('.receipt-details-table');
+                if (!table) return;
+
+                const rows = Array.from(table.querySelectorAll('tbody tr'));
+                if (rows.length === 0) return;
+
+                let totalRow = table.querySelector('tr.receipt-total-row');
+                if (!totalRow) {
+                  totalRow = rows.find(r => (r.textContent || r.innerText || '').toUpperCase().includes('TỔNG CỘNG'));
+                  if (totalRow) totalRow.classList.add('receipt-total-row');
+                }
+
+                let grandTotal = 0;
+                let tdpTotal = 0;
+                let wardTotal = 0;
+
+                rows.forEach(row => {
+                  const rText = (row.textContent || row.innerText || '').toUpperCase();
+                  if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
+                    return;
+                  }
+
+                  const tds = Array.from(row.querySelectorAll('td'));
+                  if (tds.length < 2) return;
+
+                  let amountTd = row.querySelector('.receipt-amount-cell');
+                  if (!amountTd) {
+                    if (tds.length >= 6) amountTd = tds[4];
+                    else if (tds.length >= 4) amountTd = tds[2];
+                    else amountTd = tds[tds.length - 2];
+                  }
+
+                  const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
+                  const digits = cellText.replace(/[^0-9]/g, '');
+                  const num = digits ? parseInt(digits, 10) : 0;
+
+                  const fundTypeAttr = row.getAttribute('data-fund-type');
+                  const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
+                  const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
+
+                  if (isWard) {
+                    wardTotal += num;
+                  } else {
+                    tdpTotal += num;
+                  }
+
+                  grandTotal += num;
+                });
+
+                const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
+                let effectiveTotal = grandTotal;
+                if (activePrintMode === 'tdp_only') {
+                  effectiveTotal = tdpTotal;
+                } else if (activePrintMode === 'ward_only') {
+                  effectiveTotal = wardTotal;
+                }
+
+                if (totalRow) {
+                  const totalTds = totalRow.querySelectorAll('td');
+                  if (totalTds.length >= 2) {
+                    const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
+                    const existingDigits = existingText.replace(/[^0-9]/g, '');
+                    const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
+
+                    if (effectiveTotal === 0 && existingNum > 0) {
+                      const hasAnyNonEmptyRow = rows.some(r => {
+                        if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
+                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
+                        const cellDigits = cell ? (cell.textContent || '').replace(/[^0-9]/g, '') : '';
+                        return cellDigits.length > 0;
+                      });
+                      if (hasAnyNonEmptyRow) {
+                        effectiveTotal = existingNum;
+                      }
+                    }
+
+                    const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
+                    const ths = Array.from(table.querySelectorAll('thead th'));
+                    const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
+
+                    const labelTd = totalTds[0];
+                    const amountTd = totalTds[1];
+
+                    let printModeText = '';
+                    if (activePrintMode === 'tdp_only') {
+                      printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ)';
+                    } else if (activePrintMode === 'ward_only') {
+                      printModeText = '(UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    } else {
+                      if (tdpTotal > 0 || wardTotal > 0) {
+                        printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + PHƯỜNG: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                      }
+                    }
+
+                    if (is6Col) {
+                      labelTd.setAttribute('colspan', '4');
+                      labelTd.style.textAlign = 'center';
+                      labelTd.style.fontWeight = 'bold';
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+
+                      amountTd.style.textAlign = 'right';
+                      amountTd.style.fontWeight = 'bold';
+                      amountTd.style.color = '#15803d';
+                      amountTd.style.fontSize = '11pt';
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+
+                      if (totalTds.length >= 3) {
+                        totalTds[2].innerHTML = '';
+                      }
+                    } else {
+                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN ' + printModeText;
+                      amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
+                    }
+                  }
+                }
+
+                if (effectiveTotal >= 0) calculatedGrandTotal = effectiveTotal;
+
+                const wordsContainer = container.querySelector('.receipt-amount-words') 
+                  || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                
+                if (wordsContainer) {
+                  const strongEl = wordsContainer.querySelector('strong');
+                  if (strongEl) {
+                    strongEl.innerText = docSoTien(effectiveTotal);
+                  } else {
+                    wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(effectiveTotal) + '</strong>';
+                  }
+                }
+              });
+
+              if (calculatedGrandTotal > 0) {
+                updateAllQrCodes(calculatedGrandTotal);
+              }
+            } catch (err) {
+              console.error('Error recalculating totals:', err);
+            } finally {
+              isRecalculating = false;
+            }
+          }
+
+          const btnRecalc = document.getElementById('btn-recalc');
+          if (btnRecalc) {
+            btnRecalc.addEventListener('click', function() {
+              syncAllLienContent();
+              recalculateReceiptTotals();
+              alert('⚡ Đã tự động đồng bộ giữa Liên 1 và Liên 2, tính toán lại Tổng tiền thực thu và Số tiền bằng chữ trên cả 2 Liên!');
+            });
+          }
+
+          fontSizeSelect.addEventListener('change', function() {
+            document.querySelectorAll('.receipt-container').forEach(function(el) {
+              el.style.fontSize = fontSizeSelect.value;
+            });
+          });
+
+          ['input', 'keyup', 'paste', 'change', 'blur'].forEach(function(evtType) {
+            document.addEventListener(evtType, function(e) {
+              syncReceiptFields(e);
+              recalculateReceiptTotals();
+            }, true);
+          });
+
+          try {
+            recalculateReceiptTotals();
+          } catch (e) {}
+
+
+
+          function safeSaveStorage(key, val) {
+            let saved = false;
+            try {
+              localStorage.setItem(key, val);
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(key, val);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  customs[key] = val;
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+                saved = true;
+              }
+            } catch (err) {}
+            try {
+              if (window.opener && window.opener.postMessage) {
+                window.opener.postMessage({ type: 'RECEIPT_SAVED', key: key, html: val }, '*');
+              }
+            } catch (err) {}
+            return saved;
+          }
+
+          function safeGetStorage(key) {
+            try {
+              const val = localStorage.getItem(key);
+              if (val) return val;
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                return window.opener.localStorage.getItem(key);
+              }
+            } catch (err) {}
+            return null;
+          }
+
+          function safeRemoveStorage(key) {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.removeItem(key);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  delete customs[key];
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+              }
+            } catch (err) {}
+          }
+
+          function show2DToast(msg, type = 'success') {
+            let toast = document.getElementById('custom-2d-toast');
+            if (!toast) {
+              toast = document.createElement('div');
+              toast.id = 'custom-2d-toast';
+              toast.className = 'no-print';
+              toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;padding:12px 20px;border-radius:10px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15),0 8px 10px -6px rgba(0,0,0,0.1);display:flex;align-items:center;gap:10px;transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);transform:translateY(-20px) scale(0.95);opacity:0;';
+              document.body.appendChild(toast);
+            }
+            const isSuccess = type === 'success';
+            toast.style.background = isSuccess ? '#ecfdf5' : '#fffbe8';
+            toast.style.color = isSuccess ? '#065f46' : '#92400e';
+            toast.style.border = isSuccess ? '1.5px solid #10b981' : '1.5px solid #f59e0b';
+            toast.innerHTML = isSuccess ? '<span style="font-size:16px;">✅</span> <span>' + msg + '</span>' : '<span style="font-size:16px;">ℹ️</span> <span>' + msg + '</span>';
+            requestAnimationFrame(() => {
+              toast.style.opacity = '1';
+              toast.style.transform = 'translateY(0) scale(1)';
+            });
+            if (toast.timeoutId) clearTimeout(toast.timeoutId);
+            toast.timeoutId = setTimeout(() => {
+              toast.style.opacity = '0';
+              toast.style.transform = 'translateY(-20px) scale(0.95)';
+            }, 2800);
+          }
+
+          async function waitForAllQrImages() {
+            const imgs = Array.from(document.querySelectorAll('.receipt-qr-code-img'));
+            if (imgs.length === 0) return;
+            await Promise.all(imgs.map(function(img) {
+              if (!img.src) return Promise.resolve();
+              if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+              if (typeof img.decode === 'function') {
+                return img.decode().catch(function() {});
+              }
+              return new Promise(function(resolve) {
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 2000);
+              });
+            }));
+          }
+
+          // === NUT LUU & IN: luu vao CSDL roi in ===
+          var btnSaveAndPrint = document.getElementById('btn-save-and-print');
+          window.handleSaveAndPrint = async function() {
+            var b = document.getElementById('btn-save-and-print');
+            var oldBtnText = b ? b.innerHTML : '💾🖨️ Lưu & In';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang chuẩn bị in...';
+            }
+
+            syncAllLienContent();
+            recalculateReceiptTotals();
+            await waitForAllQrImages();
+
+            safeSaveStorage(SAVE_KEY, editor.innerHTML);
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+              }
+            } catch (err) {}
+            var saveNotice = document.getElementById('saved-notice');
+            if (saveNotice) {
+              saveNotice.style.display = 'flex';
+              saveNotice.style.background = '#dcfce7';
+              saveNotice.style.border = '1.5px solid #16a34a';
+              saveNotice.style.color = '#14532d';
+              saveNotice.innerHTML = '✅ <strong>Đã cập nhật mã QR mới và lưu vĩnh viễn vào CSDL thành công!</strong> Đang mở hộp thoại in...';
+            }
+            show2DToast('✅ Đã nạp mã QR mới và lưu CSDL. Đang mở hộp thoại in...', 'success');
+            try {
+              if (window.opener && window.opener.postMessage) {
+                window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: 'hh-001', headName: 'NGUYỄN VĂN AN' }, '*');
+              }
+            } catch(e) {}
+            setTimeout(function() {
+              var t = document.getElementById('custom-2d-toast');
+              if (t) t.style.display = 'none';
+              if (b) {
+                b.disabled = false;
+                b.innerHTML = oldBtnText;
+              }
+              window.print();
+            }, 250);
+          };
+          if (btnSaveAndPrint) {
+            btnSaveAndPrint.addEventListener('click', window.handleSaveAndPrint);
+          }
+
+          window.handleSaveReceipt = async function() {
+            var b = document.getElementById('btn-save');
+            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang lưu...';
+            }
+            syncAllLienContent();
+            recalculateReceiptTotals();
+            await waitForAllQrImages();
+            const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+              }
+            } catch (err) {}
+            if (b) {
+              b.disabled = false;
+              b.innerHTML = oldBtnText;
+            }
+
+            const notice = document.getElementById('saved-notice');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
+            }
+            show2DToast('Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
+          };
+          if (btnSave) {
+            btnSave.addEventListener('click', window.handleSaveReceipt);
+          }
+
+          window.handleResetReceipt = function() {
+            if (confirm('Bạn có chắc chắn muốn xóa bản đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
+              safeRemoveStorage(SAVE_KEY);
+              try {
+                if (window.opener && window.opener.db && window.opener.db.deleteReceiptCustomization) {
+                  window.opener.db.deleteReceiptCustomization(SAVE_KEY);
+                }
+              } catch (err) {}
+              editor.innerHTML = freshHtml;
+              syncAllLienContent();
+              recalculateReceiptTotals();
+              const notice = document.getElementById('saved-notice');
+              if (notice) notice.style.display = 'none';
+              show2DToast('Đã khôi phục về dữ liệu gốc từ hệ thống!', 'success');
+            }
+          };
+          if (btnReset) {
+            btnReset.addEventListener('click', window.handleResetReceipt);
+          }
+
+          const btnClose = document.getElementById('btn-close');
+          if (btnClose) {
+            btnClose.addEventListener('click', function() {
+              try { window.close(); } catch (e) {}
+              try { self.close(); } catch (e) {}
+              try { top.close(); } catch (e) {}
+            });
+          }
+
+          window.addEventListener('beforeprint', function() {
+            syncAllLienContent();
+            recalculateReceiptTotals();
+          });
+
+          // === LOGIC MÁY TÍNH MINI 3D ===
+          var dV = "0", eV = "", nN = true;
+          function uUI() {
+            var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
+            var num = parseFloat(dV);
+            if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
+            if (eE) eE.innerText = eV;
+            if (wE) {
+              if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
+                wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
+              } else { wE.style.display = 'none'; }
+            }
+          }
+
+          window.toggleCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
+            if (m) {
+              var isHidden = (m.style.display === 'none' || !m.style.display);
+              if (isHidden) {
+                m.style.display = 'block';
+                m.style.zIndex = '999999';
+                if (b) {
+                  b.style.boxShadow = '0 0 0 3px #38bdf8, 0 0 12px rgba(14,165,233,0.8)';
+                  b.style.transform = 'scale(1.04)';
+                }
+              } else {
+                m.style.display = 'none';
+                if (b) {
+                  b.style.boxShadow = 'none';
+                  b.style.transform = 'none';
+                }
+              }
+            }
+          };
+
+          window.closeCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            var b = document.getElementById('btn-calc');
+            if (m) m.style.display = 'none';
+            if (b) {
+              b.style.boxShadow = 'none';
+              b.style.transform = 'none';
+            }
+          };
+
+          window.calcQuickAdd = function(aV) {
+            var numVal = parseFloat(aV) || 0;
+            var cV = parseFloat(dV) || 0;
+            dV = String(nN ? numVal : cV + numVal);
+            nN = false;
+            uUI();
+          };
+
+          window.calcKey = function(k) {
+            if (!k) return;
+            if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
+            else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
+            else if (['+', '-', '*', '/'].includes(k)) {
+              var op = k === '*' ? '×' : k === '/' ? '÷' : k;
+              eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
+            } else if (k === '=') {
+              if (eV) {
+                try {
+                  var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
+                  dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
+                } catch(err) { dV = "Error"; eV = ""; }
+              }
+            } else if (k === '000') {
+              if (!nN && dV !== '0') dV += '000';
+            } else {
+              if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
+            }
+            uUI();
+          };
+
+          window.calcCopy = function() {
+            var cp = document.getElementById('calc-copy-btn');
+            var num = parseFloat(dV);
+            if (!isNaN(num)) {
+              navigator.clipboard.writeText(String(num));
+              if (cp) {
+                cp.innerText = '✅ Đã sao chép!';
+                setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
+              }
+            }
+          };
+
+          (function initPrintCalc3D() {
+            var b = document.getElementById('btn-calc');
+            var m = document.getElementById('print-calc-3d');
+            var h = document.getElementById('calc-header');
+            var c = document.getElementById('calc-close-btn');
+            if (b) { b.onclick = window.toggleCalc; }
+            if (c) { c.onclick = window.closeCalc; }
+            if (h && m) {
+              var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
+              h.onmousedown = function(e) {
+                if (e.target.tagName === 'BUTTON' || (e.target.closest && e.target.closest('button'))) return;
+                isD = true;
+                var r = m.getBoundingClientRect();
+                sX = e.clientX; sY = e.clientY; iL = r.left; iT = r.top;
+                m.style.bottom = 'auto'; m.style.right = 'auto';
+                m.style.left = iL + 'px'; m.style.top = iT + 'px';
+                h.style.cursor = 'grabbing';
+              };
+              document.addEventListener('mousemove', function(e) {
+                if (!isD) return;
+                m.style.left = Math.max(0, iL + (e.clientX - sX)) + 'px';
+                m.style.top = Math.max(0, iT + (e.clientY - sY)) + 'px';
+              });
+              document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
+            }
+            document.querySelectorAll('.c-quick').forEach(function(btn) {
+              btn.onclick = function() {
+                var aV = parseFloat(this.getAttribute('data-val') || '0');
+                window.calcQuickAdd(aV);
+              };
+            });
+            document.querySelectorAll('.c-btn').forEach(function(btn) {
+              btn.onclick = function() {
+                var k = this.getAttribute('data-key');
+                window.calcKey(k);
+              };
+            });
+            var cp = document.getElementById('calc-copy-btn');
+            if (cp) {
+              cp.onclick = window.calcCopy;
+            }
+          })();
+
+          (function initQrZoomModal() {
+            var modal = document.getElementById('qr-zoom-modal');
+            var btnZoom = document.getElementById('btn-zoom-qr');
+            var btnClose = document.getElementById('qr-zoom-close');
+            var btnCopy = document.getElementById('qr-zoom-copy-btn');
+            if (!modal) return;
+
+            function openZoom() {
+              var qrBlock = document.querySelector('.receipt-qr-payment-block');
+              if (!qrBlock) {
+                alert('Chưa có thông tin mã QR / tài khoản ngân hàng trên biên lai!');
+                return;
+              }
+              var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
+              var bankName = qrBlock.getAttribute('data-bank-name') || qrBlock.getAttribute('data-bank-bin') || 'Ngân hàng';
+              var accNo = qrBlock.getAttribute('data-account-no') || '';
+              var accHolder = qrBlock.getAttribute('data-account-holder') || '';
+              var payerName = qrBlock.getAttribute('data-payer-name') || '';
+              var hhNo = qrBlock.getAttribute('data-household-no') || '';
+              var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+              var amountVal = parseFloat(qrBlock.getAttribute('data-amount') || '0') || 0;
+              var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+
+              var cleanBank = encodeURIComponent(bankBin.trim());
+              var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+              var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
+              if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
+                desc = (desc + ' ' + payerName).trim();
+              }
+              desc = desc
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/Đ/g, 'D')
+                .replace(/[^a-zA-Z0-9 -]/g, ' ')
+                .trim()
+                .substring(0, 35);
+
+              var bigQrSrc = '';
+              if (!isCustomOnly && bankBin && accNo) {
+                bigQrSrc = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
+                var qp = [];
+                if (amountVal > 0) qp.push('amount=' + Math.round(amountVal));
+                if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
+                if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
+                if (qp.length > 0) bigQrSrc += '?' + qp.join('&');
+              } else {
+                var img = qrBlock.querySelector('.receipt-qr-code-img');
+                bigQrSrc = img ? img.src : '';
+              }
+
+              var imgEl = document.getElementById('qr-zoom-img');
+              if (imgEl) imgEl.src = bigQrSrc;
+              var bEl = document.getElementById('qr-zoom-bank');
+              if (bEl) bEl.innerText = bankName;
+              var stkEl = document.getElementById('qr-zoom-stk');
+              if (stkEl) stkEl.innerText = accNo;
+              var hEl = document.getElementById('qr-zoom-holder');
+              if (hEl) hEl.innerText = accHolder;
+              var aInput = document.getElementById('qr-zoom-amount-input');
+              if (aInput) aInput.value = amountVal > 0 ? amountVal.toLocaleString('vi-VN') : '0';
+              var dEl = document.getElementById('qr-zoom-desc');
+              if (dEl) dEl.innerText = desc || 'Nộp tiền quỹ';
+
+              modal.style.display = 'flex';
+            }
+
+            var aInput = document.getElementById('qr-zoom-amount-input');
+            if (aInput) {
+              aInput.oninput = function() {
+                var newNum = parseInt(aInput.value.replace(/[^0-9]/g, '')) || 0;
+                if (newNum > 0) {
+                  updateAllQrCodes(newNum);
+                  document.querySelectorAll('.receipt-container').forEach(function(container) {
+                    const table = container.querySelector('.receipt-details-table');
+                    if (table) {
+                      const rows = Array.from(table.querySelectorAll('tbody tr'));
+                      if (rows.length >= 2) {
+                        const totalRow = rows[rows.length - 1];
+                        const totalTds = totalRow.querySelectorAll('td');
+                        if (totalTds.length >= 2) {
+                          totalTds[1].innerHTML = newNum.toLocaleString('vi-VN') + ' đ';
+                        }
+                      }
+                    }
+                    const wordsContainer = container.querySelector('.receipt-amount-words') 
+                      || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                    if (wordsContainer) {
+                      const strongEl = wordsContainer.querySelector('strong');
+                      if (strongEl) {
+                        strongEl.innerText = docSoTien(newNum);
+                      } else {
+                        wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(newNum) + '</strong>';
+                      }
+                    }
+                  });
+                }
+              };
+
+              aInput.onblur = function() {
+                var n = parseInt(aInput.value.replace(/[^0-9]/g, '')) || 0;
+                aInput.value = n > 0 ? n.toLocaleString('vi-VN') : '0';
+              };
+            }
+
+            window.openQrZoom = openZoom;
+            window.closeQrZoom = function() { modal.style.display = 'none'; };
+            if (btnZoom) btnZoom.onclick = openZoom;
+            if (btnClose) btnClose.onclick = window.closeQrZoom;
+            modal.onclick = function(e) { if (e.target === modal) window.closeQrZoom(); };
+            if (btnCopy) {
+              btnCopy.onclick = function() {
+                var s = document.getElementById('qr-zoom-stk');
+                if (s && s.innerText) {
+                  navigator.clipboard.writeText(s.innerText).then(function() {
+                    btnCopy.innerText = '✅ Đã chép!';
+                    setTimeout(function() { btnCopy.innerText = '📋 Sao chép'; }, 1500);
+                  });
+                }
+              };
+            }
+
+            // Đồng bộ khi người dùng gõ sửa số tiền trực tiếp trên biên lai
+            function syncInlineQrAmount(amtEl) {
+              var raw = amtEl.innerText || amtEl.textContent || '';
+              var num = parseInt(raw.replace(/[^0-9]/g, '')) || 0;
+              if (num > 0) {
+                updateAllQrCodes(num);
+                document.querySelectorAll('.receipt-container').forEach(function(container) {
+                  const table = container.querySelector('.receipt-details-table');
+                  if (table) {
+                    const rows = Array.from(table.querySelectorAll('tbody tr'));
+                    if (rows.length >= 2) {
+                      const totalRow = rows[rows.length - 1];
+                      const totalTds = totalRow.querySelectorAll('td');
+                      if (totalTds.length >= 2) {
+                        totalTds[1].innerHTML = num.toLocaleString('vi-VN') + ' đ';
+                      }
+                    }
+                  }
+                  const wordsContainer = container.querySelector('.receipt-amount-words') 
+                    || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
+                  if (wordsContainer) {
+                    const strongEl = wordsContainer.querySelector('strong');
+                    if (strongEl) {
+                      strongEl.innerText = docSoTien(num);
+                    } else {
+                      wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(num) + '</strong>';
+                    }
+                  }
+                });
+              }
+            }
+
+            function getAmountTextTarget(e) {
+              var t = e.target;
+              if (!t) return null;
+              if (t.nodeType === 3) t = t.parentElement;
+              if (!t) return null;
+              if (t.classList && t.classList.contains('receipt-qr-amount-text')) return t;
+              if (t.closest) return t.closest('.receipt-qr-amount-text');
+              return null;
+            }
+
+            document.addEventListener('input', function(e) {
+              var el = getAmountTextTarget(e);
+              if (el) {
+                syncInlineQrAmount(el);
+              }
+            }, true);
+
+            document.addEventListener('keyup', function(e) {
+              var el = getAmountTextTarget(e);
+              if (el) {
+                syncInlineQrAmount(el);
+              }
+            }, true);
+
+            document.addEventListener('blur', function(e) {
+              var el = getAmountTextTarget(e);
+              if (el) {
+                var n = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
+                el.textContent = n > 0 ? n.toLocaleString('vi-VN') + ' đ' : '0 đ';
+                syncInlineQrAmount(el);
+              }
+            }, true);
+
+            document.addEventListener('click', function(e) {
+              var el = getAmountTextTarget(e);
+              if (el) {
+                // Người dùng click vào số tiền để chỉnh sửa, không mở modal phóng to
+                return;
+              }
+              var t = e.target ? (e.target.nodeType === 3 ? e.target.parentElement : e.target) : null;
+              if (t && t.closest && t.closest('.receipt-qr-payment-block')) {
+                e.preventDefault();
+                openZoom();
+              }
+            });
+          })();
+        </script>
+      </body>
+      </html>
