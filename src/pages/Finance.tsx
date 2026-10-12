@@ -2088,7 +2088,32 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             gap: 10px;
             z-index: 99999;
           }
-          .toolbar-btn {
+                    .btn-card {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-width: 68px !important;
+            height: 58px !important;
+            padding: 4px 6px !important;
+            border-radius: 8px !important;
+            font-size: 8pt !important;
+            font-weight: 700 !important;
+            line-height: 1.15 !important;
+            text-align: center !important;
+            cursor: pointer !important;
+            border: none !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            transition: all 0.15s ease !important;
+          }
+          .btn-card:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.18) !important;
+          }
+          .btn-card:active {
+            transform: translateY(1px) !important;
+          }
+.toolbar-btn {
             padding: 6px 14px;
             border-radius: 6px;
             border: none;
@@ -2131,26 +2156,42 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
       </head>
       <body>
         <div class="print-toolbar">
-          <button type="button" class="toolbar-btn" id="btn-calc" onclick="window.toggleCalc && window.toggleCalc();" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
-          <button type="button" class="toolbar-btn" id="btn-zoom-qr" onclick="window.openQrZoom && window.openQrZoom();" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">📱 Phóng to mã QR</button>
-          <button type="button" class="toolbar-btn btn-print" id="btn-save-and-print" onclick="window.handleSaveAndPrint && window.handleSaveAndPrint();">💾🖨️ Lưu &amp; In</button>
-          <button type="button" class="toolbar-btn btn-save" id="btn-save" onclick="window.handleSaveReceipt && window.handleSaveReceipt();">💾 Lưu chỉnh sửa</button>
-          <button type="button" class="toolbar-btn btn-load" id="btn-load" onclick="window.handleLoadReceipt && window.handleLoadReceipt();">📂 Mở bản đã lưu</button>
-          <button type="button" class="toolbar-btn btn-reset" id="btn-reset" onclick="window.handleResetReceipt && window.handleResetReceipt();">🔄 Đặt lại mẫu phiếu in gốc</button>
-          <span class="toolbar-label">📝 Cỡ chữ:</span>
-          <select class="font-size-select" id="font-size-select" onchange="var sz=this.value; document.querySelectorAll('.receipt-container').forEach(function(el){ el.style.fontSize=sz; });">
-            <option value="7pt">7pt</option>
-            <option value="7.5pt">7.5pt</option>
-            <option value="8pt">8pt</option>
-            <option value="8.5pt">8.5pt</option>
-            <option value="9pt" selected>9pt (mặc định)</option>
-            <option value="9.5pt">9.5pt</option>
-            <option value="10pt">10pt</option>
-            <option value="10.5pt">10.5pt</option>
-            <option value="11pt">11pt</option>
-            <option value="12pt">12pt</option>
-          </select>
-          <button type="button" class="toolbar-btn btn-close" id="btn-close" onclick="try{window.close();}catch(e){} try{self.close();}catch(e){} try{top.close();}catch(e){}">❌ Đóng</button>
+          <button type="button" class="toolbar-btn btn-card" id="btn-calc" onclick="window.toggleCalc && window.toggleCalc(); return false;" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;" title="Mở máy tính 3D mini">
+            <span style="font-size: 15px; line-height: 1;">🧮</span>
+            <span>Máy tính<br/>3D</span>
+          </button>
+          <button type="button" class="toolbar-btn btn-card" id="btn-zoom-qr" onclick="window.openQrZoom && window.openQrZoom(); return false;" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">
+            <span style="font-size: 15px; line-height: 1;">📱</span>
+            <span>Phóng to<br/>mã QR</span>
+          </button>
+          <button type="button" class="toolbar-btn btn-card btn-print" id="btn-save-and-print" onclick="window.handleSaveAndPrint && window.handleSaveAndPrint(); return false;" style="background: linear-gradient(135deg, #10b981, #059669); color: white;" title="Lưu chỉnh sửa và mở hộp thoại in">
+            <span style="font-size: 15px; line-height: 1;">💾🖨️</span>
+            <span>Lưu &amp;<br/>In</span>
+          </button>
+          <button type="button" class="toolbar-btn btn-card btn-save" id="btn-save" onclick="window.handleSaveReceipt && window.handleSaveReceipt(); return false;" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white;" title="Lưu vĩnh viễn chỉnh sửa vào CSDL">
+            <span style="font-size: 15px; line-height: 1;">💾</span>
+            <span>Lưu<br/>chỉnh sửa</span>
+          </button>
+          <button type="button" class="toolbar-btn btn-card btn-reset" id="btn-reset" onclick="window.handleResetReceipt && window.handleResetReceipt(); return false;" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;" title="Khôi phục về mẫu phiếu in gốc từ hệ thống">
+            <span style="font-size: 15px; line-height: 1;">🔄</span>
+            <span>Đặt lại<br/>mẫu phiếu<br/>in gốc</span>
+          </button>
+          <div style="display: flex; flex-direction: column; justify-content: center; gap: 2px; margin-left: 4px;">
+            <span class="toolbar-label">📝 Cỡ chữ:</span>
+            <select class="font-size-select" id="font-size-select" onchange="var sz=this.value; document.querySelectorAll('.receipt-container').forEach(function(el){ el.style.fontSize=sz; });">
+              <option value="7pt">7pt</option>
+              <option value="7.5pt">7.5pt</option>
+              <option value="8pt">8pt</option>
+              <option value="8.5pt">8.5pt</option>
+              <option value="9pt" selected>9pt (mặc định)</option>
+              <option value="9.5pt">9.5pt</option>
+              <option value="10pt">10pt</option>
+              <option value="10.5pt">10.5pt</option>
+              <option value="11pt">11pt</option>
+              <option value="12pt">12pt</option>
+            </select>
+          </div>
+          <button type="button" class="toolbar-btn btn-close" id="btn-close" onclick="try{window.close();}catch(e){} try{self.close();}catch(e){} try{top.close();}catch(e){} return false;" style="align-self: center; height: 38px;">❌ Đóng</button>
         </div>
 
         <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:8px 16px;margin-bottom:8px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#92400e;">
@@ -2252,25 +2293,126 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
           const currentPrintMode = '${printMode}';
           const freshHtml = ${JSON.stringify(freshReceiptHtml)};
 
-          // === KHỞI TẠO CÁC HÀM TOÀN CỤC NGAY LẬP TỨC CHO CÁC NÚT BẤM TRÊN THANH CÔNG CỤ ===
+          const editor = document.querySelector('.editor-area');
+          const btnSave = document.getElementById('btn-save');
+          const btnSaveAndPrint = document.getElementById('btn-save-and-print');
+          const btnReset = document.getElementById('btn-reset');
+          const fontSizeSelect = document.getElementById('font-size-select');
+
+          function safeSaveStorage(key, val) {
+            let saved = false;
+            try { localStorage.setItem(key, val); } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.setItem(key, val);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  customs[key] = val;
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+                saved = true;
+              }
+            } catch (err) {}
+            try {
+              if (window.opener && window.opener.postMessage) {
+                window.opener.postMessage({ type: 'RECEIPT_SAVED', key: key, html: val }, '*');
+              }
+            } catch (err) {}
+            return saved;
+          }
+
+          function safeGetStorage(key) {
+            try {
+              const val = localStorage.getItem(key);
+              if (val) return val;
+            } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                return window.opener.localStorage.getItem(key);
+              }
+            } catch (err) {}
+            return null;
+          }
+
+          function safeRemoveStorage(key) {
+            try { localStorage.removeItem(key); } catch (e) {}
+            try {
+              if (window.opener && window.opener.localStorage) {
+                window.opener.localStorage.removeItem(key);
+                try {
+                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
+                  delete customs[key];
+                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
+                } catch (err) {}
+              }
+            } catch (err) {}
+          }
+
+          function show2DToast(msg, type = 'success') {
+            let toast = document.getElementById('custom-2d-toast');
+            if (!toast) {
+              toast = document.createElement('div');
+              toast.id = 'custom-2d-toast';
+              toast.className = 'no-print';
+              toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999999;padding:12px 20px;border-radius:10px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 25px -5px rgba(0,0,0,0.25);display:flex;align-items:center;gap:10px;transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);transform:translateY(-20px) scale(0.95);opacity:0;';
+              document.body.appendChild(toast);
+            }
+            const isSuccess = type === 'success';
+            toast.style.background = isSuccess ? '#ecfdf5' : '#fffbe8';
+            toast.style.color = isSuccess ? '#065f46' : '#92400e';
+            toast.style.border = isSuccess ? '1.5px solid #10b981' : '1.5px solid #f59e0b';
+            toast.innerHTML = (isSuccess ? '<span style="font-size:16px;">✅</span> ' : '<span style="font-size:16px;">ℹ️</span> ') + '<span>' + msg + '</span>';
+            requestAnimationFrame(() => {
+              toast.style.opacity = '1';
+              toast.style.transform = 'translateY(0) scale(1)';
+            });
+            if (toast.timeoutId) clearTimeout(toast.timeoutId);
+            toast.timeoutId = setTimeout(() => {
+              toast.style.opacity = '0';
+              toast.style.transform = 'translateY(-20px) scale(0.95)';
+            }, 3000);
+          }
+
+          async function waitForAllQrImages() {
+            const imgs = Array.from(document.querySelectorAll('.receipt-qr-code-img'));
+            if (imgs.length === 0) return;
+            await Promise.all(imgs.map(function(img) {
+              if (!img.src) return Promise.resolve();
+              if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+              if (typeof img.decode === 'function') {
+                return img.decode().catch(function() {});
+              }
+              return new Promise(function(resolve) {
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 1500);
+              });
+            }));
+          }
+
+          // === HÀM TOÀN CỤC CHO 5 NÚT BẤM TRÊN THANH CÔNG CỤ ===
           window.toggleCalc = function() {
             var m = document.getElementById('print-calc-3d');
             var b = document.getElementById('btn-calc');
-            if (m) {
-              var isHidden = (m.style.display === 'none' || !m.style.display);
-              if (isHidden) {
-                m.style.display = 'block';
-                m.style.zIndex = '999999';
-                if (b) {
-                  b.style.boxShadow = '0 0 0 3px #38bdf8, 0 0 12px rgba(14,165,233,0.8)';
-                  b.style.transform = 'scale(1.04)';
-                }
-              } else {
-                m.style.display = 'none';
-                if (b) {
-                  b.style.boxShadow = 'none';
-                  b.style.transform = 'none';
-                }
+            if (!m) return;
+            var isHidden = (m.style.display === 'none' || !m.style.display);
+            if (isHidden) {
+              if (b) {
+                var r = b.getBoundingClientRect();
+                m.style.top = (r.bottom + 8) + 'px';
+                m.style.left = Math.max(10, Math.min(window.innerWidth - 300, r.left - 40)) + 'px';
+                m.style.right = 'auto';
+                m.style.bottom = 'auto';
+                b.style.boxShadow = '0 0 0 3px #38bdf8, 0 0 12px rgba(14,165,233,0.8)';
+                b.style.transform = 'scale(1.04)';
+              }
+              m.style.display = 'block';
+              m.style.zIndex = '999999';
+            } else {
+              m.style.display = 'none';
+              if (b) {
+                b.style.boxShadow = 'none';
+                b.style.transform = 'none';
               }
             }
           };
@@ -2289,19 +2431,38 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             var modal = document.getElementById('qr-zoom-modal');
             if (!modal) return;
             var qrBlock = document.querySelector('.receipt-qr-payment-block');
-            if (!qrBlock) {
-              alert('Chưa có thông tin mã QR / tài khoản ngân hàng trên biên lai!');
-              return;
+            var bankBin = qrBlock ? (qrBlock.getAttribute('data-bank-bin') || '') : '';
+            var bankName = qrBlock ? (qrBlock.getAttribute('data-bank-name') || qrBlock.getAttribute('data-bank-bin') || '') : '';
+            var accNo = qrBlock ? (qrBlock.getAttribute('data-account-no') || '') : '';
+            var accHolder = qrBlock ? (qrBlock.getAttribute('data-account-holder') || '') : '';
+            var payerName = qrBlock ? (qrBlock.getAttribute('data-payer-name') || '') : '';
+            var hhNo = qrBlock ? (qrBlock.getAttribute('data-household-no') || '') : '';
+            var transferPrefix = qrBlock ? (qrBlock.getAttribute('data-transfer-template') || 'NOP QUY') : 'NOP QUY';
+            var amountVal = parseFloat((qrBlock && qrBlock.getAttribute('data-amount')) || '0') || 0;
+            var isCustomOnly = qrBlock ? (qrBlock.getAttribute('data-has-custom-qr') === '1') : false;
+
+            if (!accNo) {
+              try {
+                var rawCfg = localStorage.getItem('payment_qr_config') || (window.opener && window.opener.localStorage && window.opener.localStorage.getItem('payment_qr_config'));
+                if (rawCfg) {
+                  var parsed = JSON.parse(rawCfg);
+                  if (parsed) {
+                    bankBin = parsed.bank_bin || bankBin;
+                    bankName = parsed.bank_name || parsed.short_name || bankName;
+                    accNo = parsed.account_no || accNo;
+                    accHolder = parsed.account_holder || accHolder;
+                    transferPrefix = parsed.transfer_template || transferPrefix;
+                  }
+                }
+              } catch(e) {}
             }
-            var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
-            var bankName = qrBlock.getAttribute('data-bank-name') || qrBlock.getAttribute('data-bank-bin') || 'Ngân hàng';
-            var accNo = qrBlock.getAttribute('data-account-no') || '';
-            var accHolder = qrBlock.getAttribute('data-account-holder') || '';
-            var payerName = qrBlock.getAttribute('data-payer-name') || '';
-            var hhNo = qrBlock.getAttribute('data-household-no') || '';
-            var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
-            var amountVal = parseFloat(qrBlock.getAttribute('data-amount') || '0') || 0;
-            var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
+
+            if (amountVal <= 0) {
+              var totalCell = document.querySelector('.receipt-total-amount-cell');
+              if (totalCell) {
+                amountVal = parseFloat(totalCell.innerText.replace(/[^0-9]/g, '')) || 0;
+              }
+            }
 
             var cleanBank = encodeURIComponent(bankBin.trim());
             var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
@@ -2326,19 +2487,27 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
               if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
               if (qp.length > 0) bigQrSrc += '?' + qp.join('&');
-            } else {
+            } else if (qrBlock) {
               var img = qrBlock.querySelector('.receipt-qr-code-img');
               bigQrSrc = img ? img.src : '';
             }
 
             var imgEl = document.getElementById('qr-zoom-img');
-            if (imgEl) imgEl.src = bigQrSrc;
+            if (imgEl) {
+              if (bigQrSrc) {
+                imgEl.src = bigQrSrc;
+                imgEl.style.display = 'block';
+              } else {
+                imgEl.src = 'https://img.vietqr.io/image/970422-00000000-compact2.png';
+                imgEl.style.display = 'block';
+              }
+            }
             var bEl = document.getElementById('qr-zoom-bank');
-            if (bEl) bEl.innerText = bankName;
+            if (bEl) bEl.innerText = bankName || 'VietQR';
             var stkEl = document.getElementById('qr-zoom-stk');
-            if (stkEl) stkEl.innerText = accNo;
+            if (stkEl) stkEl.innerText = accNo || 'Chưa thiết lập STK trong Cài đặt QR';
             var hEl = document.getElementById('qr-zoom-holder');
-            if (hEl) hEl.innerText = accHolder;
+            if (hEl) hEl.innerText = accHolder || '';
             var aInput = document.getElementById('qr-zoom-amount-input');
             if (aInput) aInput.value = amountVal > 0 ? amountVal.toLocaleString('vi-VN') : '0';
             var dEl = document.getElementById('qr-zoom-desc');
@@ -2352,73 +2521,26 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             if (modal) modal.style.display = 'none';
           };
 
-          window.handleSaveReceipt = async function() {
-            var b = document.getElementById('btn-save');
-            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
-            if (b) {
-              b.disabled = true;
-              b.innerHTML = '⏳ Đang lưu...';
-            }
-            try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
-            try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
-
-            var editor = document.querySelector('.editor-area');
-            var htmlToSave = editor ? editor.innerHTML : '';
-
-            try { localStorage.setItem(SAVE_KEY, htmlToSave); } catch(e) {}
-            try {
-              if (window.opener && window.opener.localStorage) {
-                window.opener.localStorage.setItem(SAVE_KEY, htmlToSave);
-                var customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
-                customs[SAVE_KEY] = htmlToSave;
-                window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
-              }
-            } catch(e) {}
-            try {
-              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                await window.opener.db.saveReceiptCustomization(SAVE_KEY, htmlToSave);
-              }
-            } catch(e) {}
-
-            if (b) {
-              b.disabled = false;
-              b.innerHTML = oldBtnText;
-            }
-            var notice = document.getElementById('saved-notice');
-            if (notice) {
-              notice.style.display = 'flex';
-              notice.style.background = '#dcfce7';
-              notice.style.border = '1.5px solid #16a34a';
-              notice.style.color = '#14532d';
-              notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
-            }
-            alert('✅ Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!');
-          };
-
           window.handleSaveAndPrint = async function() {
             var b = document.getElementById('btn-save-and-print');
             var oldBtnText = b ? b.innerHTML : '💾🖨️ Lưu & In';
             if (b) {
               b.disabled = true;
-              b.innerHTML = '⏳ Đang chuẩn bị in...';
+              b.innerHTML = '<span style="font-size:15px;">⏳</span><span>Đang chuẩn bị<br/>in...</span>';
             }
-            try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
-            try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
+            try { syncTwoLiens(); } catch(e) {}
+            try { recalculateReceiptTotals(); } catch(e) {}
+            try { await waitForAllQrImages(); } catch(e) {}
 
-            var editor = document.querySelector('.editor-area');
-            var htmlToSave = editor ? editor.innerHTML : '';
+            var currentEditor = document.querySelector('.editor-area');
+            var htmlToSave = currentEditor ? currentEditor.innerHTML : '';
 
-            try { localStorage.setItem(SAVE_KEY, htmlToSave); } catch(e) {}
-            try {
-              if (window.opener && window.opener.localStorage) {
-                window.opener.localStorage.setItem(SAVE_KEY, htmlToSave);
-              }
-            } catch(e) {}
+            safeSaveStorage(SAVE_KEY, htmlToSave);
             try {
               if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
                 await window.opener.db.saveReceiptCustomization(SAVE_KEY, htmlToSave);
               }
-            } catch(e) {}
+            } catch (err) {}
 
             var notice = document.getElementById('saved-notice');
             if (notice) {
@@ -2428,6 +2550,8 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               notice.style.color = '#14532d';
               notice.innerHTML = '✅ <strong>Đã lưu vào CSDL thành công!</strong> Đang mở hộp thoại in...';
             }
+            show2DToast('✅ Đã lưu CSDL thành công! Đang mở hộp thoại in...', 'success');
+
             setTimeout(function() {
               if (b) {
                 b.disabled = false;
@@ -2437,115 +2561,64 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             }, 250);
           };
 
-          window.handleLoadReceipt = async function() {
-            let saved = null;
-            try { saved = localStorage.getItem(SAVE_KEY); } catch(e) {}
-            if (!saved && window.opener && window.opener.localStorage) {
-              try { saved = window.opener.localStorage.getItem(SAVE_KEY); } catch(e) {}
+          window.handleSaveReceipt = async function() {
+            var b = document.getElementById('btn-save');
+            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '<span style="font-size:15px;">⏳</span><span>Đang lưu...</span>';
             }
-            if (!saved && window.opener && window.opener.db && window.opener.db.getReceiptCustomization) {
-              try { saved = await window.opener.db.getReceiptCustomization(SAVE_KEY); } catch (err) {}
-            }
-            var editor = document.querySelector('.editor-area');
-            if (saved && editor) {
-              editor.innerHTML = saved;
-              try { if (typeof syncAllLienContent === 'function') syncAllLienContent(); } catch(e) {}
-              try { if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals(); } catch(e) {}
-              var notice = document.getElementById('saved-notice');
-              if (notice) {
-                notice.style.display = 'flex';
-                notice.style.background = '#dcfce7';
-                notice.style.border = '1.5px solid #16a34a';
-                notice.style.color = '#14532d';
-                notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó từ CSDL</strong>.';
+            try { syncTwoLiens(); } catch(e) {}
+            try { recalculateReceiptTotals(); } catch(e) {}
+            try { await waitForAllQrImages(); } catch(e) {}
+
+            var currentEditor = document.querySelector('.editor-area');
+            var htmlToSave = currentEditor ? currentEditor.innerHTML : '';
+
+            safeSaveStorage(SAVE_KEY, htmlToSave);
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, htmlToSave);
               }
-              alert('✅ Đã mở bản chỉnh sửa đã lưu trước đó!');
-            } else {
-              alert('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này.');
+            } catch (err) {}
+
+            if (b) {
+              b.disabled = false;
+              b.innerHTML = oldBtnText;
             }
+
+            var notice = document.getElementById('saved-notice');
+            if (notice) {
+              notice.style.display = 'flex';
+              notice.style.background = '#dcfce7';
+              notice.style.border = '1.5px solid #16a34a';
+              notice.style.color = '#14532d';
+              notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
+            }
+            show2DToast('✅ Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
+            alert('✅ Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!');
           };
 
           window.handleResetReceipt = function() {
             if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
-              try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+              safeRemoveStorage(SAVE_KEY);
               try {
-                if (window.opener && window.opener.localStorage) window.opener.localStorage.removeItem(SAVE_KEY);
                 if (window.opener && window.opener.db && window.opener.db.deleteReceiptCustomization) {
                   window.opener.db.deleteReceiptCustomization(SAVE_KEY);
                 }
-              } catch(e) {}
-              var editor = document.querySelector('.editor-area');
-              if (editor) editor.innerHTML = freshHtml;
-              try {
-                if (typeof syncAllLienContent === 'function') syncAllLienContent();
-                if (typeof recalculateReceiptTotals === 'function') recalculateReceiptTotals();
-              } catch(e) {}
+              } catch (err) {}
+              var currentEditor = document.querySelector('.editor-area');
+              if (currentEditor) currentEditor.innerHTML = freshHtml;
+              try { syncTwoLiens(); } catch(e) {}
+              try { recalculateReceiptTotals(); } catch(e) {}
               var notice = document.getElementById('saved-notice');
               if (notice) notice.style.display = 'none';
-              alert('✅ Đã khôi phục về mẫu phiếu ban đầu từ hệ thống!');
+              show2DToast('✅ Đã khôi phục về mẫu phiếu ban đầu từ hệ thống!', 'success');
+              alert('✅ Đã khôi phục về mẫu phiếu in gốc từ hệ thống!');
             }
           };
 
-          var dV = "0", eV = "", nN = true;
-          function uUI() {
-            var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq');
-            var num = parseFloat(dV);
-            if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
-            if (eE) eE.innerText = eV;
-          }
-          window.calcQuickAdd = function(aV) {
-            var numVal = parseFloat(aV) || 0;
-            var cV = parseFloat(dV) || 0;
-            dV = String(nN ? numVal : cV + numVal);
-            nN = false;
-            uUI();
-          };
-          window.calcKey = function(k) {
-            if (!k) return;
-            if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
-            else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
-            else if (['+', '-', '*', '/'].includes(k)) {
-              var op = k === '*' ? '×' : k === '/' ? '÷' : k;
-              eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
-            } else if (k === '=') {
-              if (eV) {
-                try {
-                  var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
-                  dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
-                } catch(err) { dV = "Error"; eV = ""; }
-              }
-            } else if (k === '000') {
-              if (!nN && dV !== '0') dV += '000';
-            } else {
-              if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
-            }
-            uUI();
-          };
-          window.calcCopy = function() {
-            var num = parseFloat(dV);
-            if (!isNaN(num)) {
-              navigator.clipboard.writeText(String(num));
-              var cp = document.getElementById('calc-copy-btn');
-              if (cp) {
-                cp.innerText = '✅ Đã sao chép!';
-                setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
-              }
-            }
-          };
-
-          // Lắng nghe phím ESC để đóng nhanh máy tính và phóng to QR
-          document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-              window.closeCalc();
-              window.closeQrZoom();
-            }
-          });
-          const btnSave = document.getElementById('btn-save');
-          const btnReset = document.getElementById('btn-reset');
-          const btnLoad = document.getElementById('btn-load');
-          const editor = document.querySelector('.editor-area');
-          const fontSizeSelect = document.getElementById('font-size-select');
-
+          // === HỖ TRỢ ĐỌC SỐ TIỀN THÀNH CHỮ TIẾNG VIỆT CHUẨN ===
           function docSoTien(number) {
             if (isNaN(number) || !number || number <= 0) return 'Không đồng';
             const digits = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
@@ -2583,33 +2656,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
           let lastEditedContainerIndex = 0;
 
-          function getActiveReceiptTarget(e) {
-            let target = null;
-            try {
-              const sel = window.getSelection();
-              if (sel && sel.anchorNode) {
-                target = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
-              }
-            } catch (err) {}
-
-            if (!target || !target.closest || !target.closest('.receipt-container')) {
-              if (e && e.target) {
-                const el = e.target.nodeType === 3 ? e.target.parentElement : e.target;
-                if (el && el.closest && el.closest('.receipt-container')) {
-                  target = el;
-                }
-              }
-            }
-
-            if (!target || !target.closest || !target.closest('.receipt-container')) {
-              const el = document.activeElement ? (document.activeElement.nodeType === 3 ? document.activeElement.parentElement : document.activeElement) : null;
-              if (el && el.closest && el.closest('.receipt-container')) {
-                target = el;
-              }
-            }
-            return target;
-          }
-
+          // === ĐỒNG BỘ 2 CHIỀU GIỮA LIÊN 1 VÀ LIÊN 2 ===
           function syncTwoLiens(sourceHint) {
             try {
               const containers = Array.from(document.querySelectorAll('.receipt-container'));
@@ -2655,7 +2702,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               containers.forEach((tgt, tIdx) => {
                 if (tIdx === srcIdx) return;
 
-                // 1. Đồng bộ bảng tiêu đề đơn vị (receipt-header-table)
+                // 1. Đồng bộ bảng tiêu đề đơn vị
                 const sHdr = src.querySelector('.receipt-header-table');
                 const tHdr = tgt.querySelector('.receipt-header-table');
                 if (sHdr && tHdr) {
@@ -2667,7 +2714,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   });
                 }
 
-                // 2. Đồng bộ tiêu đề chính & ngày tháng, giữ nguyên tên riêng của từng liên
+                // 2. Đồng bộ tiêu đề chính & ngày tháng, giữ nguyên tên riêng Liên 1 / Liên 2
                 const sTitle = src.querySelector('.receipt-title');
                 const tTitle = tgt.querySelector('.receipt-title');
                 if (sTitle && tTitle && sTitle.innerHTML !== tTitle.innerHTML) {
@@ -2682,7 +2729,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   }
                 }
 
-                // 3. Đồng bộ toàn diện bảng thông tin người nộp (receipt-info-table)
+                // 3. Đồng bộ toàn diện bảng thông tin người nộp
                 const sInfo = src.querySelector('.receipt-info-table');
                 const tInfo = tgt.querySelector('.receipt-info-table');
                 if (sInfo && tInfo) {
@@ -2702,7 +2749,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   });
                 }
 
-                // 4. Đồng bộ bảng chi tiết các khoản thu (receipt-details-table)
+                // 4. Đồng bộ bảng chi tiết các khoản thu
                 const sDetails = src.querySelector('.receipt-details-table');
                 const tDetails = tgt.querySelector('.receipt-details-table');
                 if (sDetails && tDetails) {
@@ -2725,7 +2772,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   });
                 }
 
-                // 5. Đồng bộ bảng chữ ký (receipt-signatures-table)
+                // 5. Đồng bộ bảng chữ ký
                 const sSig = src.querySelector('.receipt-signatures-table');
                 const tSig = tgt.querySelector('.receipt-signatures-table');
                 if (sSig && tSig) {
@@ -2754,39 +2801,41 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             }
           }
 
-          function syncReceiptFields(e) {
-            syncTwoLiens(e);
-          }
-
-          function syncAllLienContent(sourceIdx) {
-            syncTwoLiens(sourceIdx);
-          }
-
           function updateAllQrCodes(newAmount) {
             if (isNaN(newAmount) || newAmount <= 0) return;
             const qrBlocks = document.querySelectorAll('.receipt-qr-payment-block');
+
+            let currentPayerName = '';
+            const firstInfoTable = document.querySelector('.receipt-info-table');
+            if (firstInfoTable) {
+              const firstRowTd = firstInfoTable.querySelector('tr td:last-child');
+              if (firstRowTd) {
+                const rawTxt = firstRowTd.textContent || firstRowTd.innerText || '';
+                currentPayerName = rawTxt.split('(')[0].trim();
+              }
+            }
+
             qrBlocks.forEach(function(qrBlock) {
               qrBlock.setAttribute('data-amount', String(newAmount));
 
-              const amtSpan = qrBlock.querySelector('.receipt-qr-amount-text');
-              if (amtSpan && document.activeElement !== amtSpan) {
-                amtSpan.textContent = newAmount.toLocaleString('vi-VN') + ' đ';
+              const amtText = qrBlock.querySelector('.receipt-qr-amount-text');
+              if (amtText) {
+                amtText.innerText = newAmount.toLocaleString('vi-VN') + ' đ';
               }
 
               const isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
-              const bankBin = qrBlock.getAttribute('data-bank-bin');
-              const accNo = qrBlock.getAttribute('data-account-no');
-              const accHolder = qrBlock.getAttribute('data-account-holder') || '';
-              const payerName = qrBlock.getAttribute('data-payer-name') || '';
-              const hhNo = qrBlock.getAttribute('data-household-no') || '';
-              const transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
+              if (!isCustomOnly) {
+                const bankBin = qrBlock.getAttribute('data-bank-bin');
+                const accNo = qrBlock.getAttribute('data-account-no');
+                const accHolder = qrBlock.getAttribute('data-account-holder');
+                const payerName = currentPayerName || qrBlock.getAttribute('data-payer-name') || '';
+                const hhNo = qrBlock.getAttribute('data-household-no') || '';
+                const transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
 
-              if (!isCustomOnly && bankBin && accNo) {
-                const qrImg = qrBlock.querySelector('.receipt-qr-code-img');
-                if (qrImg) {
+                if (bankBin && accNo) {
                   const cleanBank = encodeURIComponent(bankBin.trim());
-                  const cleanAcc = encodeURIComponent(accNo.replace(/[ \t\r\n]+/g, ''));
-                  let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/[ \t\r\n]+/g, ' ').trim();
+                  const cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
+                  let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
                   if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
                     desc = (desc + ' ' + payerName).trim();
                   }
@@ -2799,150 +2848,86 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                     .trim()
                     .substring(0, 35);
 
-                  let newUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-qr_only.png?amount=' + Math.round(newAmount);
-                  if (desc) newUrl += '&addInfo=' + encodeURIComponent(desc);
-                  if (accHolder) newUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
-                  newUrl += '&_t=' + Date.now();
-                  qrImg.src = newUrl;
+                  let newSrc = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
+                  const qp = [];
+                  if (newAmount > 0) qp.push('amount=' + Math.round(newAmount));
+                  if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
+                  if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
+                  if (qp.length > 0) newSrc += '?' + qp.join('&');
+
+                  const img = qrBlock.querySelector('.receipt-qr-code-img');
+                  if (img && img.src !== newSrc) {
+                    img.src = newSrc;
+                  }
                 }
               }
             });
 
-            // Đồng bộ modal phóng to nếu đang mở
             const zoomInput = document.getElementById('qr-zoom-amount-input');
             if (zoomInput && document.activeElement !== zoomInput) {
               zoomInput.value = newAmount.toLocaleString('vi-VN');
-            }
-            const zoomImg = document.getElementById('qr-zoom-img');
-            const firstBlock = document.querySelector('.receipt-qr-payment-block');
-            if (zoomImg && firstBlock) {
-              const isCustomOnly = firstBlock.getAttribute('data-has-custom-qr') === '1';
-              const bankBin = firstBlock.getAttribute('data-bank-bin') || '';
-              const accNo = firstBlock.getAttribute('data-account-no') || '';
-              const accHolder = firstBlock.getAttribute('data-account-holder') || '';
-              const payerName = firstBlock.getAttribute('data-payer-name') || '';
-              const hhNo = firstBlock.getAttribute('data-household-no') || '';
-              const transferPrefix = firstBlock.getAttribute('data-transfer-template') || 'NOP QUY';
-
-              if (!isCustomOnly && bankBin && accNo) {
-                const cleanBank = encodeURIComponent(bankBin.trim());
-                const cleanAcc = encodeURIComponent(accNo.replace(/[ \t\r\n]+/g, ''));
-                let desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/[ \t\r\n]+/g, ' ').trim();
-                if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
-                  desc = (desc + ' ' + payerName).trim();
-                }
-                desc = desc
-                  .normalize('NFD')
-                  .replace(/[\u0300-\u036f]/g, '')
-                  .replace(/đ/g, 'd')
-                  .replace(/Đ/g, 'D')
-                  .replace(/[^a-zA-Z0-9 -]/g, ' ')
-                  .trim()
-                  .substring(0, 35);
-
-                let bigUrl = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png?amount=' + Math.round(newAmount);
-                if (desc) bigUrl += '&addInfo=' + encodeURIComponent(desc);
-                if (accHolder) bigUrl += '&accountName=' + encodeURIComponent(accHolder.trim());
-                bigUrl += '&_t=' + Date.now();
-                zoomImg.src = bigUrl;
-              }
             }
           }
 
           let isRecalculating = false;
           function recalculateReceiptTotals() {
             if (isRecalculating) return;
-            const activeEl = document.activeElement ? (document.activeElement.nodeType === 3 ? document.activeElement.parentElement : document.activeElement) : null;
-            if (activeEl && (activeEl.classList.contains('receipt-qr-amount-text') || (activeEl.closest && activeEl.closest('.receipt-qr-amount-text')))) {
-              return;
-            }
             isRecalculating = true;
             try {
-              const containers = document.querySelectorAll('.receipt-container');
               let calculatedGrandTotal = 0;
-              containers.forEach(container => {
+              document.querySelectorAll('.receipt-container').forEach(function(container) {
                 const table = container.querySelector('.receipt-details-table');
                 if (!table) return;
 
                 const rows = Array.from(table.querySelectorAll('tbody tr'));
                 if (rows.length === 0) return;
 
-                let totalRow = table.querySelector('tr.receipt-total-row');
-                if (!totalRow) {
-                  totalRow = rows.find(r => (r.textContent || r.innerText || '').toUpperCase().includes('TỔNG CỘNG'));
-                  if (totalRow) totalRow.classList.add('receipt-total-row');
-                }
-
-                let grandTotal = 0;
+                let sumAll = 0;
                 let tdpTotal = 0;
                 let wardTotal = 0;
+                const activePrintMode = currentPrintMode || 'combined';
 
-                rows.forEach(row => {
-                  const rText = (row.textContent || row.innerText || '').toUpperCase();
-                  if (row === totalRow || row.classList.contains('receipt-total-row') || rText.includes('TỔNG CỘNG')) {
-                    return;
+                rows.forEach(function(r) {
+                  if (r.classList.contains('receipt-total-row')) return;
+                  const tds = r.querySelectorAll('td');
+                  if (tds.length === 0) return;
+
+                  let amountColIdx = -1;
+                  if (tds.length === 6) {
+                    amountColIdx = 4;
+                  } else if (tds.length >= 4) {
+                    amountColIdx = tds.length - 2;
                   }
 
-                  const tds = Array.from(row.querySelectorAll('td'));
-                  if (tds.length < 2) return;
+                  if (amountColIdx !== -1 && tds[amountColIdx]) {
+                    const textVal = tds[amountColIdx].textContent || tds[amountColIdx].innerText || '0';
+                    const num = parseInt(textVal.replace(/[^0-9]/g, '')) || 0;
+                    sumAll += num;
 
-                  let amountTd = row.querySelector('.receipt-amount-cell');
-                  if (!amountTd) {
-                    if (tds.length >= 6) amountTd = tds[4];
-                    else if (tds.length >= 4) amountTd = tds[2];
-                    else amountTd = tds[tds.length - 2];
+                    const contentText = ((tds[1] ? (tds[1].textContent || tds[1].innerText) : '') + ' ' + (tds[2] ? (tds[2].textContent || tds[2].innerText) : '')).toLowerCase();
+                    const isWardFund = contentText.includes('đp') || contentText.includes('địa phương') || contentText.includes('ubnd') || contentText.includes('phường') || contentText.includes('quốc phòng') || contentText.includes('an ninh') || contentText.includes('đền ơn') || contentText.includes('phòng chống thiên tai') || contentText.includes('bảo trợ');
+                    if (isWardFund) {
+                      wardTotal += num;
+                    } else {
+                      tdpTotal += num;
+                    }
                   }
-
-                  const cellText = amountTd ? (amountTd.textContent || amountTd.innerText || '') : '';
-                  const digits = cellText.replace(/[^0-9]/g, '');
-                  const num = digits ? parseInt(digits, 10) : 0;
-
-                  const fundTypeAttr = row.getAttribute('data-fund-type');
-                  const fundName = (tds[1] ? (tds[1].textContent || tds[1].innerText || '') : '').toLowerCase();
-                  const isWard = fundTypeAttr === 'ward' || fundName.includes('ubnd') || fundName.includes('phường') || fundName.includes('thiên tai') || fundName.includes('đền ơn') || fundName.includes('cao tuổi');
-
-                  if (isWard) {
-                    wardTotal += num;
-                  } else {
-                    tdpTotal += num;
-                  }
-
-                  grandTotal += num;
                 });
 
-                const activePrintMode = (typeof currentPrintMode !== 'undefined') ? currentPrintMode : 'combined';
-                let effectiveTotal = grandTotal;
+                let effectiveTotal = sumAll;
                 if (activePrintMode === 'tdp_only') {
-                  effectiveTotal = tdpTotal;
+                  effectiveTotal = tdpTotal > 0 ? tdpTotal : sumAll;
                 } else if (activePrintMode === 'ward_only') {
-                  effectiveTotal = wardTotal;
+                  effectiveTotal = wardTotal > 0 ? wardTotal : sumAll;
                 }
 
+                const totalRow = rows[rows.length - 1];
                 if (totalRow) {
                   const totalTds = totalRow.querySelectorAll('td');
                   if (totalTds.length >= 2) {
-                    const existingText = totalTds[1].textContent || totalTds[1].innerText || '';
-                    const existingDigits = existingText.replace(/[^0-9]/g, '');
-                    const existingNum = existingDigits ? parseInt(existingDigits, 10) : 0;
-
-                    if (effectiveTotal === 0 && existingNum > 0) {
-                      const hasAnyNonEmptyRow = rows.some(r => {
-                        if (r === totalRow || r.classList.contains('receipt-total-row')) return false;
-                        const cell = r.querySelector('.receipt-amount-cell') || r.querySelectorAll('td')[4] || r.querySelectorAll('td')[3];
-                        const cellDigits = cell ? (cell.textContent || '').replace(/[^0-9]/g, '') : '';
-                        return cellDigits.length > 0;
-                      });
-                      if (hasAnyNonEmptyRow) {
-                        effectiveTotal = existingNum;
-                      }
-                    }
-
-                    const firstBodyRow = table.querySelector('tbody tr:not(.receipt-total-row)');
-                    const ths = Array.from(table.querySelectorAll('thead th'));
-                    const is6Col = ths.length >= 6 || (firstBodyRow && firstBodyRow.querySelectorAll('td').length >= 6);
-
                     const labelTd = totalTds[0];
                     const amountTd = totalTds[1];
+                    const is6Col = labelTd.getAttribute('colspan') === '4' || totalTds.length === 3;
 
                     let printModeText = '';
                     if (activePrintMode === 'tdp_only') {
@@ -3002,256 +2987,28 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             }
           }
 
-          fontSizeSelect.addEventListener('change', function() {
-            document.querySelectorAll('.receipt-container').forEach(function(el) {
-              el.style.fontSize = fontSizeSelect.value;
-            });
-          });
-
-          ['input', 'keyup', 'change', 'blur', 'paste'].forEach(function(evtType) {
+          // Lắng nghe sự kiện gõ phím / sửa đổi để tự động đồng bộ Liên 1 và Liên 2
+          ['input', 'keyup', 'paste', 'change', 'blur'].forEach(function(evtType) {
             document.addEventListener(evtType, function(e) {
-              syncReceiptFields(e);
+              syncTwoLiens(e);
               recalculateReceiptTotals();
             }, true);
           });
 
-          try {
-            recalculateReceiptTotals();
-          } catch (e) {}
-
-          function safeSaveStorage(key, val) {
-            let saved = false;
-            try {
-              localStorage.setItem(key, val);
-            } catch (e) {}
-            try {
-              if (window.opener && window.opener.localStorage) {
-                window.opener.localStorage.setItem(key, val);
-                try {
-                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
-                  customs[key] = val;
-                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
-                } catch (err) {}
-                saved = true;
-              }
-            } catch (err) {}
-            try {
-              if (window.opener && window.opener.postMessage) {
-                window.opener.postMessage({ type: 'RECEIPT_SAVED', key: key, html: val }, '*');
-              }
-            } catch (err) {}
-            return saved;
-          }
-
-          function safeGetStorage(key) {
-            try {
-              const val = localStorage.getItem(key);
-              if (val) return val;
-            } catch (e) {}
-            try {
-              if (window.opener && window.opener.localStorage) {
-                return window.opener.localStorage.getItem(key);
-              }
-            } catch (err) {}
-            return null;
-          }
-
-          function safeRemoveStorage(key) {
-            try {
-              localStorage.removeItem(key);
-            } catch (e) {}
-            try {
-              if (window.opener && window.opener.localStorage) {
-                window.opener.localStorage.removeItem(key);
-                try {
-                  const customs = JSON.parse(window.opener.localStorage.getItem('app_receipt_customizations') || '{}');
-                  delete customs[key];
-                  window.opener.localStorage.setItem('app_receipt_customizations', JSON.stringify(customs));
-                } catch (err) {}
-              }
-            } catch (err) {}
-          }
-
-          function show2DToast(msg, type = 'success') {
-            let toast = document.getElementById('custom-2d-toast');
-            if (!toast) {
-              toast = document.createElement('div');
-              toast.id = 'custom-2d-toast';
-              toast.className = 'no-print';
-              toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;padding:12px 20px;border-radius:10px;font-family:system-ui,-apple-system,sans-serif;font-size:13px;font-weight:600;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15),0 8px 10px -6px rgba(0,0,0,0.1);display:flex;align-items:center;gap:10px;transition:all 0.3s cubic-bezier(0.16, 1, 0.3, 1);transform:translateY(-20px) scale(0.95);opacity:0;';
-              document.body.appendChild(toast);
-            }
-            const isSuccess = type === 'success';
-            toast.style.background = isSuccess ? '#ecfdf5' : '#fffbe8';
-            toast.style.color = isSuccess ? '#065f46' : '#92400e';
-            toast.style.border = isSuccess ? '1.5px solid #10b981' : '1.5px solid #f59e0b';
-            toast.innerHTML = isSuccess ? '<span style="font-size:16px;">✅</span> <span>' + msg + '</span>' : '<span style="font-size:16px;">ℹ️</span> <span>' + msg + '</span>';
-            requestAnimationFrame(() => {
-              toast.style.opacity = '1';
-              toast.style.transform = 'translateY(0) scale(1)';
-            });
-            if (toast.timeoutId) clearTimeout(toast.timeoutId);
-            toast.timeoutId = setTimeout(() => {
-              toast.style.opacity = '0';
-              toast.style.transform = 'translateY(-20px) scale(0.95)';
-            }, 2800);
-          }
-
-          async function waitForAllQrImages() {
-            const imgs = Array.from(document.querySelectorAll('.receipt-qr-code-img'));
-            if (imgs.length === 0) return;
-            await Promise.all(imgs.map(function(img) {
-              if (!img.src) return Promise.resolve();
-              if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-              if (typeof img.decode === 'function') {
-                return img.decode().catch(function() {});
-              }
-              return new Promise(function(resolve) {
-                img.onload = resolve;
-                img.onerror = resolve;
-                setTimeout(resolve, 2000);
+          if (fontSizeSelect) {
+            fontSizeSelect.addEventListener('change', function() {
+              document.querySelectorAll('.receipt-container').forEach(function(el) {
+                el.style.fontSize = fontSizeSelect.value;
               });
-            }));
-          }
-
-          // === NUT LUU & IN: luu vao CSDL roi in ===
-          var btnSaveAndPrint = document.getElementById('btn-save-and-print');
-          window.handleSaveAndPrint = async function() {
-            var b = document.getElementById('btn-save-and-print');
-            var oldBtnText = b ? b.innerHTML : '💾🖨️ Lưu & In';
-            if (b) {
-              b.disabled = true;
-              b.innerHTML = '⏳ Đang chuẩn bị in...';
-            }
-
-            syncAllLienContent();
-            recalculateReceiptTotals();
-            await waitForAllQrImages();
-
-            safeSaveStorage(SAVE_KEY, editor.innerHTML);
-            try {
-              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
-              }
-            } catch (err) {}
-            var saveNotice = document.getElementById('saved-notice');
-            if (saveNotice) {
-              saveNotice.style.display = 'flex';
-              saveNotice.style.background = '#dcfce7';
-              saveNotice.style.border = '1.5px solid #16a34a';
-              saveNotice.style.color = '#14532d';
-              saveNotice.innerHTML = '✅ <strong>Đã cập nhật mã QR mới và lưu vĩnh viễn vào CSDL thành công!</strong> Đang mở hộp thoại in...';
-            }
-            show2DToast('✅ Đã nạp mã QR mới và lưu CSDL. Đang mở hộp thoại in...', 'success');
-            setTimeout(function() {
-              var t = document.getElementById('custom-2d-toast');
-              if (t) t.style.display = 'none';
-              if (b) {
-                b.disabled = false;
-                b.innerHTML = oldBtnText;
-              }
-              window.print();
-            }, 250);
-          };
-          if (btnSaveAndPrint) {
-            btnSaveAndPrint.addEventListener('click', window.handleSaveAndPrint);
-          }
-
-          window.handleSaveReceipt = async function() {
-            var b = document.getElementById('btn-save');
-            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
-            if (b) {
-              b.disabled = true;
-              b.innerHTML = '⏳ Đang lưu...';
-            }
-            syncAllLienContent();
-            recalculateReceiptTotals();
-            await waitForAllQrImages();
-            const ok = safeSaveStorage(SAVE_KEY, editor.innerHTML);
-            try {
-              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
-              }
-            } catch (err) {}
-            if (b) {
-              b.disabled = false;
-              b.innerHTML = oldBtnText;
-            }
-
-            const notice = document.getElementById('saved-notice');
-            if (notice) {
-              notice.style.display = 'flex';
-              notice.style.background = '#dcfce7';
-              notice.style.border = '1.5px solid #16a34a';
-              notice.style.color = '#14532d';
-              notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
-            }
-            show2DToast('Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
-          };
-          if (btnSave) {
-            btnSave.addEventListener('click', window.handleSaveReceipt);
-          }
-
-          window.handleLoadReceipt = async function() {
-            let saved = safeGetStorage(SAVE_KEY);
-            if (!saved && window.opener && window.opener.db && window.opener.db.getReceiptCustomization) {
-              try {
-                saved = await window.opener.db.getReceiptCustomization(SAVE_KEY);
-              } catch (err) {}
-            }
-            if (saved) {
-              editor.innerHTML = saved;
-              syncAllLienContent();
-              recalculateReceiptTotals();
-              const notice = document.getElementById('saved-notice');
-              if (notice) {
-                notice.style.display = 'flex';
-                notice.style.background = '#dcfce7';
-                notice.style.border = '1.5px solid #16a34a';
-                notice.style.color = '#14532d';
-                notice.innerHTML = '✅ Đang hiển thị <strong>bản chỉnh sửa đã lưu trước đó từ CSDL</strong>.';
-              }
-              show2DToast('Đã mở bản chỉnh sửa đã lưu trước đó!', 'success');
-            } else {
-              show2DToast('Chưa có bản chỉnh sửa nào được lưu cho phiếu thu này.', 'info');
-            }
-          };
-          if (btnLoad) {
-            btnLoad.addEventListener('click', window.handleLoadReceipt);
-          }
-
-          window.handleResetReceipt = function() {
-            if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
-              safeRemoveStorage(SAVE_KEY);
-              try {
-                if (window.opener && window.opener.db && window.opener.db.deleteReceiptCustomization) {
-                  window.opener.db.deleteReceiptCustomization(SAVE_KEY);
-                }
-              } catch (err) {}
-              editor.innerHTML = freshHtml;
-              syncAllLienContent();
-              recalculateReceiptTotals();
-              const notice = document.getElementById('saved-notice');
-              if (notice) notice.style.display = 'none';
-              show2DToast('Đã khôi phục về dữ liệu gốc từ hệ thống!', 'success');
-            }
-          };
-          if (btnReset) {
-            btnReset.addEventListener('click', window.handleResetReceipt);
-          }
-
-          const btnClose = document.getElementById('btn-close');
-          if (btnClose) {
-            btnClose.addEventListener('click', function() {
-              try { window.close(); } catch (e) {}
-              try { self.close(); } catch (e) {}
-              try { top.close(); } catch (e) {}
             });
           }
 
-          window.addEventListener('beforeprint', function() {
-            syncAllLienContent();
-            recalculateReceiptTotals();
+          // Phím ESC đóng modal phóng to QR và máy tính
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              window.closeCalc();
+              window.closeQrZoom();
+            }
           });
 
           // === LOGIC MÁY TÍNH MINI 3D ===
@@ -3262,44 +3019,11 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
             if (eE) eE.innerText = eV;
             if (wE) {
-              if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
+              if (!isNaN(num) && num > 0) {
                 wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
               } else { wE.style.display = 'none'; }
             }
           }
-
-          window.toggleCalc = function() {
-            var m = document.getElementById('print-calc-3d');
-            var b = document.getElementById('btn-calc');
-            if (m) {
-              var isHidden = (m.style.display === 'none' || !m.style.display);
-              if (isHidden) {
-                m.style.display = 'block';
-                m.style.zIndex = '999999';
-                if (b) {
-                  b.style.boxShadow = '0 0 0 3px #38bdf8, 0 0 12px rgba(14,165,233,0.8)';
-                  b.style.transform = 'scale(1.04)';
-                }
-              } else {
-                m.style.display = 'none';
-                if (b) {
-                  b.style.boxShadow = 'none';
-                  b.style.transform = 'none';
-                }
-              }
-            }
-          };
-
-          window.closeCalc = function() {
-            var m = document.getElementById('print-calc-3d');
-            var b = document.getElementById('btn-calc');
-            if (m) m.style.display = 'none';
-            if (b) {
-              b.style.boxShadow = 'none';
-              b.style.transform = 'none';
-            }
-          };
-
           window.calcQuickAdd = function(aV) {
             var numVal = parseFloat(aV) || 0;
             var cV = parseFloat(dV) || 0;
@@ -3307,7 +3031,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             nN = false;
             uUI();
           };
-
           window.calcKey = function(k) {
             if (!k) return;
             if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
@@ -3329,7 +3052,6 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             }
             uUI();
           };
-
           window.calcCopy = function() {
             var cp = document.getElementById('calc-copy-btn');
             var num = parseFloat(dV);
@@ -3342,13 +3064,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             }
           };
 
-          (function initPrintCalc3D() {
-            var b = document.getElementById('btn-calc');
+          // Khởi tạo kéo thả máy tính
+          (function initDraggableCalc() {
             var m = document.getElementById('print-calc-3d');
             var h = document.getElementById('calc-header');
-            var c = document.getElementById('calc-close-btn');
-            if (b) { b.onclick = window.toggleCalc; }
-            if (c) { c.onclick = window.closeCalc; }
             if (h && m) {
               var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
               h.onmousedown = function(e) {
@@ -3367,91 +3086,10 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               });
               document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
             }
-            document.querySelectorAll('.c-quick').forEach(function(btn) {
-              btn.onclick = function() {
-                var aV = parseFloat(this.getAttribute('data-val') || '0');
-                window.calcQuickAdd(aV);
-              };
-            });
-            document.querySelectorAll('.c-btn').forEach(function(btn) {
-              btn.onclick = function() {
-                var k = this.getAttribute('data-key');
-                window.calcKey(k);
-              };
-            });
-            var cp = document.getElementById('calc-copy-btn');
-            if (cp) {
-              cp.onclick = window.calcCopy;
-            }
           })();
 
-          (function initQrZoomModal() {
-            var modal = document.getElementById('qr-zoom-modal');
-            var btnZoom = document.getElementById('btn-zoom-qr');
-            var btnClose = document.getElementById('qr-zoom-close');
-            var btnCopy = document.getElementById('qr-zoom-copy-btn');
-            if (!modal) return;
-
-            function openZoom() {
-              var qrBlock = document.querySelector('.receipt-qr-payment-block');
-              if (!qrBlock) {
-                alert('Chưa có thông tin mã QR / tài khoản ngân hàng trên biên lai!');
-                return;
-              }
-              var bankBin = qrBlock.getAttribute('data-bank-bin') || '';
-              var bankName = qrBlock.getAttribute('data-bank-name') || qrBlock.getAttribute('data-bank-bin') || 'Ngân hàng';
-              var accNo = qrBlock.getAttribute('data-account-no') || '';
-              var accHolder = qrBlock.getAttribute('data-account-holder') || '';
-              var payerName = qrBlock.getAttribute('data-payer-name') || '';
-              var hhNo = qrBlock.getAttribute('data-household-no') || '';
-              var transferPrefix = qrBlock.getAttribute('data-transfer-template') || 'NOP QUY';
-              var amountVal = parseFloat(qrBlock.getAttribute('data-amount') || '0') || 0;
-              var isCustomOnly = qrBlock.getAttribute('data-has-custom-qr') === '1';
-
-              var cleanBank = encodeURIComponent(bankBin.trim());
-              var cleanAcc = encodeURIComponent(accNo.replace(/\s+/g, ''));
-              var desc = (transferPrefix + ' ' + (hhNo ? 'H' + hhNo + ' ' : '') + payerName).replace(/\s+/g, ' ').trim();
-              if (payerName && !desc.toUpperCase().includes(payerName.toUpperCase())) {
-                desc = (desc + ' ' + payerName).trim();
-              }
-              desc = desc
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/đ/g, 'd')
-                .replace(/Đ/g, 'D')
-                .replace(/[^a-zA-Z0-9 -]/g, ' ')
-                .trim()
-                .substring(0, 35);
-
-              var bigQrSrc = '';
-              if (!isCustomOnly && bankBin && accNo) {
-                bigQrSrc = 'https://img.vietqr.io/image/' + cleanBank + '-' + cleanAcc + '-compact2.png';
-                var qp = [];
-                if (amountVal > 0) qp.push('amount=' + Math.round(amountVal));
-                if (desc) qp.push('addInfo=' + encodeURIComponent(desc));
-                if (accHolder) qp.push('accountName=' + encodeURIComponent(accHolder.trim()));
-                if (qp.length > 0) bigQrSrc += '?' + qp.join('&');
-              } else {
-                var img = qrBlock.querySelector('.receipt-qr-code-img');
-                bigQrSrc = img ? img.src : '';
-              }
-
-              var imgEl = document.getElementById('qr-zoom-img');
-              if (imgEl) imgEl.src = bigQrSrc;
-              var bEl = document.getElementById('qr-zoom-bank');
-              if (bEl) bEl.innerText = bankName;
-              var stkEl = document.getElementById('qr-zoom-stk');
-              if (stkEl) stkEl.innerText = accNo;
-              var hEl = document.getElementById('qr-zoom-holder');
-              if (hEl) hEl.innerText = accHolder;
-              var aInput = document.getElementById('qr-zoom-amount-input');
-              if (aInput) aInput.value = amountVal > 0 ? amountVal.toLocaleString('vi-VN') : '0';
-              var dEl = document.getElementById('qr-zoom-desc');
-              if (dEl) dEl.innerText = desc || 'Nộp tiền quỹ';
-
-              modal.style.display = 'flex';
-            }
-
+          // Khởi tạo chỉnh sửa số tiền trong modal phóng to QR
+          (function initQrModalAmount() {
             var aInput = document.getElementById('qr-zoom-amount-input');
             if (aInput) {
               aInput.oninput = function() {
@@ -3483,18 +3121,12 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                   });
                 }
               };
-
               aInput.onblur = function() {
                 var n = parseInt(aInput.value.replace(/[^0-9]/g, '')) || 0;
                 aInput.value = n > 0 ? n.toLocaleString('vi-VN') : '0';
               };
             }
-
-            window.openQrZoom = openZoom;
-            window.closeQrZoom = function() { modal.style.display = 'none'; };
-            if (btnZoom) btnZoom.onclick = window.openQrZoom;
-            if (btnClose) btnClose.onclick = window.closeQrZoom;
-            modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+            var btnCopy = document.getElementById('qr-zoom-copy-btn');
             if (btnCopy) {
               btnCopy.onclick = function() {
                 var s = document.getElementById('qr-zoom-stk');
@@ -3506,85 +3138,19 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
                 }
               };
             }
-
-            // Đồng bộ khi người dùng gõ sửa số tiền trực tiếp trên biên lai
-            function syncInlineQrAmount(amtEl) {
-              var raw = amtEl.innerText || amtEl.textContent || '';
-              var num = parseInt(raw.replace(/[^0-9]/g, '')) || 0;
-              if (num > 0) {
-                updateAllQrCodes(num);
-                document.querySelectorAll('.receipt-container').forEach(function(container) {
-                  const table = container.querySelector('.receipt-details-table');
-                  if (table) {
-                    const rows = Array.from(table.querySelectorAll('tbody tr'));
-                    if (rows.length >= 2) {
-                      const totalRow = rows[rows.length - 1];
-                      const totalTds = totalRow.querySelectorAll('td');
-                      if (totalTds.length >= 2) {
-                        totalTds[1].innerHTML = num.toLocaleString('vi-VN') + ' đ';
-                      }
-                    }
-                  }
-                  const wordsContainer = container.querySelector('.receipt-amount-words') 
-                    || Array.from(container.querySelectorAll('div')).find(d => (d.textContent || d.innerText || '').includes('Số tiền bằng chữ'));
-                  if (wordsContainer) {
-                    const strongEl = wordsContainer.querySelector('strong');
-                    if (strongEl) {
-                      strongEl.innerText = docSoTien(num);
-                    } else {
-                      wordsContainer.innerHTML = 'Số tiền bằng chữ: <strong>' + docSoTien(num) + '</strong>';
-                    }
-                  }
-                });
-              }
-            }
-
-            function getAmountTextTarget(e) {
-              var t = e.target;
-              if (!t) return null;
-              if (t.nodeType === 3) t = t.parentElement;
-              if (!t) return null;
-              if (t.classList && t.classList.contains('receipt-qr-amount-text')) return t;
-              if (t.closest) return t.closest('.receipt-qr-amount-text');
-              return null;
-            }
-
-            document.addEventListener('input', function(e) {
-              var el = getAmountTextTarget(e);
-              if (el) {
-                syncInlineQrAmount(el);
-              }
-            }, true);
-
-            document.addEventListener('keyup', function(e) {
-              var el = getAmountTextTarget(e);
-              if (el) {
-                syncInlineQrAmount(el);
-              }
-            }, true);
-
-            document.addEventListener('blur', function(e) {
-              var el = getAmountTextTarget(e);
-              if (el) {
-                var n = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
-                el.textContent = n > 0 ? n.toLocaleString('vi-VN') + ' đ' : '0 đ';
-                syncInlineQrAmount(el);
-              }
-            }, true);
-
-            document.addEventListener('click', function(e) {
-              var el = getAmountTextTarget(e);
-              if (el) {
-                // Người dùng click vào số tiền để chỉnh sửa, không mở modal phóng to
-                return;
-              }
-              var t = e.target ? (e.target.nodeType === 3 ? e.target.parentElement : e.target) : null;
-              if (t && t.closest && t.closest('.receipt-qr-payment-block')) {
-                e.preventDefault();
-                if (window.openQrZoom) window.openQrZoom();
-              }
-            });
           })();
+
+          // Click vào mã QR trên biên lai cũng mở modal phóng to
+          document.addEventListener('click', function(e) {
+            var t = e.target ? (e.target.nodeType === 3 ? e.target.parentElement : e.target) : null;
+            if (t && t.closest && t.closest('.receipt-qr-payment-block')) {
+              if (t.classList && t.classList.contains('receipt-qr-amount-text')) return;
+              e.preventDefault();
+              window.openQrZoom();
+            }
+          });
+
+          try { recalculateReceiptTotals(); } catch (e) {}
         </script>
       </body>
       </html>
