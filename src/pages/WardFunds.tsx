@@ -5179,12 +5179,12 @@ const WardFunds = () => {
       </head>
       <body>
         <div class="print-toolbar">
-          <button class="toolbar-btn" id="btn-calc" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
-          <button class="toolbar-btn btn-print" id="btn-save-and-print">💾🖨️ Lưu &amp; In</button>
-          <button class="toolbar-btn btn-save" id="btn-save">💾 Lưu chỉnh sửa</button>
-          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Đặt lại mẫu phiếu in gốc</button>
+          <button class="toolbar-btn" id="btn-calc" onclick="window.toggleCalc && window.toggleCalc(); return false;" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
+          <button class="toolbar-btn btn-print" id="btn-save-and-print" onclick="window.handleSaveAndPrint && window.handleSaveAndPrint(); return false;">💾🖨️ Lưu &amp; In</button>
+          <button class="toolbar-btn btn-save" id="btn-save" onclick="window.handleSaveReceipt && window.handleSaveReceipt(); return false;">💾 Lưu chỉnh sửa</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset" onclick="window.handleResetReceipt && window.handleResetReceipt(); return false;">🔄 Đặt lại mẫu phiếu in gốc</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
-          <select class="font-size-select" id="font-size-select">
+          <select class="font-size-select" id="font-size-select" onchange="var sz=this.value; document.querySelectorAll('.receipt-container').forEach(function(el){ el.style.fontSize=sz; });">
             <option value="8pt">8pt</option>
             <option value="8.5pt">8.5pt</option>
             <option value="9pt">9pt</option>
@@ -5194,7 +5194,7 @@ const WardFunds = () => {
             <option value="11pt">11pt</option>
             <option value="12pt">12pt</option>
           </select>
-          <button class="toolbar-btn btn-close" onclick="window.close()">❌ Đóng</button>
+          <button class="toolbar-btn btn-close" id="btn-close" onclick="try{window.close();}catch(e){} try{self.close();}catch(e){} try{top.close();}catch(e){} return false;">❌ Đóng</button>
         </div>
 
         <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:10px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
@@ -5206,13 +5206,13 @@ const WardFunds = () => {
         </div>
 
         <!-- Draggable 3D Mini Calculator Widget for Print Window -->
-        <div id="print-calc-3d" style="display:block; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+        <div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
           <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
-            <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; flex-direction:column; pointer-events:none;">
               <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
               <span style="font-size:0.68rem; color:#94a3b8; font-weight:600;">Nguyễn Kim Tuyến</span>
             </div>
-            <button id="calc-close-btn" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:22px; height:22px; cursor:pointer;">✕</button>
+            <button id="calc-close-btn" onclick="window.closeCalc && window.closeCalc(); return false;" onmousedown="event.stopPropagation();" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:24px; height:24px; cursor:pointer; font-size:13px; font-weight:bold; display:flex; align-items:center; justify-content:center; z-index:10;" title="Đóng máy tính">✕</button>
           </div>
           <div style="background:linear-gradient(180deg,#022c22,#064e3b); border-radius:12px; padding:8px 10px; margin-bottom:8px; text-align:right;">
             <div id="calc-eq" style="font-size:0.72rem; color:#6ee7b7; height:14px; font-family:monospace;"></div>
@@ -5220,36 +5220,36 @@ const WardFunds = () => {
             <div id="calc-words" style="font-size:0.66rem; color:#d1fae5; font-style:italic; border-top:1px dashed rgba(52,211,153,0.3); margin-top:2px; text-align:left; display:none;"></div>
           </div>
           <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-bottom:8px;">
-            <button class="c-quick" data-val="10000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
-            <button class="c-quick" data-val="20000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
-            <button class="c-quick" data-val="50000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
-            <button class="c-quick" data-val="100000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
-            <button class="c-quick" data-val="200000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
-            <button class="c-quick" data-val="500000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
+            <button class="c-quick" data-val="10000" onclick="window.calcQuickAdd && window.calcQuickAdd(10000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
+            <button class="c-quick" data-val="20000" onclick="window.calcQuickAdd && window.calcQuickAdd(20000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
+            <button class="c-quick" data-val="50000" onclick="window.calcQuickAdd && window.calcQuickAdd(50000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
+            <button class="c-quick" data-val="100000" onclick="window.calcQuickAdd && window.calcQuickAdd(100000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
+            <button class="c-quick" data-val="200000" onclick="window.calcQuickAdd && window.calcQuickAdd(200000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
+            <button class="c-quick" data-val="500000" onclick="window.calcQuickAdd && window.calcQuickAdd(500000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
           </div>
           <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;">
-            <button class="c-btn" data-key="AC" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
-            <button class="c-btn" data-key="DEL" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
-            <button class="c-btn" data-key="%" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
-            <button class="c-btn" data-key="/" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
-            <button class="c-btn" data-key="7" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
-            <button class="c-btn" data-key="8" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
-            <button class="c-btn" data-key="9" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
-            <button class="c-btn" data-key="*" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
-            <button class="c-btn" data-key="4" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
-            <button class="c-btn" data-key="5" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
-            <button class="c-btn" data-key="6" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
-            <button class="c-btn" data-key="-" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
-            <button class="c-btn" data-key="1" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
-            <button class="c-btn" data-key="2" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
-            <button class="c-btn" data-key="3" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
-            <button class="c-btn" data-key="+" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
-            <button class="c-btn" data-key="0" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
-            <button class="c-btn" data-key="000" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
-            <button class="c-btn" data-key="." style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
-            <button class="c-btn" data-key="=" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
+            <button class="c-btn" data-key="AC" onclick="window.calcKey && window.calcKey('AC'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
+            <button class="c-btn" data-key="DEL" onclick="window.calcKey && window.calcKey('DEL'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
+            <button class="c-btn" data-key="%" onclick="window.calcKey && window.calcKey('%'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
+            <button class="c-btn" data-key="/" onclick="window.calcKey && window.calcKey('/'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
+            <button class="c-btn" data-key="7" onclick="window.calcKey && window.calcKey('7'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
+            <button class="c-btn" data-key="8" onclick="window.calcKey && window.calcKey('8'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
+            <button class="c-btn" data-key="9" onclick="window.calcKey && window.calcKey('9'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
+            <button class="c-btn" data-key="*" onclick="window.calcKey && window.calcKey('*'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
+            <button class="c-btn" data-key="4" onclick="window.calcKey && window.calcKey('4'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
+            <button class="c-btn" data-key="5" onclick="window.calcKey && window.calcKey('5'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
+            <button class="c-btn" data-key="6" onclick="window.calcKey && window.calcKey('6'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
+            <button class="c-btn" data-key="-" onclick="window.calcKey && window.calcKey('-'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
+            <button class="c-btn" data-key="1" onclick="window.calcKey && window.calcKey('1'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
+            <button class="c-btn" data-key="2" onclick="window.calcKey && window.calcKey('2'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
+            <button class="c-btn" data-key="3" onclick="window.calcKey && window.calcKey('3'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
+            <button class="c-btn" data-key="+" onclick="window.calcKey && window.calcKey('+'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
+            <button class="c-btn" data-key="0" onclick="window.calcKey && window.calcKey('0'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
+            <button class="c-btn" data-key="000" onclick="window.calcKey && window.calcKey('000'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
+            <button class="c-btn" data-key="." onclick="window.calcKey && window.calcKey('.'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
+            <button class="c-btn" data-key="=" onclick="window.calcKey && window.calcKey('='); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
           </div>
-          <button id="calc-copy-btn" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
+          <button id="calc-copy-btn" onclick="window.calcCopy && window.calcCopy(); return false;" onmousedown="event.stopPropagation();" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
         </div>
 
         <script>
@@ -5652,26 +5652,49 @@ const WardFunds = () => {
           }
 
           var btnSaveAndPrint = document.getElementById('btn-save-and-print');
-          if (btnSaveAndPrint) {
-            btnSaveAndPrint.addEventListener('click', async function() {
-              safeSaveStorage(SAVE_KEY, editor.innerHTML);
-              try {
-                if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                  await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
-                }
-              } catch (err) {}
-              show2DToast('✅ Đã lưu phiếu thu. Đang mở hộp thoại in...', 'success');
-              setTimeout(function() { window.print(); }, 400);
-            });
-          }
-
-          btnSave.addEventListener('click', async function() {
+          window.handleSaveAndPrint = async function() {
+            var b = document.getElementById('btn-save-and-print');
+            var oldBtnText = b ? b.innerHTML : '💾🖨️ Lưu & In';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang lưu...';
+            }
             safeSaveStorage(SAVE_KEY, editor.innerHTML);
             try {
               if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
                 await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
               }
             } catch (err) {}
+            show2DToast('✅ Đã lưu phiếu thu. Đang mở hộp thoại in...', 'success');
+            setTimeout(function() {
+              if (b) {
+                b.disabled = false;
+                b.innerHTML = oldBtnText;
+              }
+              window.print();
+            }, 300);
+          };
+          if (btnSaveAndPrint) {
+            btnSaveAndPrint.addEventListener('click', window.handleSaveAndPrint);
+          }
+
+          window.handleSaveReceipt = async function() {
+            var b = document.getElementById('btn-save');
+            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang lưu...';
+            }
+            safeSaveStorage(SAVE_KEY, editor.innerHTML);
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
+              }
+            } catch (err) {}
+            if (b) {
+              b.disabled = false;
+              b.innerHTML = oldBtnText;
+            }
             const notice = document.getElementById('saved-notice');
             if (notice) {
               notice.style.display = 'flex';
@@ -5681,9 +5704,12 @@ const WardFunds = () => {
               notice.innerHTML = '✅ <strong>Đã lưu thành công!</strong> Các chỉnh sửa trên phiếu thu của cá nhân này đã được lưu lại.';
             }
             show2DToast('Đã lưu bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
-          });
+          };
+          if (btnSave) {
+            btnSave.addEventListener('click', window.handleSaveReceipt);
+          }
 
-          btnReset.addEventListener('click', function() {
+          window.handleResetReceipt = function() {
             if (confirm('Bạn có chắc chắn muốn xóa bản chỉnh sửa đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
               safeRemoveStorage(SAVE_KEY);
               try {
@@ -5697,7 +5723,10 @@ const WardFunds = () => {
               if (notice) notice.style.display = 'none';
               show2DToast('Đã khôi phục về dữ liệu gốc từ hệ thống!', 'success');
             }
-          });
+          };
+          if (btnReset) {
+            btnReset.addEventListener('click', window.handleResetReceipt);
+          }
 
           const btnClose = document.getElementById('btn-close');
           if (btnClose) {
@@ -5708,17 +5737,86 @@ const WardFunds = () => {
             });
           }
 
+          // === LOGIC MÁY TÍNH MINI 3D ===
+          var dV = "0", eV = "", nN = true;
+          function uUI() {
+            var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
+            var num = parseFloat(dV);
+            if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
+            if (eE) eE.innerText = eV;
+            if (wE) {
+              if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
+                wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
+              } else { wE.style.display = 'none'; }
+            }
+          }
+
+          window.toggleCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            if (m) {
+              var isHidden = m.style.display === 'none' || !m.style.display;
+              m.style.display = isHidden ? 'block' : 'none';
+            }
+          };
+
+          window.closeCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            if (m) m.style.display = 'none';
+          };
+
+          window.calcQuickAdd = function(aV) {
+            var numVal = parseFloat(aV) || 0;
+            var cV = parseFloat(dV) || 0;
+            dV = String(nN ? numVal : cV + numVal);
+            nN = false;
+            uUI();
+          };
+
+          window.calcKey = function(k) {
+            if (!k) return;
+            if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
+            else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
+            else if (['+', '-', '*', '/'].includes(k)) {
+              var op = k === '*' ? '×' : k === '/' ? '÷' : k;
+              eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
+            } else if (k === '=') {
+              if (eV) {
+                try {
+                  var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
+                  dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
+                } catch(err) { dV = "Error"; eV = ""; }
+              }
+            } else if (k === '000') {
+              if (!nN && dV !== '0') dV += '000';
+            } else {
+              if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
+            }
+            uUI();
+          };
+
+          window.calcCopy = function() {
+            var cp = document.getElementById('calc-copy-btn');
+            var num = parseFloat(dV);
+            if (!isNaN(num)) {
+              navigator.clipboard.writeText(String(num));
+              if (cp) {
+                cp.innerText = '✅ Đã sao chép!';
+                setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
+              }
+            }
+          };
+
           (function initPrintCalc3D() {
             var b = document.getElementById('btn-calc');
             var m = document.getElementById('print-calc-3d');
             var h = document.getElementById('calc-header');
             var c = document.getElementById('calc-close-btn');
-            if (b && m) { b.onclick = function() { m.style.display = m.style.display === 'none' ? 'block' : 'none'; }; }
-            if (c && m) { c.onclick = function() { m.style.display = 'none'; }; }
+            if (b) { b.onclick = window.toggleCalc; }
+            if (c) { c.onclick = window.closeCalc; }
             if (h && m) {
               var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
               h.onmousedown = function(e) {
-                if (e.target.tagName === 'BUTTON') return;
+                if (e.target.tagName === 'BUTTON' || (e.target.closest && e.target.closest('button'))) return;
                 isD = true;
                 var r = m.getBoundingClientRect();
                 sX = e.clientX; sY = e.clientY; iL = r.left; iT = r.top;
@@ -5733,59 +5831,21 @@ const WardFunds = () => {
               });
               document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
             }
-            var dV = "0", eV = "", nN = true;
-            function uUI() {
-              var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
-              var num = parseFloat(dV);
-              if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
-              if (eE) eE.innerText = eV;
-              if (wE) {
-                if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
-                  wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
-                } else { wE.style.display = 'none'; }
-              }
-            }
             document.querySelectorAll('.c-quick').forEach(function(btn) {
               btn.onclick = function() {
                 var aV = parseFloat(this.getAttribute('data-val') || '0');
-                var cV = parseFloat(dV) || 0;
-                dV = String(nN ? aV : cV + aV); nN = false; uUI();
+                window.calcQuickAdd(aV);
               };
             });
             document.querySelectorAll('.c-btn').forEach(function(btn) {
               btn.onclick = function() {
                 var k = this.getAttribute('data-key');
-                if (!k) return;
-                if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
-                else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
-                else if (['+', '-', '*', '/'].includes(k)) {
-                  var op = k === '*' ? '×' : k === '/' ? '÷' : k;
-                  eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
-                } else if (k === '=') {
-                  if (eV) {
-                    try {
-                      var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
-                      dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
-                    } catch(err) { dV = "Error"; eV = ""; }
-                  }
-                } else if (k === '000') {
-                  if (!nN && dV !== '0') dV += '000';
-                } else {
-                  if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
-                }
-                uUI();
+                window.calcKey(k);
               };
             });
             var cp = document.getElementById('calc-copy-btn');
             if (cp) {
-              cp.onclick = function() {
-                var num = parseFloat(dV);
-                if (!isNaN(num)) {
-                  navigator.clipboard.writeText(String(num));
-                  cp.innerText = '✅ Đã sao chép!';
-                  setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
-                }
-              };
+              cp.onclick = window.calcCopy;
             }
           })();
         </script>
@@ -6788,13 +6848,13 @@ const WardFunds = () => {
       </head>
       <body>
         <div class="print-toolbar">
-          <button class="toolbar-btn" id="btn-calc" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
-          <button class="toolbar-btn" id="btn-zoom-qr" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">📱 Phóng to mã QR</button>
-          <button class="toolbar-btn btn-print" id="btn-save-and-print">&#x1F4BE;&#x1F5A8;&#xFE0F; L&#x01B0;u &amp; In</button>
-          <button class="toolbar-btn btn-save" id="btn-save">&#x1F4BE; L&#x01B0;u ch&#x1EC9;nh s&#x1EED;a</button>
-          <button class="toolbar-btn btn-reset" id="btn-reset">🔄 Đặt lại mẫu phiếu in gốc</button>
+          <button class="toolbar-btn" id="btn-calc" onclick="window.toggleCalc && window.toggleCalc(); return false;" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white;">🧮 Máy tính 3D</button>
+          <button class="toolbar-btn" id="btn-zoom-qr" onclick="window.openQrZoom && window.openQrZoom(); return false;" style="background: linear-gradient(135deg, #0d9488, #0f766e); color: white;" title="Bấm để phóng to mã QR quét ngay trên màn hình máy tính">📱 Phóng to mã QR</button>
+          <button class="toolbar-btn btn-print" id="btn-save-and-print" onclick="window.handleSaveAndPrint && window.handleSaveAndPrint(); return false;">💾🖨️ Lưu &amp; In</button>
+          <button class="toolbar-btn btn-save" id="btn-save" onclick="window.handleSaveReceipt && window.handleSaveReceipt(); return false;">💾 Lưu chỉnh sửa</button>
+          <button class="toolbar-btn btn-reset" id="btn-reset" onclick="window.handleResetReceipt && window.handleResetReceipt(); return false;">🔄 Đặt lại mẫu phiếu in gốc</button>
           <span class="toolbar-label">📝 Cỡ chữ:</span>
-          <select class="font-size-select" id="font-size-select">
+          <select class="font-size-select" id="font-size-select" onchange="var sz=this.value; document.querySelectorAll('.receipt-container').forEach(function(el){ el.style.fontSize=sz; });">
             <option value="7pt">7pt</option>
             <option value="7.5pt">7.5pt</option>
             <option value="8pt">8pt</option>
@@ -6806,7 +6866,7 @@ const WardFunds = () => {
             <option value="11pt">11pt</option>
             <option value="12pt">12pt</option>
           </select>
-          <button class="toolbar-btn btn-close" id="btn-close">❌ Đóng</button>
+          <button class="toolbar-btn btn-close" id="btn-close" onclick="try{window.close();}catch(e){} try{self.close();}catch(e){} try{top.close();}catch(e){} return false;">❌ Đóng</button>
         </div>
 
         <div id="saved-notice" style="${hasSavedVersion ? 'display:flex;' : 'display:none;'}background:#dcfce7;border:1.5px solid #16a34a;border-radius:8px;padding:8px 16px;margin-bottom:8px;font-size:9pt;font-family:Arial,sans-serif;align-items:center;gap:10px;color:#14532d;">
@@ -6827,7 +6887,7 @@ const WardFunds = () => {
         <!-- Modal Phóng to QR Quét trên Màn hình -->
         <div id="qr-zoom-modal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.8); z-index:9999999; align-items:center; justify-content:center; backdrop-filter:blur(4px); font-family:sans-serif;">
           <div style="background:#ffffff; border-radius:16px; padding:20px 24px; max-width:390px; width:92%; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center; position:relative; border:1px solid #cbd5e1;">
-            <button id="qr-zoom-close" style="position:absolute; top:12px; right:12px; background:#f1f5f9; border:none; width:30px; height:30px; border-radius:50%; font-size:15px; cursor:pointer; color:#475569; font-weight:bold; display:flex; align-items:center; justify-content:center;">✕</button>
+            <button id="qr-zoom-close" onclick="var m=document.getElementById('qr-zoom-modal'); if(m) m.style.display='none'; return false;" style="position:absolute; top:12px; right:12px; background:#f1f5f9; border:none; width:30px; height:30px; border-radius:50%; font-size:15px; cursor:pointer; color:#475569; font-weight:bold; display:flex; align-items:center; justify-content:center;">✕</button>
             <div style="font-size:13.5pt; font-weight:800; color:#0284c7; margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:6px;">
               <span>📱</span> QUÉT MÃ VIETQR THANH TOÁN
             </div>
@@ -6838,7 +6898,7 @@ const WardFunds = () => {
               <div>Ngân hàng: <strong id="qr-zoom-bank" style="color:#0369a1;"></strong></div>
               <div style="display:flex; align-items:center; justify-content:space-between;">
                 <span>STK: <strong id="qr-zoom-stk" style="font-family:monospace; font-size:13.5px; color:#1e40af;"></strong></span>
-                <button id="qr-zoom-copy-btn" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; border-radius:6px; padding:2px 8px; font-size:10.5px; cursor:pointer; font-weight:600;">📋 Sao chép</button>
+                <button id="qr-zoom-copy-btn" onclick="var s=document.getElementById('qr-zoom-stk'); if(s&&s.innerText){ navigator.clipboard.writeText(s.innerText); this.innerText='✅ Đã chép!'; var btn=this; setTimeout(function(){ btn.innerText='📋 Sao chép'; }, 1500); }" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; border-radius:6px; padding:2px 8px; font-size:10.5px; cursor:pointer; font-weight:600;">📋 Sao chép</button>
               </div>
               <div>Chủ TK: <strong id="qr-zoom-holder" style="text-transform:uppercase;"></strong></div>
               <div style="display:flex; align-items:center; justify-content:space-between; margin:4px 0;">
@@ -6857,13 +6917,13 @@ const WardFunds = () => {
         </div>
 
         <!-- Draggable 3D Mini Calculator Widget for Print Window -->
-        <div id="print-calc-3d" style="display:block; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
+        <div id="print-calc-3d" style="display:none; position:fixed; bottom:16px; right:16px; z-index:999999; width:280px; background:linear-gradient(145deg, #1e293b, #0f172a); border-radius:18px; padding:11px 13px; color:#f8fafc; box-shadow:0 20px 40px -10px rgba(0,0,0,0.75), 0 0 0 2px rgba(51,65,85,0.8); font-family:sans-serif; user-select:none;">
           <div id="calc-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:grab;" title="Bấm giữ chuột để di chuyển máy tính">
-            <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; flex-direction:column; pointer-events:none;">
               <span style="font-weight:800; font-size:0.85rem; color:#f8fafc;">🧮 MÁY TÍNH MINI 3D</span>
               <span style="font-size:0.68rem; color:#94a3b8; font-weight:600;">Nguyễn Kim Tuyến</span>
             </div>
-            <button id="calc-close-btn" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:22px; height:22px; cursor:pointer;">✕</button>
+            <button id="calc-close-btn" onclick="window.closeCalc && window.closeCalc(); return false;" onmousedown="event.stopPropagation();" style="background:rgba(255,255,255,0.1); border:none; color:white; border-radius:6px; width:24px; height:24px; cursor:pointer; font-size:13px; font-weight:bold; display:flex; align-items:center; justify-content:center; z-index:10;" title="Đóng máy tính">✕</button>
           </div>
           <div style="background:linear-gradient(180deg,#022c22,#064e3b); border-radius:12px; padding:8px 10px; margin-bottom:8px; text-align:right;">
             <div id="calc-eq" style="font-size:0.72rem; color:#6ee7b7; height:14px; font-family:monospace;"></div>
@@ -6871,36 +6931,36 @@ const WardFunds = () => {
             <div id="calc-words" style="font-size:0.66rem; color:#d1fae5; font-style:italic; border-top:1px dashed rgba(52,211,153,0.3); margin-top:2px; text-align:left; display:none;"></div>
           </div>
           <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:4px; margin-bottom:8px;">
-            <button class="c-quick" data-val="10000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
-            <button class="c-quick" data-val="20000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
-            <button class="c-quick" data-val="50000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
-            <button class="c-quick" data-val="100000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
-            <button class="c-quick" data-val="200000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
-            <button class="c-quick" data-val="500000" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
+            <button class="c-quick" data-val="10000" onclick="window.calcQuickAdd && window.calcQuickAdd(10000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+10k</button>
+            <button class="c-quick" data-val="20000" onclick="window.calcQuickAdd && window.calcQuickAdd(20000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+20k</button>
+            <button class="c-quick" data-val="50000" onclick="window.calcQuickAdd && window.calcQuickAdd(50000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+50k</button>
+            <button class="c-quick" data-val="100000" onclick="window.calcQuickAdd && window.calcQuickAdd(100000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+100k</button>
+            <button class="c-quick" data-val="200000" onclick="window.calcQuickAdd && window.calcQuickAdd(200000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+200k</button>
+            <button class="c-quick" data-val="500000" onclick="window.calcQuickAdd && window.calcQuickAdd(500000); return false;" onmousedown="event.stopPropagation();" style="padding:4px 1px; border-radius:6px; border:none; background:#1d4ed8; color:white; font-weight:800; font-size:0.65rem; cursor:pointer;">+500k</button>
           </div>
           <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:8px;">
-            <button class="c-btn" data-key="AC" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
-            <button class="c-btn" data-key="DEL" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
-            <button class="c-btn" data-key="%" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
-            <button class="c-btn" data-key="/" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
-            <button class="c-btn" data-key="7" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
-            <button class="c-btn" data-key="8" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
-            <button class="c-btn" data-key="9" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
-            <button class="c-btn" data-key="*" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
-            <button class="c-btn" data-key="4" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
-            <button class="c-btn" data-key="5" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
-            <button class="c-btn" data-key="6" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
-            <button class="c-btn" data-key="-" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
-            <button class="c-btn" data-key="1" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
-            <button class="c-btn" data-key="2" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
-            <button class="c-btn" data-key="3" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
-            <button class="c-btn" data-key="+" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
-            <button class="c-btn" data-key="0" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
-            <button class="c-btn" data-key="000" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
-            <button class="c-btn" data-key="." style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
-            <button class="c-btn" data-key="=" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
+            <button class="c-btn" data-key="AC" onclick="window.calcKey && window.calcKey('AC'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#ef4444; color:white; font-weight:900; cursor:pointer;">AC</button>
+            <button class="c-btn" data-key="DEL" onclick="window.calcKey && window.calcKey('DEL'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#f59e0b; color:white; font-weight:900; cursor:pointer;">⌫</button>
+            <button class="c-btn" data-key="%" onclick="window.calcKey && window.calcKey('%'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#334155; color:#94a3b8; font-weight:900; cursor:pointer;">%</button>
+            <button class="c-btn" data-key="/" onclick="window.calcKey && window.calcKey('/'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">÷</button>
+            <button class="c-btn" data-key="7" onclick="window.calcKey && window.calcKey('7'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">7</button>
+            <button class="c-btn" data-key="8" onclick="window.calcKey && window.calcKey('8'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">8</button>
+            <button class="c-btn" data-key="9" onclick="window.calcKey && window.calcKey('9'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">9</button>
+            <button class="c-btn" data-key="*" onclick="window.calcKey && window.calcKey('*'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">×</button>
+            <button class="c-btn" data-key="4" onclick="window.calcKey && window.calcKey('4'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">4</button>
+            <button class="c-btn" data-key="5" onclick="window.calcKey && window.calcKey('5'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">5</button>
+            <button class="c-btn" data-key="6" onclick="window.calcKey && window.calcKey('6'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">6</button>
+            <button class="c-btn" data-key="-" onclick="window.calcKey && window.calcKey('-'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">-</button>
+            <button class="c-btn" data-key="1" onclick="window.calcKey && window.calcKey('1'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">1</button>
+            <button class="c-btn" data-key="2" onclick="window.calcKey && window.calcKey('2'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">2</button>
+            <button class="c-btn" data-key="3" onclick="window.calcKey && window.calcKey('3'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">3</button>
+            <button class="c-btn" data-key="+" onclick="window.calcKey && window.calcKey('+'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#7c3aed; color:white; font-weight:900; cursor:pointer;">+</button>
+            <button class="c-btn" data-key="0" onclick="window.calcKey && window.calcKey('0'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">0</button>
+            <button class="c-btn" data-key="000" onclick="window.calcKey && window.calcKey('000'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:800; cursor:pointer;">000</button>
+            <button class="c-btn" data-key="." onclick="window.calcKey && window.calcKey('.'); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#475569; color:white; font-weight:900; cursor:pointer;">,</button>
+            <button class="c-btn" data-key="=" onclick="window.calcKey && window.calcKey('='); return false;" onmousedown="event.stopPropagation();" style="padding:7px 0; border-radius:8px; border:none; background:#10b981; color:white; font-weight:900; cursor:pointer;">=</button>
           </div>
-          <button id="calc-copy-btn" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
+          <button id="calc-copy-btn" onclick="window.calcCopy && window.calcCopy(); return false;" onmousedown="event.stopPropagation();" style="width:100%; padding:6px; border-radius:8px; border:none; background:#334155; color:white; font-weight:700; font-size:0.8rem; cursor:pointer;">📋 Sao chép kết quả</button>
         </div>
 
         <script>
@@ -7488,50 +7548,59 @@ const WardFunds = () => {
 
           // === NUT LUU & IN: luu vao CSDL roi in ===
           var btnSaveAndPrint = document.getElementById('btn-save-and-print');
-          if (btnSaveAndPrint) {
-            btnSaveAndPrint.addEventListener('click', async function() {
-              var oldBtnText = btnSaveAndPrint.innerHTML;
-              btnSaveAndPrint.disabled = true;
-              btnSaveAndPrint.innerHTML = '⏳ Đang chuẩn bị in...';
+          window.handleSaveAndPrint = async function() {
+            var b = document.getElementById('btn-save-and-print');
+            var oldBtnText = b ? b.innerHTML : '💾🖨️ Lưu & In';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang chuẩn bị in...';
+            }
 
-              syncAllLienContent();
-              recalculateReceiptTotals();
-              await waitForAllQrImages();
+            syncAllLienContent();
+            recalculateReceiptTotals();
+            await waitForAllQrImages();
 
-              safeSaveStorage(SAVE_KEY, editor.innerHTML);
-              try {
-                if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
-                  await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
-                }
-              } catch (err) {}
-              var saveNotice = document.getElementById('saved-notice');
-              if (saveNotice) {
-                saveNotice.style.display = 'flex';
-                saveNotice.style.background = '#dcfce7';
-                saveNotice.style.border = '1.5px solid #16a34a';
-                saveNotice.style.color = '#14532d';
-                saveNotice.innerHTML = '✅ <strong>Đã cập nhật mã QR mới và lưu vĩnh viễn vào CSDL thành công!</strong> Đang mở hộp thoại in...';
+            safeSaveStorage(SAVE_KEY, editor.innerHTML);
+            try {
+              if (window.opener && window.opener.db && window.opener.db.saveReceiptCustomization) {
+                await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
               }
-              show2DToast('✅ Đã nạp mã QR mới và lưu CSDL. Đang mở hộp thoại in...', 'success');
-              try {
-                if (window.opener && window.opener.postMessage) {
-                  window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: '${householdId}', headName: '${headName.replace(/'/g, "\\'").replace(/"/g, '&quot;')}' }, '*');
-                }
-              } catch(e) {}
-              setTimeout(function() {
-                var t = document.getElementById('custom-2d-toast');
-                if (t) t.style.display = 'none';
-                btnSaveAndPrint.disabled = false;
-                btnSaveAndPrint.innerHTML = oldBtnText;
-                window.print();
-              }, 250);
-            });
+            } catch (err) {}
+            var saveNotice = document.getElementById('saved-notice');
+            if (saveNotice) {
+              saveNotice.style.display = 'flex';
+              saveNotice.style.background = '#dcfce7';
+              saveNotice.style.border = '1.5px solid #16a34a';
+              saveNotice.style.color = '#14532d';
+              saveNotice.innerHTML = '✅ <strong>Đã cập nhật mã QR mới và lưu vĩnh viễn vào CSDL thành công!</strong> Đang mở hộp thoại in...';
+            }
+            show2DToast('✅ Đã nạp mã QR mới và lưu CSDL. Đang mở hộp thoại in...', 'success');
+            try {
+              if (window.opener && window.opener.postMessage) {
+                window.opener.postMessage({ type: 'WARD_PRINT_DONE', householdId: '${householdId}', headName: '${headName.replace(/'/g, "\\'").replace(/"/g, '&quot;')}' }, '*');
+              }
+            } catch(e) {}
+            setTimeout(function() {
+              var t = document.getElementById('custom-2d-toast');
+              if (t) t.style.display = 'none';
+              if (b) {
+                b.disabled = false;
+                b.innerHTML = oldBtnText;
+              }
+              window.print();
+            }, 250);
+          };
+          if (btnSaveAndPrint) {
+            btnSaveAndPrint.addEventListener('click', window.handleSaveAndPrint);
           }
 
-          btnSave.addEventListener('click', async function() {
-            var oldBtnText = btnSave.innerHTML;
-            btnSave.disabled = true;
-            btnSave.innerHTML = '⏳ Đang lưu...';
+          window.handleSaveReceipt = async function() {
+            var b = document.getElementById('btn-save');
+            var oldBtnText = b ? b.innerHTML : '💾 Lưu chỉnh sửa';
+            if (b) {
+              b.disabled = true;
+              b.innerHTML = '⏳ Đang lưu...';
+            }
             syncAllLienContent();
             recalculateReceiptTotals();
             await waitForAllQrImages();
@@ -7541,8 +7610,10 @@ const WardFunds = () => {
                 await window.opener.db.saveReceiptCustomization(SAVE_KEY, editor.innerHTML);
               }
             } catch (err) {}
-            btnSave.disabled = false;
-            btnSave.innerHTML = oldBtnText;
+            if (b) {
+              b.disabled = false;
+              b.innerHTML = oldBtnText;
+            }
 
             const notice = document.getElementById('saved-notice');
             if (notice) {
@@ -7553,10 +7624,12 @@ const WardFunds = () => {
               notice.innerHTML = '✅ <strong>Đã lưu vĩnh viễn vào CSDL thành công!</strong> Không bao giờ bị mất khi xóa cache hay đổi máy.';
             }
             show2DToast('Đã lưu vĩnh viễn bản chỉnh sửa phiếu thu vào CSDL thành công!', 'success');
-          });
+          };
+          if (btnSave) {
+            btnSave.addEventListener('click', window.handleSaveReceipt);
+          }
 
-
-          btnReset.addEventListener('click', function() {
+          window.handleResetReceipt = function() {
             if (confirm('Bạn có chắc chắn muốn xóa bản đã lưu và tải lại dữ liệu mới nhất từ hệ thống không?')) {
               safeRemoveStorage(SAVE_KEY);
               try {
@@ -7571,7 +7644,10 @@ const WardFunds = () => {
               if (notice) notice.style.display = 'none';
               show2DToast('Đã khôi phục về dữ liệu gốc từ hệ thống!', 'success');
             }
-          });
+          };
+          if (btnReset) {
+            btnReset.addEventListener('click', window.handleResetReceipt);
+          }
 
           const btnClose = document.getElementById('btn-close');
           if (btnClose) {
@@ -7587,17 +7663,86 @@ const WardFunds = () => {
             recalculateReceiptTotals();
           });
 
+          // === LOGIC MÁY TÍNH MINI 3D ===
+          var dV = "0", eV = "", nN = true;
+          function uUI() {
+            var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
+            var num = parseFloat(dV);
+            if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
+            if (eE) eE.innerText = eV;
+            if (wE) {
+              if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
+                wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
+              } else { wE.style.display = 'none'; }
+            }
+          }
+
+          window.toggleCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            if (m) {
+              var isHidden = m.style.display === 'none' || !m.style.display;
+              m.style.display = isHidden ? 'block' : 'none';
+            }
+          };
+
+          window.closeCalc = function() {
+            var m = document.getElementById('print-calc-3d');
+            if (m) m.style.display = 'none';
+          };
+
+          window.calcQuickAdd = function(aV) {
+            var numVal = parseFloat(aV) || 0;
+            var cV = parseFloat(dV) || 0;
+            dV = String(nN ? numVal : cV + numVal);
+            nN = false;
+            uUI();
+          };
+
+          window.calcKey = function(k) {
+            if (!k) return;
+            if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
+            else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
+            else if (['+', '-', '*', '/'].includes(k)) {
+              var op = k === '*' ? '×' : k === '/' ? '÷' : k;
+              eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
+            } else if (k === '=') {
+              if (eV) {
+                try {
+                  var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
+                  dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
+                } catch(err) { dV = "Error"; eV = ""; }
+              }
+            } else if (k === '000') {
+              if (!nN && dV !== '0') dV += '000';
+            } else {
+              if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
+            }
+            uUI();
+          };
+
+          window.calcCopy = function() {
+            var cp = document.getElementById('calc-copy-btn');
+            var num = parseFloat(dV);
+            if (!isNaN(num)) {
+              navigator.clipboard.writeText(String(num));
+              if (cp) {
+                cp.innerText = '✅ Đã sao chép!';
+                setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
+              }
+            }
+          };
+
           (function initPrintCalc3D() {
             var b = document.getElementById('btn-calc');
             var m = document.getElementById('print-calc-3d');
             var h = document.getElementById('calc-header');
             var c = document.getElementById('calc-close-btn');
-            if (b && m) { b.onclick = function() { m.style.display = m.style.display === 'none' ? 'block' : 'none'; }; }
-            if (c && m) { c.onclick = function() { m.style.display = 'none'; }; }
+            if (b) { b.onclick = window.toggleCalc; }
+            if (c) { c.onclick = window.closeCalc; }
             if (h && m) {
               var isD = false, sX = 0, sY = 0, iL = 0, iT = 0;
               h.onmousedown = function(e) {
-                if (e.target.tagName === 'BUTTON') return;
+                if (e.target.tagName === 'BUTTON' || (e.target.closest && e.target.closest('button'))) return;
                 isD = true;
                 var r = m.getBoundingClientRect();
                 sX = e.clientX; sY = e.clientY; iL = r.left; iT = r.top;
@@ -7612,59 +7757,21 @@ const WardFunds = () => {
               });
               document.addEventListener('mouseup', function() { isD = false; if (h) h.style.cursor = 'grab'; });
             }
-            var dV = "0", eV = "", nN = true;
-            function uUI() {
-              var dE = document.getElementById('calc-disp'), eE = document.getElementById('calc-eq'), wE = document.getElementById('calc-words');
-              var num = parseFloat(dV);
-              if (dE) { dE.innerText = (isNaN(num) ? dV : (num < 0 ? '-' : '') + Math.abs(num).toLocaleString('vi-VN')) + " đ"; }
-              if (eE) eE.innerText = eV;
-              if (wE) {
-                if (!isNaN(num) && num > 0 && typeof docSoTien === 'function') {
-                  wE.innerText = "= " + docSoTien(num); wE.style.display = 'block';
-                } else { wE.style.display = 'none'; }
-              }
-            }
             document.querySelectorAll('.c-quick').forEach(function(btn) {
               btn.onclick = function() {
                 var aV = parseFloat(this.getAttribute('data-val') || '0');
-                var cV = parseFloat(dV) || 0;
-                dV = String(nN ? aV : cV + aV); nN = false; uUI();
+                window.calcQuickAdd(aV);
               };
             });
             document.querySelectorAll('.c-btn').forEach(function(btn) {
               btn.onclick = function() {
                 var k = this.getAttribute('data-key');
-                if (!k) return;
-                if (k === 'AC') { dV = "0"; eV = ""; nN = true; }
-                else if (k === 'DEL') { dV = dV.length <= 1 ? "0" : dV.slice(0, -1); if (dV === "0") nN = true; }
-                else if (['+', '-', '*', '/'].includes(k)) {
-                  var op = k === '*' ? '×' : k === '/' ? '÷' : k;
-                  eV = (parseFloat(dV) || 0) + ' ' + op; nN = true;
-                } else if (k === '=') {
-                  if (eV) {
-                    try {
-                      var expr = (eV + ' ' + dV).replace(/×/g, '*').replace(/÷/g, '/');
-                      dV = String(new Function('return ' + expr)()); eV = ""; nN = true;
-                    } catch(err) { dV = "Error"; eV = ""; }
-                  }
-                } else if (k === '000') {
-                  if (!nN && dV !== '0') dV += '000';
-                } else {
-                  if (nN || dV === '0') { dV = k; nN = false; } else { dV += k; }
-                }
-                uUI();
+                window.calcKey(k);
               };
             });
             var cp = document.getElementById('calc-copy-btn');
             if (cp) {
-              cp.onclick = function() {
-                var num = parseFloat(dV);
-                if (!isNaN(num)) {
-                  navigator.clipboard.writeText(String(num));
-                  cp.innerText = '✅ Đã sao chép!';
-                  setTimeout(function() { cp.innerText = '📋 Sao chép kết quả'; }, 1500);
-                }
-              };
+              cp.onclick = window.calcCopy;
             }
           })();
 
@@ -7675,7 +7782,7 @@ const WardFunds = () => {
             var btnCopy = document.getElementById('qr-zoom-copy-btn');
             if (!modal) return;
 
-            function openZoom() {
+            window.openQrZoom = function() {
               var qrBlock = document.querySelector('.receipt-qr-payment-block');
               if (!qrBlock) {
                 alert('Chưa có thông tin mã QR / tài khoản ngân hàng trên biên lai!');
