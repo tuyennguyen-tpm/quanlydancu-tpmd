@@ -5729,7 +5729,7 @@ const WardFunds = () => {
                       } else {
                         printModeText = '(TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + UBND: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
                       }
-                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU';
 
                       const amountTd = totalTds[1];
                       amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
@@ -7853,7 +7853,7 @@ const WardFunds = () => {
                       labelTd.setAttribute('colspan', '4');
                       labelTd.style.textAlign = 'center';
                       labelTd.style.fontWeight = 'bold';
-                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU ' + printModeText;
+                      labelTd.innerHTML = 'TỔNG CỘNG THỰC THU';
 
                       amountTd.style.textAlign = 'right';
                       amountTd.style.fontWeight = 'bold';
@@ -7865,7 +7865,7 @@ const WardFunds = () => {
                         totalTds[2].innerHTML = '';
                       }
                     } else {
-                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN ' + printModeText;
+                      labelTd.innerHTML = 'TỔNG CỘNG CÁC KHOẢN';
                       amountTd.innerHTML = effectiveTotal.toLocaleString('vi-VN') + ' đ';
                     }
                   }
@@ -8420,7 +8420,7 @@ const WardFunds = () => {
                   if (is6Col && totalTds.length >= 2) {
                     const labelTd = totalTds[0];
                     labelTd.setAttribute('colspan', '4');
-                    labelTd.innerHTML = 'TỔNG CỘNG THỰC THU (TDP: ' + tdpTotal.toLocaleString('vi-VN') + ' đ + PHƯỜNG: ' + wardTotal.toLocaleString('vi-VN') + ' đ)';
+                    labelTd.innerHTML = 'TỔNG CỘNG THỰC THU';
 
                     const amountTd = totalTds[1];
                     amountTd.innerHTML = grandTotal.toLocaleString('vi-VN') + ' đ';
