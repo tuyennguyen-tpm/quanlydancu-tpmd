@@ -159,6 +159,69 @@ export function getHouseholdLaborResidents(members: Resident[], targetYear: numb
 }
 
 /**
+ * Trích xuất ngày, tháng, năm sinh để so khớp chính xác nhân khẩu.
+ * Hỗ trợ định dạng YYYY-MM-DD, DD/MM/YYYY, hoặc chỉ năm YYYY.
+ */
+export function parseDobParts(dobStr?: string): { year?: number; month?: number; day?: number } | null {
+  if (!dobStr) return null;
+  const s = dobStr.trim();
+  if (!s) return null;
+  if (s.includes('-')) {
+    const parts = s.split('-');
+    if (parts.length === 3) {
+      const p0 = parseInt(parts[0], 10);
+      const p1 = parseInt(parts[1], 10);
+      const p2 = parseInt(parts[2], 10);
+      if (p0 > 1000) {
+        return { year: p0, month: p1, day: p2 };
+      } else if (p2 > 1000) {
+        return { day: p0, month: p1, year: p2 };
+      }
+    }
+  }
+  if (s.includes('/')) {
+    const parts = s.split('/');
+    if (parts.length === 3) {
+      const p0 = parseInt(parts[0], 10);
+      const p1 = parseInt(parts[1], 10);
+      const p2 = parseInt(parts[2], 10);
+      if (p2 > 1000) {
+        return { day: p0, month: p1, year: p2 };
+      } else if (p0 > 1000) {
+        return { year: p0, month: p1, day: p2 };
+      }
+    }
+  }
+  const yMatch = s.match(/\b(19\d{2}|20\d{2})\b/);
+  if (yMatch) {
+    return { year: parseInt(yMatch[1], 10) };
+  }
+  return null;
+}
+
+/**
+ * Kiểm tra xem một bản ghi Quỹ Phường (WardFund) có thực sự thuộc về Nhân khẩu (Resident) hay không.
+ * Khớp Tên (chuẩn hóa không dấu cách thừa) VÀ khớp Năm sinh / Ngày sinh nếu có, tránh trùng tên với người khác.
+ */
+export function isResidentMatchWardFund(res: Resident, wf: WardFund): boolean {
+  const rName = (res.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const wName = (wf.full_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!rName || !wName || rName !== wName) return false;
+
+  const rDob = parseDobParts(res.dob);
+  const wDob = parseDobParts(wf.dob);
+
+  if (rDob?.year && wDob?.year) {
+    if (rDob.year !== wDob.year) return false;
+    if (rDob.month && wDob.month && rDob.day && wDob.day) {
+      if (rDob.month !== wDob.month || rDob.day !== wDob.day) return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Đọc số tiền bằng tiếng Việt chính xác 100% cho phiếu thu.
  */
 export function docSoTien(number: number): string {
@@ -392,13 +455,13 @@ export function calculateHouseholdFinancialSummary(
   const wardLineItems: HouseholdFinancialSummary['wardLineItems'] = [];
   let wardTotal = 0;
 
+  // Lọc chính xác các bản ghi Quỹ Phường của các nhân khẩu thuộc hộ (khớp Tên VÀ Ngày/Tháng/Năm sinh)
   const memberWardRecords = wardFundsList.filter(f => {
     if (Number(f.year) !== targetYear) return false;
-    return members.some(m => (f.user_id && f.user_id === m.id) || (f.full_name && f.full_name.trim().toLowerCase() === m.full_name.trim().toLowerCase()));
+    return members.some(m => isResidentMatchWardFund(m, f));
   });
 
   const laborResidentIds = new Set(laborResidents.map(r => r.id));
-  const laborResidentNames = new Set(laborResidents.map(r => r.full_name.trim().toLowerCase()));
 
   wardActiveFunds.forEach(wf => {
     const isHouseholdScope = wf.scope ? wf.scope === 'household' : (wf.name.toLowerCase().includes('hộ gia đình') || wf.name.toLowerCase().includes('người cao tuổi') || wf.name.toLowerCase().includes('cao tuổi'));
@@ -415,10 +478,7 @@ export function calculateHouseholdFinancialSummary(
       expectedTotal = manualExemptHH ? 0 : wfTargetVal;
     } else {
       expectedTotal = laborResidents.reduce((sum, res) => {
-        const rec = memberWardRecords.find(f => 
-          (f.user_id && f.user_id === res.id) || 
-          (f.full_name && f.full_name.trim().toLowerCase() === res.full_name.trim().toLowerCase())
-        );
+        const rec = memberWardRecords.find(f => isResidentMatchWardFund(res, f));
         if (rec) {
           const contrib = getContributionData(rec.contributions, wf.name);
           if (contrib) {
@@ -434,21 +494,45 @@ export function calculateHouseholdFinancialSummary(
       }, 0);
     }
 
-    const actualPaidSum = memberWardRecords.reduce((sum, r) => {
-      if (!isHouseholdScope) {
-        const isLabor = (r.user_id && laborResidentIds.has(r.user_id)) || laborResidentNames.has((r.full_name || '').trim().toLowerCase());
-        if (!isLabor) return sum;
-      }
-      const contrib = getContributionData(r.contributions, wf.name);
-      const raw = contrib?.actual ?? 0;
-      const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
-      return sum + val;
-    }, 0);
+    let actualPaidSum = 0;
+    if (isHouseholdScope) {
+      // Quỹ Hộ gia đình (ví dụ: Chăm sóc người cao tuổi):
+      // Dù có nhiều nhân khẩu trong hộ có bản ghi nộp thì tổng mức thu của hộ cũng không bị nhân bội số nhân khẩu
+      const rawActual = memberWardRecords.reduce((sum, r) => {
+        const contrib = getContributionData(r.contributions, wf.name);
+        const raw = contrib?.actual ?? 0;
+        const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
+        return sum + val;
+      }, 0);
+      actualPaidSum = rawActual;
+    } else {
+      // Quỹ theo nhân khẩu lao động: tính tổng số tiền đã nộp của đúng các nhân khẩu lao động trong hộ
+      actualPaidSum = laborResidents.reduce((sum, res) => {
+        const rec = memberWardRecords.find(f => isResidentMatchWardFund(res, f));
+        if (!rec) return sum;
+        const contrib = getContributionData(rec.contributions, wf.name);
+        const raw = contrib?.actual ?? 0;
+        const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
+        return sum + val;
+      }, 0);
 
-    // Với quỹ hộ (household scope): dù có nhiều bản ghi nhân khẩu cũng chỉ tính tối đa 1 lần/hộ
-    // Tránh tình huống hộ 2 người đều có bản ghi → bị nhân đôi 40.000 thay vì 20.000
-    const cappedPaidSum = isHouseholdScope && expectedTotal > 0
-      ? Math.min(actualPaidSum, expectedTotal)
+      // Thêm nếu có nhân khẩu ngoài độ tuổi lao động trong hộ tự nguyện nộp
+      const nonLaborPaid = members
+        .filter(m => !laborResidentIds.has(m.id))
+        .reduce((sum, res) => {
+          const rec = memberWardRecords.find(f => isResidentMatchWardFund(res, f));
+          if (!rec) return sum;
+          const contrib = getContributionData(rec.contributions, wf.name);
+          const raw = contrib?.actual ?? 0;
+          const val = typeof raw === 'number' ? raw : (parseInt(String(raw || '0').replace(/[^\d]/g, ''), 10) || 0);
+          return sum + val;
+        }, 0);
+      actualPaidSum += nonLaborPaid;
+    }
+
+    // Với quỹ hộ: trần định mức là 1 lần mức thu của hộ (20.000 đ), không nhân theo số khẩu
+    const cappedPaidSum = isHouseholdScope
+      ? (expectedTotal > 0 ? (actualPaidSum > expectedTotal ? expectedTotal : actualPaidSum) : (actualPaidSum > wfTargetVal ? wfTargetVal : actualPaidSum))
       : actualPaidSum;
 
     const displayAmount = cappedPaidSum > expectedTotal ? cappedPaidSum : expectedTotal;

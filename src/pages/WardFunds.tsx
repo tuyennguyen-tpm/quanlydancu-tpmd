@@ -26,7 +26,7 @@ import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID, supabase } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData, getCanonicalHouseholdReceiptKey, formatReceiptAddress, sanitizeReceiptHtmlAddresses } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, isLaborAge, isExemptResident, parseAgeRange, applyWardFundPrefixToHtml, getContributionData, getCanonicalHouseholdReceiptKey, formatReceiptAddress, sanitizeReceiptHtmlAddresses, isResidentMatchWardFund } from '../utils/financialEngine';
 import type { WardFund, Resident, Household, HouseholdFund, FinancialRecord } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -6775,9 +6775,7 @@ const WardFunds = () => {
 
     const memberWardRecords = funds.filter(f => {
       if (String(f.year) !== String(selectedYear)) return false;
-      if (f.user_id && memberIds.has(f.user_id)) return true;
-      if (f.full_name && memberNames.has(f.full_name.trim().toLowerCase())) return true;
-      return false;
+      return activeMembers.some(m => isResidentMatchWardFund(m, f));
     });
 
     if (!household && activeMembers.length > 0) {
@@ -8107,10 +8105,8 @@ const WardFunds = () => {
       const householdResidents = freshDbResidents.filter(r => isResidentActiveInHousehold(r, group.householdId));
 
       const memberWardRecords = freshDbFunds.filter(f => {
-        if (f.year !== selectedYear) return false;
-        if (f.user_id && householdResidents.some(m => m.id === f.user_id)) return true;
-        if (f.full_name && householdResidents.some(m => m.full_name.trim().toLowerCase() === f.full_name.trim().toLowerCase())) return true;
-        return false;
+        if (Number(f.year) !== Number(selectedYear)) return false;
+        return householdResidents.some(m => isResidentMatchWardFund(m, f));
       });
 
       const activeMemberIds = new Set(memberWardRecords.map(f => f.user_id).filter(Boolean));

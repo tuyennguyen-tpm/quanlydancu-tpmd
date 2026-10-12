@@ -26,7 +26,7 @@ import { Calculator3DModal } from '../components/Calculator3DModal';
 import { db, generateUUID } from '../services/db';
 import { showToast } from '../utils/toast';
 import { calculateExactAge, formatDateVN, autoFormatDateInput } from '../utils/dateUtils';
-import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml, docSoTien, getCanonicalHouseholdReceiptKey, formatReceiptAddress, sanitizeReceiptHtmlAddresses } from '../utils/financialEngine';
+import { calculateHouseholdFinancialSummary, generateUnifiedHouseholdReceiptHtml, applyWardFundPrefixToHtml, docSoTien, getCanonicalHouseholdReceiptKey, formatReceiptAddress, sanitizeReceiptHtmlAddresses, isResidentMatchWardFund } from '../utils/financialEngine';
 import type { FinancialRecord, Household, Resident, HouseholdFund, WardFund } from '../types';
 import ExcelJS from 'exceljs';
 
@@ -1848,24 +1848,8 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
     } catch { /* ignore */ }
 
     const memberWardRecords = wardFundsList.filter(f => {
-      const nameKey = f.full_name.trim().toLowerCase().replace(/\s+/g, ' ');
-      const dobClean = (f.dob || '').trim();
-      
-      return members.some(m => {
-        const mName = m.full_name.trim().toLowerCase().replace(/\s+/g, ' ');
-        if (mName !== nameKey) return false;
-        
-        if (f.user_id && m.user_id !== f.user_id) return false;
-        
-        if (dobClean) {
-          const normClean = normalizeDateToCompare(dobClean);
-          const normM = normalizeDateToCompare(m.dob);
-          if (normM !== normClean && !m.dob.includes(dobClean) && !dobClean.includes(m.dob)) {
-            return false;
-          }
-        }
-        return true;
-      });
+      if (Number(f.year) !== Number(fundYear)) return false;
+      return members.some(m => isResidentMatchWardFund(m, f));
     });
 
     const filteredHhFunds = householdFunds.filter(hf => hf.household_id === householdId && hf.year === fundYear);
