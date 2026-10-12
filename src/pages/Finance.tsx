@@ -3184,7 +3184,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
 
             window.openQrZoom = openZoom;
             window.closeQrZoom = function() { modal.style.display = 'none'; };
-            if (btnZoom) btnZoom.onclick = openZoom;
+            if (btnZoom) btnZoom.onclick = window.openQrZoom;
             if (btnClose) btnClose.onclick = window.closeQrZoom;
             modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
             if (btnCopy) {
@@ -3273,7 +3273,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
               var t = e.target ? (e.target.nodeType === 3 ? e.target.parentElement : e.target) : null;
               if (t && t.closest && t.closest('.receipt-qr-payment-block')) {
                 e.preventDefault();
-                openZoom();
+                if (window.openQrZoom) window.openQrZoom();
               }
             });
           })();
