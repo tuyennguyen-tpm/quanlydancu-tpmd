@@ -2651,7 +2651,7 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
             }
             let finalStr = parts.join(" ").trim();
             if (!finalStr) return 'Không đồng';
-            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/[ \t\r\n]+/g, ' ');
+            return (finalStr.charAt(0).toUpperCase() + finalStr.slice(1) + " đồng chẵn").replace(/[ \\t\\r\\n]+/g, ' ');
           }
 
           let lastEditedContainerIndex = 0;
