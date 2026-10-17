@@ -194,9 +194,25 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     });
   }, []);
 
-  // 2. Tự động khởi động lại Micro khi rảnh tay
+  const currentSpeakingTextRef = useRef<string>('');
+
+  // 🌟 HÀM CẮT LỜI / NGẮT TIẾNG TRỢ LÝ NGAY LẬP TỨC (0.05 giây)
+  const interruptSpeaking = useCallback(() => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.currentTime = 0;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+    isSpeakingRef.current = false;
+    currentSpeakingTextRef.current = '';
+  }, []);
+
+  // 2. Tự động khởi động lại Micro khi rảnh tay (KHÔNG bị chặn khi trợ lý đang nói)
   const startListeningSafely = useCallback(() => {
-    if (!isAutoHandsFreeRef.current || isSpeakingRef.current) return;
+    if (!isAutoHandsFreeRef.current) return;
     try {
       if (recognitionRef.current && !isListeningRef.current) {
         recognitionRef.current.start();
@@ -319,8 +335,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     setIsSpeaking(true);
     isSpeakingRef.current = true;
     setShowCaption(true);
+    currentSpeakingTextRef.current = textToSpeak.toLowerCase().trim();
 
-    stopListeningSafely();
+    // DUY TRÌ MICRO ĐỂ NGƯỜI DÙNG CÓ THỂ NÓI XEN VÀO / CẮT LỜI BẤT CỨ LÚC NÀO
+    if (isAutoHandsFreeRef.current && !isListeningRef.current) {
+      setTimeout(startListeningSafely, 200);
+    }
 
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
@@ -334,8 +354,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     const onFinish = () => {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
+      currentSpeakingTextRef.current = '';
       if (isAutoHandsFreeRef.current) {
-        setTimeout(startListeningSafely, 500);
+        setTimeout(startListeningSafely, 300);
       }
     };
 
@@ -433,10 +454,23 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         }
         setLiveTranscript(currentTranscript);
 
+        const clean = currentTranscript.toLowerCase().trim();
+
+        // 🌟 FULL-DUPLEX BARGE-IN: NGẮT LỜI TRỢ LÝ NGAY KHI NGƯỜI DÙNG CẤT TIẾNG
+        if (isSpeakingRef.current && clean.length >= 2) {
+          const spoken = currentSpeakingTextRef.current;
+          const isSelfEcho = spoken && spoken.includes(clean) && clean.length < 8;
+          if (!isSelfEcho) {
+            // Người dùng đang nói xen vào -> Dừng ngay giọng trợ lý!
+            interruptSpeaking();
+          }
+        }
+
         if (event.results[0].isFinal) {
           const finalQuery = currentTranscript.trim();
           setLiveTranscript('');
           if (finalQuery.length > 1) {
+            interruptSpeaking();
             handleUserQuery(finalQuery);
           }
         }
@@ -448,16 +482,16 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         if (event.error !== 'no-speech' && event.error !== 'aborted') {
           console.warn('[Micro Error]', event.error);
         }
-        if (isAutoHandsFreeRef.current && !isSpeakingRef.current) {
-          setTimeout(startListeningSafely, 1200);
+        if (isAutoHandsFreeRef.current) {
+          setTimeout(startListeningSafely, 800);
         }
       };
 
       recognition.onend = () => {
         setIsListening(false);
         isListeningRef.current = false;
-        if (isAutoHandsFreeRef.current && !isSpeakingRef.current) {
-          setTimeout(startListeningSafely, 600);
+        if (isAutoHandsFreeRef.current) {
+          setTimeout(startListeningSafely, 300);
         }
       };
 
@@ -1953,6 +1987,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       {/* 5. HÌNH TƯỢNG CÔ GÁI ĐỨNG CỬ ĐỘNG NHƯ NGƯỜI THẬT */}
       <div 
         onClick={() => {
+          if (isSpeaking) {
+            // Đang nói -> Click vào để ngắt lời ngay lập tức
+            interruptSpeaking();
+            return;
+          }
           setShowCaption(true);
           const greetingText = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
           setAssistantText(greetingText);
@@ -1967,8 +2006,42 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           userSelect: 'none',
           animation: isSpeaking ? 'none' : 'floatingGirl 3.2s ease-in-out infinite'
         }}
-        title="Bấm vào để nói chuyện với trợ lý!"
+        title={isSpeaking ? "Bấm vào để ngắt lời trợ lý!" : "Bấm vào để nói chuyện với trợ lý!"}
       >
+        {/* Nút ngắt lời nổi khi trợ lý đang phát âm thanh */}
+        {isSpeaking && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              interruptSpeaking();
+            }}
+            style={{
+              position: 'absolute',
+              top: '-36px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              whiteSpace: 'nowrap',
+              background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+              color: 'white',
+              padding: '5px 12px',
+              borderRadius: '20px',
+              fontSize: '0.74rem',
+              fontWeight: '700',
+              boxShadow: '0 6px 20px rgba(239, 68, 68, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '2px solid rgba(255, 255, 255, 0.95)',
+              cursor: 'pointer',
+              zIndex: 100,
+              animation: 'bounceTap 1.2s infinite'
+            }}
+            title="Bấm hoặc nói xen vào để cắt lời trợ lý"
+          >
+            <Mic size={13} className="pulse" />
+            <span>Nói xen vào / Bấm ngắt lời</span>
+          </div>
+        )}
         {/* Nút nhắc mở tiếng nếu trình duyệt chặn autoplay */}
         {needsUserTapToPlay && (
           <div
