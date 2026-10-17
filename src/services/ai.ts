@@ -90,6 +90,8 @@ export async function askAssistantAI(
   extraContext?: {
     totalHouseholds?: number;
     totalResidents?: number;
+    temporaryResidents?: number;
+    partyMembers?: number;
     headName?: string;
   }
 ): Promise<AssistantResponse | null> {
@@ -105,6 +107,10 @@ export async function askAssistantAI(
     minute: '2-digit' 
   });
 
+  const hhFormatted = extraContext?.totalHouseholds ? new Intl.NumberFormat('vi-VN').format(extraContext.totalHouseholds) : '1.252';
+  const resFormatted = extraContext?.totalResidents ? new Intl.NumberFormat('vi-VN').format(extraContext.totalResidents) : '5.622';
+  const tempFormatted = extraContext?.temporaryResidents !== undefined ? new Intl.NumberFormat('vi-VN').format(extraContext.temporaryResidents) : '3';
+
   const systemInstruction = `Bạn là Trợ lý ảo AI thông minh, chân thành của Tổ dân phố Quảng Giao, đang trò chuyện trực tiếp bằng giọng nói với anh Nguyễn Kim Tuyến (Tổ trưởng).
 Quy tắc trò chuyện như 2 người thật ngoài đời:
 1. Giao tiếp cực kỳ tự nhiên, sống động, ấm áp như hai người bạn hoặc người trợ lý thân cận ngồi nói chuyện trực tiếp. Xưng "Dạ, em...", gọi người dùng là "anh Tuyến" hoặc "anh".
@@ -113,12 +119,15 @@ Quy tắc trò chuyện như 2 người thật ngoài đời:
 4. Bạn thấu hiểu mọi cảm xúc, tiếng lóng, khẩu ngữ, biết nói đùa nhẹ nhàng, biết an ủi khi mệt mỏi, và am hiểu toàn diện mọi lĩnh vực trên thế giới (VNeID, CCCD, thủ tục hành chính, đời sống, pháp luật, gia đình...).
 5. Nếu anh Tuyến ngắt lời hoặc đổi đề tài, hãy ứng biến tự nhiên theo câu mới nhất của anh.
 6. Khi có yêu cầu xem/tìm kiếm trong ứng dụng, đính kèm thẻ: [ACTION:{"type":"navigate_and_search"|"navigate","tab":"households|residents|finance|ccb|elderly|party-cell|map|documents...","query":"..."}] ở cuối câu.
+7. QUY TẮC SỐ LIỆU DÂN CƯ: Khi anh Tuyến hỏi về số hộ gia đình, nhân khẩu, dân số hay tạm trú của TDP Quảng Giao, BẮT BUỘC phải dùng con số chính xác theo Bối cảnh hiển thị trên màn hình: đúng ${hhFormatted} hộ gia đình, ${resFormatted} nhân khẩu và ${tempFormatted} tạm trú tạm vắng. Tuyệt đối không được nói số cũ hay tự đoán số khác.
 
-Bối cảnh:
+Bối cảnh thực tế CSDL TDP Quảng Giao:
 - Thời gian: ${nowStr}.
 - Đang ở phân hệ: ${currentTab}.
-${extraContext?.totalHouseholds ? `- Số hộ trong TDP: ${extraContext.totalHouseholds} hộ.` : ''}
-${extraContext?.totalResidents ? `- Số nhân khẩu: ${extraContext.totalResidents} người.` : ''}`;
+- Số hộ gia đình: ${hhFormatted} hộ.
+- Tổng số nhân khẩu: ${resFormatted} người.
+- Tạm trú, tạm vắng: ${tempFormatted} người.
+${extraContext?.partyMembers ? `- Đảng viên: ${new Intl.NumberFormat('vi-VN').format(extraContext.partyMembers)} đồng chí.` : ''}`;
 
   try {
     for (const model of SUPPORTED_MODELS) {

@@ -28,6 +28,10 @@ interface VirtualAssistantProps {
   currentTab?: string;
   onNavigate: (tabId: string) => void;
   userRole?: string;
+  householdCount?: number;
+  residentCount?: number;
+  temporaryResidentCount?: number;
+  partyMemberCount?: number;
 }
 
 export type VoiceOption = 'namminh' | 'hoaimy' | 'google';
@@ -35,7 +39,11 @@ export type VoiceOption = 'namminh' | 'hoaimy' | 'google';
 export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   isSidebarOpen,
   currentTab = 'Bảng điều khiển',
-  onNavigate
+  onNavigate,
+  householdCount,
+  residentCount,
+  temporaryResidentCount,
+  partyMemberCount
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -65,9 +73,29 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   const [apiKeySavedStatus, setApiKeySavedStatus] = useState<string>('');
   const [isTestingKey, setIsTestingKey] = useState<boolean>(false);
 
-  // Bộ nhớ đàm thoại nhiều lượt & Dữ liệu thực tế dân số TDP Quảng Giao
-  const [totalHouseholdsCount, setTotalHouseholdsCount] = useState<number>(774);
-  const [totalResidentsCount, setTotalResidentsCount] = useState<number>(2500);
+  // Bộ nhớ đàm thoại nhiều lượt & Dữ liệu thực tế dân số TDP Quảng Giao (khớp 100% hiển thị menu)
+  const [totalHouseholdsCount, setTotalHouseholdsCount] = useState<number>(() => householdCount || 1252);
+  const [totalResidentsCount, setTotalResidentsCount] = useState<number>(() => residentCount || 5622);
+  const [totalTempCount, setTotalTempCount] = useState<number>(() => temporaryResidentCount || 3);
+  const [totalPartyCount, setTotalPartyCount] = useState<number>(() => partyMemberCount || 0);
+
+  // Đồng bộ tức thì khi App.tsx truyền số liệu từ menu vào
+  useEffect(() => {
+    if (householdCount && householdCount > 0) setTotalHouseholdsCount(householdCount);
+  }, [householdCount]);
+
+  useEffect(() => {
+    if (residentCount && residentCount > 0) setTotalResidentsCount(residentCount);
+  }, [residentCount]);
+
+  useEffect(() => {
+    if (temporaryResidentCount !== undefined) setTotalTempCount(temporaryResidentCount);
+  }, [temporaryResidentCount]);
+
+  useEffect(() => {
+    if (partyMemberCount !== undefined) setTotalPartyCount(partyMemberCount);
+  }, [partyMemberCount]);
+
   const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model'; text: string }[]>(() => {
     try {
       const saved = sessionStorage.getItem('assistant_chat_history');
@@ -87,14 +115,30 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     });
   }, []);
 
+  // Tự động tải số liệu thực tế từ CSDL với bộ lọc chuẩn xác
   useEffect(() => {
-    Promise.all([
-      db.getHouseholds().catch(() => []),
-      db.getResidents().catch(() => [])
-    ]).then(([hh, res]) => {
-      if (hh && hh.length > 0) setTotalHouseholdsCount(hh.length);
-      if (res && res.length > 0) setTotalResidentsCount(res.length);
-    });
+    const fetchLatestCounts = async () => {
+      try {
+        const [resList, hhList] = await Promise.all([
+          db.getResidents().catch(() => []),
+          db.getHouseholds().catch(() => [])
+        ]);
+        if (hhList && hhList.length > 0) {
+          const activeH = hhList.filter((h: any) => h.status !== 'moved_out').length;
+          setTotalHouseholdsCount(activeH || hhList.length);
+        }
+        if (resList && resList.length > 0) {
+          const activeR = resList.filter((r: any) => r.status !== 'deceased' && r.status !== 'moved_out' && (r.relationship_with_head || '').trim().toLowerCase() !== 'thành viên chuyển đi').length;
+          setTotalResidentsCount(activeR || resList.length);
+          const tempR = resList.filter((r: any) => r.status === 'temporary_resident' || r.status === 'temporary_absent').length;
+          setTotalTempCount(tempR);
+        }
+      } catch (err) {}
+    };
+
+    fetchLatestCounts();
+    window.addEventListener('db-changed', fetchLatestCounts);
+    return () => window.removeEventListener('db-changed', fetchLatestCounts);
   }, []);
 
   // 3 khung hình hoạt họa cử động như người thật:
@@ -731,11 +775,18 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     // 3. Hỏi về số liệu thực tế TDP Quảng Giao
     if (q.includes('bao nhiêu hộ') || q.includes('mấy hộ') || q.includes('số hộ')) {
-      return `Dạ, hiện tại Tổ dân phố Quảng Giao chúng ta đang có tổng cộng ${totalHouseholdsCount} hộ gia đình đã được cập nhật đầy đủ trong hệ thống anh nhé!`;
+      const hhStr = new Intl.NumberFormat('vi-VN').format(totalHouseholdsCount);
+      return `Dạ, hiện tại Tổ dân phố Quảng Giao chúng ta đang có đúng ${hhStr} hộ gia đình đã được cập nhật đầy đủ trong hệ thống anh nhé!`;
     }
 
     if (q.includes('dân số') || q.includes('bao nhiêu người') || q.includes('bao nhiêu nhân khẩu') || q.includes('mấy người')) {
-      return `Dạ, tổng số nhân khẩu hiện tại của Tổ dân phố Quảng Giao là ${totalResidentsCount} người, phân bổ trên ${totalHouseholdsCount} hộ gia đình ạ!`;
+      const resStr = new Intl.NumberFormat('vi-VN').format(totalResidentsCount);
+      const hhStr = new Intl.NumberFormat('vi-VN').format(totalHouseholdsCount);
+      return `Dạ, tổng số nhân khẩu hiện tại của Tổ dân phố Quảng Giao là đúng ${resStr} người, phân bổ trên ${hhStr} hộ gia đình anh Tuyến nhé!`;
+    }
+
+    if (q.includes('tạm trú') || q.includes('tạm vắng')) {
+      return `Dạ, hiện tại tổ dân phố mình đang ghi nhận ${totalTempCount} trường hợp tạm trú, tạm vắng anh nhé!`;
     }
 
     if (q.includes('tổ trưởng là ai') || q.includes('ai là tổ trưởng')) {
@@ -866,7 +917,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         try {
           const aiRes = await askAssistantAI(query, currentTab, chatHistory, {
             totalHouseholds: totalHouseholdsCount,
-            totalResidents: totalResidentsCount
+            totalResidents: totalResidentsCount,
+            temporaryResidents: totalTempCount,
+            partyMembers: totalPartyCount
           });
           if (aiRes && aiRes.spokenReply) {
             setAssistantText(aiRes.spokenReply);
@@ -902,7 +955,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       try {
         const aiRes = await askAssistantAI(query, currentTab, chatHistory, {
           totalHouseholds: totalHouseholdsCount,
-          totalResidents: totalResidentsCount
+          totalResidents: totalResidentsCount,
+          temporaryResidents: totalTempCount,
+          partyMembers: totalPartyCount
         });
         if (aiRes && aiRes.spokenReply) {
           setAssistantText(aiRes.spokenReply);

@@ -6028,6 +6028,10 @@ const App = () => {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             userRole={userRole}
+            householdCount={householdCount}
+            residentCount={residentCount}
+            temporaryResidentCount={temporaryResidentCount}
+            partyMemberCount={partyMemberCount}
           />
 
           <style>{`
