@@ -118,6 +118,11 @@ const Households = () => {
     return nameMap;
   }, [households, residents]);
 
+  const getHeadName = useCallback((h: Household | null) => {
+    if (!h) return '';
+    return householdHeadNameMap.get(h.id) || 'Chưa xác định';
+  }, [householdHeadNameMap]);
+
   const [policyFilter, setPolicyFilter] = useState<string>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [tdpList, setTdpList] = useState<any[]>([]);
@@ -507,11 +512,6 @@ const Households = () => {
         return (a.created_at || '').localeCompare(b.created_at || '');
       });
   };
-
-  const getHeadName = useCallback((h: Household | null) => {
-    if (!h) return '';
-    return householdHeadNameMap.get(h.id) || 'Chưa xác định';
-  }, [householdHeadNameMap]);
 
   const handleOpenAdd = () => {
     setEditingHousehold(null);
