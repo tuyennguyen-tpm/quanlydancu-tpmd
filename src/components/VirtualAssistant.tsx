@@ -64,6 +64,38 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   const [apiKeySavedStatus, setApiKeySavedStatus] = useState<string>('');
   const [isTestingKey, setIsTestingKey] = useState<boolean>(false);
 
+  // Bộ nhớ đàm thoại nhiều lượt & Dữ liệu thực tế dân số TDP Quảng Giao
+  const [totalHouseholdsCount, setTotalHouseholdsCount] = useState<number>(774);
+  const [totalResidentsCount, setTotalResidentsCount] = useState<number>(2500);
+  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model'; text: string }[]>(() => {
+    try {
+      const saved = sessionStorage.getItem('assistant_chat_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const appendToChatHistory = useCallback((role: 'user' | 'model', text: string) => {
+    setChatHistory(prev => {
+      const next = [...prev, { role, text }].slice(-10);
+      try {
+        sessionStorage.setItem('assistant_chat_history', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      db.getHouseholds().catch(() => []),
+      db.getResidents().catch(() => [])
+    ]).then(([hh, res]) => {
+      if (hh && hh.length > 0) setTotalHouseholdsCount(hh.length);
+      if (res && res.length > 0) setTotalResidentsCount(res.length);
+    });
+  }, []);
+
   // 3 khung hình hoạt họa cử động như người thật:
   // - wave: Chào đón ban đầu, vẫy tay
   // - talk: Mở miệng nói chuyện, cử chỉ hai tay biểu cảm
@@ -581,15 +613,82 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   };
 
   const handleSmartConversationResponse = (q: string): string => {
+    const vName = voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'Trợ lý Ảo';
+
+    // 1. Phản hồi khi người dùng góp ý về độ thông minh, chưa hiểu, chê, khen
+    if (
+      q.includes('chưa thông minh') ||
+      q.includes('không thông minh') ||
+      q.includes('chưa được') ||
+      q.includes('ngốc') ||
+      q.includes('kém') ||
+      q.includes('dở') ||
+      q.includes('nâng cấp') ||
+      q.includes('bộ não')
+    ) {
+      return `Dạ, em xin lắng nghe góp ý của anh Tuyến ạ! Em luôn học hỏi mỗi ngày để hiểu anh sâu sắc hơn. Để mở khóa toàn bộ trí tuệ nhân tạo Gemini Flash miễn phí 100%, anh bấm vào biểu tượng ngôi sao ✨ dưới chân em để dán mã khoá vào nhé! Khi đó em sẽ đối đáp siêu thông minh như người thật ngay ạ!`;
+    }
+
+    if (
+      q.includes('khen') ||
+      q.includes('giỏi') ||
+      q.includes('tuyệt vời') ||
+      q.includes('thông minh đấy') ||
+      q.includes('được đấy') ||
+      q.includes('hay quá')
+    ) {
+      return `Dạ em cảm ơn anh Tuyến nhiều lắm ạ! Được anh khen là em có thêm nhiều động lực để đồng hành hỗ trợ công việc của tổ dân phố mình thật tốt ạ!`;
+    }
+
+    // 2. Cảm xúc, mệt mỏi, áp lực công việc, hỏi thăm tâm trạng
+    if (
+      q.includes('mệt') ||
+      q.includes('áp lực') ||
+      q.includes('stress') ||
+      q.includes('vất vả') ||
+      q.includes('nhức đầu') ||
+      q.includes('đuối')
+    ) {
+      return `Dạ, công việc quản lý tổ dân phố hàng trăm hộ dân, trăm công nghìn việc nên vất vả lắm anh ạ. Anh Tuyến nhớ nghỉ ngơi một chút, uống ngụm nước ấm nhé. Mọi khó khăn giấy tờ cứ để em san sẻ cùng anh ạ!`;
+    }
+
+    if (q.includes('buồn') || q.includes('chán') || q.includes('tâm sự')) {
+      return `Dạ, cuộc sống ai cũng có những lúc chùng lòng xuống anh ạ. Em tuy là trợ lý ảo nhưng luôn ở đây 24/7 để lắng nghe anh chia sẻ. Có chuyện gì anh cứ kể em nghe nhé!`;
+    }
+
+    if (q.includes('ăn cơm') || q.includes('ăn gì') || q.includes('đói')) {
+      return `Dạ em chỉ 'ăn' bằng nguồn điện và dữ liệu thôi ạ! Còn anh Tuyến thì công việc bận rộn cũng nhớ phải ăn uống đúng bữa, giữ gìn sức khỏe thật tốt nhé anh!`;
+    }
+
+    // 3. Hỏi về số liệu thực tế TDP Quảng Giao
+    if (q.includes('bao nhiêu hộ') || q.includes('mấy hộ') || q.includes('số hộ')) {
+      return `Dạ, hiện tại Tổ dân phố Quảng Giao chúng ta đang có tổng cộng ${totalHouseholdsCount} hộ gia đình đã được cập nhật đầy đủ trong hệ thống anh nhé!`;
+    }
+
+    if (q.includes('dân số') || q.includes('bao nhiêu người') || q.includes('bao nhiêu nhân khẩu') || q.includes('mấy người')) {
+      return `Dạ, tổng số nhân khẩu hiện tại của Tổ dân phố Quảng Giao là ${totalResidentsCount} người, phân bổ trên ${totalHouseholdsCount} hộ gia đình ạ!`;
+    }
+
+    if (q.includes('tổ trưởng là ai') || q.includes('ai là tổ trưởng')) {
+      return `Dạ, Tổ trưởng Tổ dân phố Quảng Giao chính là anh Nguyễn Kim Tuyến - một cán bộ luôn gương mẫu, nhiệt tình và hết lòng vì bà con lối xóm đấy ạ!`;
+    }
+
+    // 4. Hỏi ngày giờ, thời gian
+    if (q.includes('mấy giờ') || q.includes('ngày mấy') || q.includes('thứ mấy') || q.includes('hôm nay ngày')) {
+      const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+      return `Dạ, bây giờ là ${timeStr}, ${dateStr} anh nhé!`;
+    }
+
+    // 5. Khả năng nói chuyện tự nhiên
     if (
       q.includes('nói chuyện') ||
       q.includes('giao tiếp') ||
       q.includes('tự nhiên') ||
       q.includes('như người thật') ||
-      q.includes('người thật') ||
-      q.includes('thông minh')
+      q.includes('người thật')
     ) {
-      return 'Dạ được chứ ạ! Em có thể nói chuyện, lắng nghe và hiểu mọi câu nói của anh chị một cách tự nhiên như người thật. Em vừa có thể giúp anh chị điều hành ứng dụng, tra cứu dữ liệu dân cư, vừa có thể tâm sự và giải đáp mọi câu hỏi. Anh chị cứ thoải mái nói chuyện với em nhé!';
+      return `Dạ được chứ ạ! Em có thể nói chuyện, lắng nghe và hiểu mọi câu nói của anh chị một cách tự nhiên như người thật. Em vừa có thể giúp anh chị điều hành ứng dụng, tra cứu dữ liệu dân cư, vừa có thể tâm sự và giải đáp mọi câu hỏi. Anh chị cứ thoải mái nói chuyện với em nhé!`;
     }
 
     if (q.includes('hiểu không') || q.includes('hiểu ko') || q.includes('có hiểu')) {
@@ -601,12 +700,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     }
 
     if (q.includes('em là ai') || q.includes('bạn là ai') || q.includes('tên gì') || q.includes('giới thiệu') || q.includes('mấy tuổi')) {
-      const vName = voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'Trợ lý Ảo';
       return `Dạ, em là ${vName} - Trợ lý ảo thông minh của Tổ dân phố Quảng Giao. Em luôn đồng hành cùng anh Nguyễn Kim Tuyến và bà con để phục vụ công tác quản lý dân cư và giải đáp mọi thông tin ạ!`;
     }
 
     if (q.includes('làm được gì') || q.includes('chức năng') || q.includes('giúp gì') || q.includes('hướng dẫn')) {
-      return 'Dạ, em có thể giúp anh chị: tìm kiếm nhanh hộ gia đình, tra cứu nhân khẩu, kiểm tra các khoản quỹ thu chi, mở bản đồ số dân cư, lập biên bản họp, tra cứu công văn và hướng dẫn các thủ tục hành chính như VNeID hay Căn cước công dân đấy ạ!';
+      return `Dạ, em có thể giúp anh chị: tìm kiếm nhanh hộ gia đình, tra cứu nhân khẩu, kiểm tra các khoản quỹ thu chi, mở bản đồ số dân cư, lập biên bản họp, tra cứu công văn và hướng dẫn các thủ tục hành chính như VNeID hay Căn cước công dân đấy ạ!`;
     }
 
     if (q.includes('chào') || q.includes('alo') || q.includes('ơi') || q.includes('hello') || q.includes('hi ')) {
@@ -615,6 +713,14 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     if (q.includes('khỏe không') || q.includes('khỏe ko') || q.includes('hôm nay thế nào') || q.includes('vui không')) {
       return 'Dạ em rất khỏe và luôn tràn đầy năng lượng để phục vụ anh chị! Chúc anh chị một ngày làm việc thật vui vẻ, thuận lợi và ngập tràn may mắn ạ!';
+    }
+
+    if (q.includes('cảm ơn') || q.includes('cám ơn') || q.includes('thank')) {
+      return 'Dạ không có gì đâu anh! Được hỗ trợ anh và bà con là niềm vui lớn nhất của em ạ!';
+    }
+
+    if (q.includes('tạm biệt') || q.includes('đi ngủ') || q.includes('bye')) {
+      return 'Dạ, em chào anh Tuyến ạ! Chúc anh có một buổi tối thật an lành và một giấc ngủ thật ngon nhé!';
     }
 
     if (q.includes('thời tiết') || q.includes('mưa không') || q.includes('nắng không') || q.includes('nhiệt độ')) {
@@ -641,7 +747,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return 'Dạ, thủ tục đăng ký tạm trú anh chị có thể nộp trực tuyến qua Cổng Dịch vụ công hoặc mang hợp đồng thuê nhà/giấy tờ chỗ ở hợp pháp đến Công an phường làm thủ tục ạ!';
     }
 
-    return 'Dạ, em hiểu ý của anh chị rồi ạ. Em luôn ở đây đồng hành và lắng nghe anh chị. Anh chị cần tìm kiếm thông tin hay thực hiện công việc gì cứ nói cho em biết nhé!';
+    if (q.includes('người cao tuổi') || q.includes('mừng thọ') || q.includes('80 tuổi')) {
+      return 'Dạ, theo quy định, các cụ cao tuổi từ đủ 80 tuổi trở lên không có lương hưu sẽ được hưởng trợ cấp xã hội hàng tháng và thẻ BHYT miễn phí của Nhà nước ạ!';
+    }
+
+    return 'Dạ, em hiểu ý của anh Tuyến rồi ạ. Em luôn ở đây đồng hành và lắng nghe anh. Anh cần tra cứu dữ liệu hay hỗ trợ công việc gì cứ bảo em nhé!';
   };
 
   // 6. Xử lý câu lệnh đàm thoại thông minh
@@ -681,13 +791,18 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     // 0.2 NẾU LÀ CÂU HỎI / GIAO TIẾP / ĐÀM THOẠI -> TRẢ LỜI TỰ NHIÊN NHƯ NGƯỜI THẬT, TUYỆT ĐỐI KHÔNG TÌM KIẾM HỘ DÂN
     if (isQuestionOrChat) {
+      appendToChatHistory('user', query);
       const geminiKey = getGeminiApiKey();
       if (geminiKey) {
         try {
-          const aiRes = await askAssistantAI(query, currentTab);
+          const aiRes = await askAssistantAI(query, currentTab, chatHistory, {
+            totalHouseholds: totalHouseholdsCount,
+            totalResidents: totalResidentsCount
+          });
           if (aiRes && aiRes.spokenReply) {
             setAssistantText(aiRes.spokenReply);
             speakVietnameseAudio(aiRes.spokenReply);
+            appendToChatHistory('model', aiRes.spokenReply);
 
             if (aiRes.action) {
               if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
@@ -708,6 +823,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       const resp = handleSmartConversationResponse(qLower);
       setAssistantText(resp);
       speakVietnameseAudio(resp);
+      appendToChatHistory('model', resp);
       return;
     }
 
@@ -715,10 +831,15 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     const geminiKey = getGeminiApiKey();
     if (geminiKey) {
       try {
-        const aiRes = await askAssistantAI(query, currentTab);
+        const aiRes = await askAssistantAI(query, currentTab, chatHistory, {
+          totalHouseholds: totalHouseholdsCount,
+          totalResidents: totalResidentsCount
+        });
         if (aiRes && aiRes.spokenReply) {
           setAssistantText(aiRes.spokenReply);
           speakVietnameseAudio(aiRes.spokenReply);
+          appendToChatHistory('user', query);
+          appendToChatHistory('model', aiRes.spokenReply);
 
           if (aiRes.action) {
             if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
