@@ -6011,8 +6011,19 @@ const App = () => {
           <VirtualAssistant 
             isSidebarOpen={isSidebarOpen}
             onNavigate={(tab) => {
-              setActiveTab(tab);
-              localStorage.setItem('active_tab', tab);
+              let targetTab = tab;
+              if (tab === 'dashboard') targetTab = 'Bảng điều khiển';
+              if (tab === 'party') targetTab = 'party-cell';
+              if (tab === 'policies') targetTab = 'policy';
+              if (tab === 'health') targetTab = 'healthcare';
+              if (tab === 'veterans-elderly') targetTab = 'elderly';
+
+              if (targetTab === 'settings') {
+                handleOpenSettings();
+              } else {
+                setActiveTab(targetTab);
+                localStorage.setItem('active_tab', targetTab);
+              }
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             userRole={userRole}

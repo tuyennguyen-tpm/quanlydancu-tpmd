@@ -438,168 +438,391 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     setSearchResults([]);
     setEditingResident(null);
 
-    // 1. LỆNH ĐIỀU HƯỚNG QUỸ PHƯỜNG
+    // 1. QUỸ NỘP PHƯỜNG
     if (
-      qLower.includes('quỹ nộp phường') ||
-      qLower.includes('quỹ phường') ||
       qLower.includes('nộp phường') ||
-      (qLower.includes('chuyển') && (qLower.includes('phường') || qLower.includes('quỹ'))) ||
-      (qLower.includes('mở') && qLower.includes('quỹ') && qLower.includes('phường'))
+      qLower.includes('quỹ phường') ||
+      (qLower.includes('quỹ') && qLower.includes('phường')) ||
+      (qLower.includes('chuyển') && qLower.includes('phường'))
     ) {
       const resp = 'Dạ, em mở quỹ nộp phường ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('ward-funds');
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 200);
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 2. LỆNH ĐIỀU HƯỚNG QUỸ TỔ DÂN PHỐ / TÀI CHÍNH / THU CHI
+    // 2. THU CHI TDP / TÀI CHÍNH TỔ DÂN PHỐ
     if (
+      qLower.includes('thu chi') ||
+      qLower.includes('tài chính') ||
       qLower.includes('quỹ tổ dân phố') ||
       qLower.includes('quỹ tdp') ||
-      qLower.includes('quỹ thu') ||
-      qLower.includes('tài chính') ||
-      qLower.includes('thu chi') ||
-      (qLower.includes('quỹ') && !qLower.includes('phường'))
+      qLower.includes('sổ thu chi') ||
+      (qLower.includes('quỹ') && !qLower.includes('phường') && !qLower.includes('thủ quỹ'))
     ) {
-      const resp = 'Dạ, em mở quỹ tổ dân phố ngay ạ!';
+      const resp = 'Dạ, em mở thu chi tổ dân phố ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('finance');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 3. LỆNH ĐIỀU HƯỚNG DÂN CƯ & HỘ KHẨU
+    // 3. THỦ QUỸ
+    if (qLower.includes('thủ quỹ') || qLower.includes('tiền mặt') || qLower.includes('bàn giao quỹ')) {
+      const resp = 'Dạ, em mở mục thủ quỹ ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('treasurer');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 4. MẠNH THƯỜNG QUÂN / TÀI TRỢ / ỦNG HỘ
     if (
-      qLower.includes('dân cư') ||
-      qLower.includes('hộ khẩu') ||
+      qLower.includes('mạnh thường quân') ||
+      qLower.includes('tài trợ') ||
+      qLower.includes('ủng hộ') ||
+      qLower.includes('đóng góp') ||
+      qLower.includes('xã hội hóa')
+    ) {
+      const resp = 'Dạ, em mở danh sách mạnh thường quân ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('sponsors');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 5. TẠM TRÚ – TẠM VẮNG
+    if (qLower.includes('tạm trú') || qLower.includes('tạm vắng') || qLower.includes('lưu trú')) {
+      const resp = 'Dạ, em mở mục tạm trú tạm vắng ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('residents-temp');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 6. BIẾN ĐỘNG DÂN CƯ
+    if (qLower.includes('biến động') || qLower.includes('thay đổi dân cư') || qLower.includes('di biến động')) {
+      const resp = 'Dạ, em mở mục biến động dân cư ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('residents-changes');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 7. HỘ GIA ĐÌNH / SỔ HỘ
+    if (qLower.includes('hộ gia đình') || qLower.includes('hộ dân') || qLower.includes('sổ hộ') || qLower.includes('quản lý hộ')) {
+      const resp = 'Dạ, em mở danh sách hộ gia đình ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('households');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 8. NHÂN KHẨU / DÂN CƯ / SỔ HỘ KHẨU
+    if (
       qLower.includes('nhân khẩu') ||
-      qLower.includes('sổ hộ khẩu') ||
-      qLower.includes('danh sách nhân khẩu')
+      qLower.includes('hộ khẩu') ||
+      qLower.includes('dân cư') ||
+      qLower.includes('cư dân') ||
+      qLower.includes('công dân')
     ) {
       const resp = 'Dạ, em mở danh sách nhân khẩu ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('residents');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 4. LỆNH ĐIỀU HƯỚNG CHI BỘ ĐẢNG
-    if (
-      qLower.includes('chi bộ') ||
-      qLower.includes('đảng viên') ||
-      qLower.includes('đảng')
-    ) {
-      const resp = 'Dạ, em mở mục chi bộ Đảng ngay ạ!';
+    // 9. BẢN ĐỒ SỐ DÂN CƯ
+    if (qLower.includes('bản đồ') || qLower.includes('vị trí')) {
+      const resp = 'Dạ, em mở bản đồ số dân cư ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('party');
+      onNavigate('map');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 5. LỆNH ĐIỀU HƯỚNG HỌP TỔ DÂN PHỐ
+    // 10. GIA ĐÌNH CHÍNH SÁCH / HỘ NGHÈO
     if (
-      qLower.includes('họp tổ') ||
-      qLower.includes('cuộc họp') ||
-      qLower.includes('biên bản họp') ||
-      qLower.includes('sổ họp')
+      qLower.includes('chính sách') ||
+      qLower.includes('hộ nghèo') ||
+      qLower.includes('cận nghèo') ||
+      qLower.includes('người có công') ||
+      qLower.includes('thương binh')
     ) {
-      const resp = 'Dạ, em mở sổ họp tổ dân phố ngay ạ!';
+      const resp = 'Dạ, em mở mục gia đình chính sách ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('meetings');
+      onNavigate('policy');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 6. LỆNH ĐIỀU HƯỚNG AN NINH TRẬT TỰ / TỔ LIÊN GIA
+    // 11. AN NINH TRẬT TỰ / TỔ LIÊN GIA
     if (
       qLower.includes('an ninh') ||
+      qLower.includes('trật tự') ||
       qLower.includes('tổ liên gia') ||
-      qLower.includes('trật tự')
+      qLower.includes('phòng cháy') ||
+      qLower.includes('pccc') ||
+      qLower.includes('camera')
     ) {
       const resp = 'Dạ, em mở mục an ninh trật tự ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('security');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 7. LỆNH ĐIỀU HƯỚNG HỘI PHỤ NỮ
-    if (qLower.includes('phụ nữ') || qLower.includes('hội phụ nữ')) {
-      const resp = 'Dạ, em mở hội phụ nữ ngay ạ!';
+    // 12. Y TẾ & SỨC KHỎE
+    if (
+      qLower.includes('y tế') ||
+      qLower.includes('sức khỏe') ||
+      qLower.includes('tiêm chủng') ||
+      qLower.includes('bảo hiểm y tế') ||
+      qLower.includes('khám bệnh')
+    ) {
+      const resp = 'Dạ, em mở mục y tế và sức khỏe ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('women-association');
+      onNavigate('healthcare');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 8. LỆNH ĐIỀU HƯỚNG ĐOÀN THANH NIÊN
-    if (qLower.includes('thanh niên') || qLower.includes('đoàn thanh niên')) {
-      const resp = 'Dạ, em mở đoàn thanh niên ngay ạ!';
+    // 13. HỌP CHI BỘ ĐẢNG (BIÊN BẢN / LỊCH HỌP)
+    if (
+      qLower.includes('họp chi bộ') ||
+      qLower.includes('lịch họp chi bộ') ||
+      qLower.includes('biên bản họp chi bộ') ||
+      qLower.includes('họp đảng') ||
+      qLower.includes('sinh hoạt chi bộ')
+    ) {
+      const resp = 'Dạ, em mở lịch họp chi bộ Đảng ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('youth-union');
+      onNavigate('meetings-party');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 9. LỆNH ĐIỀU HƯỚNG HỘI NÔNG DÂN
+    // 14. BAN CÔNG TÁC MẶT TRẬN (LỊCH HỌP / BIÊN BẢN)
+    if (
+      qLower.includes('mặt trận') ||
+      qLower.includes('họp mặt trận') ||
+      qLower.includes('ban công tác mặt trận')
+    ) {
+      const resp = 'Dạ, em mở ban công tác mặt trận ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('meetings-front');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 15. HỌP TỔ DÂN PHỐ / BIÊN BẢN HỌP
+    if (
+      qLower.includes('họp tổ') ||
+      qLower.includes('cuộc họp') ||
+      qLower.includes('biên bản họp') ||
+      qLower.includes('sổ họp') ||
+      qLower.includes('lịch họp')
+    ) {
+      const resp = 'Dạ, em mở sổ họp tổ dân phố ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('meetings');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 16. CHI BỘ ĐẢNG (ĐẢNG VIÊN)
+    if (
+      qLower.includes('chi bộ') ||
+      qLower.includes('đảng viên') ||
+      qLower.includes('đảng bộ') ||
+      qLower.includes('hồ sơ đảng')
+    ) {
+      const resp = 'Dạ, em mở mục chi bộ Đảng ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('party-cell');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 17. HỘI NGƯỜI CAO TUỔI
+    if (
+      qLower.includes('người cao tuổi') ||
+      qLower.includes('cao tuổi') ||
+      qLower.includes('người già') ||
+      qLower.includes('mừng thọ')
+    ) {
+      const resp = 'Dạ, em mở hội người cao tuổi ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('elderly');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 18. HỘI CỰU CHIẾN BINH
+    if (qLower.includes('cựu chiến binh') || qLower.includes('ccb')) {
+      const resp = 'Dạ, em mở hội cựu chiến binh ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('ccb');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 19. HỘI NÔNG DÂN
     if (qLower.includes('nông dân') || qLower.includes('hội nông dân')) {
       const resp = 'Dạ, em mở hội nông dân ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('farmers-association');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 10. LỆNH ĐIỀU HƯỚNG CỰU CHIẾN BINH / NGƯỜI CAO TUỔI
+    // 20. HỘI PHỤ NỮ
+    if (qLower.includes('phụ nữ') || qLower.includes('hội phụ nữ')) {
+      const resp = 'Dạ, em mở hội phụ nữ ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('women-association');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 21. ĐOÀN THANH NIÊN
+    if (qLower.includes('thanh niên') || qLower.includes('đoàn thanh niên') || qLower.includes('đoàn viên')) {
+      const resp = 'Dạ, em mở đoàn thanh niên ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('youth-union');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 22. CÔNG VĂN CỦA PHƯỜNG
     if (
-      qLower.includes('người cao tuổi') ||
-      qLower.includes('cựu chiến binh') ||
-      qLower.includes('ccb')
+      qLower.includes('công văn phường') ||
+      qLower.includes('công văn của phường') ||
+      qLower.includes('văn bản phường') ||
+      qLower.includes('thông báo phường') ||
+      (qLower.includes('công văn') && qLower.includes('phường'))
     ) {
-      const resp = 'Dạ, em mở hội cựu chiến binh và người cao tuổi ngay ạ!';
+      const resp = 'Dạ, em mở công văn của phường ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('veterans-elderly');
+      onNavigate('ward-documents');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 11. LỆNH ĐIỀU HƯỚNG THEO DÕI SỨC KHỎE Y TẾ
-    if (qLower.includes('sức khỏe') || qLower.includes('y tế')) {
-      const resp = 'Dạ, em mở mục sức khỏe y tế ngay ạ!';
+    // 23. VĂN BẢN - NGHỊ QUYẾT
+    if (
+      qLower.includes('văn bản') ||
+      qLower.includes('nghị quyết') ||
+      qLower.includes('công văn')
+    ) {
+      const resp = 'Dạ, em mở văn bản nghị quyết ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('health');
+      onNavigate('documents');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 12. LỆNH ĐIỀU HƯỚNG BẢN ĐỒ SỐ
-    if (qLower.includes('bản đồ') || qLower.includes('bản đồ số') || qLower.includes('vị trí')) {
-      const resp = 'Dạ, em mở bản đồ số dân cư ngay ạ!';
+    // 24. MẪU GIẤY MỜI
+    if (
+      qLower.includes('giấy mời') ||
+      qLower.includes('mẫu giấy mời') ||
+      qLower.includes('in giấy mời') ||
+      qLower.includes('thư mời')
+    ) {
+      const resp = 'Dạ, em mở mẫu giấy mời ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('map');
+      onNavigate('invitation-templates');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 13. LỆNH ĐIỀU HƯỚNG CHÍNH SÁCH XÃ HỘI / HỘ NGHÈO
-    if (qLower.includes('chính sách') || qLower.includes('hộ nghèo') || qLower.includes('cận nghèo')) {
-      const resp = 'Dạ, em mở chính sách xã hội ngay ạ!';
+    // 25. QUY ĐỊNH & NHIỆM VỤ
+    if (qLower.includes('quy định') || qLower.includes('nhiệm vụ') || qLower.includes('quy chế')) {
+      const resp = 'Dạ, em mở mục quy định và nhiệm vụ ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('policies');
+      onNavigate('regulations');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
-    // 14. LỆNH ĐIỀU HƯỚNG TRANG CHỦ / TỔNG QUAN
-    if (qLower.includes('trang chủ') || qLower.includes('tổng quan') || qLower.includes('bảng tin')) {
-      const resp = 'Dạ, em về trang chủ ngay ạ!';
+    // 26. PHẢN ÁNH KIẾN NÒI
+    if (
+      qLower.includes('phản ánh') ||
+      qLower.includes('kiến nghị') ||
+      qLower.includes('khiếu nại') ||
+      qLower.includes('tâm tư')
+    ) {
+      const resp = 'Dạ, em mở mục phản ánh kiến nghị ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('dashboard');
+      onNavigate('complaints');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 27. TRỢ LÝ AI
+    if (qLower.includes('trợ lý ai') || qLower.includes('ai trợ lý') || qLower.includes('hỏi đáp ai')) {
+      const resp = 'Dạ, em mở trợ lý AI ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('ai-assistant');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      return;
+    }
+
+    // 28. CÀI ĐẶT / CẤU HÌNH
+    if (
+      qLower.includes('cài đặt') ||
+      qLower.includes('cấu hình') ||
+      qLower.includes('thiết lập')
+    ) {
+      const resp = 'Dạ, em mở cài đặt hệ thống ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('settings');
+      return;
+    }
+
+    // 29. BẢNG ĐIỀU KHIỂN / TRANG CHỦ / TỔNG QUAN
+    if (
+      qLower.includes('trang chủ') ||
+      qLower.includes('bảng điều khiển') ||
+      qLower.includes('tổng quan') ||
+      qLower.includes('bảng tin') ||
+      qLower.includes('màn hình chính')
+    ) {
+      const resp = 'Dạ, em về bảng điều khiển ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('Bảng điều khiển');
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
 
