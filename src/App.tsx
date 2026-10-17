@@ -30,6 +30,7 @@ import YouthUnion from './pages/YouthUnion';
 import WardDocuments from './pages/WardDocuments';
 import InvitationTemplates from './pages/InvitationTemplates';
 import HealthCare from './pages/HealthCare';
+import { VirtualAssistant } from './components/VirtualAssistant';
 import { speakVietnamese, getTingChimeDataUrl } from './utils/tts';
 import { 
   Activity,
@@ -6005,8 +6006,20 @@ const App = () => {
               </div>
             </div>
           )}
+
+          {/* Trợ lý ảo Nữ người Việt Nam ở góc dưới bên trái */}
+          <VirtualAssistant 
+            isSidebarOpen={isSidebarOpen}
+            onNavigate={(tab) => {
+              setActiveTab(tab);
+              localStorage.setItem('active_tab', tab);
+            }}
+            userRole={userRole}
+          />
+
           <style>{`
             @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+            @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
           `}</style>
         </>
     </div>
