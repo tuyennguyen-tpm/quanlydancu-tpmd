@@ -513,6 +513,137 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     return str.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
   };
 
+  // Nhận diện câu hỏi, giao tiếp, tâm sự, trò chuyện tự nhiên (không phải lệnh tìm kiếm dữ liệu)
+  const isConversationalQuery = (text: string) => {
+    const t = text.toLowerCase().trim();
+    if (
+      t.endsWith('?') ||
+      t.includes('không bạn') ||
+      t.includes('không em') ||
+      t.includes('được không') ||
+      t.includes('được ko') ||
+      t.includes('có được không') ||
+      t.includes('có được ko') ||
+      t.includes('có thể không') ||
+      t.includes('thế nào') ||
+      t.includes('sao vậy') ||
+      t.includes('sao thế') ||
+      t.includes('sao nhỉ') ||
+      t.includes('là gì') ||
+      t.includes('là ai') ||
+      t.includes('ai đó') ||
+      t.includes('ở đâu') ||
+      t.includes('khi nào') ||
+      t.includes('tại sao') ||
+      t.includes('làm sao') ||
+      t.includes('bao nhiêu') ||
+      t.includes('như thế nào') ||
+      t.includes('nói chuyện') ||
+      t.includes('giao tiếp') ||
+      t.includes('tự nhiên') ||
+      t.includes('như người thật') ||
+      t.includes('người thật') ||
+      t.includes('tâm sự') ||
+      t.includes('kể chuyện') ||
+      t.includes('đọc thơ') ||
+      t.includes('hát') ||
+      t.includes('chào') ||
+      t.includes('alo') ||
+      t.includes('ơi') ||
+      t.includes('bạn là ai') ||
+      t.includes('em là ai') ||
+      t.includes('tên gì') ||
+      t.includes('mấy tuổi') ||
+      t.includes('khỏe không') ||
+      t.includes('khỏe ko') ||
+      t.includes('ăn cơm') ||
+      t.includes('thời tiết') ||
+      t.includes('hôm nay') ||
+      t.includes('giúp tôi') ||
+      t.includes('giúp mình') ||
+      t.includes('cho hỏi') ||
+      t.includes('cho tôi hỏi') ||
+      t.includes('hướng dẫn') ||
+      t.includes('làm được gì') ||
+      t.includes('chức năng gì') ||
+      t.includes('nghe rõ không') ||
+      t.includes('nghe được không') ||
+      t.includes('hiểu không') ||
+      t.includes('hiểu ko') ||
+      t.includes('thông minh không') ||
+      t.startsWith('bạn có ') ||
+      t.startsWith('em có ') ||
+      t.startsWith('chị có ')
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  const handleSmartConversationResponse = (q: string): string => {
+    if (
+      q.includes('nói chuyện') ||
+      q.includes('giao tiếp') ||
+      q.includes('tự nhiên') ||
+      q.includes('như người thật') ||
+      q.includes('người thật') ||
+      q.includes('thông minh')
+    ) {
+      return 'Dạ được chứ ạ! Em có thể nói chuyện, lắng nghe và hiểu mọi câu nói của anh chị một cách tự nhiên như người thật. Em vừa có thể giúp anh chị điều hành ứng dụng, tra cứu dữ liệu dân cư, vừa có thể tâm sự và giải đáp mọi câu hỏi. Anh chị cứ thoải mái nói chuyện với em nhé!';
+    }
+
+    if (q.includes('hiểu không') || q.includes('hiểu ko') || q.includes('có hiểu')) {
+      return 'Dạ em hiểu rất rõ từng câu nói và yêu cầu của anh chị ạ! Em luôn chú ý lắng nghe để phục vụ anh chị tốt nhất.';
+    }
+
+    if (q.includes('nghe rõ') || q.includes('nghe được') || q.includes('có nghe')) {
+      return 'Dạ em nghe anh chị rất rõ ràng và mạch lạc ạ! Giọng nói của anh chị rất ấm áp, em đang tiếp tục lắng nghe đây ạ.';
+    }
+
+    if (q.includes('em là ai') || q.includes('bạn là ai') || q.includes('tên gì') || q.includes('giới thiệu') || q.includes('mấy tuổi')) {
+      const vName = voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'Trợ lý Ảo';
+      return `Dạ, em là ${vName} - Trợ lý ảo thông minh của Tổ dân phố Quảng Giao. Em luôn đồng hành cùng anh Nguyễn Kim Tuyến và bà con để phục vụ công tác quản lý dân cư và giải đáp mọi thông tin ạ!`;
+    }
+
+    if (q.includes('làm được gì') || q.includes('chức năng') || q.includes('giúp gì') || q.includes('hướng dẫn')) {
+      return 'Dạ, em có thể giúp anh chị: tìm kiếm nhanh hộ gia đình, tra cứu nhân khẩu, kiểm tra các khoản quỹ thu chi, mở bản đồ số dân cư, lập biên bản họp, tra cứu công văn và hướng dẫn các thủ tục hành chính như VNeID hay Căn cước công dân đấy ạ!';
+    }
+
+    if (q.includes('chào') || q.includes('alo') || q.includes('ơi') || q.includes('hello') || q.includes('hi ')) {
+      return 'Dạ, em chào anh chị! Em đang lắng nghe đây ạ, anh chị cần em hỗ trợ việc gì cứ nói với em nhé!';
+    }
+
+    if (q.includes('khỏe không') || q.includes('khỏe ko') || q.includes('hôm nay thế nào') || q.includes('vui không')) {
+      return 'Dạ em rất khỏe và luôn tràn đầy năng lượng để phục vụ anh chị! Chúc anh chị một ngày làm việc thật vui vẻ, thuận lợi và ngập tràn may mắn ạ!';
+    }
+
+    if (q.includes('thời tiết') || q.includes('mưa không') || q.includes('nắng không') || q.includes('nhiệt độ')) {
+      return 'Dạ, thời tiết hôm nay nhìn chung khá dễ chịu và thuận lợi cho công việc, anh chị ra ngoài nhớ chú ý giữ gìn sức khỏe nhé ạ!';
+    }
+
+    if (q.includes('đọc thơ') || q.includes('bài thơ') || q.includes('thơ') || q.includes('hát') || q.includes('kể chuyện')) {
+      return 'Dạ, em xin đọc tặng anh chị câu thơ này nhé: "Quảng Giao đoàn kết nghĩa tình - Dân cư ấm no, xóm làng văn minh" ạ!';
+    }
+
+    if (q.includes('vneid') || q.includes('định danh') || q.includes('mức 2') || q.includes('mức 1')) {
+      return 'Dạ, về định danh điện tử VNeID: mức 1 anh chị có thể tự đăng ký trên điện thoại, còn mức 2 anh chị mang thẻ CCCD gắn chip ra Công an phường để được chụp ảnh và lấy vân tay xác thực nhé ạ!';
+    }
+
+    if (q.includes('bảo hiểm y tế') || q.includes('bhyt')) {
+      return 'Dạ, hiện nay thẻ BHYT đã được tích hợp trực tiếp vào thẻ CCCD gắn chip và ứng dụng VNeID. Khi đi khám chữa bệnh, bà con chỉ cần xuất trình thẻ CCCD là được hưởng quyền lợi ạ!';
+    }
+
+    if (q.includes('căn cước') || q.includes('cccd') || q.includes('làm thẻ')) {
+      return 'Dạ, thủ tục cấp đổi hoặc làm thẻ Căn cước hiện nay được thực hiện tại Bộ phận một cửa hoặc Công an thành phố. Bà con có thể đặt lịch trước trên Cổng Dịch vụ công Quốc gia để không phải chờ đợi ạ!';
+    }
+
+    if (q.includes('tạm trú') || q.includes('tạm vắng')) {
+      return 'Dạ, thủ tục đăng ký tạm trú anh chị có thể nộp trực tuyến qua Cổng Dịch vụ công hoặc mang hợp đồng thuê nhà/giấy tờ chỗ ở hợp pháp đến Công an phường làm thủ tục ạ!';
+    }
+
+    return 'Dạ, em hiểu ý của anh chị rồi ạ. Em luôn ở đây đồng hành và lắng nghe anh chị. Anh chị cần tìm kiếm thông tin hay thực hiện công việc gì cứ nói cho em biết nhé!';
+  };
+
   // 6. Xử lý câu lệnh đàm thoại thông minh
   const handleUserQuery = async (query: string) => {
     if (!query.trim()) return;
@@ -523,6 +654,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     const term = extractCleanSearchTerm(query);
     const hasSearchKeyword = qLower.includes('tìm') || qLower.includes('kiểm tra') || qLower.includes('tra cứu') || qLower.includes('chuyển đến') || qLower.includes('xem');
+    const isQuestionOrChat = isConversationalQuery(query);
 
     // 0. ĐỔI GIỌNG NÓI TRỰC TIẾP QUA GIỌNG NÓI
     if (qLower.includes('giọng nam minh') || qLower.includes('đổi giọng nam')) {
@@ -547,7 +679,39 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 0.2 GỌI TRỢ LÝ AI GEMINI NẾU CÓ KEY (ĐỂ GIAO TIẾP TỰ NHIÊN NHƯ NGƯỜI THẬT VÀ HIỂU MỌI CÂU LỆNH)
+    // 0.2 NẾU LÀ CÂU HỎI / GIAO TIẾP / ĐÀM THOẠI -> TRẢ LỜI TỰ NHIÊN NHƯ NGƯỜI THẬT, TUYỆT ĐỐI KHÔNG TÌM KIẾM HỘ DÂN
+    if (isQuestionOrChat) {
+      const geminiKey = getGeminiApiKey();
+      if (geminiKey) {
+        try {
+          const aiRes = await askAssistantAI(query, currentTab);
+          if (aiRes && aiRes.spokenReply) {
+            setAssistantText(aiRes.spokenReply);
+            speakVietnameseAudio(aiRes.spokenReply);
+
+            if (aiRes.action) {
+              if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
+                triggerSearchAndJump(aiRes.action.tab, aiRes.action.query || term);
+              } else if (aiRes.action.tab) {
+                onNavigate(aiRes.action.tab);
+                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+              }
+            }
+            return;
+          }
+        } catch (err) {
+          console.warn('[Gemini call skipped, falling back to local engine]', err);
+        }
+      }
+
+      // Xử lý đàm thoại tự nhiên nội bộ như người thật
+      const resp = handleSmartConversationResponse(qLower);
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    // 0.3 GỌI TRỢ LÝ AI GEMINI CHO CÁC YÊU CẦU PHỨC TẠP KHÁC NẾU CÓ KEY
     const geminiKey = getGeminiApiKey();
     if (geminiKey) {
       try {
@@ -574,8 +738,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     // 1. TÌM KIẾM HOẶC CHUYỂN ĐẾN HỘ GIA ĐÌNH
     // Ví dụ: "tìm kiếm hộ nguyễn kim tuyến", "tìm hộ nguyễn kim tuyến", "hộ nguyễn kim tuyến", hoặc đang ở tab hộ gia đình mà nói "tìm nguyễn kim tuyến"
     if (
-      qLower.includes('hộ') || 
-      (currentTab === 'households' && (hasSearchKeyword || term.length >= 2))
+      !isQuestionOrChat &&
+      (
+        (qLower.includes('hộ') && (hasSearchKeyword || qLower.startsWith('hộ '))) || 
+        (currentTab === 'households' && hasSearchKeyword)
+      )
     ) {
       const isPureNav = ['gia đình', 'dân', 'khẩu', 'này', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -640,7 +807,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('công dân') || 
       qLower.includes('căn cước') || 
       qLower.includes('cccd') ||
-      (currentTab === 'residents' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'residents' && hasSearchKeyword)
     ) {
       const isPureNav = ['nhân khẩu', 'dân cư', 'công dân', 'hộ khẩu', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -682,7 +849,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('tạm trú') || 
       qLower.includes('tạm vắng') || 
       qLower.includes('lưu trú') ||
-      (currentTab === 'residents-temp' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'residents-temp' && hasSearchKeyword)
     ) {
       const isPureNav = ['tạm trú', 'tạm vắng', 'lưu trú', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -705,7 +872,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('biến động') || 
       qLower.includes('thay đổi dân cư') || 
       qLower.includes('di biến động') ||
-      (currentTab === 'residents-changes' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'residents-changes' && hasSearchKeyword)
     ) {
       const isPureNav = ['biến động', 'thay đổi', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -733,7 +900,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('tiền quỹ') ||
       qLower.includes('đóng quỹ') ||
       qLower.includes('nộp quỹ') ||
-      (currentTab === 'finance' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'finance' && hasSearchKeyword)
     ) {
       const isPureNav = ['thu chi', 'tài chính', 'quỹ', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -756,7 +923,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('nộp phường') ||
       qLower.includes('quỹ phường') ||
       (qLower.includes('quỹ') && qLower.includes('phường')) ||
-      (currentTab === 'ward-funds' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'ward-funds' && hasSearchKeyword)
     ) {
       const isPureNav = ['quỹ', 'phường', 'nộp phường', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -796,7 +963,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('ủng hộ') ||
       qLower.includes('đóng góp') ||
       qLower.includes('xã hội hóa') ||
-      (currentTab === 'sponsors' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'sponsors' && hasSearchKeyword)
     ) {
       const isPureNav = ['mạnh thường quân', 'tài trợ', 'ủng hộ', 'đóng góp', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -820,7 +987,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('cao tuổi') ||
       qLower.includes('người già') ||
       qLower.includes('mừng thọ') ||
-      (currentTab === 'elderly' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'elderly' && hasSearchKeyword)
     ) {
       const isPureNav = ['người cao tuổi', 'cao tuổi', 'mừng thọ', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -842,7 +1009,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     if (
       qLower.includes('cựu chiến binh') || 
       qLower.includes('ccb') ||
-      (currentTab === 'ccb' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'ccb' && hasSearchKeyword)
     ) {
       const isPureNav = ['cựu chiến binh', 'ccb', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -866,7 +1033,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('đảng viên') ||
       qLower.includes('đảng bộ') ||
       qLower.includes('hồ sơ đảng') ||
-      (currentTab === 'party-cell' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'party-cell' && hasSearchKeyword)
     ) {
       const isPureNav = ['chi bộ', 'đảng viên', 'đảng bộ', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -891,7 +1058,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('cận nghèo') ||
       qLower.includes('người có công') ||
       qLower.includes('thương binh') ||
-      (currentTab === 'policy' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'policy' && hasSearchKeyword)
     ) {
       const isPureNav = ['chính sách', 'hộ nghèo', 'cận nghèo', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -913,7 +1080,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     if (
       qLower.includes('bản đồ') || 
       qLower.includes('vị trí') ||
-      (currentTab === 'map' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'map' && hasSearchKeyword)
     ) {
       const isPureNav = ['bản đồ', 'vị trí', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -1047,7 +1214,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('công văn phường') ||
       qLower.includes('công văn của phường') ||
       (qLower.includes('công văn') && qLower.includes('phường')) ||
-      (currentTab === 'ward-documents' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'ward-documents' && hasSearchKeyword)
     ) {
       const isPureNav = ['công văn', 'phường', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -1070,7 +1237,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('văn bản') ||
       qLower.includes('nghị quyết') ||
       qLower.includes('công văn') ||
-      (currentTab === 'documents' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'documents' && hasSearchKeyword)
     ) {
       const isPureNav = ['văn bản', 'nghị quyết', 'công văn', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {
@@ -1119,7 +1286,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       qLower.includes('kiến nghị') ||
       qLower.includes('khiếu nại') ||
       qLower.includes('tâm tư') ||
-      (currentTab === 'complaints' && (hasSearchKeyword || term.length >= 2))
+      (currentTab === 'complaints' && hasSearchKeyword)
     ) {
       const isPureNav = ['phản ánh', 'kiến nghị', 'khiếu nại', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
       if (isPureNav) {

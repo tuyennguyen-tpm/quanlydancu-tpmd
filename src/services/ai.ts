@@ -3,7 +3,14 @@ import { GoogleGenAI } from "@google/genai";
 
 export function getGeminiApiKey(): string {
   const localKey = typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key')?.trim() : '';
-  return localKey || (import.meta.env.VITE_GEMINI_API_KEY?.trim() ?? "");
+  if (localKey) return localKey;
+
+  const envKey = (import.meta.env.VITE_GEMINI_API_KEY?.trim() ?? "");
+  // Nếu key trong .env bắt đầu bằng 'AQ.' (token tạm hoặc dịch vụ không có quota Google AI Studio), bỏ qua
+  if (envKey && envKey.startsWith('AQ.')) {
+    return '';
+  }
+  return envKey;
 }
 
 export function setGeminiApiKey(key: string): void {
