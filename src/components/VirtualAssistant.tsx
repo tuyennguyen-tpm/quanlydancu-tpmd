@@ -11,7 +11,8 @@ import {
   Mic,
   MicOff,
   Radio,
-  RadioTower
+  RadioTower,
+  Play
 } from 'lucide-react';
 import { db } from '../services/db';
 import type { Resident } from '../types';
@@ -42,6 +43,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   });
   const [inputText, setInputText] = useState('');
   const [assistantText, setAssistantText] = useState('');
+  const [needsUserTapToPlay, setNeedsUserTapToPlay] = useState(false);
   const [searchResults, setSearchResults] = useState<Resident[]>([]);
   const [editingResident, setEditingResident] = useState<Resident | null>(null);
   const [editFormData, setEditFormData] = useState<{ full_name: string; dob: string; cccd: string; phone: string }>({
@@ -54,6 +56,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
   const recognitionRef = useRef<any>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const activeBlobUrlRef = useRef<string | null>(null);
   const isSpeakingRef = useRef<boolean>(false);
   const isListeningRef = useRef<boolean>(false);
   const isAutoHandsFreeRef = useRef<boolean>(isAutoHandsFree);
@@ -62,7 +65,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   isListeningRef.current = isListening;
   isAutoHandsFreeRef.current = isAutoHandsFree;
 
-  // 1. Tách nền ảnh tự động
+  // 1. Tách nền ảnh tự động cho nhân vật
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -103,9 +106,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       if (recognitionRef.current && !isListeningRef.current) {
         recognitionRef.current.start();
       }
-    } catch (e) {
-      // Đã start hoặc đang chờ
-    }
+    } catch (e) {}
   }, []);
 
   const stopListeningSafely = useCallback(() => {
@@ -116,8 +117,108 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     } catch (e) {}
   }, []);
 
-  // 3. HÀM PHÁT ÂM TIẾNG VIỆT 100% CHUẨN (KHÔNG BAO GIỜ BỊ RƠI VÀO TIẾNG ANH!)
-  const speakVietnameseAudio = useCallback((textToSpeak: string, chosenVoice?: VoiceOption) => {
+  // Quản lý danh sách giọng nói của trình duyệt (hỗ trợ Edge Natural Nam Minh & Hoài My)
+  const [browserVoices, setBrowserVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const updateVoices = () => {
+      if ('speechSynthesis' in window) {
+        const vList = window.speechSynthesis.getVoices();
+        if (vList && vList.length > 0) {
+          setBrowserVoices(vList);
+        }
+      }
+    };
+    updateVoices();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
+  }, []);
+
+  // Phát trực tiếp qua Google TTS bằng thẻ Audio HTML5 (không dùng fetch để tránh chặn CORS)
+  const playViaGoogleAudio = useCallback((textToSpeak: string, currentVoice: VoiceOption, onFinish: () => void) => {
+    // Tách văn bản thành các đoạn ngắn tự nhiên theo dấu câu (<130 ký tự) để Google phát mượt mà không bị ngắt
+    const sentences = textToSpeak.match(/[^.,!?;:]+[.,!?;:]*/g) || [textToSpeak];
+    const chunks: string[] = [];
+    let currentChunk = '';
+    for (const s of sentences) {
+      if ((currentChunk + ' ' + s).length <= 130) {
+        currentChunk += (currentChunk ? ' ' : '') + s.trim();
+      } else {
+        if (currentChunk) chunks.push(currentChunk.trim());
+        currentChunk = s.trim();
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk.trim());
+    if (chunks.length === 0) chunks.push(textToSpeak.slice(0, 130));
+
+    let chunkIdx = 0;
+    const playNext = () => {
+      if (chunkIdx >= chunks.length) {
+        onFinish();
+        return;
+      }
+
+      const text = chunks[chunkIdx++];
+      if (!text || !text.trim()) {
+        playNext();
+        return;
+      }
+
+      // Tuyệt đối không dùng fetch(). Audio element tự stream trực tiếp không bị CORS.
+      const encoded = encodeURIComponent(text.trim());
+      // Thử endpoint chính thức
+      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=vi&client=tw-ob`;
+      const audio = new Audio();
+      audio.src = ttsUrl;
+      audioPlayerRef.current = audio;
+
+      // Điều chỉnh tốc độ giọng Nam Minh trầm ấm hơn, Hoài My nhanh trẻo hơn
+      if (currentVoice === 'namminh') {
+        audio.playbackRate = 0.92;
+      } else if (currentVoice === 'hoaimy') {
+        audio.playbackRate = 1.05;
+      } else {
+        audio.playbackRate = 1.0;
+      }
+
+      audio.onplay = () => {
+        setIsSpeaking(true);
+        isSpeakingRef.current = true;
+        setNeedsUserTapToPlay(false);
+      };
+
+      audio.onended = () => {
+        playNext();
+      };
+
+      audio.onerror = () => {
+        // Fallback endpoint dự phòng
+        const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=vi&client=gtx`;
+        const fbAudio = new Audio(fallbackUrl);
+        audioPlayerRef.current = fbAudio;
+        fbAudio.onended = () => playNext();
+        fbAudio.onerror = () => playNext();
+        fbAudio.play().catch(() => playNext());
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('[Trình duyệt chặn phát âm thanh tự động]', err);
+          // Trình duyệt bắt buộc người dùng bấm vào trước để phát âm thanh
+          setNeedsUserTapToPlay(true);
+          setIsSpeaking(false);
+          isSpeakingRef.current = false;
+        });
+      }
+    };
+
+    playNext();
+  }, []);
+
+  // 3. HÀM PHÁT ÂM TIẾNG VIỆT 100% CHUẨN XÁC
+  const speakVietnameseAudio = useCallback(async (textToSpeak: string, chosenVoice?: VoiceOption) => {
     if (!voiceEnabled) {
       if (isAutoHandsFreeRef.current) {
         setTimeout(startListeningSafely, 300);
@@ -129,12 +230,17 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     setIsSpeaking(true);
     isSpeakingRef.current = true;
 
-    // Ngắt micro khi bắt đầu nói để tránh micro thu lại tiếng của trợ lý
+    // Tạm dừng micro khi trợ lý đang nói
     stopListeningSafely();
 
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
       audioPlayerRef.current.currentTime = 0;
+    }
+
+    if (activeBlobUrlRef.current) {
+      URL.revokeObjectURL(activeBlobUrlRef.current);
+      activeBlobUrlRef.current = null;
     }
 
     if ('speechSynthesis' in window) {
@@ -144,70 +250,67 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     const onFinish = () => {
       setIsSpeaking(false);
       isSpeakingRef.current = false;
-      // Trợ lý nói xong -> tự động bật lại micro để lắng nghe người dùng
       if (isAutoHandsFreeRef.current) {
         setTimeout(startListeningSafely, 500);
       }
     };
 
-    // Kiểm tra xem trình duyệt có giọng tiếng Việt thực sự hay không (vi-VN)
-    let hasViSpeechVoice = false;
+    // 1. Kiểm tra xem máy/trình duyệt có giọng tiếng Việt thực sự hay không (Microsoft Edge có sẵn Nam Minh và Hoài My cực chuẩn)
     let viVoiceObj: SpeechSynthesisVoice | undefined;
     if ('speechSynthesis' in window) {
       const allVoices = window.speechSynthesis.getVoices();
-      viVoiceObj = allVoices.find(v => v.lang.toLowerCase().includes('vi') || v.lang.toLowerCase().includes('vn'));
-      if (viVoiceObj) {
-        hasViSpeechVoice = true;
+      if (currentVoice === 'namminh') {
+        viVoiceObj = allVoices.find(v => (v.lang.toLowerCase().includes('vi') || v.lang.toLowerCase().includes('vn')) && v.name.toLowerCase().includes('namminh'))
+          || allVoices.find(v => v.lang.toLowerCase().includes('vi') || v.lang.toLowerCase().includes('vn'));
+      } else if (currentVoice === 'hoaimy') {
+        viVoiceObj = allVoices.find(v => (v.lang.toLowerCase().includes('vi') || v.lang.toLowerCase().includes('vn')) && v.name.toLowerCase().includes('hoaimy'))
+          || allVoices.find(v => v.lang.toLowerCase().includes('vi') || v.lang.toLowerCase().includes('vn'));
+      } else {
+        viVoiceObj = allVoices.find(v => v.lang.toLowerCase().includes('vi') || v.lang.toLowerCase().includes('vn'));
       }
     }
 
-    // NẾU CÓ GIỌNG TIẾNG VIỆT THỰC SỰ TRONG WINDOWS (vd: Hoài My, Nam Minh đã cài):
-    if (hasViSpeechVoice && viVoiceObj && currentVoice !== 'google') {
+    // NẾU CÓ GIỌNG TIẾNG VIỆT NATIVE CHUẨN VÀ KHÔNG PHẢI ÉP DÙNG GOOGLE TTS:
+    if (viVoiceObj && currentVoice !== 'google') {
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.voice = viVoiceObj;
       utterance.lang = 'vi-VN';
       utterance.rate = 1.0;
       utterance.pitch = currentVoice === 'namminh' ? 0.9 : 1.1;
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        isSpeakingRef.current = true;
+        setNeedsUserTapToPlay(false);
+      };
       utterance.onend = onFinish;
-      utterance.onerror = onFinish;
+      utterance.onerror = () => {
+        // Fallback sang Google TTS
+        playViaGoogleAudio(textToSpeak, currentVoice, onFinish);
+      };
       window.speechSynthesis.speak(utterance);
       return;
     }
 
-    // NẾU MÁY CHƯA CÀI GÓI TIẾNG VIỆT (Chỉ có Microsoft David tiếng Anh):
-    // => DÙNG 100% GOOGLE VIETNAMESE TTS AUDIO! ĐẢM BẢO 100% TIẾNG VIỆT CHUẨN, TUYỆT ĐỐI KHÔNG BỊ TIẾNG ANH!
-    try {
-      const cleanText = textToSpeak.replace(/[\r\n\t]+/g, ' ').slice(0, 200);
-      const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=vi&client=tw-ob`;
+    // NẾU MÁY KHÔNG CÓ GIỌNG TIẾNG VIỆT: PHÁT TRỰC TIẾP QUA GOOGLE TTS (KHÔNG DÙNG FETCH, TRÁNH LỖI CORS)
+    playViaGoogleAudio(textToSpeak, currentVoice, onFinish);
+  }, [voiceEnabled, voiceType, startListeningSafely, stopListeningSafely, playViaGoogleAudio]);
 
-      const audio = new Audio(ttsUrl);
-      audioPlayerRef.current = audio;
-
-      // Giả lập giọng Nam Minh (trầm ấm hơn) hoặc Hoài My (trong trẻo hơn) bằng tốc độ phát
-      if (currentVoice === 'namminh') {
-        audio.playbackRate = 0.92; // Trầm và điềm đạm hơn
-      } else if (currentVoice === 'hoaimy') {
-        audio.playbackRate = 1.05; // Nhanh và trong trẻo
-      } else {
-        audio.playbackRate = 1.0;
+  // Tự động mở khóa Autoplay ngay khi người dùng click/gõ phím bất kỳ chỗ nào trên ứng dụng
+  useEffect(() => {
+    const handleFirstGesture = () => {
+      if (needsUserTapToPlay) {
+        setNeedsUserTapToPlay(false);
+        const greeting = 'Dạ em chào anh chị! Em là trợ lý ảo tổ dân phố Quảng Giao, em đang lắng nghe đây ạ.';
+        speakVietnameseAudio(greeting);
       }
-
-      audio.onplay = () => {
-        setIsSpeaking(true);
-        isSpeakingRef.current = true;
-      };
-      audio.onended = onFinish;
-      audio.onerror = () => {
-        onFinish();
-      };
-
-      audio.play().catch(() => {
-        onFinish();
-      });
-    } catch (e) {
-      onFinish();
-    }
-  }, [voiceEnabled, voiceType, startListeningSafely, stopListeningSafely]);
+    };
+    window.addEventListener('click', handleFirstGesture, { once: true });
+    window.addEventListener('keydown', handleFirstGesture, { once: true });
+    return () => {
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('keydown', handleFirstGesture);
+    };
+  }, [needsUserTapToPlay, speakVietnameseAudio]);
 
   // 4. Lời chào ban đầu
   useEffect(() => {
@@ -219,18 +322,23 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     const greeting = `${timeGreet} Em là trợ lý ảo tổ dân phố Quảng Giao. Chế độ đàm thoại tự động đang bật, anh chị cứ nói tự nhiên không cần bấm nút: mở phần nào, tìm kiểm tra nhân khẩu, tên, tuổi, số căn cước để em phục vụ ngay nhé!`;
     setAssistantText(greeting);
-  }, []);
 
-  // 5. Khởi tạo SpeechRecognition liên tục tự động
+    // Kích hoạt phát âm chào
+    const t = setTimeout(() => {
+      speakVietnameseAudio(greeting);
+    }, 700);
+
+    return () => clearTimeout(t);
+  }, [speakVietnameseAudio]);
+
+
+  // 5. Khởi tạo SpeechRecognition tự động
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
-      console.warn('SpeechRecognition API not available in this browser');
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     try {
       const recognition = new SpeechRecognition();
@@ -262,14 +370,13 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           setInputText(spoken);
           setIsListening(false);
           isListeningRef.current = false;
-          // Xử lý câu nói ngay
           handleUserQuery(spoken);
         } else {
           setLiveTranscript(interim);
         }
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = () => {
         setIsListening(false);
         isListeningRef.current = false;
       };
@@ -277,7 +384,6 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       recognition.onend = () => {
         setIsListening(false);
         isListeningRef.current = false;
-        // Tự động lắng nghe lại nếu rảnh tay
         if (isAutoHandsFreeRef.current && !isSpeakingRef.current) {
           setTimeout(() => {
             if (isAutoHandsFreeRef.current && !isSpeakingRef.current) {
@@ -289,11 +395,10 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
       recognitionRef.current = recognition;
 
-      // Bắt đầu lắng nghe sau khi giao diện sẵn sàng
       if (isAutoHandsFreeRef.current) {
         setTimeout(() => {
           startListeningSafely();
-        }, 1000);
+        }, 1200);
       }
     } catch (e) {
       console.warn('SpeechRecognition error:', e);
@@ -317,30 +422,30 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     const qLower = query.toLowerCase();
 
-    // A. Xử lý mở QUỸ NỘP PHƯỜNG (Bắt trọn mọi cách nói: "quỹ nộp phường", "quỹ phường", "chuyển xuống phần quỹ", "nộp phường"...)
+    // A. Xử lý chuyển sang QUỸ NỘP PHƯỜNG
     if (
       qLower.includes('quỹ nộp phường') ||
       qLower.includes('nộp phường') ||
       qLower.includes('quỹ phường') ||
-      (qLower.includes('chuyển xuống') && (qLower.includes('quỹ') || qLower.includes('phường'))) ||
-      (qLower.includes('mở') && (qLower.includes('quỹ') || qLower.includes('phường'))) ||
-      qLower.includes('phần quỹ nộp phường') ||
+      qLower.includes('phần quỹ') ||
       qLower.includes('tiền nộp phường') ||
-      qLower.includes('nghĩa vụ phường')
+      qLower.includes('nghĩa vụ phường') ||
+      (qLower.includes('chuyển xuống') && (qLower.includes('quỹ') || qLower.includes('phường'))) ||
+      (qLower.includes('mở') && (qLower.includes('quỹ') || qLower.includes('phường')))
     ) {
-      const reply = 'Dạ vâng! Em chuyển ngay xuống phần Quỹ nộp phường cho anh chị đây ạ!';
+      const reply = 'Dạ vâng! Em chuyển ngay sang phần Quỹ nộp phường cho anh chị đây ạ!';
       setAssistantText(reply);
       speakVietnameseAudio(reply);
 
-      // Chuyển trang và cuộn mượt lên trên
+      // Chuyển tab sang Quỹ nộp phường
       onNavigate('ward-funds');
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
-      // Nếu đang trong trang Thu chi mà có section quỹ phường, cuộn tới đó
+      // Nếu đang ở trang Thu chi, tự động cuộn đến phần quỹ phường
       setTimeout(() => {
         const el = document.getElementById('ward-funds-section') || document.querySelector('.ward-funds-container');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 300);
+      }, 350);
       return;
     }
 
@@ -431,7 +536,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // I. Thống kê số lượng
+    // I. Thống kê
     if (qLower.includes('bao nhiêu người') || qLower.includes('bao nhiêu nhân khẩu')) {
       try {
         const residents = await db.getResidents();
@@ -452,7 +557,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       } catch (e) {}
     }
 
-    // J. Tra cứu nhân khẩu theo tên, tuổi, CCCD
+    // J. Tra cứu nhân khẩu
     try {
       const allResidents = await db.getResidents();
       const currentYear = new Date().getFullYear();
@@ -668,7 +773,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
                   borderRadius: '6px',
                   fontWeight: '700'
                 }}>
-                  Đang trả lời...
+                  Đang nói...
                 </span>
               )}
             </div>
@@ -743,6 +848,33 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
               </button>
             </div>
           </div>
+
+          {/* NÚT MỞ KHÓA ÂM THANH NẾU TRÌNH DUYỆT CHẶN AUTOPLAY */}
+          {needsUserTapToPlay && (
+            <div 
+              onClick={() => {
+                setNeedsUserTapToPlay(false);
+                speakVietnameseAudio(assistantText);
+              }}
+              style={{
+                background: '#fef3c7',
+                border: '1.5px solid #f59e0b',
+                color: '#92400e',
+                borderRadius: '8px',
+                padding: '6px 10px',
+                marginBottom: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                animation: 'pulse 1.5s infinite'
+              }}
+            >
+              <Play size={14} /> Bấm vào đây để nghe trợ lý nói!
+            </div>
+          )}
 
           {/* LỜI THOẠI CỦA TRỢ LÝ */}
           <div style={{ lineHeight: '1.5', color: '#1e293b', marginBottom: '10px' }}>
@@ -1009,6 +1141,46 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         }}
         title="Bấm vào để nói chuyện với trợ lý!"
       >
+        {/* Nút nhắc mở tiếng nếu trình duyệt chặn autoplay */}
+        {needsUserTapToPlay && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              setNeedsUserTapToPlay(false);
+              const greetingText = voiceType === 'namminh'
+                ? 'Chào anh chị! Nam Minh đây ạ, anh chị cần em giúp gì cứ nói tự nhiên nhé.'
+                : 'Dạ em chào anh chị! Em là trợ lý ảo tổ dân phố, anh chị cần em giúp gì cứ nói nhé.';
+              setAssistantText(greetingText);
+              speakVietnameseAudio(greetingText);
+            }}
+            style={{
+              position: 'absolute',
+              top: '-38px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              whiteSpace: 'nowrap',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '0.74rem',
+              fontWeight: '700',
+              boxShadow: '0 6px 18px rgba(234, 88, 12, 0.45)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              border: '2px solid rgba(255, 255, 255, 0.9)',
+              animation: 'bounceTap 1.5s infinite',
+              cursor: 'pointer',
+              zIndex: 100
+            }}
+            title="Bấm vào để kích hoạt âm thanh trợ lý"
+          >
+            <Volume2 size={13} />
+            <span>Bấm nghe tiếng trợ lý!</span>
+          </div>
+        )}
+
         {/* Nút tạm ẩn */}
         <button
           onClick={(e) => {
@@ -1091,6 +1263,10 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         @keyframes floatingGirl {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-7px); }
+        }
+        @keyframes bounceTap {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(-6px); }
         }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(10px); }
