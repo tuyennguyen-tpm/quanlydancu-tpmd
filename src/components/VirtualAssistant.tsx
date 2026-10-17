@@ -10,8 +10,9 @@ import {
   ArrowRight,
   Mic,
   MicOff,
-  User,
-  Radio
+  Radio,
+  RadioTower,
+  Bot
 } from 'lucide-react';
 import { db } from '../services/db';
 import type { Resident } from '../types';
@@ -22,7 +23,7 @@ interface VirtualAssistantProps {
   userRole?: string;
 }
 
-export type VoiceOption = 'hoaimy' | 'namminh' | 'google';
+export type VoiceOption = 'namminh' | 'hoaimy' | 'google';
 
 export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   isSidebarOpen,
@@ -32,10 +33,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   const [isBubbleOpen, setIsBubbleOpen] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState('');
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('assistant_voice_enabled') !== 'false';
+  // Chế độ đàm thoại tự động rảnh tay (Hands-Free): Liên tục nghe và nói không cần bấm micro
+  const [isAutoHandsFree, setIsAutoHandsFree] = useState<boolean>(() => {
+    return localStorage.getItem('assistant_autohandsfree') !== 'false';
   });
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [voiceType, setVoiceType] = useState<VoiceOption>(() => {
     return (localStorage.getItem('assistant_voice_type') as VoiceOption) || 'namminh';
   });
@@ -54,8 +57,13 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   const recognitionRef = useRef<any>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const availableVoicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const isSpeakingRef = useRef<boolean>(false);
+  const isAutoHandsFreeRef = useRef<boolean>(isAutoHandsFree);
 
-  // 1. Tách nền trắng tự động cho ảnh nhân vật
+  isSpeakingRef.current = isSpeaking;
+  isAutoHandsFreeRef.current = isAutoHandsFree;
+
+  // 1. Tách nền ảnh tự động
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -89,7 +97,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     };
   }, []);
 
-  // 2. Tải danh sách giọng nói tiếng Việt từ hệ thống (Hoài My, Nam Minh, Google)
+  // 2. Tải danh sách giọng nói tiếng Việt
   const refreshVoices = useCallback(() => {
     if ('speechSynthesis' in window) {
       const list = window.speechSynthesis.getVoices();
@@ -104,12 +112,38 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     }
   }, [refreshVoices]);
 
-  // 3. Hàm phát âm giọng nói chuẩn (Hoài My, Nam Minh, hoặc Google)
+  // Khởi động lại micro an toàn khi trợ lý dứt lời
+  const restartListeningIfHandsFree = useCallback(() => {
+    if (!isAutoHandsFreeRef.current || !recognitionRef.current) return;
+    setTimeout(() => {
+      if (!isSpeakingRef.current && isAutoHandsFreeRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch (e) {
+          // Bỏ qua nếu đã đang start
+        }
+      }
+    }, 400);
+  }, []);
+
+  // 3. Hàm phát âm giọng nói (Nam Minh / Hoài My / Chị Google)
   const speak = useCallback((textToSpeak: string, customVoice?: VoiceOption) => {
-    if (!voiceEnabled) return;
+    if (!voiceEnabled) {
+      restartListeningIfHandsFree();
+      return;
+    }
 
     const chosenVoice = customVoice || voiceType;
     setIsSpeaking(true);
+    isSpeakingRef.current = true;
+
+    // Tạm dừng micro khi trợ lý đang nói để tránh micro nghe lại chính giọng của trợ lý
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
 
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
@@ -120,36 +154,42 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       window.speechSynthesis.cancel();
     }
 
-    // A. Nếu chọn Google TTS hoặc fallback
+    // Khi trợ lý nói xong -> tự động mở lại micro để nghe người dùng
+    const onSpeechEnd = () => {
+      setIsSpeaking(false);
+      isSpeakingRef.current = false;
+      restartListeningIfHandsFree();
+    };
+
+    // A. Nếu chọn Google TTS
     if (chosenVoice === 'google') {
       try {
         const clean = textToSpeak.replace(/[\r\n\t]+/g, ' ').slice(0, 200);
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(clean)}&tl=vi&client=tw-ob`;
         const audio = new Audio(url);
         audioPlayerRef.current = audio;
-        audio.onplay = () => setIsSpeaking(true);
-        audio.onended = () => setIsSpeaking(false);
+        audio.onplay = () => { setIsSpeaking(true); isSpeakingRef.current = true; };
+        audio.onended = onSpeechEnd;
         audio.onerror = () => {
-          // Fallback sang SpeechSynthesis
-          speakWithWebSpeech(textToSpeak, chosenVoice);
+          speakWithWebSpeech(textToSpeak, chosenVoice, onSpeechEnd);
         };
         audio.play().catch(() => {
-          speakWithWebSpeech(textToSpeak, chosenVoice);
+          speakWithWebSpeech(textToSpeak, chosenVoice, onSpeechEnd);
         });
         return;
       } catch {
-        speakWithWebSpeech(textToSpeak, chosenVoice);
+        speakWithWebSpeech(textToSpeak, chosenVoice, onSpeechEnd);
         return;
       }
     }
 
-    // B. Nếu chọn Hoài My hoặc Nam Minh qua Web Speech API
-    speakWithWebSpeech(textToSpeak, chosenVoice);
-  }, [voiceEnabled, voiceType]);
+    // B. Nếu chọn Nam Minh hoặc Hoài My
+    speakWithWebSpeech(textToSpeak, chosenVoice, onSpeechEnd);
+  }, [voiceEnabled, voiceType, restartListeningIfHandsFree]);
 
-  const speakWithWebSpeech = (textToSpeak: string, chosenVoice: VoiceOption) => {
+  const speakWithWebSpeech = (textToSpeak: string, chosenVoice: VoiceOption, onEndCallback: () => void) => {
     if (!('speechSynthesis' in window)) {
-      setIsSpeaking(false);
+      onEndCallback();
       return;
     }
 
@@ -165,7 +205,6 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     let matchedVoice: SpeechSynthesisVoice | undefined;
 
     if (chosenVoice === 'namminh') {
-      // Tìm giọng Nam Minh (Microsoft NamMinh Online) hoặc bất kỳ giọng nam tiếng Việt
       matchedVoice = voices.find(v => 
         (v.name.toLowerCase().includes('namminh') || v.name.toLowerCase().includes('nam minh')) && 
         (v.lang.includes('vi') || v.lang.includes('VI'))
@@ -177,14 +216,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         );
       }
     } else if (chosenVoice === 'hoaimy') {
-      // Tìm giọng Hoài My (Microsoft HoaiMy Online) hoặc giọng nữ tiếng Việt
       matchedVoice = voices.find(v => 
         (v.name.toLowerCase().includes('hoaimy') || v.name.toLowerCase().includes('hoài my')) && 
         (v.lang.includes('vi') || v.lang.includes('VI'))
       );
     }
 
-    // Fallback nếu không có tên chính xác: lấy bất kỳ giọng vi-VN nào
     if (!matchedVoice) {
       matchedVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VI'));
     }
@@ -193,29 +230,14 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       utterance.voice = matchedVoice;
     }
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = (e) => {
-      console.warn('SpeechSynthesis error:', e);
-      setIsSpeaking(false);
-    };
+    utterance.onstart = () => { setIsSpeaking(true); isSpeakingRef.current = true; };
+    utterance.onend = onEndCallback;
+    utterance.onerror = () => { onEndCallback(); };
 
     window.speechSynthesis.speak(utterance);
   };
 
-  // 4. Lời chào khởi đầu
-  useEffect(() => {
-    const hour = new Date().getHours();
-    let timeGreeting = 'Chào buổi sáng anh chị!';
-    if (hour >= 11 && hour < 14) timeGreeting = 'Chào buổi trưa anh chị!';
-    else if (hour >= 14 && hour < 18) timeGreeting = 'Chào buổi chiều anh chị!';
-    else if (hour >= 18) timeGreeting = 'Chào buổi tối anh chị!';
-
-    const greeting = `${timeGreeting} Em là trợ lý ảo TDP Quảng Giao. Anh chị có thể bấm micro hoặc gõ yêu cầu: mở phần nào, tìm kiểm tra nhân khẩu, tên, tuổi, số căn cước để em phục vụ nhé!`;
-    setAssistantText(greeting);
-  }, []);
-
-  // 5. Khởi tạo chức năng Nhận diện giọng nói qua Micro (SpeechRecognition)
+  // 4. Khởi tạo nhận diện giọng nói liên tục không cần bấm nút (Continuous Auto Speech Recognition)
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
@@ -226,7 +248,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     try {
       const recognition = new SpeechRecognition();
       recognition.lang = 'vi-VN';
-      recognition.continuous = false;
+      recognition.continuous = false; // Xử lý từng câu nói trọn vẹn
       recognition.interimResults = true;
 
       recognition.onstart = () => {
@@ -251,7 +273,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           setLiveTranscript(spoken);
           setInputText(spoken);
           setIsListening(false);
-          // Tự động xử lý ngay khi người dùng nói xong!
+          // Tự động kích hoạt phản hồi trò chuyện ngay lập tức!
           handleUserQuery(spoken);
         } else {
           setLiveTranscript(interim);
@@ -259,51 +281,48 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       };
 
       recognition.onerror = (event: any) => {
-        console.warn('Microphone Recognition Error:', event.error);
         setIsListening(false);
-        if (event.error === 'not-allowed') {
-          const err = 'Trình duyệt chưa cho phép dùng Micro. Anh chị bấm Cho phép (Allow) Micro giúp em nhé!';
-          setAssistantText(err);
-          speak(err);
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          console.warn('SpeechRecognition error:', event.error);
         }
       };
 
       recognition.onend = () => {
         setIsListening(false);
+        // Tự động bật lại micro nếu đang ở chế độ đàm thoại tự động và trợ lý không nói
+        if (isAutoHandsFreeRef.current && !isSpeakingRef.current) {
+          setTimeout(() => {
+            if (isAutoHandsFreeRef.current && !isSpeakingRef.current && recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+              } catch (e) {}
+            }
+          }, 300);
+        }
       };
 
       recognitionRef.current = recognition;
-    } catch (e) {
-      console.warn('SpeechRecognition init error:', e);
-    }
-  }, [speak]);
 
-  // Bật/tắt Micro thu âm
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
-      const msg = 'Trình duyệt hiện tại chưa hỗ trợ nhận diện Micro Web Speech API.';
-      setAssistantText(msg);
-      speak(msg);
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      try {
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        recognitionRef.current.start();
-        setIsListening(true);
-        setLiveTranscript('Đang lắng nghe anh chị nói...');
-      } catch (err) {
-        console.warn('Cannot start recognition:', err);
+      // Khởi động lắng nghe ban đầu nếu đàm thoại rảnh tay được bật
+      if (isAutoHandsFreeRef.current) {
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 1200);
       }
+    } catch (e) {
+      console.warn('SpeechRecognition init failed:', e);
     }
-  };
 
-  // 6. Xử lý câu lệnh & phản hồi tự nhiên (qua Micro hoặc qua ô nhập)
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+    };
+  }, []);
+
+  // 5. Trí tuệ hội thoại tự nhiên tương tác như người thật
   const handleUserQuery = async (queryStr: string) => {
     const query = queryStr.trim();
     if (!query) return;
@@ -314,80 +333,146 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     const qLower = query.toLowerCase();
 
-    // A. Lời chào xã giao tự nhiên
-    if (qLower === 'chào' || qLower.startsWith('chào em') || qLower.startsWith('xin chào') || qLower === 'alo' || qLower.includes('bạn tên gì')) {
-      const nameVoice = voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'chị Google';
-      const msg = `Dạ, em chào anh chị! Em là trợ lý ảo giọng ${nameVoice} của tổ dân phố Quảng Giao. Anh chị cần em mở trang nào hay kiểm tra, sửa đổi nhân khẩu ai ạ?`;
-      setAssistantText(msg);
-      speak(msg);
+    // A. Chào hỏi xã giao tự nhiên & hỏi thăm
+    if (
+      qLower === 'chào' || 
+      qLower.includes('xin chào') || 
+      qLower.includes('chào em') || 
+      qLower.includes('chào bạn') || 
+      qLower === 'alo' || 
+      qLower.includes('em ơi') ||
+      qLower.includes('bạn ơi')
+    ) {
+      const hour = new Date().getHours();
+      let timeGreet = 'Chào anh chị!';
+      if (hour < 11) timeGreet = 'Chào buổi sáng anh chị!';
+      else if (hour < 14) timeGreet = 'Chào buổi trưa anh chị!';
+      else if (hour < 18) timeGreet = 'Chào buổi chiều anh chị!';
+      else timeGreet = 'Chào buổi tối anh chị!';
+
+      const voiceName = voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'chị Google';
+      const reply = `${timeGreet} Em là ${voiceName}, trợ lý ảo thông minh của tổ dân phố Quảng Giao. Em đang lắng nghe đây, anh chị cần em mở phần nào hay kiểm tra nhân khẩu ai ạ?`;
+      setAssistantText(reply);
+      speak(reply);
       return;
     }
 
-    // B. Điều hướng phân hệ
-    if (qLower.includes('nhân khẩu') || qLower.includes('dân cư') || qLower.includes('cư dân') || qLower.includes('danh sách người')) {
-      const msg = 'Dạ được rồi, em mở danh sách Nhân khẩu cho anh chị ngay đây ạ!';
-      setAssistantText(msg);
-      speak(msg);
+    if (qLower.includes('khỏe không') || qLower.includes('thế nào rồi') || qLower.includes('hôm nay thế nào')) {
+      const reply = 'Dạ em khỏe lắm ạ! Cảm ơn anh chị đã quan tâm. Em luôn sẵn sàng hỗ trợ anh chị quản lý tốt dữ liệu tổ dân phố Quảng Giao!';
+      setAssistantText(reply);
+      speak(reply);
+      return;
+    }
+
+    if (qLower.includes('tên gì') || qLower.includes('là ai') || qLower.includes('giới thiệu')) {
+      const voiceName = voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'trợ lý ảo chị Google';
+      const reply = `Dạ em là ${voiceName}, được tạo ra để đồng hành hỗ trợ ban cán sự tổ dân phố Quảng Giao quản lý nhân khẩu, thu chi và tra cứu hồ sơ nhanh chóng nhất ạ!`;
+      setAssistantText(reply);
+      speak(reply);
+      return;
+    }
+
+    if (qLower.includes('cảm ơn') || qLower.includes('thank') || qLower.includes('tốt lắm') || qLower.includes('giỏi quá')) {
+      const reply = 'Dạ không có gì ạ! Giúp được anh chị là niềm vui của em. Anh chị có cần em làm gì nữa không ạ?';
+      setAssistantText(reply);
+      speak(reply);
+      return;
+    }
+
+    // B. Điều hướng phân hệ thông minh
+    if (qLower.includes('nhân khẩu') || qLower.includes('dân cư') || qLower.includes('danh sách người')) {
+      const reply = 'Dạ vâng, em mở danh sách Nhân khẩu cho anh chị ngay đây ạ!';
+      setAssistantText(reply);
+      speak(reply);
       onNavigate('residents');
       return;
     }
 
     if (qLower.includes('hộ gia đình') || qLower.includes('danh sách hộ') || qLower.includes('sổ hộ')) {
-      const msg = 'Dạ vâng, em chuyển ngay sang danh sách Hộ gia đình ạ!';
-      setAssistantText(msg);
-      speak(msg);
+      const reply = 'Dạ được rồi, em mở danh sách Hộ gia đình cho anh chị ạ!';
+      setAssistantText(reply);
+      speak(reply);
       onNavigate('households');
       return;
     }
 
-    if (qLower.includes('thu chi') || qLower.includes('tiền quỹ') || qLower.includes('tài chính') || qLower.includes('ngân sách')) {
-      const msg = 'Dạ, em mở trang Quản lý Thu chi của tổ dân phố cho anh chị kiểm tra ạ!';
-      setAssistantText(msg);
-      speak(msg);
+    if (qLower.includes('thu chi') || qLower.includes('tiền quỹ') || qLower.includes('tài chính') || qLower.includes('sổ quỹ')) {
+      const reply = 'Dạ em chuyển ngay sang phần Quản lý Thu chi tổ dân phố ạ!';
+      setAssistantText(reply);
+      speak(reply);
       onNavigate('finance');
       return;
     }
 
-    if (qLower.includes('quỹ phường') || qLower.includes('nộp phường') || qLower.includes('nghĩa vụ phường')) {
-      const msg = 'Dạ vâng, em mở trang Quỹ nộp về phường ngay đây ạ!';
-      setAssistantText(msg);
-      speak(msg);
+    if (qLower.includes('quỹ phường') || qLower.includes('nộp phường') || qLower.includes('nghĩa vụ')) {
+      const reply = 'Dạ, em mở mục Quỹ nộp về phường cho anh chị kiểm tra ạ!';
+      setAssistantText(reply);
+      speak(reply);
       onNavigate('ward-funds');
       return;
     }
 
-    if (qLower.includes('mừng thọ') || qLower.includes('người cao tuổi') || qLower.includes('hội người cao tuổi')) {
-      const msg = 'Dạ, em chuyển sang phần Hội Người cao tuổi và mừng thọ ạ!';
-      setAssistantText(msg);
-      speak(msg);
+    if (qLower.includes('mừng thọ') || qLower.includes('người cao tuổi') || qLower.includes('hội viên cao tuổi')) {
+      const reply = 'Dạ vâng, em mở danh sách Hội Người cao tuổi và mừng thọ ạ!';
+      setAssistantText(reply);
+      speak(reply);
       onNavigate('elderly');
       return;
     }
 
-    if (qLower.includes('bản đồ') || qLower.includes('map') || qLower.includes('địa lý')) {
-      const msg = 'Dạ, em mở Bản đồ số dân cư tổ dân phố Quảng Giao ngay đây ạ!';
-      setAssistantText(msg);
-      speak(msg);
+    if (qLower.includes('bản đồ') || qLower.includes('map') || qLower.includes('vị trí')) {
+      const reply = 'Dạ, em mở Bản đồ số dân cư tổ dân phố Quảng Giao ngay đây ạ!';
+      setAssistantText(reply);
+      speak(reply);
       onNavigate('map');
       return;
     }
 
-    if (qLower.includes('đảng') || qLower.includes('chi bộ') || qLower.includes('đảng viên')) {
-      const msg = 'Dạ vâng, em mở mục Chi bộ Đảng và danh sách Đảng viên ạ!';
-      setAssistantText(msg);
-      speak(msg);
+    if (qLower.includes('chính sách') || qLower.includes('thương binh') || qLower.includes('liệt sĩ')) {
+      const reply = 'Dạ, em mở mục Gia đình chính sách và người có công ạ!';
+      setAssistantText(reply);
+      speak(reply);
+      onNavigate('policy');
+      return;
+    }
+
+    if (qLower.includes('chi bộ') || qLower.includes('đảng viên') || qLower.includes('đảng')) {
+      const reply = 'Dạ, em mở mục Chi bộ Đảng và danh sách Đảng viên ạ!';
+      setAssistantText(reply);
+      speak(reply);
       onNavigate('party-cell');
       return;
     }
 
-    // C. Tra cứu nhân khẩu để xem hoặc sửa đổi thông tin
+    // C. Thống kê nhanh dữ liệu khi hỏi
+    if (qLower.includes('có bao nhiêu người') || qLower.includes('bao nhiêu nhân khẩu') || qLower.includes('tổng số người')) {
+      try {
+        const residents = await db.getResidents();
+        const reply = `Dạ báo cáo anh chị, hiện tại tổ dân phố Quảng Giao đang quản lý tổng cộng ${residents.length} nhân khẩu ạ!`;
+        setAssistantText(reply);
+        speak(reply);
+        return;
+      } catch (e) {}
+    }
+
+    if (qLower.includes('bao nhiêu hộ') || qLower.includes('tổng số hộ')) {
+      try {
+        const households = await db.getHouseholds();
+        const reply = `Dạ hiện tại trên địa bàn tổ dân phố có tổng cộng ${households.length} hộ gia đình cư trú ạ!`;
+        setAssistantText(reply);
+        speak(reply);
+        return;
+      } catch (e) {}
+    }
+
+    // D. Tra cứu nhân khẩu để xem hoặc sửa đổi
     try {
       const allResidents = await db.getResidents();
       const currentYear = new Date().getFullYear();
 
-      // Nhận diện tìm theo tuổi (vd: "80 tuổi", "75 tuổi")
+      // Tuổi (vd: "ai 80 tuổi", "85 tuổi")
       const ageMatch = qLower.match(/(\d+)\s*tuổi/);
-      // Nhận diện tìm theo năm sinh (vd: "năm sinh 1984", "1993")
+      // Năm sinh (vd: "năm sinh 1984")
       const yearMatch = qLower.match(/(?:sinh\s*năm|năm\s*sinh|sn)?\s*(\d{4})/);
 
       let found: Resident[] = [];
@@ -419,22 +504,23 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       if (found.length > 0) {
         const top = found.slice(0, 5);
         setSearchResults(top);
-        const reply = `Em đã tìm thấy ${found.length} nhân khẩu. Anh chị có thể xem chi tiết hoặc bấm nút Sửa để chỉnh sửa tên, tuổi, căn cước nhé!`;
+        const reply = `Em đã tìm thấy ${found.length} nhân khẩu. Anh chị có thể xem chi tiết hoặc bấm nút Sửa để chỉnh sửa thông tin nhé!`;
         setAssistantText(reply);
         speak(`Em đã tìm thấy ${found.length} người. Anh chị có thể bấm nút Sửa để thay đổi thông tin nhé!`);
       } else {
-        const reply = `Em chưa tìm thấy thông tin nào khớp với "${query}". Anh chị đọc lại tên hoặc số căn cước giúp em nhé!`;
+        // Phản hồi hội thoại thông minh khi không có kết quả tra cứu
+        const reply = `Em đã nghe rõ "${query}". Anh chị có muốn em tìm kiếm theo tên, năm sinh, số căn cước hay mở trang nào không ạ?`;
         setAssistantText(reply);
         speak(reply);
       }
     } catch (e) {
-      const err = 'Dạ có lỗi khi tra cứu dữ liệu, anh chị nói lại giúp em nhé!';
+      const err = 'Dạ em chưa nghe rõ lắm, anh chị nói lại giúp em nhé!';
       setAssistantText(err);
       speak(err);
     }
   };
 
-  // 7. Lưu thông tin nhân khẩu sau khi sửa
+  // 6. Lưu sửa thông tin nhân khẩu
   const handleSaveEdit = async () => {
     if (!editingResident) return;
     try {
@@ -461,18 +547,43 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     }
   };
 
-  // 8. Đổi giọng nói và phát âm thử nghiệm
+  // 7. Chuyển đổi giọng nói & đàm thoại tự động
   const handleChangeVoice = (newV: VoiceOption) => {
     setVoiceType(newV);
     localStorage.setItem('assistant_voice_type', newV);
 
     let sample = '';
-    if (newV === 'namminh') sample = 'Chào anh chị, tôi là trợ lý Nam Minh. Rất hân hạnh được hỗ trợ anh chị!';
-    else if (newV === 'hoaimy') sample = 'Dạ em chào anh chị, em là Hoài My. Em sẵn sàng lắng nghe anh chị!';
+    if (newV === 'namminh') sample = 'Chào anh chị, Nam Minh đã sẵn sàng đàm thoại tự động cùng anh chị!';
+    else if (newV === 'hoaimy') sample = 'Dạ em là Hoài My, em đã sẵn sàng đàm thoại rảnh tay cùng anh chị!';
     else sample = 'Xin chào bạn, tôi là trợ lý ảo giọng chị Google của tổ dân phố Quảng Giao.';
 
     setAssistantText(sample);
     speak(sample, newV);
+  };
+
+  const toggleAutoHandsFree = () => {
+    const nextVal = !isAutoHandsFree;
+    setIsAutoHandsFree(nextVal);
+    isAutoHandsFreeRef.current = nextVal;
+    localStorage.setItem('assistant_autohandsfree', String(nextVal));
+
+    if (nextVal) {
+      const msg = 'Đã bật đàm thoại tự động rảnh tay. Anh chị cứ nói tự nhiên không cần bấm nút nữa nhé!';
+      setAssistantText(msg);
+      speak(msg);
+      setTimeout(() => {
+        try {
+          if (recognitionRef.current) recognitionRef.current.start();
+        } catch {}
+      }, 1000);
+    } else {
+      const msg = 'Đã tắt đàm thoại tự động rảnh tay.';
+      setAssistantText(msg);
+      speak(msg);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+      }
+    }
   };
 
   if (!isVisible) {
@@ -521,7 +632,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
-      {/* 1. BONG BÓNG LỜI THOẠI TRÒ CHUYỆN VỚI CÔ GÁI */}
+      {/* 1. BONG BÓNG LỜI THOẠI TRÒ CHUYỆN */}
       {isBubbleOpen && (
         <div 
           style={{
@@ -561,7 +672,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
             borderTop: '9px solid #ffffff'
           }} />
 
-          {/* Header chọn giọng nói và bật tắt micro */}
+          {/* Header chọn giọng nói và chế độ Đàm thoại tự động */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontWeight: '800', color: '#0284c7', fontSize: '0.88rem' }}>Trợ lý Ảo</span>
@@ -575,13 +686,13 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
                   borderRadius: '6px',
                   fontWeight: '700'
                 }}>
-                  Đang nói...
+                  Đang trả lời...
                 </span>
               )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              {/* CHỌN GIỌNG NÓI: NAM MINH / HOÀI MY / CHỊ GOOGLE */}
+              {/* CHỌN GIỌNG NÓI */}
               <select 
                 value={voiceType} 
                 onChange={(e) => handleChangeVoice(e.target.value as VoiceOption)}
@@ -598,17 +709,38 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
                 }}
                 title="Chọn giọng nói: Nam Minh, Hoài My, Chị Google"
               >
-                <option value="namminh">👨 Giọng Nam Minh</option>
-                <option value="hoaimy">👩 Giọng Hoài My</option>
-                <option value="google">🌐 Giọng chị Google</option>
+                <option value="namminh">👨 Nam Minh</option>
+                <option value="hoaimy">👩 Hoài My</option>
+                <option value="google">🌐 Chị Google</option>
               </select>
 
-              {/* Bật tắt âm thanh */}
+              {/* Nút bật/tắt ĐÀM THOẠI TỰ ĐỘNG RẢNH TAY */}
+              <button 
+                onClick={toggleAutoHandsFree}
+                style={{
+                  background: isAutoHandsFree ? '#dbeafe' : '#f1f5f9',
+                  border: isAutoHandsFree ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '3px 6px',
+                  fontSize: '0.65rem',
+                  fontWeight: '700',
+                  color: isAutoHandsFree ? '#0284c7' : '#64748b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}
+                title={isAutoHandsFree ? 'Đang bật đàm thoại tự động (nói tự do không cần bấm nút)' : 'Bấm để bật đàm thoại rảnh tay'}
+              >
+                <RadioTower size={12} />
+                <span>{isAutoHandsFree ? 'Tự động' : 'Thủ công'}</span>
+              </button>
+
+              {/* Bật/tắt âm thanh */}
               <button 
                 onClick={() => {
                   const n = !voiceEnabled;
                   setVoiceEnabled(n);
-                  localStorage.setItem('assistant_voice_enabled', String(n));
                   if (!n) {
                     if (audioPlayerRef.current) audioPlayerRef.current.pause();
                     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
@@ -630,12 +762,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
             </div>
           </div>
 
-          {/* NỘI DUNG LỜI THOẠI CỦA TRỢ LÝ */}
+          {/* LỜI THOẠI CỦA TRỢ LÝ */}
           <div style={{ lineHeight: '1.5', color: '#1e293b', marginBottom: '10px' }}>
             {assistantText}
           </div>
 
-          {/* ĐANG NGHE QUA MICRO THỰC TẾ (Live Voice Feedback) */}
+          {/* TRẠNG THÁI ĐANG LẮNG NGHE TỰ ĐỘNG QUA MICRO */}
           {isListening && (
             <div style={{
               background: '#fef2f2',
@@ -648,14 +780,14 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
               gap: '8px',
               animation: 'pulse 1.5s infinite'
             }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }} />
-              <div style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: '600' }}>
-                {liveTranscript || '🎙️ Đang nghe anh chị nói... Hãy nói yêu cầu của bạn'}
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
+              <div style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: '600', flex: 1 }}>
+                {liveTranscript || '🎙️ Đang lắng nghe anh chị nói... (Hãy nói tự nhiên)'}
               </div>
             </div>
           )}
 
-          {/* BẢNG CHỈNH SỬA THÔNG TIN NHÂN KHẨU */}
+          {/* FORM SỬA NHÂN KHẨU */}
           {editingResident && (
             <div style={{
               background: '#f8fafc',
@@ -736,7 +868,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
             </div>
           )}
 
-          {/* DANH SÁCH KẾT QUẢ TÌM KIẾM CÓ SẴN NÚT SỬA */}
+          {/* KẾT QUẢ TÌM KIẾM CÓ SẴN NÚT SỬA */}
           {!editingResident && searchResults.length > 0 && (
             <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
               {searchResults.map((r) => (
@@ -810,49 +942,44 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
             </div>
           )}
 
-          {/* Ô NÓI CHUYỆN: TÍCH HỢP NÚT MICRO VÀ Ô GÕ PHÍM */}
+          {/* Ô NÓI CHUYỆN & GÕ PHÍM DỰ PHÒNG */}
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {/* Nút Micro để nói chuyện trực tiếp */}
-            <button
-              onClick={toggleListening}
-              style={{
-                background: isListening ? '#ef4444' : '#f0f9ff',
-                color: isListening ? '#ffffff' : '#0284c7',
-                border: isListening ? '2px solid #dc2626' : '1.5px solid #38bdf8',
-                borderRadius: '10px',
-                width: '36px',
-                height: '36px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                boxShadow: isListening ? '0 0 12px rgba(239, 68, 68, 0.5)' : 'none',
-                transition: 'all 0.2s'
-              }}
-              title={isListening ? 'Bấm để dừng nghe' : 'Bấm micro để nói chuyện'}
-            >
-              {isListening ? <MicOff size={16} /> : <Mic size={16} />}
-            </button>
-
-            <input 
-              type="text" 
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleUserQuery(inputText);
-              }}
-              placeholder={isListening ? 'Đang lắng nghe bạn nói...' : 'Nói hoặc gõ yêu cầu...'}
-              style={{
-                flex: 1,
-                padding: '8px 10px',
-                borderRadius: '10px',
-                border: '1.5px solid #cbd5e1',
-                fontSize: '0.78rem',
-                outline: 'none',
-                background: '#ffffff'
-              }}
-            />
+            <div style={{
+              background: isListening ? '#fef2f2' : '#f0f9ff',
+              border: isListening ? '1.5px solid #ef4444' : '1.5px solid #38bdf8',
+              borderRadius: '10px',
+              padding: '0 8px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flex: 1
+            }}>
+              <span style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: isListening ? '#ef4444' : '#0284c7',
+                display: 'inline-block'
+              }} />
+              <input 
+                type="text" 
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUserQuery(inputText);
+                }}
+                placeholder={isListening ? 'Đang tự động nghe... Bạn cứ nói' : 'Nói hoặc gõ yêu cầu...'}
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontSize: '0.78rem',
+                  flex: 1,
+                  color: '#1e293b'
+                }}
+              />
+            </div>
 
             <button 
               onClick={() => handleUserQuery(inputText)}
@@ -884,8 +1011,8 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         onClick={() => {
           setIsBubbleOpen(true);
           const greetingText = voiceType === 'namminh' 
-            ? 'Chào anh chị, Nam Minh đang lắng nghe đây ạ. Anh chị cần kiểm tra hay mở phân hệ nào?'
-            : 'Dạ, em đang lắng nghe đây ạ. Anh chị cần kiểm tra hay sửa thông tin ai ạ?';
+            ? 'Chào anh chị, Nam Minh đang lắng nghe đây ạ. Anh chị cứ nói tự nhiên em phục vụ ngay!'
+            : 'Dạ em đang lắng nghe đây ạ. Anh chị cứ nói tự nhiên em phục vụ ngay nhé!';
           setAssistantText(greetingText);
           speak(greetingText);
         }}
@@ -900,7 +1027,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         }}
         title="Bấm vào để nói chuyện với trợ lý!"
       >
-        {/* Nút nhỏ đóng hẳn */}
+        {/* Nút tạm ẩn */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -947,7 +1074,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           />
         </div>
 
-        {/* Nhãn nhỏ dưới chân */}
+        {/* Nhãn nhỏ dưới chân cô gái */}
         <div style={{
           marginTop: '-6px',
           background: isListening 
@@ -967,7 +1094,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           {isListening ? (
             <>
               <Radio size={10} className="pulse" />
-              <span>Đang nghe...</span>
+              <span>Đang nghe tự động...</span>
             </>
           ) : (
             <>
