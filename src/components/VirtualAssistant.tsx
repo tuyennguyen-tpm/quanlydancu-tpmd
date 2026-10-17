@@ -336,7 +336,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     const handleFirstGesture = () => {
       if (needsUserTapToPlay) {
         setNeedsUserTapToPlay(false);
-        const greeting = 'Dạ em chào anh chị! Em là trợ lý ảo tổ dân phố Quảng Giao, em đang lắng nghe đây ạ.';
+        const greeting = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
         speakVietnameseAudio(greeting);
       }
     };
@@ -350,13 +350,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
   // 4. Lời chào ban đầu
   useEffect(() => {
-    const hour = new Date().getHours();
-    let timeGreet = 'Chào buổi sáng anh chị!';
-    if (hour >= 11 && hour < 14) timeGreet = 'Chào buổi trưa anh chị!';
-    else if (hour >= 14 && hour < 18) timeGreet = 'Chào buổi chiều anh chị!';
-    else if (hour >= 18) timeGreet = 'Chào buổi tối anh chị!';
-
-    const greeting = `${timeGreet} Em là trợ lý ảo tổ dân phố Quảng Giao. Chế độ đàm thoại tự động đang bật, anh chị cứ nói tự nhiên không cần bấm nút: mở phần nào, tìm kiểm tra nhân khẩu, tên, tuổi, số căn cước để em phục vụ ngay nhé!`;
+    const greeting = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
     setAssistantText(greeting);
 
     const t = setTimeout(() => {
@@ -365,6 +359,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     return () => clearTimeout(t);
   }, [speakVietnameseAudio]);
+
 
   // 5. Khởi tạo SpeechRecognition tự động
   useEffect(() => {
@@ -575,13 +570,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     // LỜI THOẠI THÔNG THƯỜNG / CHÀO HỎI
     if (qLower.includes('chào') || qLower.includes('alo') || qLower.includes('ơi')) {
-      const resp = voiceType === 'namminh'
-        ? 'Dạ em chào anh chị! Nam Minh đang lắng nghe đây ạ. Anh chị cần tìm nhân khẩu hay mở mục nào cứ nói nhé!'
-        : 'Dạ em chào anh chị! Em đang lắng nghe đây ạ. Anh chị cần tìm nhân khẩu hay mở mục nào cứ nói tự nhiên nhé!';
+      const resp = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       return;
     }
+
 
     // LỆNH MẶC ĐỊNH
     const defaultResp = `Dạ em đã nghe: "${query}". Anh chị có thể yêu cầu em: chuyển xuống quỹ nộp phường, mở hộ khẩu dân cư, hoặc tìm tên tuổi số căn cước của ai nhé!`;
@@ -652,11 +646,10 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         onClick={() => { 
           setIsVisible(true); 
           setShowCaption(true);
-          const greetingText = voiceType === 'namminh' 
-            ? 'Chào anh chị! Em đang lắng nghe đây ạ, anh chị cứ nói tự nhiên nhé.'
-            : 'Dạ em chào anh chị! Em đang lắng nghe đây ạ, anh chị cứ nói tự nhiên nhé.';
+          const greetingText = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
           setAssistantText(greetingText);
           speakVietnameseAudio(greetingText);
+
         }}
         style={{
           position: 'fixed',
@@ -984,9 +977,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       <div 
         onClick={() => {
           setShowCaption(true);
-          const greetingText = voiceType === 'namminh' 
-            ? 'Chào anh chị! Nam Minh đang lắng nghe đây ạ, anh chị cứ nói tự nhiên em phục vụ ngay nhé.'
-            : 'Dạ em đang lắng nghe đây ạ, anh chị cứ nói tự nhiên em phục vụ ngay nhé!';
+          const greetingText = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
           setAssistantText(greetingText);
           speakVietnameseAudio(greetingText);
         }}
@@ -1007,12 +998,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               setNeedsUserTapToPlay(false);
-              const greetingText = voiceType === 'namminh'
-                ? 'Chào anh chị! Nam Minh đây ạ, anh chị cần em giúp gì cứ nói tự nhiên nhé.'
-                : 'Dạ em chào anh chị! Em là trợ lý ảo tổ dân phố, anh chị cần em giúp gì cứ nói nhé.';
+              const greetingText = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
               setAssistantText(greetingText);
               speakVietnameseAudio(greetingText);
             }}
+
             style={{
               position: 'absolute',
               top: '-38px',
