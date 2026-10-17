@@ -438,15 +438,15 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     setSearchResults([]);
     setEditingResident(null);
 
-    // LỆNH ĐIỀU HƯỚNG QUỸ PHƯỜNG
+    // 1. LỆNH ĐIỀU HƯỚNG QUỸ PHƯỜNG
     if (
       qLower.includes('quỹ nộp phường') ||
       qLower.includes('quỹ phường') ||
       qLower.includes('nộp phường') ||
-      (qLower.includes('chuyển xuống') && (qLower.includes('quỹ') || qLower.includes('phường'))) ||
+      (qLower.includes('chuyển') && (qLower.includes('phường') || qLower.includes('quỹ'))) ||
       (qLower.includes('mở') && qLower.includes('quỹ') && qLower.includes('phường'))
     ) {
-      const resp = 'Dạ, em đang chuyển xuống phần Quỹ nộp về phường cho anh chị đây ạ!';
+      const resp = 'Dạ, em mở quỹ nộp phường ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('ward-funds');
@@ -456,51 +456,154 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // LỆNH ĐIỀU HƯỚNG QUỸ TỔ DÂN PHỐ / TÀI CHÍNH
+    // 2. LỆNH ĐIỀU HƯỚNG QUỸ TỔ DÂN PHỐ / TÀI CHÍNH / THU CHI
     if (
       qLower.includes('quỹ tổ dân phố') ||
       qLower.includes('quỹ tdp') ||
       qLower.includes('quỹ thu') ||
-      (qLower.includes('chuyển') && qLower.includes('tài chính')) ||
-      (qLower.includes('mở') && (qLower.includes('tài chính') || qLower.includes('quỹ')))
+      qLower.includes('tài chính') ||
+      qLower.includes('thu chi') ||
+      (qLower.includes('quỹ') && !qLower.includes('phường'))
     ) {
-      const resp = 'Dạ, em chuyển sang phần Thu chi và Quỹ tổ dân phố ngay ạ!';
+      const resp = 'Dạ, em mở quỹ tổ dân phố ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('finance');
       return;
     }
 
-    // LỆNH ĐIỀU HƯỚNG DÂN CƯ & HỘ KHẨU
+    // 3. LỆNH ĐIỀU HƯỚNG DÂN CƯ & HỘ KHẨU
     if (
       qLower.includes('dân cư') ||
       qLower.includes('hộ khẩu') ||
-      qLower.includes('danh sách nhân khẩu') ||
+      qLower.includes('nhân khẩu') ||
       qLower.includes('sổ hộ khẩu') ||
-      (qLower.includes('mở') && (qLower.includes('nhân khẩu') || qLower.includes('hộ')))
+      qLower.includes('danh sách nhân khẩu')
     ) {
-      const resp = 'Dạ, em đang mở danh sách Hộ khẩu và Nhân khẩu đây ạ!';
+      const resp = 'Dạ, em mở danh sách nhân khẩu ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('residents');
       return;
     }
 
-    // LỆNH ĐIỀU HƯỚNG CHI BỘ ĐẢNG
+    // 4. LỆNH ĐIỀU HƯỚNG CHI BỘ ĐẢNG
     if (
       qLower.includes('chi bộ') ||
       qLower.includes('đảng viên') ||
-      qLower.includes('sinh hoạt chi bộ') ||
-      (qLower.includes('mở') && qLower.includes('đảng'))
+      qLower.includes('đảng')
     ) {
-      const resp = 'Dạ, em mở mục Chi bộ Đảng và Hồ sơ Đảng viên ngay đây ạ!';
+      const resp = 'Dạ, em mở mục chi bộ Đảng ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('party');
       return;
     }
 
-    // LỆNH ĐỔI GIỌNG NÓI TRỰC TIẾP QUA GIỌNG NÓI
+    // 5. LỆNH ĐIỀU HƯỚNG HỌP TỔ DÂN PHỐ
+    if (
+      qLower.includes('họp tổ') ||
+      qLower.includes('cuộc họp') ||
+      qLower.includes('biên bản họp') ||
+      qLower.includes('sổ họp')
+    ) {
+      const resp = 'Dạ, em mở sổ họp tổ dân phố ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('meetings');
+      return;
+    }
+
+    // 6. LỆNH ĐIỀU HƯỚNG AN NINH TRẬT TỰ / TỔ LIÊN GIA
+    if (
+      qLower.includes('an ninh') ||
+      qLower.includes('tổ liên gia') ||
+      qLower.includes('trật tự')
+    ) {
+      const resp = 'Dạ, em mở mục an ninh trật tự ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('security');
+      return;
+    }
+
+    // 7. LỆNH ĐIỀU HƯỚNG HỘI PHỤ NỮ
+    if (qLower.includes('phụ nữ') || qLower.includes('hội phụ nữ')) {
+      const resp = 'Dạ, em mở hội phụ nữ ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('women-association');
+      return;
+    }
+
+    // 8. LỆNH ĐIỀU HƯỚNG ĐOÀN THANH NIÊN
+    if (qLower.includes('thanh niên') || qLower.includes('đoàn thanh niên')) {
+      const resp = 'Dạ, em mở đoàn thanh niên ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('youth-union');
+      return;
+    }
+
+    // 9. LỆNH ĐIỀU HƯỚNG HỘI NÔNG DÂN
+    if (qLower.includes('nông dân') || qLower.includes('hội nông dân')) {
+      const resp = 'Dạ, em mở hội nông dân ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('farmers-association');
+      return;
+    }
+
+    // 10. LỆNH ĐIỀU HƯỚNG CỰU CHIẾN BINH / NGƯỜI CAO TUỔI
+    if (
+      qLower.includes('người cao tuổi') ||
+      qLower.includes('cựu chiến binh') ||
+      qLower.includes('ccb')
+    ) {
+      const resp = 'Dạ, em mở hội cựu chiến binh và người cao tuổi ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('veterans-elderly');
+      return;
+    }
+
+    // 11. LỆNH ĐIỀU HƯỚNG THEO DÕI SỨC KHỎE Y TẾ
+    if (qLower.includes('sức khỏe') || qLower.includes('y tế')) {
+      const resp = 'Dạ, em mở mục sức khỏe y tế ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('health');
+      return;
+    }
+
+    // 12. LỆNH ĐIỀU HƯỚNG BẢN ĐỒ SỐ
+    if (qLower.includes('bản đồ') || qLower.includes('bản đồ số') || qLower.includes('vị trí')) {
+      const resp = 'Dạ, em mở bản đồ số dân cư ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('map');
+      return;
+    }
+
+    // 13. LỆNH ĐIỀU HƯỚNG CHÍNH SÁCH XÃ HỘI / HỘ NGHÈO
+    if (qLower.includes('chính sách') || qLower.includes('hộ nghèo') || qLower.includes('cận nghèo')) {
+      const resp = 'Dạ, em mở chính sách xã hội ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('policies');
+      return;
+    }
+
+    // 14. LỆNH ĐIỀU HƯỚNG TRANG CHỦ / TỔNG QUAN
+    if (qLower.includes('trang chủ') || qLower.includes('tổng quan') || qLower.includes('bảng tin')) {
+      const resp = 'Dạ, em về trang chủ ngay ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      onNavigate('dashboard');
+      return;
+    }
+
+    // 15. LỆNH ĐỔI GIỌNG NÓI TRỰC TIẾP QUA GIỌNG NÓI
     if (qLower.includes('giọng nam minh') || qLower.includes('đổi giọng nam')) {
       handleChangeVoice('namminh');
       return;
@@ -514,13 +617,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // LỆNH TÌM KIẾM & TRA CỨU NHÂN KHẨU / CCCD
+    // 16. LỆNH TÌM KIẾM & TRA CỨU NHÂN KHẨU / CCCD
     if (
       qLower.includes('tìm') || 
       qLower.includes('kiểm tra') || 
       qLower.includes('tra cứu') || 
       qLower.includes('ai tên') ||
-      qLower.includes('nhân khẩu') ||
       qLower.includes('cccd') ||
       qLower.includes('căn cước')
     ) {
@@ -552,12 +654,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           if (matched.length > 0) {
             setSearchResults(matched.slice(0, 5));
             const first = matched[0];
-            const resp = `Dạ, em tìm thấy ${matched.length} người. Người đầu tiên là ${first.full_name}, sinh ngày ${first.dob || 'chưa rõ'}, số căn cước là ${first.cccd || 'chưa cập nhật'}. Em đã hiện thông tin bên cạnh, anh chị có thể bấm Sửa nếu cần nhé!`;
+            const resp = `Dạ, em tìm thấy ${first.full_name}, sinh ngày ${first.dob || 'chưa rõ'}, số CCCD là ${first.cccd || 'chưa có'}.`;
             setAssistantText(resp);
             speakVietnameseAudio(resp);
             return;
           } else {
-            const resp = `Dạ, em đã tra cứu toàn bộ cơ sở dữ liệu nhưng không tìm thấy ai khớp với từ khóa "${searchTerm}". Anh chị thử đọc lại tên hoặc số căn cước rõ hơn nhé!`;
+            const resp = `Dạ, em chưa tìm thấy ai khớp với từ khóa "${searchTerm}" ạ!`;
             setAssistantText(resp);
             speakVietnameseAudio(resp);
             return;
@@ -576,12 +678,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-
-    // LỆNH MẶC ĐỊNH
-    const defaultResp = `Dạ em đã nghe: "${query}". Anh chị có thể yêu cầu em: chuyển xuống quỹ nộp phường, mở hộ khẩu dân cư, hoặc tìm tên tuổi số căn cước của ai nhé!`;
+    // LỆNH MẶC ĐỊNH - NGẮN GỌN, KHÔNG NÓI DÀI DÒNG
+    const defaultResp = 'Dạ, em đang lắng nghe đây ạ!';
     setAssistantText(defaultResp);
     speakVietnameseAudio(defaultResp);
   };
+
 
   // 7. Lưu chỉnh sửa nhân khẩu trực tiếp vào CSDL Supabase
   const handleSaveEdit = async () => {
