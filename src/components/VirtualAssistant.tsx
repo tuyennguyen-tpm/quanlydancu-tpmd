@@ -12,10 +12,15 @@ import {
   MicOff,
   Radio,
   RadioTower,
-  Play
+  Play,
+  Key,
+  ExternalLink,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { db } from '../services/db';
 import type { Resident } from '../types';
+import { askAssistantAI, getGeminiApiKey, setGeminiApiKey, askGemini } from '../services/ai';
 
 interface VirtualAssistantProps {
   isSidebarOpen: boolean;
@@ -52,6 +57,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     cccd: '',
     phone: ''
   });
+
+  const [showApiKeyModal, setShowApiKeyModal] = useState<boolean>(false);
+  const [apiKeyInput, setApiKeyInput] = useState<string>(() => getGeminiApiKey());
+  const [showKeyPassword, setShowKeyPassword] = useState<boolean>(false);
+  const [apiKeySavedStatus, setApiKeySavedStatus] = useState<string>('');
+  const [isTestingKey, setIsTestingKey] = useState<boolean>(false);
 
   // 3 khung hình hoạt họa cử động như người thật:
   // - wave: Chào đón ban đầu, vẫy tay
@@ -525,6 +536,39 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     if (qLower.includes('giọng google') || qLower.includes('chị google')) {
       handleChangeVoice('google');
       return;
+    }
+
+    // 0.1 CÀI ĐẶT API KEY BẰNG GIỌNG NÓI HOẶC HỎI CẤU HÌNH
+    if (qLower.includes('cài đặt api') || qLower.includes('cấu hình gemini') || qLower.includes('nhập api key') || qLower.includes('khóa api')) {
+      setShowApiKeyModal(true);
+      const resp = 'Dạ, em đã mở bảng cài đặt Google Gemini rồi ạ! Anh chị nhập khoá API miễn phí vào đây nhé!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    // 0.2 GỌI TRỢ LÝ AI GEMINI NẾU CÓ KEY (ĐỂ GIAO TIẾP TỰ NHIÊN NHƯ NGƯỜI THẬT VÀ HIỂU MỌI CÂU LỆNH)
+    const geminiKey = getGeminiApiKey();
+    if (geminiKey) {
+      try {
+        const aiRes = await askAssistantAI(query, currentTab);
+        if (aiRes && aiRes.spokenReply) {
+          setAssistantText(aiRes.spokenReply);
+          speakVietnameseAudio(aiRes.spokenReply);
+
+          if (aiRes.action) {
+            if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
+              triggerSearchAndJump(aiRes.action.tab, aiRes.action.query || term);
+            } else if (aiRes.action.tab) {
+              onNavigate(aiRes.action.tab);
+              setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+            }
+          }
+          return;
+        }
+      } catch (err) {
+        console.warn('[Gemini call skipped, falling back to local engine]', err);
+      }
     }
 
     // 1. TÌM KIẾM HOẶC CHUYỂN ĐẾN HỘ GIA ĐÌNH
@@ -1190,8 +1234,39 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // LỆNH MẶC ĐỊNH - NGẮN GỌN, KHÔNG NÓI DÀI DÒNG
-    const defaultResp = 'Dạ, em đang lắng nghe đây ạ!';
+    // TƯ VẤN THỦ TỤC HÀNH CHÍNH & KIẾN THỨC NỘI BỘ
+    if (qLower.includes('vneid') || qLower.includes('định danh') || qLower.includes('mức 2')) {
+      const resp = 'Dạ, để kích hoạt định danh điện tử VNeID mức 2, anh chị mang theo thẻ CCCD gắn chip đến Công an phường để được lăn tay và chụp ảnh xác thực nhé ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    if (qLower.includes('bảo hiểm y tế') || qLower.includes('bhyt')) {
+      const resp = 'Dạ, thẻ bảo hiểm y tế hiện nay đã được tích hợp trực tiếp vào thẻ CCCD và ứng dụng VNeID, khi đi khám chữa bệnh bà con chỉ cần xuất trình CCCD là được ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    if (qLower.includes('tạm trú') || qLower.includes('đăng ký tạm trú')) {
+      const resp = 'Dạ, thủ tục đăng ký tạm trú anh chị có thể thực hiện trực tuyến qua Cổng Dịch vụ công Quốc gia hoặc đến trực tiếp Công an phường ạ!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    if (qLower.includes('em là ai') || qLower.includes('bạn là ai') || qLower.includes('giới thiệu')) {
+      const resp = 'Dạ, em là trợ lý ảo thông minh của Tổ dân phố Quảng Giao, được lập trình để đồng hành cùng anh Nguyễn Kim Tuyến và bà con trong mọi công tác quản lý và tra cứu thông tin dân cư!';
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    // LỆNH MẶC ĐỊNH
+    const defaultResp = geminiKey 
+      ? 'Dạ, em đang lắng nghe đây ạ, anh chị có thể nói lại rõ hơn giúp em được không ạ?' 
+      : 'Dạ, em đang lắng nghe đây ạ! Để em có thể trò chuyện thông minh như người thật và trả lời mọi lĩnh vực trên thế giới, anh chị bấm vào biểu tượng ngôi sao ✨ dưới chân em để cài đặt khoá Gemini miễn phí nhé!';
     setAssistantText(defaultResp);
     speakVietnameseAudio(defaultResp);
   };
@@ -1809,8 +1884,258 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           >
             {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
           </button>
+
+          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+
+          {/* Nút cài đặt Google Gemini AI */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowApiKeyModal(true);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#38bdf8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: 0
+            }}
+            title="Cài đặt Google Gemini AI (Miễn phí 100%)"
+          >
+            <Sparkles size={12} />
+          </button>
         </div>
       </div>
+
+      {/* MODAL CÀI ĐẶT GOOGLE GEMINI API KEY MIỄN PHÍ 100% */}
+      {showApiKeyModal && (
+        <div 
+          onClick={() => setShowApiKeyModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 100000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0',
+              animation: 'fadeInUp 0.25s ease-out'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}>
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                    Cấu hình Trí tuệ Nhân tạo Gemini
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>
+                    ✨ Hoàn toàn miễn phí 100% vĩnh viễn
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowApiKeyModal(false)}
+                style={{
+                  border: 'none',
+                  background: '#f1f5f9',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748b'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              marginBottom: '16px',
+              fontSize: '0.82rem',
+              color: '#166534',
+              lineHeight: 1.5
+            }}>
+              <strong>Trợ lý siêu trí tuệ:</strong> Khi có khóa Gemini, trợ lý sẽ giao tiếp lưu loát như người thật, hiểu mọi câu nói tự do và giải đáp mọi lĩnh vực trên thế giới.
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Khoá Google Gemini API Key:
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showKeyPassword ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => {
+                    setApiKeyInput(e.target.value);
+                    setApiKeySavedStatus('');
+                  }}
+                  placeholder="Dán mã API Key (ví dụ: AIzaSy...)"
+                  style={{
+                    width: '100%',
+                    padding: '10px 42px 10px 12px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.86rem',
+                    outline: 'none',
+                    fontFamily: 'monospace'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKeyPassword(!showKeyPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  {showKeyPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {apiKeySavedStatus && (
+                <div style={{ 
+                  marginTop: '6px', 
+                  fontSize: '0.78rem', 
+                  color: apiKeySavedStatus.includes('thành công') ? '#16a34a' : '#ef4444',
+                  fontWeight: 600
+                }}>
+                  {apiKeySavedStatus}
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              marginBottom: '20px',
+              fontSize: '0.78rem',
+              color: '#475569',
+              lineHeight: 1.6
+            }}>
+              <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>Cách lấy Key miễn phí (mất 30 giây):</div>
+              <div>1. Truy cập: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: '#0284c7', fontWeight: 600, textDecoration: 'underline' }}>aistudio.google.com/app/apikey <ExternalLink size={11} style={{ display: 'inline' }} /></a></div>
+              <div>2. Đăng nhập tài khoản Gmail bất kỳ.</div>
+              <div>3. Bấm <strong>"Create API key"</strong> rồi copy mã dán vào ô trên.</div>
+              <div style={{ color: '#059669', marginTop: '2px' }}>✓ Không cần thẻ ngân hàng, hoàn toàn miễn phí 100%.</div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                disabled={isTestingKey}
+                onClick={async () => {
+                  const key = apiKeyInput.trim();
+                  if (!key) {
+                    setApiKeySavedStatus('Vui lòng nhập mã API Key trước khi thử!');
+                    return;
+                  }
+                  setIsTestingKey(true);
+                  setApiKeySavedStatus('Đang kiểm tra kết nối với Gemini...');
+                  setGeminiApiKey(key);
+                  try {
+                    const testReply = await askGemini('Xin chào, bạn là trợ lý thông minh đúng không?');
+                    if (testReply) {
+                      setApiKeySavedStatus('✓ Kết nối thành công! Trợ lý đã sẵn sàng trò chuyện.');
+                      const resp = 'Dạ, kết nối Google Gemini thành công rồi ạ! Em đã sẵn sàng phục vụ anh chị!';
+                      setAssistantText(resp);
+                      speakVietnameseAudio(resp);
+                    } else {
+                      setApiKeySavedStatus('⚠️ Không nhận được phản hồi, vui lòng kiểm tra lại mã Key.');
+                    }
+                  } catch (e: any) {
+                    setApiKeySavedStatus(`⚠️ Lỗi: ${e?.message || 'Không thể kết nối'}`);
+                  } finally {
+                    setIsTestingKey(false);
+                  }
+                }}
+                style={{
+                  padding: '9px 14px',
+                  borderRadius: '10px',
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  color: '#334155',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {isTestingKey ? 'Đang thử...' : 'Kiểm tra Key'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const key = apiKeyInput.trim();
+                  setGeminiApiKey(key);
+                  setApiKeySavedStatus('✓ Đã lưu mã API Key thành công!');
+                  const resp = 'Dạ, em đã lưu cài đặt thành công rồi ạ!';
+                  setAssistantText(resp);
+                  speakVietnameseAudio(resp);
+                  setTimeout(() => setShowApiKeyModal(false), 900);
+                }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.35)'
+                }}
+              >
+                Lưu cài đặt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes floatingGirl {
