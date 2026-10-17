@@ -412,32 +412,89 @@ const Households = () => {
   }, []);
 
   useEffect(() => {
-    const handleHighlight = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const hhId = customEvent.detail;
-      const matched = households.find(h => h.id === hhId);
+    const checkAndExecuteHouseholdHighlight = (detail: any) => {
+      if (!detail) return;
+      const targetId = typeof detail === 'string' ? detail : detail?.id;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      const qClean = query.trim().toLowerCase();
+
+      // 1. Tìm theo ID
+      let matched = targetId ? households.find(h => h.id === targetId) : undefined;
+
+      // 2. Nếu không tìm thấy theo ID, tìm theo tên chủ hộ hoặc số hộ
+      if (!matched && qClean) {
+        matched = households.find(h => {
+          const headName = getHeadName(h).toLowerCase();
+          const hkNum = (h.household_number || '').toLowerCase();
+          const addr = (h.address || '').toLowerCase();
+          return headName.includes(qClean) || hkNum.includes(qClean) || addr.includes(qClean);
+        });
+
+        // 3. Nếu không khớp chủ hộ, tìm trong thành viên của hộ
+        if (!matched) {
+          const memberMatched = residents.find(r => r.full_name?.toLowerCase().includes(qClean));
+          if (memberMatched) {
+            matched = households.find(h => h.id === memberMatched.household_id);
+          }
+        }
+      }
+
       if (matched) {
         const ownerName = getHeadName(matched);
-        setSearchInput(ownerName);
+        setSearchInput(ownerName || query);
         setPolicyFilter('all');
-        
-        setTimeout(() => {
-          const card = document.getElementById(`household-card-${hhId}`);
+        setGroupFilter('all');
+        setTdpFilter('all');
+        setCurrentPage(1);
+
+        const tryScroll = (attempts = 0) => {
+          const card = document.getElementById(`household-card-${matched!.id}`);
           if (card) {
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            card.style.borderColor = 'var(--primary)';
-            card.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.2)';
+            card.style.borderColor = '#2563eb';
+            card.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.45), 0 10px 25px -5px rgba(37, 99, 235, 0.3)';
+            card.style.transform = 'scale(1.02)';
+            card.style.transition = 'all 0.35s ease';
             setTimeout(() => {
               card.style.borderColor = '';
               card.style.boxShadow = '';
-            }, 3000);
+              card.style.transform = '';
+            }, 4000);
+          } else if (attempts < 6) {
+            setTimeout(() => tryScroll(attempts + 1), 200);
           }
-        }, 300);
+        };
+
+        setTimeout(() => tryScroll(0), 300);
+      } else if (query) {
+        setSearchInput(query);
+        setPolicyFilter('all');
+        setGroupFilter('all');
+        setCurrentPage(1);
       }
     };
+
+    const handleHighlight = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      checkAndExecuteHouseholdHighlight(customEvent.detail);
+    };
+
     window.addEventListener('highlight-household', handleHighlight);
+
+    // Kiểm tra nếu có lệnh tìm kiếm đang chờ từ Trợ lý ảo
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.tab === 'households' && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          checkAndExecuteHouseholdHighlight(pending);
+        }
+      }
+    } catch {}
+
     return () => window.removeEventListener('highlight-household', handleHighlight);
-  }, [households, residents]);
+  }, [households, residents, getHeadName]);
 
   const getHouseholdMembers = (hId: string) => {
     return residents

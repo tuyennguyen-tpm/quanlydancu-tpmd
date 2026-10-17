@@ -30,6 +30,37 @@ const Complaints = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
+
+  useEffect(() => {
+    const handleComplaintsSearch = (detail: any) => {
+      if (!detail) return;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      if (query) {
+        setSearchInput(query);
+        setStatusFilter('all');
+      }
+    };
+
+    const onComplaintsEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleComplaintsSearch(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-complaints', onComplaintsEvent);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.tab === 'complaints' && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          handleComplaintsSearch(pending);
+        }
+      }
+    } catch {}
+
+    return () => window.removeEventListener('highlight-complaints', onComplaintsEvent);
+  }, []);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'resolved'>('all');
 
 

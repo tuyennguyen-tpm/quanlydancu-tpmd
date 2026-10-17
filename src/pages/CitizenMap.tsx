@@ -501,6 +501,37 @@ const CitizenMap = () => {
   // Search states với useDeferredValue để gõ phím siêu mượt 60fps không giật lag
   const [mapSearchTerm, setMapSearchTerm] = useState<string>('');
   const deferredSearchTerm = useDeferredValue(mapSearchTerm);
+
+  useEffect(() => {
+    const handleMapSearch = (detail: any) => {
+      if (!detail) return;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      if (query) {
+        setMapSearchTerm(query);
+        setShowSearchDropdown(true);
+      }
+    };
+
+    const onMapEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleMapSearch(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-map', onMapEvent);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.tab === 'map' && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          handleMapSearch(pending);
+        }
+      }
+    } catch {}
+
+    return () => window.removeEventListener('highlight-map', onMapEvent);
+  }, []);
   
   const [popupSearchTerm, setPopupSearchTerm] = useState<string>('');
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);

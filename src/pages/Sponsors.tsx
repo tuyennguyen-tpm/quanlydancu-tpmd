@@ -35,6 +35,38 @@ const Sponsors = () => {
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
 
+  useEffect(() => {
+    const handleSponsorsSearch = (detail: any) => {
+      if (!detail) return;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      if (query) {
+        setSearchInput(query);
+        setCategoryFilter('all');
+        setActiveType('all');
+      }
+    };
+
+    const onSponsorsEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleSponsorsSearch(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-sponsors', onSponsorsEvent);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.tab === 'sponsors' && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          handleSponsorsSearch(pending);
+        }
+      }
+    } catch {}
+
+    return () => window.removeEventListener('highlight-sponsors', onSponsorsEvent);
+  }, []);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<SponsorRecord | null>(null);
   const [printReceiptRecord, setPrintReceiptRecord] = useState<SponsorRecord | null>(null);

@@ -637,6 +637,39 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
   });
   const [searchInput, setSearchInput] = useState('');
   const search = useDeferredValue(searchInput);
+
+  useEffect(() => {
+    const handlePartySearch = (detail: any) => {
+      if (!detail) return;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      if (query) {
+        setSearchInput(query);
+        setSelectedPartyGroup('all');
+        setSelectedGender('all');
+      }
+    };
+
+    const onPartyEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handlePartySearch(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-party', onPartyEvent);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.tab === 'party-cell' && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          handlePartySearch(pending);
+        }
+      }
+    } catch {}
+
+    return () => window.removeEventListener('highlight-party', onPartyEvent);
+  }, []);
+
   const [selectedPartyGroup, setSelectedPartyGroup] = useState<string>('all');
   const [selectedGender, setSelectedGender] = useState<'all' | 'male' | 'female'>('all');
 

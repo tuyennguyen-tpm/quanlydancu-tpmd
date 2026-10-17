@@ -149,6 +149,37 @@ const Finance = ({ initialType = 'all' }: FinanceProps) => {
   }, [initialType]);
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
+
+  useEffect(() => {
+    const handleFinanceSearch = (detail: any) => {
+      if (!detail) return;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      if (query) {
+        setSearchInput(query);
+        setFundSearchInput(query);
+      }
+    };
+
+    const onHighlightFinance = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleFinanceSearch(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-finance', onHighlightFinance);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.tab === 'finance' && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          handleFinanceSearch(pending);
+        }
+      }
+    } catch {}
+
+    return () => window.removeEventListener('highlight-finance', onHighlightFinance);
+  }, []);
   const [recordedByFilter, setRecordedByFilter] = useState<string>('all');
   const [payerFilter, setPayerFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);

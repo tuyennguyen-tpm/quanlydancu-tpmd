@@ -6010,6 +6010,7 @@ const App = () => {
           {/* Trợ lý ảo Nữ người Việt Nam ở góc dưới bên trái */}
           <VirtualAssistant 
             isSidebarOpen={isSidebarOpen}
+            currentTab={activeTab}
             onNavigate={(tab) => {
               let targetTab = tab;
               if (tab === 'dashboard') targetTab = 'Bảng điều khiển';

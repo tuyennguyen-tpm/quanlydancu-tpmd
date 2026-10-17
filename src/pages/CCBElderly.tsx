@@ -28,6 +28,42 @@ const CCBElderly = ({ type = 'both' }: CCBElderlyProps) => {
   const [seniors, setSeniors] = useState<Resident[]>([]);
   const [veterans, setVeterans] = useState<Resident[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handleElderlySearch = (detail: any) => {
+      if (!detail) return;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      if (query) {
+        setSearchQuery(query);
+        setSubFilter('all');
+        setGroupFilter('all');
+      }
+    };
+
+    const onElderlyEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleElderlySearch(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-elderly', onElderlyEvent);
+    window.addEventListener('highlight-ccb', onElderlyEvent);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if ((pending.tab === 'elderly' || pending.tab === 'ccb') && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          handleElderlySearch(pending);
+        }
+      }
+    } catch {}
+
+    return () => {
+      window.removeEventListener('highlight-elderly', onElderlyEvent);
+      window.removeEventListener('highlight-ccb', onElderlyEvent);
+    };
+  }, []);
   const [subFilter, setSubFilter] = useState<'all' | 'senior60' | 'senior70' | 'senior75' | 'longevity'>('all');
   const [longevityYear, setLongevityYear] = useState<number>(new Date().getFullYear());
   const [groupFilter, setGroupFilter] = useState('all');

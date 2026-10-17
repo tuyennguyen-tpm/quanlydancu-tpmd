@@ -328,6 +328,79 @@ const Residents = ({ viewMode = 'all' }: ResidentsProps) => {
     return () => window.removeEventListener('role-changed', handleRoleChange);
   }, []);
 
+  useEffect(() => {
+    const checkAndExecuteResidentHighlight = (detail: any) => {
+      if (!detail) return;
+      const targetId = typeof detail === 'string' ? detail : detail?.id;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      const qClean = query.trim().toLowerCase();
+
+      let matched = targetId ? residents.find(r => r.id === targetId) : undefined;
+      if (!matched && qClean) {
+        matched = residents.find(r => 
+          r.full_name?.toLowerCase().includes(qClean) ||
+          r.cccd?.includes(qClean) ||
+          r.phone?.includes(qClean)
+        );
+      }
+
+      if (matched) {
+        setSearchInput(matched.full_name);
+        setCategoryFilter('all');
+        setHouseholdFilter('all');
+        setGroupFilter('all');
+        setCurrentPage(1);
+        if (matched.status === 'deceased') setShowDeceased(true);
+        if (matched.status === 'moved_out') setShowMovedOut(true);
+
+        const tryScroll = (attempts = 0) => {
+          const row = document.getElementById(`resident-row-${matched!.id}`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            row.style.backgroundColor = '#dbeafe';
+            row.style.outline = '3px solid #2563eb';
+            row.style.boxShadow = '0 0 15px rgba(37, 99, 235, 0.4)';
+            row.style.transition = 'all 0.3s ease';
+            setTimeout(() => {
+              row.style.backgroundColor = '';
+              row.style.outline = '';
+              row.style.boxShadow = '';
+            }, 4000);
+          } else if (attempts < 6) {
+            setTimeout(() => tryScroll(attempts + 1), 200);
+          }
+        };
+        setTimeout(() => tryScroll(0), 300);
+      } else if (query) {
+        setSearchInput(query);
+        setCategoryFilter('all');
+        setHouseholdFilter('all');
+        setGroupFilter('all');
+        setCurrentPage(1);
+      }
+    };
+
+    const handleHighlight = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      checkAndExecuteResidentHighlight(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-resident', handleHighlight);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if ((pending.tab === 'residents' || pending.tab === 'residents-temp' || pending.tab === 'residents-changes') && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          checkAndExecuteResidentHighlight(pending);
+        }
+      }
+    } catch {}
+
+    return () => window.removeEventListener('highlight-resident', handleHighlight);
+  }, [residents]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modals state

@@ -19,6 +19,7 @@ import type { Resident } from '../types';
 
 interface VirtualAssistantProps {
   isSidebarOpen: boolean;
+  currentTab?: string;
   onNavigate: (tabId: string) => void;
   userRole?: string;
 }
@@ -27,6 +28,7 @@ export type VoiceOption = 'namminh' | 'hoaimy' | 'google';
 
 export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   isSidebarOpen,
+  currentTab = 'Bảng điều khiển',
   onNavigate
 }) => {
   const [isVisible, setIsVisible] = useState(true);
@@ -430,6 +432,76 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     };
   }, []);
 
+  // Hàm điều hướng và kích hoạt tìm kiếm / cuộn sáng tức thì tới đối tượng ở bất kỳ tab nào
+  const triggerSearchAndJump = (targetTab: string, term: string, targetId?: string) => {
+    const trimmed = term.trim();
+    try {
+      localStorage.setItem('assistant_pending_search', JSON.stringify({
+        tab: targetTab,
+        query: trimmed,
+        id: targetId,
+        timestamp: Date.now()
+      }));
+    } catch {}
+
+    onNavigate(targetTab);
+
+    const fireEvents = () => {
+      const payload = { id: targetId, query: trimmed, name: trimmed };
+      if (targetTab === 'households') {
+        window.dispatchEvent(new CustomEvent('highlight-household', { detail: payload }));
+      } else if (targetTab === 'residents' || targetTab === 'residents-temp' || targetTab === 'residents-changes') {
+        window.dispatchEvent(new CustomEvent('highlight-resident', { detail: payload }));
+      } else if (targetTab === 'finance') {
+        window.dispatchEvent(new CustomEvent('highlight-finance', { detail: payload }));
+      } else if (targetTab === 'ward-funds') {
+        window.dispatchEvent(new CustomEvent('highlight-ward-funds', { detail: payload }));
+      } else if (targetTab === 'sponsors') {
+        window.dispatchEvent(new CustomEvent('highlight-sponsors', { detail: payload }));
+      } else if (targetTab === 'elderly') {
+        window.dispatchEvent(new CustomEvent('highlight-elderly', { detail: payload }));
+      } else if (targetTab === 'ccb') {
+        window.dispatchEvent(new CustomEvent('highlight-ccb', { detail: payload }));
+      } else if (targetTab === 'party-cell') {
+        window.dispatchEvent(new CustomEvent('highlight-party', { detail: payload }));
+      } else if (targetTab === 'policy') {
+        window.dispatchEvent(new CustomEvent('highlight-policy', { detail: payload }));
+      } else if (targetTab === 'security') {
+        window.dispatchEvent(new CustomEvent('highlight-security', { detail: payload }));
+      } else if (targetTab === 'healthcare') {
+        window.dispatchEvent(new CustomEvent('highlight-healthcare', { detail: payload }));
+      } else if (targetTab === 'documents') {
+        window.dispatchEvent(new CustomEvent('highlight-documents', { detail: payload }));
+      } else if (targetTab === 'ward-documents') {
+        window.dispatchEvent(new CustomEvent('highlight-ward-documents', { detail: payload }));
+      } else if (targetTab === 'complaints') {
+        window.dispatchEvent(new CustomEvent('highlight-complaints', { detail: payload }));
+      } else if (targetTab === 'map') {
+        window.dispatchEvent(new CustomEvent('highlight-map', { detail: payload }));
+      }
+    };
+
+    fireEvents();
+    setTimeout(fireEvents, 150);
+    setTimeout(fireEvents, 400);
+    setTimeout(fireEvents, 800);
+  };
+
+  // Chuẩn hóa tên và bóc tách từ khóa tìm kiếm thông minh từ giọng nói
+  const extractCleanSearchTerm = (text: string) => {
+    let t = text.trim();
+    t = t.replace(/^(hãy |xin hãy |làm ơn |nhờ em |em ơi |trợ lý ơi |ơi )/i, '');
+    t = t.replace(/^(tìm kiếm|tìm|kiểm tra|tra cứu|cho tôi xem|cho xem|xem|mở|chuyển đến|chuyển sang|đi tới|hướng dẫn)\s+/i, '');
+    t = t.replace(/^(hộ gia đình|hộ dân|hộ|nhân khẩu|công dân|người dân|dân cư|cư dân|đảng viên|đồng chí|bác|ông|bà|anh|chị|em|cụ|hội viên ccb|cựu chiến binh|mạnh thường quân|nhà|sổ hộ|số hộ)\s+/i, '');
+    t = t.replace(/^(tên là|tên|có tên|số cccd|cccd|số căn cước|căn cước)\s+/i, '');
+    return t.trim();
+  };
+
+  const formatDisplayName = (str: string) => {
+    if (!str) return '';
+    return str.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
+  };
+
   // 6. Xử lý câu lệnh đàm thoại thông minh
   const handleUserQuery = async (query: string) => {
     if (!query.trim()) return;
@@ -438,40 +510,233 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     setSearchResults([]);
     setEditingResident(null);
 
-    // 1. QUỸ NỘP PHƯỜNG
-    if (
-      qLower.includes('nộp phường') ||
-      qLower.includes('quỹ phường') ||
-      (qLower.includes('quỹ') && qLower.includes('phường')) ||
-      (qLower.includes('chuyển') && qLower.includes('phường'))
-    ) {
-      const resp = 'Dạ, em mở quỹ nộp phường ngay ạ!';
-      setAssistantText(resp);
-      speakVietnameseAudio(resp);
-      onNavigate('ward-funds');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+    const term = extractCleanSearchTerm(query);
+    const hasSearchKeyword = qLower.includes('tìm') || qLower.includes('kiểm tra') || qLower.includes('tra cứu') || qLower.includes('chuyển đến') || qLower.includes('xem');
+
+    // 0. ĐỔI GIỌNG NÓI TRỰC TIẾP QUA GIỌNG NÓI
+    if (qLower.includes('giọng nam minh') || qLower.includes('đổi giọng nam')) {
+      handleChangeVoice('namminh');
+      return;
+    }
+    if (qLower.includes('giọng hoài my') || qLower.includes('đổi giọng nữ')) {
+      handleChangeVoice('hoaimy');
+      return;
+    }
+    if (qLower.includes('giọng google') || qLower.includes('chị google')) {
+      handleChangeVoice('google');
       return;
     }
 
-    // 2. THU CHI TDP / TÀI CHÍNH TỔ DÂN PHỐ
+    // 1. TÌM KIẾM HOẶC CHUYỂN ĐẾN HỘ GIA ĐÌNH
+    // Ví dụ: "tìm kiếm hộ nguyễn kim tuyến", "tìm hộ nguyễn kim tuyến", "hộ nguyễn kim tuyến", hoặc đang ở tab hộ gia đình mà nói "tìm nguyễn kim tuyến"
+    if (
+      qLower.includes('hộ') || 
+      (currentTab === 'households' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['gia đình', 'dân', 'khẩu', 'này', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở danh sách hộ gia đình ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('households');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+
+      if (term.length >= 2) {
+        try {
+          const [households, residents] = await Promise.all([
+            db.getHouseholds(),
+            db.getResidents()
+          ]);
+          const qClean = term.toLowerCase().trim();
+
+          // Tìm theo chủ hộ hoặc số hộ
+          let matchedH = households.find(h => {
+            const head = residents.find(r => r.id === h.head_of_household_id || (r.household_id === h.id && r.is_head));
+            const headName = head?.full_name?.toLowerCase() || '';
+            const hkNum = (h.household_number || '').toLowerCase();
+            const addr = (h.address || '').toLowerCase();
+            return headName.includes(qClean) || hkNum.includes(qClean) || addr.includes(qClean);
+          });
+
+          // Nếu không khớp chủ hộ, tìm trong thành viên trong hộ
+          if (!matchedH) {
+            const memberMatch = residents.find(r => r.full_name?.toLowerCase().includes(qClean));
+            if (memberMatch) {
+              matchedH = households.find(h => h.id === memberMatch.household_id);
+            }
+          }
+
+          let headName = '';
+          if (matchedH) {
+            const head = residents.find(r => r.id === matchedH!.head_of_household_id || (r.household_id === matchedH!.id && r.is_head));
+            headName = head?.full_name || matchedH.household_number;
+          }
+
+          const displayName = headName || formatDisplayName(term);
+          const resp = matchedH
+            ? `Dạ, em chuyển đến hộ ông bà ${displayName} ngay đây ạ!`
+            : `Dạ, em đang tìm và chuyển đến hộ ${formatDisplayName(term)} ngay ạ!`;
+
+          setAssistantText(resp);
+          speakVietnameseAudio(resp);
+          triggerSearchAndJump('households', term, matchedH?.id);
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // 2. TÌM KIẾM HOẶC CHUYỂN ĐẾN NHÂN KHẨU / DÂN CƯ / CCCD
+    if (
+      qLower.includes('nhân khẩu') || 
+      qLower.includes('dân cư') || 
+      qLower.includes('công dân') || 
+      qLower.includes('căn cước') || 
+      qLower.includes('cccd') ||
+      (currentTab === 'residents' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['nhân khẩu', 'dân cư', 'công dân', 'hộ khẩu', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở danh sách nhân khẩu ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('residents');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+
+      if (term.length >= 2) {
+        try {
+          const residents = await db.getResidents();
+          const qClean = term.toLowerCase().trim();
+          const matchedR = residents.find(r => 
+            r.full_name?.toLowerCase().includes(qClean) ||
+            r.cccd?.includes(qClean) ||
+            r.phone?.includes(qClean)
+          );
+
+          const displayName = matchedR?.full_name || formatDisplayName(term);
+          const resp = matchedR 
+            ? `Dạ, em chuyển đến thông tin nhân khẩu ${displayName} ngay đây ạ!`
+            : `Dạ, em đang tìm nhân khẩu ${formatDisplayName(term)} ngay ạ!`;
+
+          setAssistantText(resp);
+          speakVietnameseAudio(resp);
+          triggerSearchAndJump('residents', term, matchedR?.id);
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // 3. TẠM TRÚ – TẠM VẮNG
+    if (
+      qLower.includes('tạm trú') || 
+      qLower.includes('tạm vắng') || 
+      qLower.includes('lưu trú') ||
+      (currentTab === 'residents-temp' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['tạm trú', 'tạm vắng', 'lưu trú', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở mục tạm trú tạm vắng ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('residents-temp');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến danh sách tạm trú của ${formatDisplayName(term)} ngay ạ!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      triggerSearchAndJump('residents-temp', term);
+      return;
+    }
+
+    // 4. BIẾN ĐỘNG DÂN CƯ
+    if (
+      qLower.includes('biến động') || 
+      qLower.includes('thay đổi dân cư') || 
+      qLower.includes('di biến động') ||
+      (currentTab === 'residents-changes' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['biến động', 'thay đổi', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở mục biến động dân cư ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('residents-changes');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em mở biến động dân cư của ${formatDisplayName(term)} ngay ạ!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      triggerSearchAndJump('residents-changes', term);
+      return;
+    }
+
+    // 5. THU CHI TDP / TÀI CHÍNH TỔ DÂN PHỐ / ĐÓNG QUỸ
     if (
       qLower.includes('thu chi') ||
       qLower.includes('tài chính') ||
       qLower.includes('quỹ tổ dân phố') ||
       qLower.includes('quỹ tdp') ||
       qLower.includes('sổ thu chi') ||
-      (qLower.includes('quỹ') && !qLower.includes('phường') && !qLower.includes('thủ quỹ'))
+      qLower.includes('tiền quỹ') ||
+      qLower.includes('đóng quỹ') ||
+      qLower.includes('nộp quỹ') ||
+      (currentTab === 'finance' && (hasSearchKeyword || term.length >= 2))
     ) {
-      const resp = 'Dạ, em mở thu chi tổ dân phố ngay ạ!';
+      const isPureNav = ['thu chi', 'tài chính', 'quỹ', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở thu chi tổ dân phố ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('finance');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến mục thu chi của ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('finance');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('finance', term);
       return;
     }
 
-    // 3. THỦ QUỸ
-    if (qLower.includes('thủ quỹ') || qLower.includes('tiền mặt') || qLower.includes('bàn giao quỹ')) {
+    // 6. QUỸ NỘP PHƯỜNG
+    if (
+      qLower.includes('nộp phường') ||
+      qLower.includes('quỹ phường') ||
+      (qLower.includes('quỹ') && qLower.includes('phường')) ||
+      (currentTab === 'ward-funds' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['quỹ', 'phường', 'nộp phường', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở quỹ nộp phường ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('ward-funds');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến quỹ nộp phường của ${formatDisplayName(term)} ngay ạ!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      triggerSearchAndJump('ward-funds', term);
+      return;
+    }
+
+    // 7. THỦ QUỸ
+    if (
+      qLower.includes('thủ quỹ') || 
+      qLower.includes('tiền mặt') || 
+      qLower.includes('bàn giao quỹ') ||
+      (currentTab === 'treasurer' && (hasSearchKeyword || term.length >= 2))
+    ) {
       const resp = 'Dạ, em mở mục thủ quỹ ngay ạ!';
       setAssistantText(resp);
       speakVietnameseAudio(resp);
@@ -480,102 +745,157 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 4. MẠNH THƯỜNG QUÂN / TÀI TRỢ / ỦNG HỘ
+    // 8. MẠNH THƯỜNG QUÂN / TÀI TRỢ / ỦNG HỘ
     if (
       qLower.includes('mạnh thường quân') ||
       qLower.includes('tài trợ') ||
       qLower.includes('ủng hộ') ||
       qLower.includes('đóng góp') ||
-      qLower.includes('xã hội hóa')
+      qLower.includes('xã hội hóa') ||
+      (currentTab === 'sponsors' && (hasSearchKeyword || term.length >= 2))
     ) {
-      const resp = 'Dạ, em mở danh sách mạnh thường quân ngay ạ!';
+      const isPureNav = ['mạnh thường quân', 'tài trợ', 'ủng hộ', 'đóng góp', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở danh sách mạnh thường quân ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('sponsors');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến danh sách ủng hộ của ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('sponsors');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('sponsors', term);
       return;
     }
 
-    // 5. TẠM TRÚ – TẠM VẮNG
-    if (qLower.includes('tạm trú') || qLower.includes('tạm vắng') || qLower.includes('lưu trú')) {
-      const resp = 'Dạ, em mở mục tạm trú tạm vắng ngay ạ!';
-      setAssistantText(resp);
-      speakVietnameseAudio(resp);
-      onNavigate('residents-temp');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-      return;
-    }
-
-    // 6. BIẾN ĐỘNG DÂN CƯ
-    if (qLower.includes('biến động') || qLower.includes('thay đổi dân cư') || qLower.includes('di biến động')) {
-      const resp = 'Dạ, em mở mục biến động dân cư ngay ạ!';
-      setAssistantText(resp);
-      speakVietnameseAudio(resp);
-      onNavigate('residents-changes');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-      return;
-    }
-
-    // 7. HỘ GIA ĐÌNH / SỔ HỘ
-    if (qLower.includes('hộ gia đình') || qLower.includes('hộ dân') || qLower.includes('sổ hộ') || qLower.includes('quản lý hộ')) {
-      const resp = 'Dạ, em mở danh sách hộ gia đình ngay ạ!';
-      setAssistantText(resp);
-      speakVietnameseAudio(resp);
-      onNavigate('households');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-      return;
-    }
-
-    // 8. NHÂN KHẨU / DÂN CƯ / SỔ HỘ KHẨU
+    // 9. HỘI NGƯỜI CAO TUỔI / MỪNG THỌ
     if (
-      qLower.includes('nhân khẩu') ||
-      qLower.includes('hộ khẩu') ||
-      qLower.includes('dân cư') ||
-      qLower.includes('cư dân') ||
-      qLower.includes('công dân')
+      qLower.includes('người cao tuổi') ||
+      qLower.includes('cao tuổi') ||
+      qLower.includes('người già') ||
+      qLower.includes('mừng thọ') ||
+      (currentTab === 'elderly' && (hasSearchKeyword || term.length >= 2))
     ) {
-      const resp = 'Dạ, em mở danh sách nhân khẩu ngay ạ!';
+      const isPureNav = ['người cao tuổi', 'cao tuổi', 'mừng thọ', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở hội người cao tuổi ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('elderly');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến danh sách người cao tuổi ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('residents');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('elderly', term);
       return;
     }
 
-    // 9. BẢN ĐỒ SỐ DÂN CƯ
-    if (qLower.includes('bản đồ') || qLower.includes('vị trí')) {
-      const resp = 'Dạ, em mở bản đồ số dân cư ngay ạ!';
+    // 10. HỘI CỰU CHIẾN BINH
+    if (
+      qLower.includes('cựu chiến binh') || 
+      qLower.includes('ccb') ||
+      (currentTab === 'ccb' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['cựu chiến binh', 'ccb', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở hội cựu chiến binh ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('ccb');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến hội viên cựu chiến binh ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('map');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('ccb', term);
       return;
     }
 
-    // 10. GIA ĐÌNH CHÍNH SÁCH / HỘ NGHÈO
+    // 11. CHI BỘ ĐẢNG (ĐẢNG VIÊN)
+    if (
+      qLower.includes('chi bộ') ||
+      qLower.includes('đảng viên') ||
+      qLower.includes('đảng bộ') ||
+      qLower.includes('hồ sơ đảng') ||
+      (currentTab === 'party-cell' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['chi bộ', 'đảng viên', 'đảng bộ', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở mục chi bộ Đảng ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('party-cell');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến thông tin đảng viên ${formatDisplayName(term)} ngay ạ!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      triggerSearchAndJump('party-cell', term);
+      return;
+    }
+
+    // 12. GIA ĐÌNH CHÍNH SÁCH / HỘ NGHÈO
     if (
       qLower.includes('chính sách') ||
       qLower.includes('hộ nghèo') ||
       qLower.includes('cận nghèo') ||
       qLower.includes('người có công') ||
-      qLower.includes('thương binh')
+      qLower.includes('thương binh') ||
+      (currentTab === 'policy' && (hasSearchKeyword || term.length >= 2))
     ) {
-      const resp = 'Dạ, em mở mục gia đình chính sách ngay ạ!';
+      const isPureNav = ['chính sách', 'hộ nghèo', 'cận nghèo', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở mục gia đình chính sách ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('policy');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em chuyển đến gia đình chính sách ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('policy');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('policy', term);
       return;
     }
 
-    // 11. AN NINH TRẬT TỰ / TỔ LIÊN GIA
+    // 13. BẢN ĐỒ SỐ DÂN CƯ
+    if (
+      qLower.includes('bản đồ') || 
+      qLower.includes('vị trí') ||
+      (currentTab === 'map' && (hasSearchKeyword || term.length >= 2))
+    ) {
+      const isPureNav = ['bản đồ', 'vị trí', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở bản đồ số dân cư ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('map');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em định vị ${formatDisplayName(term)} trên bản đồ ngay ạ!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      triggerSearchAndJump('map', term);
+      return;
+    }
+
+    // 14. AN NINH TRẬT TỰ / TỔ LIÊN GIA
     if (
       qLower.includes('an ninh') ||
       qLower.includes('trật tự') ||
       qLower.includes('tổ liên gia') ||
       qLower.includes('phòng cháy') ||
       qLower.includes('pccc') ||
-      qLower.includes('camera')
+      qLower.includes('camera') ||
+      (currentTab === 'security' && (hasSearchKeyword || term.length >= 2))
     ) {
       const resp = 'Dạ, em mở mục an ninh trật tự ngay ạ!';
       setAssistantText(resp);
@@ -585,13 +905,14 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 12. Y TẾ & SỨC KHỎE
+    // 15. Y TẾ & SỨC KHỎE
     if (
       qLower.includes('y tế') ||
       qLower.includes('sức khỏe') ||
       qLower.includes('tiêm chủng') ||
       qLower.includes('bảo hiểm y tế') ||
-      qLower.includes('khám bệnh')
+      qLower.includes('khám bệnh') ||
+      (currentTab === 'healthcare' && (hasSearchKeyword || term.length >= 2))
     ) {
       const resp = 'Dạ, em mở mục y tế và sức khỏe ngay ạ!';
       setAssistantText(resp);
@@ -601,7 +922,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 13. HỌP CHI BỘ ĐẢNG (BIÊN BẢN / LỊCH HỌP)
+    // 16. HỌP CHI BỘ ĐẢNG (BIÊN BẢN / LỊCH HỌP)
     if (
       qLower.includes('họp chi bộ') ||
       qLower.includes('lịch họp chi bộ') ||
@@ -617,7 +938,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 14. BAN CÔNG TÁC MẶT TRẬN (LỊCH HỌP / BIÊN BẢN)
+    // 17. BAN CÔNG TÁC MẶT TRẬN (LỊCH HỌP / BIÊN BẢN)
     if (
       qLower.includes('mặt trận') ||
       qLower.includes('họp mặt trận') ||
@@ -631,7 +952,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 15. HỌP TỔ DÂN PHỐ / BIÊN BẢN HỌP
+    // 18. HỌP TỔ DÂN PHỐ / BIÊN BẢN HỌP
     if (
       qLower.includes('họp tổ') ||
       qLower.includes('cuộc họp') ||
@@ -643,46 +964,6 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       setAssistantText(resp);
       speakVietnameseAudio(resp);
       onNavigate('meetings');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-      return;
-    }
-
-    // 16. CHI BỘ ĐẢNG (ĐẢNG VIÊN)
-    if (
-      qLower.includes('chi bộ') ||
-      qLower.includes('đảng viên') ||
-      qLower.includes('đảng bộ') ||
-      qLower.includes('hồ sơ đảng')
-    ) {
-      const resp = 'Dạ, em mở mục chi bộ Đảng ngay ạ!';
-      setAssistantText(resp);
-      speakVietnameseAudio(resp);
-      onNavigate('party-cell');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-      return;
-    }
-
-    // 17. HỘI NGƯỜI CAO TUỔI
-    if (
-      qLower.includes('người cao tuổi') ||
-      qLower.includes('cao tuổi') ||
-      qLower.includes('người già') ||
-      qLower.includes('mừng thọ')
-    ) {
-      const resp = 'Dạ, em mở hội người cao tuổi ngay ạ!';
-      setAssistantText(resp);
-      speakVietnameseAudio(resp);
-      onNavigate('elderly');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-      return;
-    }
-
-    // 18. HỘI CỰU CHIẾN BINH
-    if (qLower.includes('cựu chiến binh') || qLower.includes('ccb')) {
-      const resp = 'Dạ, em mở hội cựu chiến binh ngay ạ!';
-      setAssistantText(resp);
-      speakVietnameseAudio(resp);
-      onNavigate('ccb');
       setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
       return;
     }
@@ -721,15 +1002,22 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     if (
       qLower.includes('công văn phường') ||
       qLower.includes('công văn của phường') ||
-      qLower.includes('văn bản phường') ||
-      qLower.includes('thông báo phường') ||
-      (qLower.includes('công văn') && qLower.includes('phường'))
+      (qLower.includes('công văn') && qLower.includes('phường')) ||
+      (currentTab === 'ward-documents' && (hasSearchKeyword || term.length >= 2))
     ) {
-      const resp = 'Dạ, em mở công văn của phường ngay ạ!';
+      const isPureNav = ['công văn', 'phường', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở công văn của phường ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('ward-documents');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em tìm công văn phường về ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('ward-documents');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('ward-documents', term);
       return;
     }
 
@@ -737,13 +1025,22 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     if (
       qLower.includes('văn bản') ||
       qLower.includes('nghị quyết') ||
-      qLower.includes('công văn')
+      qLower.includes('công văn') ||
+      (currentTab === 'documents' && (hasSearchKeyword || term.length >= 2))
     ) {
-      const resp = 'Dạ, em mở văn bản nghị quyết ngay ạ!';
+      const isPureNav = ['văn bản', 'nghị quyết', 'công văn', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở văn bản nghị quyết ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('documents');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em tìm văn bản ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('documents');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('documents', term);
       return;
     }
 
@@ -772,18 +1069,27 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 26. PHẢN ÁNH KIẾN NÒI
+    // 26. PHẢN ÁNH KIẾN NGHỊ
     if (
       qLower.includes('phản ánh') ||
       qLower.includes('kiến nghị') ||
       qLower.includes('khiếu nại') ||
-      qLower.includes('tâm tư')
+      qLower.includes('tâm tư') ||
+      (currentTab === 'complaints' && (hasSearchKeyword || term.length >= 2))
     ) {
-      const resp = 'Dạ, em mở mục phản ánh kiến nghị ngay ạ!';
+      const isPureNav = ['phản ánh', 'kiến nghị', 'khiếu nại', ''].includes(term.toLowerCase()) && !hasSearchKeyword;
+      if (isPureNav) {
+        const resp = 'Dạ, em mở mục phản ánh kiến nghị ngay ạ!';
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        onNavigate('complaints');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+        return;
+      }
+      const resp = `Dạ, em tìm phản ánh kiến nghị về ${formatDisplayName(term)} ngay ạ!`;
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      onNavigate('complaints');
-      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
+      triggerSearchAndJump('complaints', term);
       return;
     }
 
@@ -826,70 +1132,53 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 15. LỆNH ĐỔI GIỌNG NÓI TRỰC TIẾP QUA GIỌNG NÓI
-    if (qLower.includes('giọng nam minh') || qLower.includes('đổi giọng nam')) {
-      handleChangeVoice('namminh');
-      return;
-    }
-    if (qLower.includes('giọng hoài my') || qLower.includes('đổi giọng nữ')) {
-      handleChangeVoice('hoaimy');
-      return;
-    }
-    if (qLower.includes('giọng google') || qLower.includes('chị google')) {
-      handleChangeVoice('google');
-      return;
-    }
+    // 30. TÌM KIẾM TỔNG QUÁT (Khi người dùng nói "tìm [tên]" mà chưa rõ phân hệ)
+    if (hasSearchKeyword && term.length >= 2) {
+      try {
+        const [households, residents] = await Promise.all([
+          db.getHouseholds(),
+          db.getResidents()
+        ]);
+        const qClean = term.toLowerCase().trim();
 
-    // 16. LỆNH TÌM KIẾM & TRA CỨU NHÂN KHẨU / CCCD
-    if (
-      qLower.includes('tìm') || 
-      qLower.includes('kiểm tra') || 
-      qLower.includes('tra cứu') || 
-      qLower.includes('ai tên') ||
-      qLower.includes('cccd') ||
-      qLower.includes('căn cước')
-    ) {
-      let searchTerm = qLower
-        .replace(/tìm kiếm/g, '')
-        .replace(/tìm hộ/g, '')
-        .replace(/tìm/g, '')
-        .replace(/kiểm tra nhân khẩu/g, '')
-        .replace(/kiểm tra thông tin/g, '')
-        .replace(/kiểm tra/g, '')
-        .replace(/tra cứu/g, '')
-        .replace(/ai tên là/g, '')
-        .replace(/ai tên/g, '')
-        .replace(/người tên/g, '')
-        .replace(/cho tôi/g, '')
-        .replace(/xem/g, '')
-        .trim();
+        // 1. Kiểm tra xem có khớp hộ gia đình nào không
+        const matchedH = households.find(h => {
+          const head = residents.find(r => r.id === h.head_of_household_id || (r.household_id === h.id && r.is_head));
+          return head?.full_name?.toLowerCase().includes(qClean) || (h.household_number || '').toLowerCase().includes(qClean);
+        });
 
-      if (searchTerm.length >= 2) {
-        try {
-          const residents = await db.getResidents();
-          const matched = residents.filter((r: Resident) => {
-            const nameMatch = r.full_name?.toLowerCase().includes(searchTerm);
-            const cccdMatch = r.cccd?.includes(searchTerm);
-            const dobMatch = r.dob?.includes(searchTerm);
-            return nameMatch || cccdMatch || dobMatch;
-          });
-
-          if (matched.length > 0) {
-            setSearchResults(matched.slice(0, 5));
-            const first = matched[0];
-            const resp = `Dạ, em tìm thấy ${first.full_name}, sinh ngày ${first.dob || 'chưa rõ'}, số CCCD là ${first.cccd || 'chưa có'}.`;
-            setAssistantText(resp);
-            speakVietnameseAudio(resp);
-            return;
-          } else {
-            const resp = `Dạ, em chưa tìm thấy ai khớp với từ khóa "${searchTerm}" ạ!`;
-            setAssistantText(resp);
-            speakVietnameseAudio(resp);
-            return;
-          }
-        } catch (e) {
-          console.error(e);
+        if (matchedH) {
+          const head = residents.find(r => r.id === matchedH.head_of_household_id || (r.household_id === matchedH.id && r.is_head));
+          const headName = head?.full_name || matchedH.household_number;
+          const resp = `Dạ, em chuyển đến hộ ông bà ${headName} ngay đây ạ!`;
+          setAssistantText(resp);
+          speakVietnameseAudio(resp);
+          triggerSearchAndJump('households', term, matchedH.id);
+          return;
         }
+
+        // 2. Kiểm tra xem có khớp nhân khẩu nào không
+        const matchedR = residents.find(r => 
+          r.full_name?.toLowerCase().includes(qClean) ||
+          r.cccd?.includes(qClean)
+        );
+
+        if (matchedR) {
+          const resp = `Dạ, em chuyển đến thông tin nhân khẩu ${matchedR.full_name} ngay đây ạ!`;
+          setAssistantText(resp);
+          speakVietnameseAudio(resp);
+          triggerSearchAndJump('residents', term, matchedR.id);
+          return;
+        }
+
+        // Mặc định chuyển sang danh sách nhân khẩu để tìm kiếm rộng
+        const resp = `Dạ, em tìm kiếm thông tin của ${formatDisplayName(term)} ngay ạ!`;
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        triggerSearchAndJump('residents', term);
+        return;
+      } catch (e) {
+        console.error(e);
       }
     }
 

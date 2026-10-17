@@ -19,6 +19,36 @@ const Documents = () => {
   const [docs, setDocs] = useState<Document[]>([]);
   const [searchInput, setSearchInput] = useState('');
   const searchTerm = useDeferredValue(searchInput);
+
+  useEffect(() => {
+    const handleDocsSearch = (detail: any) => {
+      if (!detail) return;
+      const query = typeof detail === 'string' ? detail : detail?.query || detail?.name || '';
+      if (query) {
+        setSearchInput(query);
+      }
+    };
+
+    const onDocsEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      handleDocsSearch(customEvent.detail);
+    };
+
+    window.addEventListener('highlight-documents', onDocsEvent);
+
+    try {
+      const pendingRaw = localStorage.getItem('assistant_pending_search');
+      if (pendingRaw) {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.tab === 'documents' && Date.now() - pending.timestamp < 6000) {
+          localStorage.removeItem('assistant_pending_search');
+          handleDocsSearch(pending);
+        }
+      }
+    } catch {}
+
+    return () => window.removeEventListener('highlight-documents', onDocsEvent);
+  }, []);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
 
