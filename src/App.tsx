@@ -6013,6 +6013,7 @@ const App = () => {
             onNavigate={(tab) => {
               setActiveTab(tab);
               localStorage.setItem('active_tab', tab);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             userRole={userRole}
           />
