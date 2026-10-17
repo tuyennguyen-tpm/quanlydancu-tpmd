@@ -13,6 +13,7 @@ import {
   Radio,
   RadioTower,
   Play,
+  Square,
   Key,
   ExternalLink,
   Eye,
@@ -110,6 +111,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
   const captionTimerRef = useRef<any>(null);
 
   const recognitionRef = useRef<any>(null);
+  const handleUserQueryRef = useRef<((query: string) => Promise<void>) | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const isSpeakingRef = useRef<boolean>(false);
   const isListeningRef = useRef<boolean>(false);
@@ -196,23 +198,10 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
   const currentSpeakingTextRef = useRef<string>('');
 
-  // 🌟 HÀM CẮT LỜI / NGẮT TIẾNG TRỢ LÝ NGAY LẬP TỨC (0.05 giây)
-  const interruptSpeaking = useCallback(() => {
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause();
-      audioPlayerRef.current.currentTime = 0;
-    }
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    setIsSpeaking(false);
-    isSpeakingRef.current = false;
-    currentSpeakingTextRef.current = '';
-  }, []);
-
-  // 2. Tự động khởi động lại Micro khi rảnh tay (KHÔNG bị chặn khi trợ lý đang nói)
+  // 1. Tự động bật/tắt Micro an toàn (TUYỆT ĐỐI KHÔNG BẬT KHI TRỢ LÝ ĐANG NÓI ĐỂ CHỐNG HÚ VỌNG TỪ LOA)
   const startListeningSafely = useCallback(() => {
     if (!isAutoHandsFreeRef.current) return;
+    if (isSpeakingRef.current) return; // Đang nói -> Tuyệt đối không bật mic
     try {
       if (recognitionRef.current && !isListeningRef.current) {
         recognitionRef.current.start();
@@ -226,6 +215,31 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         recognitionRef.current.abort();
       }
     } catch (e) {}
+  }, []);
+
+  // 🌟 HÀM CẮT LỜI / NGẮT TIẾNG TRỢ LÝ TỨC THÌ (0.01 giây) VÀ MỞ LẠI MIC ĐỂ NGƯỜI DÙNG NÓI
+  const interruptSpeaking = useCallback(() => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.currentTime = 0;
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+    isSpeakingRef.current = false;
+    currentSpeakingTextRef.current = '';
+
+    // Khi người dùng bấm cắt lời hoặc gõ phím Cách -> mở mic lại ngay sau 80ms để đón câu nói mới
+    if (isAutoHandsFreeRef.current) {
+      setTimeout(() => {
+        try {
+          if (recognitionRef.current && !isListeningRef.current) {
+            recognitionRef.current.start();
+          }
+        } catch (e) {}
+      }, 80);
+    }
   }, []);
 
   // Quản lý danh sách giọng nói của trình duyệt (hỗ trợ Edge Natural Nam Minh & Hoài My)
@@ -337,10 +351,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     setShowCaption(true);
     currentSpeakingTextRef.current = textToSpeak.toLowerCase().trim();
 
-    // DUY TRÌ MICRO ĐỂ NGƯỜI DÙNG CÓ THỂ NÓI XEN VÀO / CẮT LỜI BẤT CỨ LÚC NÀO
-    if (isAutoHandsFreeRef.current && !isListeningRef.current) {
-      setTimeout(startListeningSafely, 200);
-    }
+    // 🌟 QUY TẮC VÀNG CHỐNG THU NGƯỢC GIỌNG TRỢ LÝ:
+    // TẮT MICRO NGAY KHI TRỢ LÝ BẮT ĐẦU NÓI ĐỂ KHÔNG BỊ THU VỌNG TỪ LOA MÁY TÍNH VÀO MIC
+    stopListeningSafely();
 
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
@@ -355,8 +368,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       setIsSpeaking(false);
       isSpeakingRef.current = false;
       currentSpeakingTextRef.current = '';
+      // Trợ lý nói xong -> tự động mở lại mic sau 350ms để phòng im ắng và người dùng nói tiếp tự nhiên
       if (isAutoHandsFreeRef.current) {
-        setTimeout(startListeningSafely, 300);
+        setTimeout(startListeningSafely, 350);
       }
     };
 
@@ -448,30 +462,22 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       };
 
       recognition.onresult = (event: any) => {
+        // NẾU TRỢ LÝ ĐANG NÓI: HỦY BỎ NGAY, TUYỆT ĐỐI KHÔNG XỬ LÝ ĐỂ TRÁNH THU TIẾNG TỪ LOA VÀO MIC!
+        if (isSpeakingRef.current) {
+          return;
+        }
+
         let currentTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
           currentTranscript += event.results[i][0].transcript;
         }
         setLiveTranscript(currentTranscript);
 
-        const clean = currentTranscript.toLowerCase().trim();
-
-        // 🌟 FULL-DUPLEX BARGE-IN: NGẮT LỜI TRỢ LÝ NGAY KHI NGƯỜI DÙNG CẤT TIẾNG
-        if (isSpeakingRef.current && clean.length >= 2) {
-          const spoken = currentSpeakingTextRef.current;
-          const isSelfEcho = spoken && spoken.includes(clean) && clean.length < 8;
-          if (!isSelfEcho) {
-            // Người dùng đang nói xen vào -> Dừng ngay giọng trợ lý!
-            interruptSpeaking();
-          }
-        }
-
         if (event.results[0].isFinal) {
           const finalQuery = currentTranscript.trim();
           setLiveTranscript('');
-          if (finalQuery.length > 1) {
-            interruptSpeaking();
-            handleUserQuery(finalQuery);
+          if (finalQuery.length > 1 && handleUserQueryRef.current) {
+            handleUserQueryRef.current(finalQuery);
           }
         }
       };
@@ -482,7 +488,8 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         if (event.error !== 'no-speech' && event.error !== 'aborted') {
           console.warn('[Micro Error]', event.error);
         }
-        if (isAutoHandsFreeRef.current) {
+        // Chỉ tự bật lại micro khi trợ lý KHÔNG ĐANG NÓI
+        if (isAutoHandsFreeRef.current && !isSpeakingRef.current) {
           setTimeout(startListeningSafely, 800);
         }
       };
@@ -490,7 +497,8 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       recognition.onend = () => {
         setIsListening(false);
         isListeningRef.current = false;
-        if (isAutoHandsFreeRef.current) {
+        // CHỈ TỰ ĐỘNG BẬT LẠI MICRO KHI TRỢ LÝ KHÔNG ĐANG NÓI
+        if (isAutoHandsFreeRef.current && !isSpeakingRef.current) {
           setTimeout(startListeningSafely, 300);
         }
       };
@@ -507,7 +515,34 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         } catch (e) {}
       }
     };
-  }, []);
+  }, [startListeningSafely]);
+
+  // 🌟 PHÍM TẮT THÔNG MINH: Bấm phím CÁCH (Spacebar) hoặc Esc để ngắt lời trợ lý ngay lập tức và nói ngay
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput = target && (
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.isContentEditable
+      );
+      
+      // Bấm phím CÁCH khi không gõ chữ trong ô nhập liệu -> Ngắt lời trợ lý tức thì
+      if (e.code === 'Space' && !isInput) {
+        if (isSpeakingRef.current) {
+          e.preventDefault();
+          interruptSpeaking();
+        }
+      } else if (e.key === 'Escape') {
+        if (isSpeakingRef.current) {
+          interruptSpeaking();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [interruptSpeaking]);
 
   // Hàm điều hướng và kích hoạt tìm kiếm / cuộn sáng tức thì tới đối tượng ở bất kỳ tab nào
   const triggerSearchAndJump = (targetTab: string, term: string, targetId?: string) => {
@@ -1593,6 +1628,8 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     speakVietnameseAudio(defaultResp);
   };
 
+  handleUserQueryRef.current = handleUserQuery;
+
 
   // 7. Lưu chỉnh sửa nhân khẩu trực tiếp vào CSDL Supabase
   const handleSaveEdit = async () => {
@@ -2023,7 +2060,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
               whiteSpace: 'nowrap',
               background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
               color: 'white',
-              padding: '5px 12px',
+              padding: '6px 14px',
               borderRadius: '20px',
               fontSize: '0.74rem',
               fontWeight: '700',
@@ -2036,10 +2073,10 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
               zIndex: 100,
               animation: 'bounceTap 1.2s infinite'
             }}
-            title="Bấm hoặc nói xen vào để cắt lời trợ lý"
+            title="Bấm vào đây hoặc nhấn phím CÁCH (Space) để cắt lời và nói ngay"
           >
-            <Mic size={13} className="pulse" />
-            <span>Nói xen vào / Bấm ngắt lời</span>
+            <Square size={11} fill="white" />
+            <span>🛑 Bấm / Phím Cách để ngắt lời</span>
           </div>
         )}
         {/* Nút nhắc mở tiếng nếu trình duyệt chặn autoplay */}
