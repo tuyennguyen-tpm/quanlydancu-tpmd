@@ -17,11 +17,24 @@ import {
   Key,
   ExternalLink,
   Eye,
-  EyeOff
+  EyeOff,
+  Brain,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { db } from '../services/db';
 import type { Resident } from '../types';
-import { askAssistantAI, getGeminiApiKey, setGeminiApiKey, askGemini } from '../services/ai';
+import { 
+  askAssistantAI, 
+  getGeminiApiKey, 
+  setGeminiApiKey, 
+  askGemini,
+  getAssistantMemories,
+  saveAssistantMemory,
+  removeAssistantMemory,
+  clearAssistantMemories,
+  type AssistantMemory
+} from '../services/ai';
 
 interface VirtualAssistantProps {
   isSidebarOpen: boolean;
@@ -98,18 +111,22 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
   const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model'; text: string }[]>(() => {
     try {
-      const saved = sessionStorage.getItem('assistant_chat_history');
+      const saved = localStorage.getItem('assistant_chat_history');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   });
 
+  const [memories, setMemories] = useState<AssistantMemory[]>(() => getAssistantMemories());
+  const [showMemoriesModal, setShowMemoriesModal] = useState<boolean>(false);
+  const [newMemoryInput, setNewMemoryInput] = useState<string>('');
+
   const appendToChatHistory = useCallback((role: 'user' | 'model', text: string) => {
     setChatHistory(prev => {
-      const next = [...prev, { role, text }].slice(-10);
+      const next = [...prev, { role, text }].slice(-30);
       try {
-        sessionStorage.setItem('assistant_chat_history', JSON.stringify(next));
+        localStorage.setItem('assistant_chat_history', JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -306,19 +323,36 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
   // Phát trực tiếp qua Google TTS bằng thẻ Audio HTML5 (không dùng fetch để tránh chặn CORS)
   const playViaGoogleAudio = useCallback((textToSpeak: string, currentVoice: VoiceOption, onFinish: () => void) => {
-    const sentences = textToSpeak.match(/[^.,!?;:]+[.,!?;:]*/g) || [textToSpeak];
+    // Tách câu theo dấu ngắt câu tự nhiên (. ! ? \n) để giữ câu nói trọn vẹn, không ngắt quãng ở từng dấu phẩy
+    const rawSentences = textToSpeak.split(/(?<=[.!?\n])\s+/).filter(Boolean);
     const chunks: string[] = [];
     let currentChunk = '';
-    for (const s of sentences) {
-      if ((currentChunk + ' ' + s).length <= 130) {
+    for (const s of rawSentences) {
+      if ((currentChunk + ' ' + s).length <= 140) {
         currentChunk += (currentChunk ? ' ' : '') + s.trim();
       } else {
         if (currentChunk) chunks.push(currentChunk.trim());
-        currentChunk = s.trim();
+        // Nếu một câu đơn quá dài trên 140 ký tự, tách nhẹ theo dấu phẩy hoặc khoảng trắng
+        if (s.length > 140) {
+          const subParts = s.match(/[^,;]+[,;]?/g) || [s];
+          let subChunk = '';
+          for (const sp of subParts) {
+            if ((subChunk + ' ' + sp).length <= 140) {
+              subChunk += (subChunk ? ' ' : '') + sp.trim();
+            } else {
+              if (subChunk) chunks.push(subChunk.trim());
+              subChunk = sp.trim();
+            }
+          }
+          if (subChunk) chunks.push(subChunk.trim());
+          currentChunk = '';
+        } else {
+          currentChunk = s.trim();
+        }
       }
     }
     if (currentChunk) chunks.push(currentChunk.trim());
-    if (chunks.length === 0) chunks.push(textToSpeak.slice(0, 130));
+    if (chunks.length === 0) chunks.push(textToSpeak.slice(0, 140));
 
     let chunkIdx = 0;
     const playNext = () => {
@@ -340,9 +374,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       audioPlayerRef.current = audio;
 
       if (currentVoice === 'namminh') {
-        audio.playbackRate = 0.92;
+        audio.playbackRate = 0.95;
       } else if (currentVoice === 'hoaimy') {
-        audio.playbackRate = 1.05;
+        audio.playbackRate = 1.02;
       } else {
         audio.playbackRate = 1.0;
       }
@@ -438,7 +472,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       utterance.voice = viVoiceObj;
       utterance.lang = 'vi-VN';
       utterance.rate = 1.0;
-      utterance.pitch = currentVoice === 'namminh' ? 0.9 : 1.1;
+      utterance.pitch = 1.0; // Giữ nguyên độ cao tự nhiên của giọng Neural AI cao cấp, không bị biến dạng
       utterance.onstart = () => {
         setIsSpeaking(true);
         isSpeakingRef.current = true;
@@ -658,75 +692,114 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     return str.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
   };
 
-  // Nhận diện câu hỏi, giao tiếp, tâm sự, trò chuyện tự nhiên (không phải lệnh tìm kiếm dữ liệu)
-  const isConversationalQuery = (text: string) => {
-    const t = text.toLowerCase().trim();
+  // Kiểm tra xem câu nói có phải là lệnh tìm kiếm dữ liệu / chuyển tab rõ ràng hay không
+  const isExplicitSearchOrNavigationCommand = (text: string) => {
+    const q = text.toLowerCase().trim();
+
+    // Nếu là câu hỏi, dặn dò, tâm sự, chào hỏi, chia sẻ cảm xúc, hỏi ký ức -> Chắc chắn là ĐÀM THOẠI TRÒ CHUYỆN!
     if (
-      t.endsWith('?') ||
-      t.includes('không bạn') ||
-      t.includes('không em') ||
-      t.includes('được không') ||
-      t.includes('được ko') ||
-      t.includes('có được không') ||
-      t.includes('có được ko') ||
-      t.includes('có thể không') ||
-      t.includes('thế nào') ||
-      t.includes('sao vậy') ||
-      t.includes('sao thế') ||
-      t.includes('sao nhỉ') ||
-      t.includes('là gì') ||
-      t.includes('là ai') ||
-      t.includes('ai đó') ||
-      t.includes('ở đâu') ||
-      t.includes('khi nào') ||
-      t.includes('tại sao') ||
-      t.includes('làm sao') ||
-      t.includes('bao nhiêu') ||
-      t.includes('như thế nào') ||
-      t.includes('nói chuyện') ||
-      t.includes('giao tiếp') ||
-      t.includes('tự nhiên') ||
-      t.includes('như người thật') ||
-      t.includes('người thật') ||
-      t.includes('tâm sự') ||
-      t.includes('kể chuyện') ||
-      t.includes('đọc thơ') ||
-      t.includes('hát') ||
-      t.includes('chào') ||
-      t.includes('alo') ||
-      t.includes('ơi') ||
-      t.includes('bạn là ai') ||
-      t.includes('em là ai') ||
-      t.includes('tên gì') ||
-      t.includes('mấy tuổi') ||
-      t.includes('khỏe không') ||
-      t.includes('khỏe ko') ||
-      t.includes('ăn cơm') ||
-      t.includes('thời tiết') ||
-      t.includes('hôm nay') ||
-      t.includes('giúp tôi') ||
-      t.includes('giúp mình') ||
-      t.includes('cho hỏi') ||
-      t.includes('cho tôi hỏi') ||
-      t.includes('hướng dẫn') ||
-      t.includes('làm được gì') ||
-      t.includes('chức năng gì') ||
-      t.includes('nghe rõ không') ||
-      t.includes('nghe được không') ||
-      t.includes('hiểu không') ||
-      t.includes('hiểu ko') ||
-      t.includes('thông minh không') ||
-      t.startsWith('bạn có ') ||
-      t.startsWith('em có ') ||
-      t.startsWith('chị có ')
+      q.endsWith('?') ||
+      q.includes('nhé') ||
+      q.includes('nhỉ') ||
+      q.includes('không em') ||
+      q.includes('không bạn') ||
+      q.includes('hôm nay') ||
+      q.includes('ngày mai') ||
+      q.includes('tối nay') ||
+      q.includes('ghi nhớ') ||
+      q.includes('nhớ giúp') ||
+      q.includes('nhớ nhé') ||
+      q.includes('còn nhớ') ||
+      q.includes('vừa nói') ||
+      q.includes('anh tên') ||
+      q.includes('tâm sự') ||
+      q.includes('kể chuyện') ||
+      q.includes('nói chuyện') ||
+      q.includes('người thật') ||
+      q.includes('chào') ||
+      q.includes('mệt') ||
+      q.includes('khỏe') ||
+      q.includes('cảm ơn') ||
+      q.includes('làm sao') ||
+      q.includes('tại sao') ||
+      q.includes('thế nào') ||
+      q.includes('cho hỏi') ||
+      q.includes('ăn cơm') ||
+      q.includes('thời tiết') ||
+      q.includes('sổ tay')
     ) {
+      return false;
+    }
+
+    // Các tiền tố tìm kiếm / điều hướng rõ ràng
+    const explicitPrefixes = [
+      'tìm kiếm hộ ', 'tìm hộ ', 'tra cứu hộ ', 'xem hộ ',
+      'tìm kiếm nhân khẩu ', 'tìm nhân khẩu ', 'tra cứu nhân khẩu ', 'xem nhân khẩu ',
+      'tìm cccd ', 'tra cứu cccd ', 'số cccd ', 'tìm kiếm cccd ',
+      'chuyển sang ', 'chuyển đến ', 'mở tab ', 'mở màn hình ', 'mở trang ', 'đi tới '
+    ];
+    if (explicitPrefixes.some(p => q.startsWith(p))) return true;
+
+    // Nếu đang ở tab households/residents mà câu bắt đầu bằng "tìm " hoặc "tra cứu "
+    if ((currentTab === 'households' || currentTab === 'residents') && (q.startsWith('tìm ') || q.startsWith('tra cứu '))) {
       return true;
     }
+
     return false;
   };
 
-  const handleSmartConversationResponse = (q: string): string => {
+  const handleSmartConversationResponse = (q: string, history: { role: 'user' | 'model'; text: string }[] = []): string => {
     const vName = voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'Trợ lý Ảo';
+
+    // 0. Ghi nhớ trực tiếp khi người dùng dặn dò
+    if (
+      q.startsWith('em nhớ giúp') || 
+      q.startsWith('nhớ giúp anh') || 
+      q.startsWith('ghi nhớ giúp') || 
+      q.startsWith('nhớ là') || 
+      q.includes('nhớ nhé') ||
+      q.includes('ghi nhớ nhé')
+    ) {
+      const cleanNote = q.replace(/^(em nhớ giúp anh|ghi nhớ giúp anh|nhớ giúp anh|em nhớ là|nhớ là|ghi nhớ là|em nhớ|nhớ)\s+/i, '').trim();
+      if (cleanNote) {
+        saveAssistantMemory({ category: 'task', content: cleanNote });
+        setMemories(getAssistantMemories());
+        return `Dạ vâng anh Tuyến ơi, em đã ghi nhớ kỹ vào sổ tay rồi nhé: "${cleanNote}". Anh Tuyến cứ yên tâm làm việc nha!`;
+      }
+    }
+
+    // 0.1 Hỏi về trí nhớ, sổ tay ký ức, dặn dò
+    if (
+      q.includes('nhớ được gì') ||
+      q.includes('nhớ gì về anh') ||
+      q.includes('nhớ những gì') ||
+      q.includes('dặn gì') ||
+      q.includes('lịch gì') ||
+      q.includes('ngày mai anh có') ||
+      q.includes('sổ tay')
+    ) {
+      const mems = getAssistantMemories();
+      if (mems.length > 0) {
+        const topMems = mems.slice(0, 3).map(m => m.content).join('. ');
+        return `Dạ, em nhớ hết mọi điều anh Tuyến dặn rồi ạ! Trong sổ tay em đang ghi nhớ: ${topMems}. Anh Tuyến cứ yên tâm nhé!`;
+      }
+      return 'Dạ, hiện tại trong sổ tay em chưa có ghi chú mới nào của anh Tuyến. Anh có việc gì cần dặn dò, lên lịch hay lưu ý cứ bảo em ghi nhớ giúp anh nhé!';
+    }
+
+    // 0.2 Hỏi câu vừa nói
+    if (q.includes('vừa nói gì') || q.includes('anh nói gì') || q.includes('câu vừa rồi')) {
+      const userMsgs = history.filter(h => h.role === 'user');
+      if (userMsgs.length >= 2) {
+        const prev = userMsgs[userMsgs.length - 2].text;
+        return `Dạ, vừa nãy anh Tuyến vừa nói là: "${prev}" đấy ạ! Em luôn chú ý lắng nghe từng lời của anh nhé!`;
+      }
+      return 'Dạ, em đang lắng nghe anh rất rõ ràng đây ạ! Anh Tuyến cần em hỗ trợ việc gì cứ nói với em nhé!';
+    }
+
+    // 0.3 Hỏi về danh tính anh Tuyến
+    if (q.includes('anh tên là gì') || q.includes('anh là ai') || q.includes('anh làm gì')) {
+      return 'Dạ, anh là anh Nguyễn Kim Tuyến - Tổ trưởng tâm huyết, gương mẫu của Tổ dân phố Quảng Giao chúng ta đấy ạ!';
+    }
 
     // 1. Phản hồi khi người dùng góp ý về độ thông minh, chưa hiểu, chê, khen
     if (
@@ -736,10 +809,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       q.includes('ngốc') ||
       q.includes('kém') ||
       q.includes('dở') ||
-      q.includes('nâng cấp') ||
-      q.includes('bộ não')
+      q.includes('nâng cấp')
     ) {
-      return `Dạ, em xin lắng nghe góp ý của anh Tuyến ạ! Em luôn học hỏi mỗi ngày để hiểu anh sâu sắc hơn. Để mở khóa toàn bộ trí tuệ nhân tạo Gemini Flash miễn phí 100%, anh bấm vào biểu tượng ngôi sao ✨ dưới chân em để dán mã khoá vào nhé! Khi đó em sẽ đối đáp siêu thông minh như người thật ngay ạ!`;
+      return `Dạ, em xin lắng nghe góp ý của anh Tuyến ạ! Em luôn học hỏi mỗi ngày để hiểu anh sâu sắc hơn. Để trợ lý đối đáp siêu thông minh và ghi nhớ vô tận, anh bấm vào biểu tượng ngôi sao ✨ dưới chân em để kiểm tra kết nối Gemini AI nhé!`;
     }
 
     if (
@@ -750,7 +822,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       q.includes('được đấy') ||
       q.includes('hay quá')
     ) {
-      return `Dạ em cảm ơn anh Tuyến nhiều lắm ạ! Được anh khen là em có thêm nhiều động lực để đồng hành hỗ trợ công việc của tổ dân phố mình thật tốt ạ!`;
+      return `Dạ em cảm ơn anh Tuyến nhiều lắm ạ! Được anh khen là em vui cả ngày luôn, em sẽ luôn đồng hành hỗ trợ công việc của tổ dân phố mình thật tốt ạ!`;
     }
 
     // 2. Cảm xúc, mệt mỏi, áp lực công việc, hỏi thăm tâm trạng
@@ -762,11 +834,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       q.includes('nhức đầu') ||
       q.includes('đuối')
     ) {
-      return `Dạ, công việc quản lý tổ dân phố hàng trăm hộ dân, trăm công nghìn việc nên vất vả lắm anh ạ. Anh Tuyến nhớ nghỉ ngơi một chút, uống ngụm nước ấm nhé. Mọi khó khăn giấy tờ cứ để em san sẻ cùng anh ạ!`;
+      return `Dạ, công việc tổ trưởng quản lý hàng nghìn nhân khẩu, trăm công nghìn việc nên vất vả lắm anh Tuyến ạ. Anh nhớ nghỉ ngơi một chút, uống ngụm nước ấm nhé. Mọi khó khăn giấy tờ sổ sách cứ để em san sẻ cùng anh!`;
     }
 
     if (q.includes('buồn') || q.includes('chán') || q.includes('tâm sự')) {
-      return `Dạ, cuộc sống ai cũng có những lúc chùng lòng xuống anh ạ. Em tuy là trợ lý ảo nhưng luôn ở đây 24/7 để lắng nghe anh chia sẻ. Có chuyện gì anh cứ kể em nghe nhé!`;
+      return `Dạ, cuộc sống và công việc ai cũng có những lúc chùng lòng xuống anh ạ. Em luôn ở đây 24/7 để lắng nghe anh chia sẻ. Có chuyện gì trăn trở anh cứ tâm sự với em nhé!`;
     }
 
     if (q.includes('ăn cơm') || q.includes('ăn gì') || q.includes('đói')) {
@@ -808,35 +880,31 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       q.includes('như người thật') ||
       q.includes('người thật')
     ) {
-      return `Dạ được chứ ạ! Em có thể nói chuyện, lắng nghe và hiểu mọi câu nói của anh chị một cách tự nhiên như người thật. Em vừa có thể giúp anh chị điều hành ứng dụng, tra cứu dữ liệu dân cư, vừa có thể tâm sự và giải đáp mọi câu hỏi. Anh chị cứ thoải mái nói chuyện với em nhé!`;
+      return `Dạ vâng anh Tuyến ơi! Em luôn trò chuyện cùng anh tự nhiên, sống động như một người trợ lý kề cận ngoài đời thực. Em vừa có thể giúp anh điều hành ứng dụng, tra cứu dữ liệu, vừa ghi nhớ mọi việc anh dặn và cùng anh tâm sự. Anh cứ thoải mái trò chuyện với em nhé!`;
     }
 
     if (q.includes('hiểu không') || q.includes('hiểu ko') || q.includes('có hiểu')) {
-      return 'Dạ em hiểu rất rõ từng câu nói và yêu cầu của anh chị ạ! Em luôn chú ý lắng nghe để phục vụ anh chị tốt nhất.';
+      return 'Dạ em hiểu rất rõ từng câu nói và yêu cầu của anh Tuyến ạ! Em luôn chú ý lắng nghe để phục vụ anh tốt nhất.';
     }
 
     if (q.includes('nghe rõ') || q.includes('nghe được') || q.includes('có nghe')) {
-      return 'Dạ em nghe anh chị rất rõ ràng và mạch lạc ạ! Giọng nói của anh chị rất ấm áp, em đang tiếp tục lắng nghe đây ạ.';
+      return 'Dạ em nghe anh rất rõ ràng và mạch lạc ạ! Giọng nói của anh rất ấm áp, em đang tiếp tục lắng nghe đây ạ.';
     }
 
     if (q.includes('em là ai') || q.includes('bạn là ai') || q.includes('tên gì') || q.includes('giới thiệu') || q.includes('mấy tuổi')) {
-      return `Dạ, em là ${vName} - Trợ lý ảo thông minh của Tổ dân phố Quảng Giao. Em luôn đồng hành cùng anh Nguyễn Kim Tuyến và bà con để phục vụ công tác quản lý dân cư và giải đáp mọi thông tin ạ!`;
-    }
-
-    if (q.includes('làm được gì') || q.includes('chức năng') || q.includes('giúp gì') || q.includes('hướng dẫn')) {
-      return `Dạ, em có thể giúp anh chị: tìm kiếm nhanh hộ gia đình, tra cứu nhân khẩu, kiểm tra các khoản quỹ thu chi, mở bản đồ số dân cư, lập biên bản họp, tra cứu công văn và hướng dẫn các thủ tục hành chính như VNeID hay Căn cước công dân đấy ạ!`;
+      return `Dạ, em là ${vName} - Trợ lý ảo thông minh của Tổ dân phố Quảng Giao. Em luôn đồng hành kề cận bên anh Nguyễn Kim Tuyến và bà con để phục vụ công tác quản lý dân cư và giải đáp mọi thông tin ạ!`;
     }
 
     if (q.includes('chào') || q.includes('alo') || q.includes('ơi') || q.includes('hello') || q.includes('hi ')) {
-      return 'Dạ, em chào anh chị! Em đang lắng nghe đây ạ, anh chị cần em hỗ trợ việc gì cứ nói với em nhé!';
+      return 'Dạ, em chào anh Tuyến ạ! Em đang lắng nghe đây, hôm nay anh cần em hỗ trợ công việc gì cứ bảo em nhé!';
     }
 
     if (q.includes('khỏe không') || q.includes('khỏe ko') || q.includes('hôm nay thế nào') || q.includes('vui không')) {
-      return 'Dạ em rất khỏe và luôn tràn đầy năng lượng để phục vụ anh chị! Chúc anh chị một ngày làm việc thật vui vẻ, thuận lợi và ngập tràn may mắn ạ!';
+      return 'Dạ em rất khỏe và luôn tràn đầy năng lượng để phục vụ anh! Chúc anh Tuyến một ngày làm việc thật vui vẻ, thuận lợi và ngập tràn may mắn ạ!';
     }
 
     if (q.includes('cảm ơn') || q.includes('cám ơn') || q.includes('thank')) {
-      return 'Dạ không có gì đâu anh! Được hỗ trợ anh và bà con là niềm vui lớn nhất của em ạ!';
+      return 'Dạ không có gì đâu anh Tuyến! Được hỗ trợ anh và bà con tổ dân phố là niềm vui lớn nhất của em ạ!';
     }
 
     if (q.includes('tạm biệt') || q.includes('đi ngủ') || q.includes('bye')) {
@@ -844,11 +912,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     }
 
     if (q.includes('thời tiết') || q.includes('mưa không') || q.includes('nắng không') || q.includes('nhiệt độ')) {
-      return 'Dạ, thời tiết hôm nay nhìn chung khá dễ chịu và thuận lợi cho công việc, anh chị ra ngoài nhớ chú ý giữ gìn sức khỏe nhé ạ!';
+      return 'Dạ, thời tiết hôm nay nhìn chung khá thuận lợi cho công việc, anh Tuyến ra ngoài nhớ chú ý giữ gìn sức khỏe nhé ạ!';
     }
 
     if (q.includes('đọc thơ') || q.includes('bài thơ') || q.includes('thơ') || q.includes('hát') || q.includes('kể chuyện')) {
-      return 'Dạ, em xin đọc tặng anh chị câu thơ này nhé: "Quảng Giao đoàn kết nghĩa tình - Dân cư ấm no, xóm làng văn minh" ạ!';
+      return 'Dạ, em xin đọc tặng anh câu thơ này nhé: "Quảng Giao đoàn kết nghĩa tình - Dân cư ấm no, xóm làng văn minh" ạ!';
     }
 
     if (q.includes('vneid') || q.includes('định danh') || q.includes('mức 2') || q.includes('mức 1')) {
@@ -871,7 +939,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return 'Dạ, theo quy định, các cụ cao tuổi từ đủ 80 tuổi trở lên không có lương hưu sẽ được hưởng trợ cấp xã hội hàng tháng và thẻ BHYT miễn phí của Nhà nước ạ!';
     }
 
-    return 'Dạ, em hiểu ý của anh Tuyến rồi ạ. Em luôn ở đây đồng hành và lắng nghe anh. Anh cần tra cứu dữ liệu hay hỗ trợ công việc gì cứ bảo em nhé!';
+    return 'Dạ vâng anh Tuyến ơi, em luôn ở đây đồng hành và lắng nghe anh. Anh cần tra cứu dữ liệu hay có việc gì cần dặn dò cứ bảo em nhé!';
   };
 
   // 6. Xử lý câu lệnh đàm thoại thông minh
@@ -884,7 +952,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
     const term = extractCleanSearchTerm(query);
     const hasSearchKeyword = qLower.includes('tìm') || qLower.includes('kiểm tra') || qLower.includes('tra cứu') || qLower.includes('chuyển đến') || qLower.includes('xem');
-    const isQuestionOrChat = isConversationalQuery(query);
+    const isExplicitSearch = isExplicitSearchOrNavigationCommand(query);
 
     // 0. ĐỔI GIỌNG NÓI TRỰC TIẾP QUA GIỌNG NÓI
     if (qLower.includes('giọng nam minh') || qLower.includes('đổi giọng nam')) {
@@ -909,13 +977,28 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 0.2 NẾU LÀ CÂU HỎI / GIAO TIẾP / ĐÀM THOẠI -> TRẢ LỜI TỰ NHIÊN NHƯ NGƯỜI THẬT, TUYỆT ĐỐI KHÔNG TÌM KIẾM HỘ DÂN
-    if (isQuestionOrChat) {
-      appendToChatHistory('user', query);
+    // 0.15 XEM SỔ TAY KÝ ỨC
+    if (qLower.includes('mở sổ tay') || qLower.includes('xem ký ức') || qLower.includes('sổ tay ghi nhớ') || qLower.includes('mở trí nhớ')) {
+      setMemories(getAssistantMemories());
+      setShowMemoriesModal(true);
+      const resp = `Dạ, em mở ngay sổ tay ghi nhớ đây ạ! Hiện em đang lưu ${memories.length} điều anh Tuyến dặn nhé!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    // 0.2 NẾU LÀ GIAO TIẾP / ĐÀM THOẠI / HỎI ĐÁP / DẶN DÒ / TÂM SỰ -> GỬI TỚI GEMINI AI CÙNG BỘ NHỚ KÝ ỨC
+    if (!isExplicitSearch) {
+      const updatedHistory = [...chatHistory, { role: 'user' as const, text: query }].slice(-30);
+      setChatHistory(updatedHistory);
+      try {
+        localStorage.setItem('assistant_chat_history', JSON.stringify(updatedHistory));
+      } catch {}
+
       const geminiKey = getGeminiApiKey();
       if (geminiKey) {
         try {
-          const aiRes = await askAssistantAI(query, currentTab, chatHistory, {
+          const aiRes = await askAssistantAI(query, currentTab, updatedHistory, {
             totalHouseholds: totalHouseholdsCount,
             totalResidents: totalResidentsCount,
             temporaryResidents: totalTempCount,
@@ -924,7 +1007,14 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
           if (aiRes && aiRes.spokenReply) {
             setAssistantText(aiRes.spokenReply);
             speakVietnameseAudio(aiRes.spokenReply);
-            appendToChatHistory('model', aiRes.spokenReply);
+            const fullHistory = [...updatedHistory, { role: 'model' as const, text: aiRes.spokenReply }].slice(-30);
+            setChatHistory(fullHistory);
+            try {
+              localStorage.setItem('assistant_chat_history', JSON.stringify(fullHistory));
+            } catch {}
+
+            // Cập nhật lại memories trong UI nếu có ký ức mới
+            setMemories(getAssistantMemories());
 
             if (aiRes.action) {
               if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
@@ -937,47 +1027,20 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
             return;
           }
         } catch (err) {
-          console.warn('[Gemini call skipped, falling back to local engine]', err);
+          console.warn('[Gemini Assistant Error, fallback to smart local engine]:', err);
         }
       }
 
-      // Xử lý đàm thoại tự nhiên nội bộ như người thật
-      const resp = handleSmartConversationResponse(qLower);
+      // Xử lý đàm thoại tự nhiên nội bộ như người thật với bộ nhớ
+      const resp = handleSmartConversationResponse(qLower, updatedHistory);
       setAssistantText(resp);
       speakVietnameseAudio(resp);
-      appendToChatHistory('model', resp);
-      return;
-    }
-
-    // 0.3 GỌI TRỢ LÝ AI GEMINI CHO CÁC YÊU CẦU PHỨC TẠP KHÁC NẾU CÓ KEY
-    const geminiKey = getGeminiApiKey();
-    if (geminiKey) {
+      const fullHistory = [...updatedHistory, { role: 'model' as const, text: resp }].slice(-30);
+      setChatHistory(fullHistory);
       try {
-        const aiRes = await askAssistantAI(query, currentTab, chatHistory, {
-          totalHouseholds: totalHouseholdsCount,
-          totalResidents: totalResidentsCount,
-          temporaryResidents: totalTempCount,
-          partyMembers: totalPartyCount
-        });
-        if (aiRes && aiRes.spokenReply) {
-          setAssistantText(aiRes.spokenReply);
-          speakVietnameseAudio(aiRes.spokenReply);
-          appendToChatHistory('user', query);
-          appendToChatHistory('model', aiRes.spokenReply);
-
-          if (aiRes.action) {
-            if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
-              triggerSearchAndJump(aiRes.action.tab, aiRes.action.query || term);
-            } else if (aiRes.action.tab) {
-              onNavigate(aiRes.action.tab);
-              setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-            }
-          }
-          return;
-        }
-      } catch (err) {
-        console.warn('[Gemini call skipped, falling back to local engine]', err);
-      }
+        localStorage.setItem('assistant_chat_history', JSON.stringify(fullHistory));
+      } catch {}
+      return;
     }
 
     // 1. TÌM KIẾM HOẶC CHUYỂN ĐẾN HỘ GIA ĐÌNH
@@ -2340,6 +2403,29 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
 
           <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
 
+          {/* Nút xem Sổ tay Ký ức / Trí nhớ */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMemories(getAssistantMemories());
+              setShowMemoriesModal(true);
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#c084fc',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: 0
+            }}
+            title={`Sổ tay ký ức (${memories.length} điều đã ghi nhớ)`}
+          >
+            <Brain size={12} />
+          </button>
+
+          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+
           {/* Nút cài đặt Google Gemini AI */}
           <button
             onClick={(e) => {
@@ -2584,6 +2670,241 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
                 }}
               >
                 Lưu cài đặt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SỔ TAY KÝ ỨC / TRÍ NHỚ CỦA TRỢ LÝ ẢO */}
+      {showMemoriesModal && (
+        <div 
+          onClick={() => setShowMemoriesModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 100000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0',
+              animation: 'fadeInUp 0.25s ease-out'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}>
+                  <Brain size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
+                    Sổ tay Ký ức Trợ lý Ảo
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                    Trợ lý tự động ghi nhớ và đối đáp theo thông tin của anh Tuyến
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowMemoriesModal(false)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748b'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Input thêm nhanh ghi nhớ */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <input
+                type="text"
+                value={newMemoryInput}
+                onChange={(e) => setNewMemoryInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newMemoryInput.trim()) {
+                    const updated = saveAssistantMemory({ category: 'note', content: newMemoryInput.trim() });
+                    setMemories(updated);
+                    setNewMemoryInput('');
+                  }
+                }}
+                placeholder="Dặn dò trợ lý ghi nhớ điều gì... (VD: Chiều mai 3h nộp báo cáo)"
+                style={{
+                  flex: 1,
+                  padding: '9px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.85rem',
+                  outline: 'none'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newMemoryInput.trim()) {
+                    const updated = saveAssistantMemory({ category: 'note', content: newMemoryInput.trim() });
+                    setMemories(updated);
+                    setNewMemoryInput('');
+                  }
+                }}
+                style={{
+                  background: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '0 14px',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <Plus size={16} />
+                <span>Nhớ</span>
+              </button>
+            </div>
+
+            {/* Danh sách ký ức cuộn */}
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '140px' }}>
+              {memories.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                  Chưa có ký ức nào được lưu. Bạn có thể nói với trợ lý: "Em nhớ giúp anh là..." hoặc gõ dặn dò ở ô trên nhé!
+                </div>
+              ) : (
+                memories.map((m) => (
+                  <div 
+                    key={m.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      borderRadius: '12px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0'
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          background: m.category === 'task' ? '#dbeafe' : m.category === 'profile' ? '#fef3c7' : '#ede9fe',
+                          color: m.category === 'task' ? '#1e40af' : m.category === 'profile' ? '#92400e' : '#6b21a8'
+                        }}>
+                          {m.category === 'task' ? 'LỊCH HẸN / VIỆC CẦN LÀM' : m.category === 'profile' ? 'THÔNG TIN CÁ NHÂN' : 'GHI CHÚ'}
+                        </span>
+                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
+                          {new Date(m.createdAt).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#1e293b', lineHeight: 1.4 }}>
+                        {m.content}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = removeAssistantMemory(m.id);
+                        setMemories(updated);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.7
+                      }}
+                      title="Xóa ký ức này"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer modal */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Anh có chắc muốn xóa toàn bộ sổ tay ký ức của trợ lý không?')) {
+                    clearAssistantMemories();
+                    setMemories([]);
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                Xóa toàn bộ ký ức
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMemoriesModal(false)}
+                style={{
+                  background: '#0f172a',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '7px 18px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Đóng
               </button>
             </div>
           </div>

@@ -36,12 +36,100 @@ function getAiClient(): GoogleGenAI | null {
 
 const SUPPORTED_MODELS = [
   "gemini-3.8-flash",
-  "gemini-3.7-flash",
   "gemini-3.5-flash",
   "gemini-flash-latest",
   "gemini-flash-lite-latest",
-  "gemini-2.5-flash"
+  "gemini-2.0-flash"
 ];
+
+export interface AssistantMemory {
+  id: string;
+  category: 'profile' | 'task' | 'note' | 'community' | 'preference';
+  content: string;
+  createdAt: string;
+}
+
+/**
+ * Lấy danh sách ký ức / sổ tay ghi nhớ lâu dài của Trợ lý Ảo từ localStorage
+ */
+export function getAssistantMemories(): AssistantMemory[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('assistant_memories');
+    if (!raw) {
+      const defaults: AssistantMemory[] = [
+        {
+          id: 'mem_user_role',
+          category: 'profile',
+          content: 'Người dùng là anh Nguyễn Kim Tuyến - Tổ trưởng tâm huyết của Tổ dân phố Quảng Giao.',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 'mem_work_spirit',
+          category: 'profile',
+          content: 'Anh Tuyến là cán bộ gương mẫu, luôn chu đáo, gần gũi và tận tụy chăm lo đời sống bà con tổ dân phố.',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem('assistant_memories', JSON.stringify(defaults));
+      return defaults;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Lưu một ký ức mới vào Sổ tay ghi nhớ dài hạn
+ */
+export function saveAssistantMemory(item: { category: AssistantMemory['category']; content: string }): AssistantMemory[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const current = getAssistantMemories();
+    const cleanContent = item.content.trim();
+    if (!cleanContent) return current;
+
+    const exists = current.some(m => m.content.toLowerCase() === cleanContent.toLowerCase());
+    if (exists) return current;
+
+    const newItem: AssistantMemory = {
+      id: 'mem_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      category: item.category,
+      content: cleanContent,
+      createdAt: new Date().toISOString()
+    };
+    const updated = [newItem, ...current].slice(0, 60);
+    localStorage.setItem('assistant_memories', JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Xóa một mục ghi nhớ theo ID
+ */
+export function removeAssistantMemory(id: string): AssistantMemory[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const current = getAssistantMemories();
+    const updated = current.filter(m => m.id !== id);
+    localStorage.setItem('assistant_memories', JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Xóa toàn bộ ký ức
+ */
+export function clearAssistantMemories(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('assistant_memories');
+  }
+}
 
 /**
  * Send a prompt to Gemini and return the generated text.
@@ -78,10 +166,14 @@ export interface AssistantResponse {
     tab: string;
     query?: string;
   };
+  newMemory?: {
+    category: AssistantMemory['category'];
+    content: string;
+  };
 }
 
 /**
- * Phân tích và trò chuyện thông minh bằng Gemini AI với bộ nhớ ngữ cảnh nhiều lượt thoại
+ * Phân tích và trò chuyện thông minh bằng Gemini AI với bộ nhớ ngữ cảnh nhiều lượt thoại và trí nhớ dài hạn
  */
 export async function askAssistantAI(
   userQuery: string, 
@@ -110,35 +202,57 @@ export async function askAssistantAI(
   const hhFormatted = extraContext?.totalHouseholds ? new Intl.NumberFormat('vi-VN').format(extraContext.totalHouseholds) : '1.252';
   const resFormatted = extraContext?.totalResidents ? new Intl.NumberFormat('vi-VN').format(extraContext.totalResidents) : '5.622';
   const tempFormatted = extraContext?.temporaryResidents !== undefined ? new Intl.NumberFormat('vi-VN').format(extraContext.temporaryResidents) : '3';
+  const partyFormatted = extraContext?.partyMembers ? new Intl.NumberFormat('vi-VN').format(extraContext.partyMembers) : 'đầy đủ';
 
-  const systemInstruction = `Bạn là Trợ lý ảo AI thông minh, chân thành của Tổ dân phố Quảng Giao, đang trò chuyện trực tiếp bằng giọng nói với anh Nguyễn Kim Tuyến (Tổ trưởng).
-Quy tắc trò chuyện như 2 người thật ngoài đời:
-1. Giao tiếp cực kỳ tự nhiên, sống động, ấm áp như hai người bạn hoặc người trợ lý thân cận ngồi nói chuyện trực tiếp. Xưng "Dạ, em...", gọi người dùng là "anh Tuyến" hoặc "anh".
-2. Dùng câu ngắn gọn, giàu ngữ điệu nói, có từ đệm tự nhiên (ví dụ: "Dạ em nghe anh...", "À đúng rồi anh Tuyến...", "Em hiểu ý anh rồi...", "Thế hả anh?").
-3. TUYỆT ĐỐI KHÔNG đọc bài luận dài dòng, không gạch đầu dòng máy móc. Trả lời cô đọng chỉ từ 1 đến 2 câu ngắn (tối đa 3 câu khi cần giải thích thủ tục) để phát âm giọng nói nghe vừa vặn, đối đáp qua lại liên tục.
-4. Bạn thấu hiểu mọi cảm xúc, tiếng lóng, khẩu ngữ, biết nói đùa nhẹ nhàng, biết an ủi khi mệt mỏi, và am hiểu toàn diện mọi lĩnh vực trên thế giới (VNeID, CCCD, thủ tục hành chính, đời sống, pháp luật, gia đình...).
-5. Nếu anh Tuyến ngắt lời hoặc đổi đề tài, hãy ứng biến tự nhiên theo câu mới nhất của anh.
-6. Khi có yêu cầu xem/tìm kiếm trong ứng dụng, đính kèm thẻ: [ACTION:{"type":"navigate_and_search"|"navigate","tab":"households|residents|finance|ccb|elderly|party-cell|map|documents...","query":"..."}] ở cuối câu.
-7. QUY TẮC SỐ LIỆU DÂN CƯ: Khi anh Tuyến hỏi về số hộ gia đình, nhân khẩu, dân số hay tạm trú của TDP Quảng Giao, BẮT BUỘC phải dùng con số chính xác theo Bối cảnh hiển thị trên màn hình: đúng ${hhFormatted} hộ gia đình, ${resFormatted} nhân khẩu và ${tempFormatted} tạm trú tạm vắng. Tuyệt đối không được nói số cũ hay tự đoán số khác.
+  // Lấy toàn bộ sổ tay ký ức đã lưu
+  const memories = getAssistantMemories();
+  const memoriesListStr = memories.length > 0
+    ? memories.map((m, i) => `${i + 1}. [${m.category}] ${m.content}`).join('\n')
+    : '(Chưa có thông tin ghi nhớ bổ sung)';
+
+  const systemInstruction = `Bạn là Trợ lý ảo AI thông minh, chân thành, tâm lý và chu đáo của Tổ dân phố Quảng Giao, đang trò chuyện trực tiếp bằng giọng nói hai chiều với anh Nguyễn Kim Tuyến (Tổ trưởng).
+Quy tắc ứng xử và giao tiếp như người thật ngoài đời (100% tự nhiên, sinh động, truyền cảm):
+
+1. PHONG CÁCH GIAO TIẾP NHƯ NGƯỜI THẬT:
+- Nói chuyện tự nhiên, ấm áp, nhịp nhàng như người trợ lý thân cận hoặc người bạn đồng hành kề cận bên anh Tuyến.
+- Xưng hô lịch sự, gần gũi: gọi là "anh Tuyến" hoặc "anh", xưng "em" hoặc "dạ em".
+- Dùng ngôn ngữ nói đời thường, câu từ có hồn, giàu ngữ điệu, có từ đệm cảm xúc tự nhiên (ví dụ: "Dạ vâng anh...", "Ồ thế hả anh Tuyến...", "Em nghe anh đây ạ...", "Anh Tuyến yên tâm nhé...", "Đúng rồi anh ạ...", "Để em xem nào...").
+- TUYỆT ĐỐI KHÔNG nói giọng robot máy móc, không dùng các câu trả lời sẵn sáo rỗng, không đọc bài luận dài dòng hay gạch đầu dòng khô khan.
+- Độ dài câu nói: Vừa vặn để nghe giọng đọc truyền cảm (từ 2 đến 4 câu hoàn chỉnh, đủ tình cảm, sắc thái và ý tứ).
+- Thấu hiểu tâm tư: Hiểu công việc của người tổ trưởng nhiều vất vả, biết chúc mừng, động viên khi mệt mỏi, chia sẻ chân thành khi trò chuyện tâm sự.
+
+2. TRÍ NHỚ HOÀN HẢO VÀ GHI NHỚ MỌI THỨ:
+- Bạn có TRÍ NHỚ VỀ ANH TUYẾN, về mọi lời dặn dò, công việc, lịch hẹn, sự kiện ngõ xóm và thói quen cá nhân đã được ghi trong "SỔ TAY KÝ ỨC ĐÃ LƯU" bên dưới.
+- Khi anh Tuyến hỏi về những điều đã dặn, hỏi "Em nhớ gì về anh?", "Hôm qua anh bảo gì?", "Mai anh có lịch gì?", "Anh tên là gì, làm gì?", hãy kiểm tra ngay SỔ TAY KÝ ỨC và trả lời vanh vách, chính xác, tự nhiên.
+- NẾU ANH TUYẾN CHIA SẺ THÔNG TIN MỚI CẦN GHI NHỚ LÂU DÀI (lời dặn, lịch họp, kế hoạch, thông tin gia đình, cư dân, sở thích, việc cần làm, hoặc dặn "nhớ nhé", "ghi nhớ giúp anh"):
+BẮT BUỘC đính kèm thẻ ở cuối câu:
+[MEMORY:{"category":"task"|"profile"|"note"|"community"|"preference","content":"Nội dung tóm tắt cần ghi nhớ ngắn gọn, chính xác"}]
+Hệ thống sẽ tự động bóc tách lưu thẻ này vào sổ tay vĩnh viễn và không phát thẻ này ra loa.
+
+3. ĐIỀU HƯỚNG VÀ TRA CỨU TRONG HỆ THỐNG:
+- Khi anh Tuyến muốn mở màn hình, tra cứu dữ liệu (hộ dân, nhân khẩu, quỹ thu chi, bản đồ, cựu chiến binh, văn bản...), đính kèm thẻ: [ACTION:{"type":"navigate_and_search"|"navigate","tab":"households|residents|finance|ward-funds|sponsors|elderly|ccb|party-cell|map|documents|complaints...","query":"..."}] ở cuối câu.
+
+4. QUY TẮC SỐ LIỆU DÂN CƯ:
+- Khi anh Tuyến hỏi về số liệu TDP Quảng Giao, BẮT BUỘC dùng đúng con số thực tế: đúng ${hhFormatted} hộ gia đình, ${resFormatted} nhân khẩu, ${tempFormatted} tạm trú tạm vắng, ${partyFormatted} đảng viên.
+
+SỔ TAY KÝ ỨC ĐÃ LƯU VỀ ANH TUYẾN & TỔ DÂN PHỐ:
+${memoriesListStr}
 
 Bối cảnh thực tế CSDL TDP Quảng Giao:
-- Thời gian: ${nowStr}.
+- Thời gian hiện tại: ${nowStr}.
 - Đang ở phân hệ: ${currentTab}.
-- Số hộ gia đình: ${hhFormatted} hộ.
-- Tổng số nhân khẩu: ${resFormatted} người.
-- Tạm trú, tạm vắng: ${tempFormatted} người.
-${extraContext?.partyMembers ? `- Đảng viên: ${new Intl.NumberFormat('vi-VN').format(extraContext.partyMembers)} đồng chí.` : ''}`;
+- Số hộ: ${hhFormatted} | Nhân khẩu: ${resFormatted} | Tạm trú: ${tempFormatted}.`;
 
   try {
     for (const model of SUPPORTED_MODELS) {
       try {
-        // Xây dựng chuỗi hội thoại nhiều lượt thoại để AI có trí nhớ dài hạn
+        // Xây dựng chuỗi hội thoại nhiều lượt thoại liên tục để AI nhớ mạch trò chuyện
         let conversationPrompt = `${systemInstruction}\n\nLỊCH SỬ TRÒ CHUYỆN GẦN ĐÂY:\n`;
-        const recentHistory = history.slice(-6);
+        const recentHistory = history.slice(-16);
         for (const h of recentHistory) {
-          conversationPrompt += `${h.role === 'user' ? 'Người dùng' : 'Trợ lý'}: "${h.text}"\n`;
+          conversationPrompt += `${h.role === 'user' ? 'Người dùng (Anh Tuyến)' : 'Trợ lý (Em)'}: "${h.text}"\n`;
         }
-        conversationPrompt += `Người dùng vừa nói: "${userQuery}"\n\nHãy trả lời tự nhiên, ấm áp, thông minh như người thật:`;
+        conversationPrompt += `Người dùng (Anh Tuyến) vừa nói: "${userQuery}"\n\nHãy trả lời tự nhiên, ấm áp, thông minh, đúng mực như người thật:`;
 
         const response = await client.models.generateContent({
           model,
@@ -148,23 +262,42 @@ ${extraContext?.partyMembers ? `- Đảng viên: ${new Intl.NumberFormat('vi-VN'
         const rawText = response.text?.trim() || "";
         if (!rawText) continue;
 
-        // Bóc tách [ACTION:{...}] nếu có
-        const actionMatch = rawText.match(/\[ACTION:\s*(\{.*?\})\s*\]/is);
-        let action: AssistantResponse['action'] = undefined;
         let spokenReply = rawText;
 
+        // Bóc tách [ACTION:{...}] nếu có
+        let action: AssistantResponse['action'] = undefined;
+        const actionMatch = spokenReply.match(/\[ACTION:\s*(\{.*?\})\s*\]/is);
         if (actionMatch) {
           try {
             action = JSON.parse(actionMatch[1]);
-            spokenReply = rawText.replace(actionMatch[0], '').trim();
+            spokenReply = spokenReply.replace(actionMatch[0], '').trim();
           } catch (e) {
             console.warn('[Parse Assistant Action Error]', e);
           }
         }
 
+        // Bóc tách [MEMORY:{...}] nếu có và tự động ghi nhớ
+        let newMemory: AssistantResponse['newMemory'] = undefined;
+        const memoryMatch = spokenReply.match(/\[MEMORY:\s*(\{.*?\})\s*\]/is);
+        if (memoryMatch) {
+          try {
+            newMemory = JSON.parse(memoryMatch[1]);
+            spokenReply = spokenReply.replace(memoryMatch[0], '').trim();
+            if (newMemory && newMemory.content) {
+              saveAssistantMemory({
+                category: newMemory.category || 'note',
+                content: newMemory.content
+              });
+            }
+          } catch (e) {
+            console.warn('[Parse Assistant Memory Error]', e);
+          }
+        }
+
         return {
-          spokenReply: spokenReply || "Dạ, em đã nắm được rồi ạ!",
-          action
+          spokenReply: spokenReply || "Dạ, em nghe anh Tuyến rồi ạ!",
+          action,
+          newMemory
         };
       } catch (err: any) {
         console.warn(`[Gemini Assistant with ${model} error]:`, err?.message || err);
