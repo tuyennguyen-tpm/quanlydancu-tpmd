@@ -25,8 +25,8 @@ export function setGeminiApiKey(key: string): void {
   }
 }
 
-function getAiClient(): GoogleGenAI | null {
-  const key = getGeminiApiKey();
+function getAiClient(customKey?: string): GoogleGenAI | null {
+  const key = customKey || getGeminiApiKey();
   if (!key) return null;
   try {
     return new GoogleGenAI({ apiKey: key });
@@ -37,11 +37,12 @@ function getAiClient(): GoogleGenAI | null {
 }
 
 const SUPPORTED_MODELS = [
-  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash-lite",
   "gemini-3.5-flash",
-  "gemini-flash-latest",
-  "gemini-flash-lite-latest",
-  "gemini-2.0-flash"
+  "gemini-3.8-flash",
+  "gemini-flash-latest"
 ];
 
 export interface AssistantMemory {
@@ -138,23 +139,25 @@ export function clearAssistantMemories(): void {
  * Automatically tries available flash models with fallback.
  */
 export async function askGemini(prompt: string): Promise<string> {
-  const client = getAiClient();
-  if (!client) {
-    return "";
-  }
+  const primaryKey = getGeminiApiKey();
+  const keysToTry = primaryKey !== DEFAULT_GEMINI_KEY ? [primaryKey, DEFAULT_GEMINI_KEY] : [DEFAULT_GEMINI_KEY];
 
-  for (const model of SUPPORTED_MODELS) {
-    try {
-      const response = await client.models.generateContent({
-        model,
-        contents: prompt,
-      });
-      if (response && response.text) {
-        return response.text.trim();
+  for (const k of keysToTry) {
+    const client = getAiClient(k);
+    if (!client) continue;
+
+    for (const model of SUPPORTED_MODELS) {
+      try {
+        const response = await client.models.generateContent({
+          model,
+          contents: prompt,
+        });
+        if (response && response.text) {
+          return response.text.trim();
+        }
+      } catch (err: any) {
+        console.warn(`[Gemini API Error with model ${model}]:`, err?.message || err);
       }
-    } catch (err: any) {
-      console.warn(`[Gemini API Error with model ${model}]:`, err?.message || err);
-      // Try next model if quota or model error
     }
   }
 
@@ -189,8 +192,6 @@ export async function askAssistantAI(
     headName?: string;
   }
 ): Promise<AssistantResponse | null> {
-  const client = getAiClient();
-  if (!client) return null;
 
   const nowStr = new Date().toLocaleDateString('vi-VN', { 
     weekday: 'long', 
@@ -220,13 +221,17 @@ Quy tắc ứng xử và giao tiếp như người thật ngoài đời (100% t�
 - Xưng hô lịch sự, gần gũi: gọi là "anh Tuyến" hoặc "anh", xưng "em" hoặc "dạ em".
 - Dùng ngôn ngữ nói đời thường, câu từ có hồn, giàu ngữ điệu, có từ đệm cảm xúc tự nhiên (ví dụ: "Dạ vâng anh Tuyến ơi...", "Ồ thế hả anh...", "Em nghe anh đây ạ...", "Anh Tuyến yên tâm nhé...", "Đúng rồi anh ạ...", "Để em xem nào...", "À việc này thú vị lắm anh nhé...").
 - TUYỆT ĐỐI KHÔNG nói giọng robot máy móc, không dùng các câu trả lời sẵn sáo rỗng, không đọc bài luận dài dòng hay gạch đầu dòng khô khan.
-- Độ dài câu nói: Vừa vặn để nghe giọng đọc truyền cảm (từ 2 đến 4 câu hoàn chỉnh, giàu sức sống, diễn đạt lưu loát).
+- ĐỘ DÀI VÀ CHIỀU SÂU CÂU TRẢ LỜI:
+  + Đối với câu chào hỏi, đáp lễ, cập nhật thông thường: Trả lời ngắn gọn, ấm áp, nhịp nhàng (từ 2 đến 3 câu).
+  + Đối với câu hỏi về KIẾN THỨC, KHOA HỌC, ĐỜI SỐNG, LỊCH SỬ, THẾ GIỚI, BÁCH KHOA TOÀN THƯ, TÂM SỰ, HOẶC KHI ĐƯỢC HỎI VỀ ĐỘ THÔNG MINH, HIỂU BIẾT, THÔNG TIN:
+    HÃY TRẢ LỜI THÔNG MINH, SÂU SẮC, RÀNH RỌT, ĐẦY ĐỦ VÀ UYÊN BÁC như một siêu trí tuệ AI (tương tự Google Antigravity / Gemini Pro). Giải thích rõ ràng nguồn cơn, bản chất, phân tích thấu đáo với phong cách trò chuyện bằng lời nói tự nhiên, mượt mà, cuốn hút. Không được cắt cụt câu hay trả lời qua loa!
 - Thấu hiểu tâm tư: Hiểu công việc của người tổ trưởng nhiều vất vả, biết chúc mừng, động viên khi mệt mỏi, chia sẻ chân thành khi trò chuyện tâm sự.
 
 2. TRI THỨC BÁCH KHOA TOÀN DIỆN VỀ MỌI THỨ TRÊN THẾ GIỚI:
 - BẠN HIỂU BIẾT TOÀN DIỆN MỌI LĨNH VỰC TRÊN THẾ GIỚI: khoa học, vũ trụ, tự nhiên, sinh học, lịch sử thế giới và Việt Nam, địa lý, chính trị, y tế sức khỏe, văn hóa, danh lam thắng cảnh, ẩm thực, âm nhạc, văn học, thể thao, pháp luật, công nghệ và đời sống.
 - KHI ANH TUYẾN HỎI BẤT KỲ CÂU HỎI NÀO VỀ THẾ GIỚI HAY ĐỜI SỐNG (ví dụ: "Vì sao lá cây có màu xanh?", "Thủ đô của Úc là gì?", "Lịch sử chiến thắng Điện Biên Phủ", "Bí quyết ngủ ngon", "Ai là người giàu nhất thế giới?", "Món phở có nguồn gốc từ đâu?", "Hôm nay thời tiết thế nào?", "Kể một câu chuyện cười/câu chuyện cuộc sống..."):
 HÃY TRẢ LỜI CỰC KỲ THÔNG MINH, SÂU SẮC, RÀNH MẠCH VÀ CHUẨN XÁC 100%!
+- Khi anh Tuyến hỏi vì sao trước đây trợ lý chưa cập nhật thông tin hay chưa thông minh như mong đợi: Hãy giải thích chân thành và tự tin rằng hệ thống vừa được nâng cấp động cơ trí tuệ nhân tạo Gemini 3.7 Flash mới nhất của Google cùng bộ nhớ dài hạn, hiện tại em đã sẵn sàng trả lời thông minh, đầy đủ mọi kiến thức thế giới và đồng hành cùng anh!
 - Giữ phong cách đối thoại tự nhiên, giải thích dễ hiểu, cuốn hút, dí dỏm như một chuyên gia thông thái ngồi uống trà tâm sự cùng anh.
 - TUYỆT ĐỐI KHÔNG tự giới hạn mình chỉ biết việc tổ dân phố! Đối với tổ dân phố, bạn là trợ lý mẫn cán; đối với thế giới và đời sống, bạn là cuốn bách khoa toàn thư thông minh và người bạn tâm giao tuyệt vời của anh Tuyến.
 
@@ -252,64 +257,72 @@ Bối cảnh thực tế CSDL TDP Quảng Giao:
 - Đang ở phân hệ: ${currentTab}.
 - Số hộ: ${hhFormatted} | Nhân khẩu: ${resFormatted} | Tạm trú: ${tempFormatted}.`;
 
+  const primaryKey = getGeminiApiKey();
+  const keysToTry = primaryKey !== DEFAULT_GEMINI_KEY ? [primaryKey, DEFAULT_GEMINI_KEY] : [DEFAULT_GEMINI_KEY];
+
   try {
-    for (const model of SUPPORTED_MODELS) {
-      try {
-        // Xây dựng chuỗi hội thoại nhiều lượt thoại liên tục để AI nhớ mạch trò chuyện
-        let conversationPrompt = `${systemInstruction}\n\nLỊCH SỬ TRÒ CHUYỆN GẦN ĐÂY:\n`;
-        const recentHistory = history.slice(-16);
-        for (const h of recentHistory) {
-          conversationPrompt += `${h.role === 'user' ? 'Người dùng (Anh Tuyến)' : 'Trợ lý (Em)'}: "${h.text}"\n`;
-        }
-        conversationPrompt += `Người dùng (Anh Tuyến) vừa nói: "${userQuery}"\n\nHãy trả lời tự nhiên, ấm áp, thông minh, đúng mực như người thật:`;
+    for (const key of keysToTry) {
+      const client = getAiClient(key);
+      if (!client) continue;
 
-        const response = await client.models.generateContent({
-          model,
-          contents: conversationPrompt,
-        });
-
-        const rawText = response.text?.trim() || "";
-        if (!rawText) continue;
-
-        let spokenReply = rawText;
-
-        // Bóc tách [ACTION:{...}] nếu có
-        let action: AssistantResponse['action'] = undefined;
-        const actionMatch = spokenReply.match(/\[ACTION:\s*(\{.*?\})\s*\]/is);
-        if (actionMatch) {
-          try {
-            action = JSON.parse(actionMatch[1]);
-            spokenReply = spokenReply.replace(actionMatch[0], '').trim();
-          } catch (e) {
-            console.warn('[Parse Assistant Action Error]', e);
+      for (const model of SUPPORTED_MODELS) {
+        try {
+          // Xây dựng chuỗi hội thoại nhiều lượt thoại liên tục để AI nhớ mạch trò chuyện
+          let conversationPrompt = `${systemInstruction}\n\nLỊCH SỬ TRÒ CHUYỆN GẦN ĐÂY:\n`;
+          const recentHistory = history.slice(-16);
+          for (const h of recentHistory) {
+            conversationPrompt += `${h.role === 'user' ? 'Người dùng (Anh Tuyến)' : 'Trợ lý (Em)'}: "${h.text}"\n`;
           }
-        }
+          conversationPrompt += `Người dùng (Anh Tuyến) vừa nói: "${userQuery}"\n\nHãy trả lời tự nhiên, ấm áp, thông minh, đúng mực như người thật:`;
 
-        // Bóc tách [MEMORY:{...}] nếu có và tự động ghi nhớ
-        let newMemory: AssistantResponse['newMemory'] = undefined;
-        const memoryMatch = spokenReply.match(/\[MEMORY:\s*(\{.*?\})\s*\]/is);
-        if (memoryMatch) {
-          try {
-            newMemory = JSON.parse(memoryMatch[1]);
-            spokenReply = spokenReply.replace(memoryMatch[0], '').trim();
-            if (newMemory && newMemory.content) {
-              saveAssistantMemory({
-                category: newMemory.category || 'note',
-                content: newMemory.content
-              });
+          const response = await client.models.generateContent({
+            model,
+            contents: conversationPrompt,
+          });
+
+          const rawText = response.text?.trim() || "";
+          if (!rawText) continue;
+
+          let spokenReply = rawText;
+
+          // Bóc tách [ACTION:{...}] nếu có
+          let action: AssistantResponse['action'] = undefined;
+          const actionMatch = spokenReply.match(/\[ACTION:\s*(\{.*?\})\s*\]/is);
+          if (actionMatch) {
+            try {
+              action = JSON.parse(actionMatch[1]);
+              spokenReply = spokenReply.replace(actionMatch[0], '').trim();
+            } catch (e) {
+              console.warn('[Parse Assistant Action Error]', e);
             }
-          } catch (e) {
-            console.warn('[Parse Assistant Memory Error]', e);
           }
-        }
 
-        return {
-          spokenReply: spokenReply || "Dạ, em nghe anh Tuyến rồi ạ!",
-          action,
-          newMemory
-        };
-      } catch (err: any) {
-        console.warn(`[Gemini Assistant with ${model} error]:`, err?.message || err);
+          // Bóc tách [MEMORY:{...}] nếu có và tự động ghi nhớ
+          let newMemory: AssistantResponse['newMemory'] = undefined;
+          const memoryMatch = spokenReply.match(/\[MEMORY:\s*(\{.*?\})\s*\]/is);
+          if (memoryMatch) {
+            try {
+              newMemory = JSON.parse(memoryMatch[1]);
+              spokenReply = spokenReply.replace(memoryMatch[0], '').trim();
+              if (newMemory && newMemory.content) {
+                saveAssistantMemory({
+                  category: newMemory.category || 'note',
+                  content: newMemory.content
+                });
+              }
+            } catch (e) {
+              console.warn('[Parse Assistant Memory Error]', e);
+            }
+          }
+
+          return {
+            spokenReply: spokenReply || "Dạ, em nghe anh Tuyến rồi ạ!",
+            action,
+            newMemory
+          };
+        } catch (err: any) {
+          console.warn(`[Gemini Assistant with model ${model} error]:`, err?.message || err);
+        }
       }
     }
   } catch (err) {
