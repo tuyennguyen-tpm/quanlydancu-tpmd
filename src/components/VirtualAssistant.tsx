@@ -953,6 +953,8 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     const term = extractCleanSearchTerm(query);
     const hasSearchKeyword = qLower.includes('tìm') || qLower.includes('kiểm tra') || qLower.includes('tra cứu') || qLower.includes('chuyển đến') || qLower.includes('xem');
     const isExplicitSearch = isExplicitSearchOrNavigationCommand(query);
+    const isQuestionOrChat = !isExplicitSearch;
+    const geminiKey = getGeminiApiKey();
 
     // 0. ĐỔI GIỌNG NÓI TRỰC TIẾP QUA GIỌNG NÓI
     if (qLower.includes('giọng nam minh') || qLower.includes('đổi giọng nam')) {
