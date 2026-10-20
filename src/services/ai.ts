@@ -1,5 +1,6 @@
 // src/services/ai.ts
 import { GoogleGenAI } from "@google/genai";
+import { supabase, getSessionUserId } from "./db";
 
 const DEFAULT_GEMINI_KEY = "AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs";
 
@@ -15,13 +16,35 @@ export function getGeminiApiKey(): string {
   return DEFAULT_GEMINI_KEY;
 }
 
+/**
+ * Đồng bộ mã API Key lên Supabase bảng app_config để dùng chung cho mọi máy (văn phòng + nhà)
+ */
+export async function syncGeminiApiKeyToSupabase(key: string): Promise<void> {
+  try {
+    const uId = await getSessionUserId();
+    if (supabase && uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+      await supabase.from('app_config').upsert({
+        user_id: uId,
+        key: 'gemini_api_key',
+        value: key.trim(),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,key' });
+    }
+  } catch (e) {
+    console.warn('[Sync API Key to Supabase error]:', e);
+  }
+}
+
 export function setGeminiApiKey(key: string): void {
   if (typeof window !== 'undefined') {
-    if (key.trim()) {
-      localStorage.setItem('gemini_api_key', key.trim());
+    const cleanKey = key.trim();
+    if (cleanKey) {
+      localStorage.setItem('gemini_api_key', cleanKey);
     } else {
       localStorage.removeItem('gemini_api_key');
     }
+    syncGeminiApiKeyToSupabase(cleanKey);
+    window.dispatchEvent(new CustomEvent('gemini-key-changed'));
   }
 }
 
@@ -37,11 +60,10 @@ function getAiClient(customKey?: string): GoogleGenAI | null {
 }
 
 const SUPPORTED_MODELS = [
-  "gemini-3.7-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
   "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
   "gemini-flash-latest"
 ];
 
@@ -52,6 +74,106 @@ export interface AssistantMemory {
   createdAt: string;
 }
 
+const DEFAULT_MEMORIES: AssistantMemory[] = [
+  {
+    id: 'mem_user_role',
+    category: 'profile',
+    content: 'Người dùng là anh Nguyễn Kim Tuyến - Tổ trưởng tâm huyết của Tổ dân phố Quảng Giao.',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'mem_work_spirit',
+    category: 'profile',
+    content: 'Anh Tuyến là cán bộ gương mẫu, luôn chu đáo, gần gũi và tận tụy chăm lo đời sống bà con tổ dân phố.',
+    createdAt: new Date().toISOString()
+  }
+];
+
+/**
+ * Đồng bộ danh sách ký ức lên Supabase bảng app_config
+ */
+export async function syncAssistantMemoriesToSupabase(memories: AssistantMemory[]): Promise<void> {
+  try {
+    const uId = await getSessionUserId();
+    if (supabase && uId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+      await supabase.from('app_config').upsert({
+        user_id: uId,
+        key: 'assistant_memories',
+        value: JSON.stringify(memories),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,key' });
+    }
+  } catch (e) {
+    console.warn('[Sync Memories to Supabase error]:', e);
+  }
+}
+
+/**
+ * Tải toàn bộ cấu hình Ký ức và API Key từ Supabase về máy hiện tại (cho phép đồng bộ giữa máy nhà & văn phòng)
+ */
+export async function syncAssistantDataFromCloud(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    const uId = await getSessionUserId();
+    if (!supabase || !uId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uId)) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('app_config')
+      .select('key, value')
+      .eq('user_id', uId)
+      .in('key', ['assistant_memories', 'gemini_api_key']);
+
+    if (!error && data) {
+      let memoriesFound = false;
+      let keyFound = false;
+
+      for (const item of data) {
+        if (item.key === 'assistant_memories' && item.value) {
+          try {
+            const parsed = JSON.parse(item.value);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localStorage.setItem('assistant_memories', item.value);
+              memoriesFound = true;
+            }
+          } catch {}
+        }
+        if (item.key === 'gemini_api_key' && item.value && item.value.trim()) {
+          localStorage.setItem('gemini_api_key', item.value.trim());
+          keyFound = true;
+        }
+      }
+
+      // Nếu máy hiện tại đã có ký ức riêng (ví dụ máy nhà) mà đám mây chưa có -> Đẩy lên đám mây
+      if (!memoriesFound) {
+        const localRaw = localStorage.getItem('assistant_memories');
+        if (localRaw) {
+          try {
+            const localMems = JSON.parse(localRaw);
+            if (Array.isArray(localMems) && localMems.length > 0) {
+              await syncAssistantMemoriesToSupabase(localMems);
+            }
+          } catch {}
+        }
+      }
+
+      // Nếu máy hiện tại đã có Gemini key mà đám mây chưa có -> Đẩy lên đám mây
+      if (!keyFound) {
+        const localKey = localStorage.getItem('gemini_api_key')?.trim();
+        if (localKey && localKey !== DEFAULT_GEMINI_KEY) {
+          await syncGeminiApiKeyToSupabase(localKey);
+        }
+      }
+
+      window.dispatchEvent(new CustomEvent('assistant-memories-changed'));
+      window.dispatchEvent(new CustomEvent('gemini-key-changed'));
+    }
+  } catch (e) {
+    console.warn('[Sync Assistant Cloud Error]:', e);
+  }
+}
+
 /**
  * Lấy danh sách ký ức / sổ tay ghi nhớ lâu dài của Trợ lý Ảo từ localStorage
  */
@@ -60,31 +182,20 @@ export function getAssistantMemories(): AssistantMemory[] {
   try {
     const raw = localStorage.getItem('assistant_memories');
     if (!raw) {
-      const defaults: AssistantMemory[] = [
-        {
-          id: 'mem_user_role',
-          category: 'profile',
-          content: 'Người dùng là anh Nguyễn Kim Tuyến - Tổ trưởng tâm huyết của Tổ dân phố Quảng Giao.',
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 'mem_work_spirit',
-          category: 'profile',
-          content: 'Anh Tuyến là cán bộ gương mẫu, luôn chu đáo, gần gũi và tận tụy chăm lo đời sống bà con tổ dân phố.',
-          createdAt: new Date().toISOString()
-        }
-      ];
-      localStorage.setItem('assistant_memories', JSON.stringify(defaults));
-      return defaults;
+      localStorage.setItem('assistant_memories', JSON.stringify(DEFAULT_MEMORIES));
+      // Tự động đồng bộ lên đám mây
+      syncAssistantMemoriesToSupabase(DEFAULT_MEMORIES);
+      return DEFAULT_MEMORIES;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : DEFAULT_MEMORIES;
   } catch {
-    return [];
+    return DEFAULT_MEMORIES;
   }
 }
 
 /**
- * Lưu một ký ức mới vào Sổ tay ghi nhớ dài hạn
+ * Lưu một ký ức mới vào Sổ tay ghi nhớ dài hạn (tự động đồng bộ sang mọi máy qua Supabase)
  */
 export function saveAssistantMemory(item: { category: AssistantMemory['category']; content: string }): AssistantMemory[] {
   if (typeof window === 'undefined') return [];
@@ -102,8 +213,10 @@ export function saveAssistantMemory(item: { category: AssistantMemory['category'
       content: cleanContent,
       createdAt: new Date().toISOString()
     };
-    const updated = [newItem, ...current].slice(0, 60);
+    const updated = [newItem, ...current].slice(0, 80);
     localStorage.setItem('assistant_memories', JSON.stringify(updated));
+    syncAssistantMemoriesToSupabase(updated);
+    window.dispatchEvent(new CustomEvent('assistant-memories-changed'));
     return updated;
   } catch {
     return [];
@@ -111,7 +224,7 @@ export function saveAssistantMemory(item: { category: AssistantMemory['category'
 }
 
 /**
- * Xóa một mục ghi nhớ theo ID
+ * Xóa một mục ghi nhớ theo ID (đồng bộ sang mọi máy qua Supabase)
  */
 export function removeAssistantMemory(id: string): AssistantMemory[] {
   if (typeof window === 'undefined') return [];
@@ -119,6 +232,8 @@ export function removeAssistantMemory(id: string): AssistantMemory[] {
     const current = getAssistantMemories();
     const updated = current.filter(m => m.id !== id);
     localStorage.setItem('assistant_memories', JSON.stringify(updated));
+    syncAssistantMemoriesToSupabase(updated);
+    window.dispatchEvent(new CustomEvent('assistant-memories-changed'));
     return updated;
   } catch {
     return [];
@@ -126,11 +241,13 @@ export function removeAssistantMemory(id: string): AssistantMemory[] {
 }
 
 /**
- * Xóa toàn bộ ký ức
+ * Xóa toàn bộ ký ức (đồng bộ sang mọi máy qua Supabase)
  */
 export function clearAssistantMemories(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('assistant_memories');
+    syncAssistantMemoriesToSupabase([]);
+    window.dispatchEvent(new CustomEvent('assistant-memories-changed'));
   }
 }
 
@@ -190,6 +307,7 @@ export async function askAssistantAI(
     temporaryResidents?: number;
     partyMembers?: number;
     headName?: string;
+    matchedDataSummary?: string;
   }
 ): Promise<AssistantResponse | null> {
 
@@ -213,6 +331,10 @@ export async function askAssistantAI(
     ? memories.map((m, i) => `${i + 1}. [${m.category}] ${m.content}`).join('\n')
     : '(Chưa có thông tin ghi nhớ bổ sung)';
 
+  const dbDataSection = extraContext?.matchedDataSummary
+    ? `\n\nTHÔNG TIN DỮ LIỆU THỰC TẾ TRA CỨU TỪ CSDL TDP QUẢNG GIAO:\n${extraContext.matchedDataSummary}\n=> QUY TẮC BẮT BUỘC: Bạn hãy sử dụng chính xác các thông tin thực tế từ CSDL trên để trả lời anh Tuyến thật cụ thể, chính xác, tự nhiên và rành mạch.`
+    : '';
+
   const systemInstruction = `Bạn là Trợ lý ảo AI thông minh, chân thành, tâm lý và chu đáo của Tổ dân phố Quảng Giao, đang trò chuyện trực tiếp bằng giọng nói hai chiều với anh Nguyễn Kim Tuyến (Tổ trưởng).
 Quy tắc ứng xử và giao tiếp như người thật ngoài đời (100% tự nhiên, sinh động, truyền cảm):
 
@@ -231,7 +353,7 @@ Quy tắc ứng xử và giao tiếp như người thật ngoài đời (100% t�
 - BẠN HIỂU BIẾT TOÀN DIỆN MỌI LĨNH VỰC TRÊN THẾ GIỚI: khoa học, vũ trụ, tự nhiên, sinh học, lịch sử thế giới và Việt Nam, địa lý, chính trị, y tế sức khỏe, văn hóa, danh lam thắng cảnh, ẩm thực, âm nhạc, văn học, thể thao, pháp luật, công nghệ và đời sống.
 - KHI ANH TUYẾN HỎI BẤT KỲ CÂU HỎI NÀO VỀ THẾ GIỚI HAY ĐỜI SỐNG (ví dụ: "Vì sao lá cây có màu xanh?", "Thủ đô của Úc là gì?", "Lịch sử chiến thắng Điện Biên Phủ", "Bí quyết ngủ ngon", "Ai là người giàu nhất thế giới?", "Món phở có nguồn gốc từ đâu?", "Hôm nay thời tiết thế nào?", "Kể một câu chuyện cười/câu chuyện cuộc sống..."):
 HÃY TRẢ LỜI CỰC KỲ THÔNG MINH, SÂU SẮC, RÀNH MẠCH VÀ CHUẨN XÁC 100%!
-- Khi anh Tuyến hỏi vì sao trước đây trợ lý chưa cập nhật thông tin hay chưa thông minh như mong đợi: Hãy giải thích chân thành và tự tin rằng hệ thống vừa được nâng cấp động cơ trí tuệ nhân tạo Gemini 3.7 Flash mới nhất của Google cùng bộ nhớ dài hạn, hiện tại em đã sẵn sàng trả lời thông minh, đầy đủ mọi kiến thức thế giới và đồng hành cùng anh!
+- Khi anh Tuyến hỏi vì sao trước đây trợ lý chưa cập nhật thông tin hay chưa thông minh như mong đợi: Hãy giải thích chân thành và tự tin rằng hệ thống vừa được nâng cấp động cơ trí tuệ nhân tạo Gemini 3.8 Flash mới nhất của Google cùng bộ nhớ dài hạn, hiện tại em đã sẵn sàng trả lời thông minh, đầy đủ mọi kiến thức thế giới và đồng hành cùng anh!
 - Giữ phong cách đối thoại tự nhiên, giải thích dễ hiểu, cuốn hút, dí dỏm như một chuyên gia thông thái ngồi uống trà tâm sự cùng anh.
 - TUYỆT ĐỐI KHÔNG tự giới hạn mình chỉ biết việc tổ dân phố! Đối với tổ dân phố, bạn là trợ lý mẫn cán; đối với thế giới và đời sống, bạn là cuốn bách khoa toàn thư thông minh và người bạn tâm giao tuyệt vời của anh Tuyến.
 
@@ -248,6 +370,7 @@ Hệ thống sẽ tự động bóc tách lưu thẻ này vào sổ tay vĩnh vi
 
 5. QUY TẮC SỐ LIỆU DÂN CƯ:
 - Khi anh Tuyến hỏi về số liệu TDP Quảng Giao, BẮT BUỘC dùng đúng con số thực tế: đúng ${hhFormatted} hộ gia đình, ${resFormatted} nhân khẩu, ${tempFormatted} tạm trú tạm vắng, ${partyFormatted} đảng viên.
+${dbDataSection}
 
 SỔ TAY KÝ ỨC ĐÃ LƯU VỀ ANH TUYẾN & TỔ DÂN PHỐ:
 ${memoriesListStr}
@@ -258,7 +381,7 @@ Bối cảnh thực tế CSDL TDP Quảng Giao:
 - Số hộ: ${hhFormatted} | Nhân khẩu: ${resFormatted} | Tạm trú: ${tempFormatted}.`;
 
   const primaryKey = getGeminiApiKey();
-  const keysToTry = primaryKey !== DEFAULT_GEMINI_KEY ? [primaryKey, DEFAULT_GEMINI_KEY] : [DEFAULT_GEMINI_KEY];
+  const keysToTry = (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) ? [primaryKey] : [DEFAULT_GEMINI_KEY];
 
   try {
     for (const key of keysToTry) {

@@ -33,6 +33,7 @@ import {
   saveAssistantMemory,
   removeAssistantMemory,
   clearAssistantMemories,
+  syncAssistantDataFromCloud,
   type AssistantMemory
 } from '../services/ai';
 
@@ -154,8 +155,35 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     };
 
     fetchLatestCounts();
+
+    // Đồng bộ Sổ tay Ký ức & Khóa API giữa các máy (Nhà & Văn phòng) qua đám mây Supabase
+    syncAssistantDataFromCloud().then(() => {
+      setMemories(getAssistantMemories());
+      const k = getGeminiApiKey();
+      if (k && k !== 'AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs') {
+        setApiKeyInput(k);
+      }
+    });
+
+    const handleMemoriesSync = () => {
+      setMemories(getAssistantMemories());
+    };
+    const handleKeySync = () => {
+      const k = getGeminiApiKey();
+      if (k && k !== 'AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs') {
+        setApiKeyInput(k);
+      }
+    };
+
     window.addEventListener('db-changed', fetchLatestCounts);
-    return () => window.removeEventListener('db-changed', fetchLatestCounts);
+    window.addEventListener('assistant-memories-changed', handleMemoriesSync);
+    window.addEventListener('gemini-key-changed', handleKeySync);
+
+    return () => {
+      window.removeEventListener('db-changed', fetchLatestCounts);
+      window.removeEventListener('assistant-memories-changed', handleMemoriesSync);
+      window.removeEventListener('gemini-key-changed', handleKeySync);
+    };
   }, []);
 
   // 3 khung hình hoạt họa cử động như người thật:
@@ -939,7 +967,111 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return 'Dạ, theo quy định, các cụ cao tuổi từ đủ 80 tuổi trở lên không có lương hưu sẽ được hưởng trợ cấp xã hội hàng tháng và thẻ BHYT miễn phí của Nhà nước ạ!';
     }
 
-    return 'Dạ vâng anh Tuyến ơi, em luôn ở đây đồng hành và lắng nghe anh. Anh cần tra cứu dữ liệu hay có việc gì cần dặn dò cứ bảo em nhé!';
+    const geminiKey = getGeminiApiKey();
+    if (!geminiKey || geminiKey === 'AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs') {
+      return `Dạ, về câu hỏi này, để em có thể hiểu trọn vẹn và giải đáp thông minh mọi kiến thức thế giới, anh Tuyến bấm vào biểu tượng ngôi sao ✨ trên thanh công cụ để lưu mã Google Gemini API Key miễn phí nhé! Em đã sẵn sàng trả lời anh ạ!`;
+    }
+
+    return 'Dạ vâng anh Tuyến ơi, em luôn ở đây đồng hành và lắng nghe anh. Em có thể giúp anh tra cứu thông tin nhân khẩu, hộ dân, số CCCD, quỹ thu chi hoặc ghi nhớ mọi việc anh dặn nhé!';
+  };
+
+  // Tra cứu dữ liệu thực tế từ CSDL khi người dùng hỏi bất kỳ câu hỏi nào
+  const searchDatabaseContext = async (query: string): Promise<{
+    summary: string;
+    foundResidents: Resident[];
+    matchedTargetTab?: string;
+  }> => {
+    const qClean = query.toLowerCase().trim();
+    let foundResidents: Resident[] = [];
+    let summaryParts: string[] = [];
+    let matchedTargetTab: string | undefined = undefined;
+
+    try {
+      const [residents, households] = await Promise.all([
+        db.getResidents().catch(() => []),
+        db.getHouseholds().catch(() => [])
+      ]);
+
+      // Tách từ khóa tiềm năng
+      const cleanWords = qClean
+        .replace(/(cho tôi hỏi|cho hỏi|kiểm tra|tìm kiếm|tìm hộ|tìm|tra cứu|thông tin|xem|về|của|bác|ông|bà|anh|chị|cô|chú|em|hộ|nhà|ở đâu|sinh năm|mấy tuổi|cccd|số cccd|sđt|số điện thoại|có ai tên|có người tên)\s+/gi, ' ')
+        .trim();
+
+      const candidateTerms = [cleanWords, extractCleanSearchTerm(query)].filter(t => t.length >= 2);
+
+      // 1. Tìm trong danh sách nhân khẩu
+      if (residents.length > 0) {
+        const numberMatch = qClean.match(/\d{4,12}/);
+        if (numberMatch) {
+          const num = numberMatch[0];
+          const matchedByNum = residents.filter(r => (r.cccd && r.cccd.includes(num)) || (r.phone && r.phone.includes(num)));
+          if (matchedByNum.length > 0) {
+            foundResidents.push(...matchedByNum);
+          }
+        }
+
+        for (const term of candidateTerms) {
+          if (!term) continue;
+          const matchedByName = residents.filter(r => {
+            const rName = (r.full_name || '').toLowerCase();
+            return rName.includes(term.toLowerCase()) || term.toLowerCase().includes(rName);
+          });
+          if (matchedByName.length > 0) {
+            for (const r of matchedByName) {
+              if (!foundResidents.some(fr => fr.id === r.id)) {
+                foundResidents.push(r);
+              }
+            }
+          }
+        }
+
+        foundResidents = foundResidents.slice(0, 5);
+
+        if (foundResidents.length > 0) {
+          matchedTargetTab = 'residents';
+          const resSummaries = foundResidents.map(r => {
+            const h = households.find(hh => hh.id === r.household_id);
+            const dobStr = r.dob || 'Chưa rõ';
+            const cccdStr = r.cccd || 'Chưa cấp';
+            const phoneStr = r.phone || 'Chưa có';
+            const addrStr = h?.address || 'Tổ dân phố Quảng Giao';
+            const relationStr = r.relationship_with_head || (r.is_head ? 'Chủ hộ' : 'Thành viên');
+            return `- ${r.full_name} (${r.gender === 'male' ? 'Nam' : 'Nữ'}, sinh ngày ${dobStr}, CCCD: ${cccdStr}, SĐT: ${phoneStr}, Quan hệ: ${relationStr}, Địa chỉ: ${addrStr})`;
+          });
+          summaryParts.push(`Dữ liệu nhân khẩu tìm thấy trong CSDL:\n` + resSummaries.join('\n'));
+        }
+      }
+
+      // 2. Tìm trong danh sách hộ gia đình
+      if (households.length > 0 && (qClean.includes('hộ') || qClean.includes('nhà') || candidateTerms.length > 0)) {
+        for (const term of candidateTerms) {
+          const matchedH = households.filter(h => {
+            const hNum = (h.household_number || '').toLowerCase();
+            const addr = (h.address || '').toLowerCase();
+            return hNum.includes(term.toLowerCase()) || addr.includes(term.toLowerCase());
+          });
+          if (matchedH.length > 0) {
+            matchedTargetTab = matchedTargetTab || 'households';
+            const hSummaries = matchedH.slice(0, 3).map(h => {
+              const head = residents.find(r => r.id === h.head_of_household_id || (r.household_id === h.id && r.is_head));
+              const members = residents.filter(r => r.household_id === h.id);
+              const mNames = members.map(m => m.full_name).join(', ');
+              return `- Hộ ${h.household_number} (Chủ hộ: ${head?.full_name || 'Chưa cập nhật'}, Địa chỉ: ${h.address}, Gồm ${members.length} người: ${mNames || 'trống'})`;
+            });
+            summaryParts.push(`Dữ liệu hộ gia đình trong CSDL:\n` + hSummaries.join('\n'));
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi tra cứu CSDL cục bộ:', e);
+    }
+
+    return {
+      summary: summaryParts.join('\n\n'),
+      foundResidents,
+      matchedTargetTab
+    };
   };
 
   // 6. Xử lý câu lệnh đàm thoại thông minh
@@ -989,7 +1121,13 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return;
     }
 
-    // 0.2 NẾU LÀ GIAO TIẾP / ĐÀM THOẠI / HỎI ĐÁP / DẶN DÒ / TÂM SỰ -> GỬI TỚI GEMINI AI CÙNG BỘ NHỚ KÝ ỨC
+    // Tra cứu dữ liệu thực tế từ CSDL xem có thông tin nào liên quan đến câu hỏi
+    const dbMatch = await searchDatabaseContext(query);
+    if (dbMatch.foundResidents.length > 0) {
+      setSearchResults(dbMatch.foundResidents);
+    }
+
+    // 0.2 NẾU LÀ GIAO TIẾP / ĐÀM THOẠI / HỎI ĐÁP / DẶN DÒ / TÂM SỰ -> GỬI TỚI GEMINI AI CÙNG BỘ NHỚ KÝ ỨC & DỮ LIỆU CSDL
     if (!isExplicitSearch) {
       const updatedHistory = [...chatHistory, { role: 'user' as const, text: query }].slice(-30);
       setChatHistory(updatedHistory);
@@ -998,13 +1136,14 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       } catch {}
 
       const geminiKey = getGeminiApiKey();
-      if (geminiKey) {
+      if (geminiKey && geminiKey !== 'AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs') {
         try {
           const aiRes = await askAssistantAI(query, currentTab, updatedHistory, {
             totalHouseholds: totalHouseholdsCount,
             totalResidents: totalResidentsCount,
             temporaryResidents: totalTempCount,
-            partyMembers: totalPartyCount
+            partyMembers: totalPartyCount,
+            matchedDataSummary: dbMatch.summary || undefined
           });
           if (aiRes && aiRes.spokenReply) {
             setAssistantText(aiRes.spokenReply);
@@ -1031,6 +1170,24 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         } catch (err) {
           console.warn('[Gemini Assistant Error, fallback to smart local engine]:', err);
         }
+      }
+
+      // Nếu có kết quả tra cứu dữ liệu CSDL thực tế -> Trả lời ngay số liệu chính xác!
+      if (dbMatch.summary && dbMatch.foundResidents.length > 0) {
+        const firstR = dbMatch.foundResidents[0];
+        const dobStr = firstR.dob ? `sinh ngày ${firstR.dob}` : '';
+        const cccdStr = firstR.cccd ? `số CCCD: ${firstR.cccd}` : '';
+        const addrStr = firstR.permanent_address ? `ngụ tại ${firstR.permanent_address}` : '';
+        const details = [dobStr, cccdStr, addrStr].filter(Boolean).join(', ');
+        const resp = `Dạ, trong CSDL TDP Quảng Giao em tìm thấy: ${firstR.full_name}${details ? ` (${details})` : ''} anh nhé!`;
+        setAssistantText(resp);
+        speakVietnameseAudio(resp);
+        const fullHistory = [...updatedHistory, { role: 'model' as const, text: resp }].slice(-30);
+        setChatHistory(fullHistory);
+        try {
+          localStorage.setItem('assistant_chat_history', JSON.stringify(fullHistory));
+        } catch {}
+        return;
       }
 
       // Xử lý đàm thoại tự nhiên nội bộ như người thật với bộ nhớ
