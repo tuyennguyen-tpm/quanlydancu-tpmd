@@ -1394,41 +1394,38 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         localStorage.setItem('assistant_chat_history', JSON.stringify(updatedHistory));
       } catch {}
 
-      const geminiKey = getGeminiApiKey();
-      if (geminiKey && geminiKey !== 'AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs') {
-        try {
-          const aiRes = await askAssistantAI(query, currentTab, updatedHistory, {
-            totalHouseholds: totalHouseholdsCount,
-            totalResidents: totalResidentsCount,
-            temporaryResidents: totalTempCount,
-            partyMembers: totalPartyCount,
-            matchedDataSummary: dbMatch.summary || undefined
-          });
-          if (aiRes && aiRes.spokenReply) {
-            setAssistantText(aiRes.spokenReply);
-            speakVietnameseAudio(aiRes.spokenReply);
-            const fullHistory = [...updatedHistory, { role: 'model' as const, text: aiRes.spokenReply }].slice(-30);
-            setChatHistory(fullHistory);
-            try {
-              localStorage.setItem('assistant_chat_history', JSON.stringify(fullHistory));
-            } catch {}
+      try {
+        const aiRes = await askAssistantAI(query, currentTab, updatedHistory, {
+          totalHouseholds: totalHouseholdsCount,
+          totalResidents: totalResidentsCount,
+          temporaryResidents: totalTempCount,
+          partyMembers: totalPartyCount,
+          matchedDataSummary: dbMatch.summary || undefined
+        });
+        if (aiRes && aiRes.spokenReply) {
+          setAssistantText(aiRes.spokenReply);
+          speakVietnameseAudio(aiRes.spokenReply);
+          const fullHistory = [...updatedHistory, { role: 'model' as const, text: aiRes.spokenReply }].slice(-30);
+          setChatHistory(fullHistory);
+          try {
+            localStorage.setItem('assistant_chat_history', JSON.stringify(fullHistory));
+          } catch {}
 
-            // Cập nhật lại memories trong UI nếu có ký ức mới
-            setMemories(getAssistantMemories());
+          // Cập nhật lại memories trong UI nếu có ký ức mới
+          setMemories(getAssistantMemories());
 
-            if (aiRes.action) {
-              if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
-                triggerSearchAndJump(aiRes.action.tab, aiRes.action.query || term);
-              } else if (aiRes.action.tab) {
-                onNavigate(aiRes.action.tab);
-                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
-              }
+          if (aiRes.action) {
+            if (aiRes.action.type === 'navigate_and_search' && aiRes.action.tab) {
+              triggerSearchAndJump(aiRes.action.tab, aiRes.action.query || term);
+            } else if (aiRes.action.tab) {
+              onNavigate(aiRes.action.tab);
+              setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 200);
             }
-            return;
           }
-        } catch (err) {
-          console.warn('[Gemini Assistant Error, fallback to smart local engine]:', err);
+          return;
         }
+      } catch (err) {
+        console.warn('[Assistant AI Error, fallback to smart local engine]:', err);
       }
 
       // Nếu có kết quả tra cứu dữ liệu CSDL thực tế -> Trả lời ngay số liệu chính xác!

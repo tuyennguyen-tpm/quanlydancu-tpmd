@@ -253,12 +253,48 @@ export function clearAssistantMemories(): void {
 }
 
 /**
+ * Gọi dịch vụ Cloud AI miễn phí không cần API Key để đảm bảo trợ lý luôn trả lời thông minh 100% mọi câu hỏi
+ */
+export async function askFreeCloudAI(prompt: string, systemInstruction?: string): Promise<string> {
+  try {
+    const messages: { role: string; content: string }[] = [];
+    if (systemInstruction) {
+      messages.push({ role: 'system', content: systemInstruction });
+    }
+    messages.push({ role: 'user', content: prompt });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch('https://text.pollinations.ai/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages,
+        model: 'openai',
+        seed: Math.floor(Math.random() * 100000)
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const text = await response.text();
+      return text.trim();
+    }
+  } catch (e) {
+    console.warn('[Free Cloud AI Error]:', e);
+  }
+  return '';
+}
+
+/**
  * Send a prompt to Gemini and return the generated text.
- * Automatically tries available flash models with fallback.
+ * Automatically tries available flash models with fallback to free cloud AI.
  */
 export async function askGemini(prompt: string): Promise<string> {
   const primaryKey = getGeminiApiKey();
-  const keysToTry = primaryKey !== DEFAULT_GEMINI_KEY ? [primaryKey, DEFAULT_GEMINI_KEY] : [DEFAULT_GEMINI_KEY];
+  const keysToTry = (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) ? [primaryKey] : [];
 
   for (const k of keysToTry) {
     const client = getAiClient(k);
@@ -278,6 +314,10 @@ export async function askGemini(prompt: string): Promise<string> {
       }
     }
   }
+
+  // Tự động kết nối Free Cloud AI nếu chưa có key Gemini
+  const freeText = await askFreeCloudAI(prompt);
+  if (freeText) return freeText;
 
   return "";
 }
@@ -381,77 +421,96 @@ Bối cảnh thực tế CSDL TDP Quảng Giao:
 - Đang ở phân hệ: ${currentTab}.
 - Số hộ: ${hhFormatted} | Nhân khẩu: ${resFormatted} | Tạm trú: ${tempFormatted}.`;
 
-  const primaryKey = getGeminiApiKey();
-  const keysToTry = (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) ? [primaryKey] : [DEFAULT_GEMINI_KEY];
+  const parseAssistantReply = (rawText: string): AssistantResponse => {
+    let spokenReply = rawText;
 
-  try {
-    for (const key of keysToTry) {
-      const client = getAiClient(key);
-      if (!client) continue;
-
-      for (const model of SUPPORTED_MODELS) {
-        try {
-          // Xây dựng chuỗi hội thoại nhiều lượt thoại liên tục để AI nhớ mạch trò chuyện
-          let conversationPrompt = `${systemInstruction}\n\nLỊCH SỬ TRÒ CHUYỆN GẦN ĐÂY:\n`;
-          const recentHistory = history.slice(-16);
-          for (const h of recentHistory) {
-            conversationPrompt += `${h.role === 'user' ? 'Người dùng (Anh Tuyến)' : 'Trợ lý (Em)'}: "${h.text}"\n`;
-          }
-          conversationPrompt += `Người dùng (Anh Tuyến) vừa nói: "${userQuery}"\n\nHãy trả lời tự nhiên, ấm áp, thông minh, đúng mực như người thật:`;
-
-          const response = await client.models.generateContent({
-            model,
-            contents: conversationPrompt,
-          });
-
-          const rawText = response.text?.trim() || "";
-          if (!rawText) continue;
-
-          let spokenReply = rawText;
-
-          // Bóc tách [ACTION:{...}] nếu có
-          let action: AssistantResponse['action'] = undefined;
-          const actionMatch = spokenReply.match(/\[ACTION:\s*(\{.*?\})\s*\]/is);
-          if (actionMatch) {
-            try {
-              action = JSON.parse(actionMatch[1]);
-              spokenReply = spokenReply.replace(actionMatch[0], '').trim();
-            } catch (e) {
-              console.warn('[Parse Assistant Action Error]', e);
-            }
-          }
-
-          // Bóc tách [MEMORY:{...}] nếu có và tự động ghi nhớ
-          let newMemory: AssistantResponse['newMemory'] = undefined;
-          const memoryMatch = spokenReply.match(/\[MEMORY:\s*(\{.*?\})\s*\]/is);
-          if (memoryMatch) {
-            try {
-              newMemory = JSON.parse(memoryMatch[1]);
-              spokenReply = spokenReply.replace(memoryMatch[0], '').trim();
-              if (newMemory && newMemory.content) {
-                saveAssistantMemory({
-                  category: newMemory.category || 'note',
-                  content: newMemory.content
-                });
-              }
-            } catch (e) {
-              console.warn('[Parse Assistant Memory Error]', e);
-            }
-          }
-
-          return {
-            spokenReply: spokenReply || "Dạ, em nghe anh Tuyến rồi ạ!",
-            action,
-            newMemory
-          };
-        } catch (err: any) {
-          console.warn(`[Gemini Assistant with model ${model} error]:`, err?.message || err);
-        }
+    // Bóc tách [ACTION:{...}] nếu có
+    let action: AssistantResponse['action'] = undefined;
+    const actionMatch = spokenReply.match(/\[ACTION:\s*(\{.*?\})\s*\]/is);
+    if (actionMatch) {
+      try {
+        action = JSON.parse(actionMatch[1]);
+        spokenReply = spokenReply.replace(actionMatch[0], '').trim();
+      } catch (e) {
+        console.warn('[Parse Assistant Action Error]', e);
       }
     }
-  } catch (err) {
-    console.error('[Gemini Assistant Error]', err);
+
+    // Bóc tách [MEMORY:{...}] nếu có và tự động ghi nhớ
+    let newMemory: AssistantResponse['newMemory'] = undefined;
+    const memoryMatch = spokenReply.match(/\[MEMORY:\s*(\{.*?\})\s*\]/is);
+    if (memoryMatch) {
+      try {
+        newMemory = JSON.parse(memoryMatch[1]);
+        spokenReply = spokenReply.replace(memoryMatch[0], '').trim();
+        if (newMemory && newMemory.content) {
+          saveAssistantMemory({
+            category: newMemory.category || 'note',
+            content: newMemory.content
+          });
+        }
+      } catch (e) {
+        console.warn('[Parse Assistant Memory Error]', e);
+      }
+    }
+
+    return {
+      spokenReply: spokenReply || "Dạ, em nghe anh Tuyến rồi ạ!",
+      action,
+      newMemory
+    };
+  };
+
+  // Xây dựng chuỗi hội thoại nhiều lượt thoại liên tục để AI nhớ mạch trò chuyện
+  let conversationPrompt = `${systemInstruction}\n\nLỊCH SỬ TRÒ CHUYỆN GẦN ĐÂY:\n`;
+  const recentHistory = history.slice(-16);
+  for (const h of recentHistory) {
+    conversationPrompt += `${h.role === 'user' ? 'Người dùng (Anh Tuyến)' : 'Trợ lý (Em)'}: "${h.text}"\n`;
   }
+  conversationPrompt += `Người dùng (Anh Tuyến) vừa nói: "${userQuery}"\n\nHãy trả lời tự nhiên, ấm áp, thông minh, đúng mực như người thật:`;
+
+  const primaryKey = getGeminiApiKey();
+  const keysToTry = (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) ? [primaryKey] : [];
+
+  // 1. Nếu người dùng có cấu hình mã Google Gemini riêng, ưu tiên gọi Gemini trước
+  if (keysToTry.length > 0) {
+    try {
+      for (const key of keysToTry) {
+        const client = getAiClient(key);
+        if (!client) continue;
+
+        for (const model of SUPPORTED_MODELS) {
+          try {
+            const response = await client.models.generateContent({
+              model,
+              contents: conversationPrompt,
+            });
+
+            const rawText = response.text?.trim() || "";
+            if (rawText) {
+              return parseAssistantReply(rawText);
+            }
+          } catch (err: any) {
+            console.warn(`[Gemini Assistant with model ${model} error]:`, err?.message || err);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Gemini Assistant Key Error, switching to Free Cloud AI]', err);
+    }
+  }
+
+  // 2. Tự động kết nối Free Cloud AI thông minh (không cần API key, trả lời mọi câu hỏi trên thế giới)
+  try {
+    const freeText = await askFreeCloudAI(conversationPrompt, systemInstruction);
+    if (freeText && freeText.trim()) {
+      return parseAssistantReply(freeText.trim());
+    }
+  } catch (err) {
+    console.warn('[Free Cloud AI Assistant Error]:', err);
+  }
+
+  return null;
 
   return null;
 }
