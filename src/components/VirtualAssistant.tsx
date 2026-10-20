@@ -720,11 +720,98 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     return str.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
   };
 
-  // Kiểm tra xem câu nói có phải là lệnh tìm kiếm dữ liệu / chuyển tab rõ ràng hay không
+  // Danh sách đầy đủ 29 tab menu cột bên trái theo đúng thứ tự giao diện
+  const SIDEBAR_MENU_TABS = [
+    { id: 'Bảng điều khiển', name: 'Bảng điều khiển', keywords: ['bảng điều khiển', 'trang chủ', 'tổng quan', 'dashboard', 'bàn điều khiển'] },
+    { id: 'households', name: 'Hộ gia đình', keywords: ['hộ gia đình', 'hộ dân', 'quản lý hộ', 'danh sách hộ', 'các hộ', 'sổ hộ', 'hộ khẩu'] },
+    { id: 'residents', name: 'Nhân khẩu', keywords: ['nhân khẩu', 'dân cư', 'danh sách nhân khẩu', 'công dân', 'người dân', 'quản lý dân cư'] },
+    { id: 'map', name: 'Bản đồ số dân cư', keywords: ['bản đồ', 'bản đồ số', 'bản đồ dân cư', 'vị trí', 'bản đồ số dân cư'] },
+    { id: 'residents-temp', name: 'Tạm trú - Tạm vắng', keywords: ['tạm trú', 'tạm vắng', 'tạm trú tạm vắng', 'tạm vắng tạm trú'] },
+    { id: 'residents-changes', name: 'Biến động dân cư', keywords: ['biến động dân cư', 'biến động', 'chuyển khẩu', 'thay đổi nhân khẩu'] },
+    { id: 'policy', name: 'Gia đình chính sách', keywords: ['chính sách', 'gia đình chính sách', 'thương binh', 'liệt sĩ', 'hộ nghèo', 'cận nghèo', 'chế độ chính sách'] },
+    { id: 'security', name: 'An ninh trật tự', keywords: ['an ninh', 'an ninh trật tự', 'trật tự', 'dân quân', 'công an', 'trật tự an ninh'] },
+    { id: 'healthcare', name: 'Y tế & Sức khỏe', keywords: ['y tế', 'sức khỏe', 'bảo hiểm y tế', 'tiêm chủng', 'khám bệnh', 'y tế sức khỏe'] },
+    { id: 'meetings', name: 'Họp Tổ dân phố', keywords: ['họp tổ dân phố', 'lịch họp tổ dân phố', 'họp tổ', 'biên bản họp tổ', 'họp dân'] },
+    { id: 'meetings-party', name: 'Họp Chi bộ Đảng', keywords: ['họp chi bộ', 'lịch họp chi bộ', 'họp đảng', 'biên bản chi bộ'] },
+    { id: 'meetings-front', name: 'Họp Ban CT Mặt trận', keywords: ['họp mặt trận', 'ban công tác mặt trận', 'lịch họp mặt trận', 'mặt trận tổ quốc'] },
+    { id: 'party-cell', name: 'Chi bộ Đảng (Đảng viên)', keywords: ['chi bộ đảng', 'chi bộ', 'đảng viên', 'danh sách đảng viên', 'đảng'] },
+    { id: 'elderly', name: 'Hội Người cao tuổi', keywords: ['người cao tuổi', 'hội người cao tuổi', 'hội người già', 'mừng thọ', 'chúc thọ'] },
+    { id: 'ccb', name: 'Hội Cựu chiến binh', keywords: ['cựu chiến binh', 'hội cựu chiến binh', 'ccb'] },
+    { id: 'farmers-association', name: 'Hội Nông dân', keywords: ['hội nông dân', 'nông dân', 'chi hội nông dân'] },
+    { id: 'women-association', name: 'Hội Phụ nữ', keywords: ['hội phụ nữ', 'phụ nữ', 'chi hội phụ nữ'] },
+    { id: 'youth-union', name: 'Đoàn Thanh niên', keywords: ['đoàn thanh niên', 'thanh niên', 'chi đoàn', 'đoàn viên'] },
+    { id: 'documents', name: 'Văn bản - Nghị quyết', keywords: ['văn bản', 'nghị quyết', 'văn bản nghị quyết', 'tài liệu'] },
+    { id: 'ward-documents', name: 'Công văn của Phường', keywords: ['công văn của phường', 'công văn phường', 'văn bản phường', 'thông báo phường'] },
+    { id: 'invitation-templates', name: 'Mẫu giấy mời', keywords: ['mẫu giấy mời', 'giấy mời', 'soạn giấy mời'] },
+    { id: 'regulations', name: 'Quy định & Nhiệm vụ', keywords: ['quy định', 'nhiệm vụ', 'quy định nhiệm vụ', 'nội quy'] },
+    { id: 'finance', name: 'Thu chi TDP', keywords: ['thu chi', 'thu chi tdp', 'sổ quỹ', 'tài chính', 'thu quỹ', 'chi quỹ', 'tiền nong'] },
+    { id: 'ward-funds', name: 'Quỹ nộp phường', keywords: ['quỹ nộp phường', 'nộp phường', 'quỹ phường'] },
+    { id: 'sponsors', name: 'Người dân / Mạnh thường quân', keywords: ['mạnh thường quân', 'tài trợ', 'ủng hộ', 'người dân ủng hộ', 'nhà hảo tâm'] },
+    { id: 'treasurer', name: 'Thủ quỹ', keywords: ['thủ quỹ', 'quỹ tiền mặt', 'tồn quỹ'] },
+    { id: 'complaints', name: 'Phản ánh kiến nghị', keywords: ['phản ánh kiến nghị', 'phản ánh', 'kiến nghị', 'khiếu nại', 'ý kiến cử tri', 'tiếp công dân'] },
+    { id: 'ai-assistant', name: 'Trợ lý AI', keywords: ['trợ lý ai', 'trợ lý ảo', 'chat ai', 'bot ai', 'hỏi ai'] },
+    { id: 'settings', name: 'Cài đặt', keywords: ['cài đặt', 'thiết lập', 'cấu hình', 'hệ thống', 'quản trị mã', 'đổi mật khẩu'] },
+  ];
+
+  // Kiểm tra lệnh chuyển từng tab tiếp theo hoặc lùi lại ở menu cột bên trái
+  const checkSequentialTabNavigation = (q: string, curTab: string): { type: 'next' | 'prev'; targetTab: typeof SIDEBAR_MENU_TABS[0] } | null => {
+    const isNext = [
+      'chuyển từng tab', 'chuyển tab tiếp', 'chuyển tiếp từng tab', 'tab tiếp theo', 'tab kế tiếp', 
+      'tab tiếp', 'chuyển tiếp tab', 'chuyển tiếp sang tab', 'tab sau', 'kế bên', 'qua tab khác', 
+      'sang tab khác', 'cột bên trái', 'menu bên trái', 'bên menu'
+    ].some(w => q.includes(w)) && !q.includes('trước') && !q.includes('lùi');
+
+    const isPrev = ['tab trước', 'tab lùi', 'chuyển lùi', 'lùi lại tab', 'quay lại tab', 'tab trước đó'].some(w => q.includes(w));
+
+    if (!isNext && !isPrev) return null;
+
+    const curIdx = Math.max(0, SIDEBAR_MENU_TABS.findIndex(t => t.id === curTab));
+    if (isNext) {
+      const nextIdx = (curIdx + 1) % SIDEBAR_MENU_TABS.length;
+      return { type: 'next', targetTab: SIDEBAR_MENU_TABS[nextIdx] };
+    } else {
+      const prevIdx = (curIdx - 1 + SIDEBAR_MENU_TABS.length) % SIDEBAR_MENU_TABS.length;
+      return { type: 'prev', targetTab: SIDEBAR_MENU_TABS[prevIdx] };
+    }
+  };
+
+  // Khớp lệnh chuyển sang tab cụ thể ở cột bên trái
+  const matchSidebarTab = (query: string): { id: string; name: string } | null => {
+    const q = query.toLowerCase().trim();
+    if (
+      (q.includes('tìm ') || q.includes('tra cứu ') || q.includes('kiểm tra ')) &&
+      (q.includes('cccd') || q.includes('sđt') || q.includes('ông ') || q.includes('bà ') || q.includes('anh ') || q.includes('chị ') || q.includes('bác '))
+    ) {
+      return null;
+    }
+
+    const clean = q
+      .replace(/(chuyển từng tab|chuyển tab|chuyển sang tab|chuyển sang|chuyển đến tab|chuyển đến|mở tab|mở mục|mở trang|mở phần|vào tab|vào mục|vào trang|xem tab|xem mục|xem trang|đi tới tab|đi tới|tab)\s+/gi, '')
+      .replace(/(nhé|nhỉ|giúp anh|cho anh|với em|nhá|hộ anh|nào|đi|ạ)\s*$/gi, '')
+      .trim();
+
+    for (const tab of SIDEBAR_MENU_TABS) {
+      for (const kw of tab.keywords) {
+        if (clean === kw || clean.startsWith(kw) || clean.endsWith(kw)) {
+          return tab;
+        }
+        if (
+          (q.includes('chuyển') || q.includes('mở') || q.includes('vào') || q.includes('xem') || q.includes('sang') || q.includes('đến') || q.includes('tab')) &&
+          q.includes(kw)
+        ) {
+          return tab;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // Kiểm tra xem câu nói có phải là lệnh tìm kiếm dữ liệu rõ ràng hay không
   const isExplicitSearchOrNavigationCommand = (text: string) => {
     const q = text.toLowerCase().trim();
 
-    // Nếu là câu hỏi, dặn dò, tâm sự, chào hỏi, chia sẻ cảm xúc, hỏi ký ức -> Chắc chắn là ĐÀM THOẠI TRÒ CHUYỆN!
+    // Nếu là câu hỏi, dặn dò, tâm sự, chào hỏi, chia sẻ cảm xúc, hỏi ký ức -> ĐÀM THOẠI TRÒ CHUYỆN!
     if (
       q.endsWith('?') ||
       q.includes('nhé') ||
@@ -759,21 +846,144 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return false;
     }
 
-    // Các tiền tố tìm kiếm / điều hướng rõ ràng
     const explicitPrefixes = [
       'tìm kiếm hộ ', 'tìm hộ ', 'tra cứu hộ ', 'xem hộ ',
       'tìm kiếm nhân khẩu ', 'tìm nhân khẩu ', 'tra cứu nhân khẩu ', 'xem nhân khẩu ',
-      'tìm cccd ', 'tra cứu cccd ', 'số cccd ', 'tìm kiếm cccd ',
-      'chuyển sang ', 'chuyển đến ', 'mở tab ', 'mở màn hình ', 'mở trang ', 'đi tới '
+      'tìm cccd ', 'tra cứu cccd ', 'số cccd ', 'tìm kiếm cccd '
     ];
     if (explicitPrefixes.some(p => q.startsWith(p))) return true;
 
-    // Nếu đang ở tab households/residents mà câu bắt đầu bằng "tìm " hoặc "tra cứu "
     if ((currentTab === 'households' || currentTab === 'residents') && (q.startsWith('tìm ') || q.startsWith('tra cứu '))) {
       return true;
     }
 
     return false;
+  };
+
+  // Kho tri thức bách khoa phong phú về Địa lý, Lịch sử, Khoa học, Y tế, Đời sống
+  const getEncyclopedicKnowledgeResponse = (q: string): string | null => {
+    // 1. ĐỊA LÝ & THỦ ĐÔ THẾ GIỚI
+    if (q.includes('thủ đô của pháp') || q.includes('thủ đô nước pháp')) {
+      return 'Dạ, thủ đô của nước Pháp là thành phố Paris - được mệnh danh là Kinh đô Ánh sáng và kinh đô thời trang của thế giới, nổi tiếng với tháp Eiffel, bảo tàng Louvre và dòng sông Seine thơ mộng anh Tuyến nhé!';
+    }
+    if (q.includes('thủ đô của mỹ') || q.includes('thủ đô hoa kỳ') || q.includes('thủ đô nước mỹ')) {
+      return 'Dạ, thủ đô của Hợp chúng quốc Hoa Kỳ (Mỹ) là Washington D.C. đặt tại Đặc khu Columbia - nơi có Nhà Trắng và Điện Capitol. Nhiều người hay nhầm với New York, nhưng New York là trung tâm tài chính lớn nhất, còn Washington D.C. mới là thủ đô anh nhé!';
+    }
+    if (q.includes('thủ đô của anh') || q.includes('thủ đô nước anh')) {
+      return 'Dạ, thủ đô của Vương quốc Anh là thành phố London - một trong những trung tâm tài chính và văn hóa lớn nhất thế giới, nổi tiếng với tháp đồng hồ Big Ben, cung điện Buckingham và sông Thames anh nhé!';
+    }
+    if (q.includes('thủ đô của nga') || q.includes('thủ đô nước nga')) {
+      return 'Dạ, thủ đô của Liên bang Nga là Mát-xcơ-va (Moscow) - trung tâm chính trị, văn hóa của nước Nga với Điện Kremlin lịch sử và Quảng trường Đỏ nổi tiếng anh Tuyến nhé!';
+    }
+    if (q.includes('thủ đô của nhật') || q.includes('thủ đô nhật bản')) {
+      return 'Dạ, thủ đô của Nhật Bản là Tokyo - siêu đô thị hiện đại và sầm uất bậc nhất thế giới, biểu tượng của sự giao thoa giữa công nghệ đỉnh cao và truyền thống văn hóa xứ sở hoa anh đào anh nhé!';
+    }
+    if (q.includes('thủ đô của hàn quốc') || q.includes('thủ đô hàn quốc')) {
+      return 'Dạ, thủ đô của Hàn Quốc là Seoul - trung tâm kinh tế, văn hóa nằm bên dòng sông Hàn với sự phát triển năng động, tháp Namsan và các cung điện cổ kính anh nhé!';
+    }
+    if (q.includes('thủ đô của trung quốc') || q.includes('thủ đô nước úc') || q.includes('thủ đô úc') || q.includes('thủ đô australia')) {
+      if (q.includes('trung quốc')) {
+        return 'Dạ, thủ đô của Trung Quốc là Bắc Kinh - trung tâm chính trị lâu đời với Vạn Lý Trường Thành kỳ vĩ và Cố Cung Tử Cấm Thành anh nhé!';
+      }
+      return 'Dạ, thủ đô của nước Úc (Australia) là Canberra anh Tuyến nhé! Rất nhiều người thường hay nhầm thủ đô của Úc là Sydney hay Melbourne vì hai thành phố này đông dân hơn, nhưng Canberra mới chính là thủ đô hành chính của Úc ạ!';
+    }
+    if (q.includes('thủ đô của đức') || q.includes('thủ đô nước đức')) {
+      return 'Dạ, thủ đô của Cộng hòa Liên bang Đức là Berlin - thành phố lịch sử nổi tiếng với Cổng thành Brandenburg và bề dày di sản văn hóa châu Âu anh nhé!';
+    }
+    if (q.includes('thủ đô của ý') || q.includes('thủ đô nước ý') || q.includes('thủ đô italia')) {
+      return 'Dạ, thủ đô của nước Ý (Italia) là Rome (Rô-ma) - Thành phố Vĩnh hằng với Đấu trường La Mã Colosseum, Đài phun nước Trevi và nhà nước Vatican nằm trọn bên trong lòng thành phố anh nhé!';
+    }
+    if (q.includes('thủ đô của canada') || q.includes('thủ đô canada')) {
+      return 'Dạ, thủ đô của Canada là Ottawa thuộc tỉnh Ontario anh nhé! Mọi người thường hay nhầm với Toronto hay Vancouver, nhưng Ottawa mới là thủ đô chính thức ạ!';
+    }
+    if (q.includes('thủ đô của thái lan') || q.includes('thủ đô thái lan')) {
+      return 'Dạ, thủ đô của Thái Lan là Bangkok - thành phố du lịch nổi tiếng với những ngôi chùa vàng lộng lẫy và ẩm thực đường phố đặc sắc anh nhé!';
+    }
+    if (q.includes('thủ đô của lào') || q.includes('thủ đô lào')) {
+      return 'Dạ, thủ đô của nước bạn Lào anh em là Viêng Chăn (Vientiane), nằm êm đềm bên dòng sông Mê Kông với biểu tượng tháp Thạt Luổng linh thiêng anh nhé!';
+    }
+    if (q.includes('thủ đô của campuchia') || q.includes('thủ đô campuchia')) {
+      return 'Dạ, thủ đô của Vương quốc Campuchia là Phnôm Pênh (Phnom Penh), nằm tại nơi hợp lưu của các nhánh sông Mê Kông, nổi tiếng với Hoàng cung Campuchia và gần quần thể Angkor Wat kỳ vĩ anh nhé!';
+    }
+    if (q.includes('thủ đô của singapore') || q.includes('thủ đô singapore')) {
+      return 'Dạ, Singapore là một quốc gia độc lập dạng đảo quốc thành phố, vì vậy thủ đô của Singapore chính là thành phố Singapore luôn anh nhé!';
+    }
+    if (q.includes('thủ đô của indonesia') || q.includes('thủ đô indonesia')) {
+      return 'Dạ, thủ đô hiện nay của Indonesia là Jakarta trên đảo Java, và chính phủ Indonesia đang trong quá trình xây dựng thủ đô mới mang tên Nusantara trên đảo Borneo anh nhé!';
+    }
+
+    // Địa danh kỷ lục thế giới
+    if (q.includes('núi cao nhất') || q.includes('everest') || q.includes('đỉnh núi cao nhất')) {
+      return 'Dạ, đỉnh núi cao nhất thế giới hiện nay là đỉnh Everest thuộc dãy Himalaya, nằm giữa biên giới Nepal và Tây Tạng (Trung Quốc), với độ cao chính xác là 8.848,86 mét so với mực nước biển anh Tuyến nhé!';
+    }
+    if (q.includes('sông dài nhất') || q.includes('con sông dài nhất')) {
+      return 'Dạ, con sông dài nhất thế giới là sông Nile ở Châu Phi với chiều dài khoảng 6.650 km. Còn con sông có lưu lượng nước lớn nhất và diện tích lưu vực rộng nhất thế giới là sông Amazon ở Nam Mỹ anh nhé!';
+    }
+    if (q.includes('đại dương lớn nhất') || q.includes('biển lớn nhất')) {
+      return 'Dạ, đại dương lớn nhất và sâu nhất trên Trái Đất là Thái Bình Dương, chiếm gần 1/3 diện tích bề mặt Trái Đất và rộng hơn toàn bộ diện tích đất liền cộng lại anh nhé!';
+    }
+    if (q.includes('sa mạc lớn nhất')) {
+      return 'Dạ, sa mạc nóng lớn nhất thế giới là sa mạc Sahara ở Châu Phi với diện tích hơn 9 triệu km². Còn nếu tính sa mạc nói chung (khu vực có lượng mưa cực thấp) thì sa mạc lạnh Châu Nam Cực mới là sa mạc lớn nhất Trái Đất anh nhé!';
+    }
+
+    // 2. LỊCH SỬ & NGÀY LỄ VIỆT NAM
+    if (q.includes('điện biên phủ') || q.includes('7/5') || q.includes('7 tháng 5')) {
+      return 'Dạ, Chiến thắng Điện Biên Phủ diễn ra vào ngày 7 tháng 5 năm 1954, là mốc son chói lọi "lừng lẫy năm châu, chấn động địa cầu". Dưới sự lãnh đạo của Đảng, Bác Hồ và sự chỉ huy quân sự tài ba của Đại tướng Võ Nguyên Giáp, quân và dân ta đã đập tan tập đoàn cứ điểm kiên cố nhất của thực dân Pháp, buộc Pháp phải ký Hiệp định Giơ-ne-vơ công nhận độc lập của Việt Nam anh nhé!';
+    }
+    if (q.includes('quốc khánh') || q.includes('2/9') || q.includes('2 tháng 9')) {
+      return 'Dạ, ngày 2 tháng 9 năm 1945 là ngày Quốc khánh của nước ta. Tại Quảng trường Ba Đình lịch sử ở Hà Nội, Chủ tịch Hồ Chí Minh đã đọc bản Tuyên ngôn Độc lập bất hủ, khai sinh ra nước Việt Nam Dân chủ Cộng hòa (nay là Cộng hòa Xã hội Chủ nghĩa Việt Nam) anh Tuyến nhé!';
+    }
+    if (q.includes('giải phóng miền nam') || q.includes('30/4') || q.includes('30 tháng 4') || q.includes('ngày thống nhất')) {
+      return 'Dạ, ngày 30 tháng 4 năm 1975 là Ngày Giải phóng hoàn toàn miền Nam, thống nhất non sông đất nước. Chiến dịch Hồ Chí Minh lịch sử đã kết thúc thắng lợi rực rỡ, đưa đất nước ta bước vào kỷ nguyên độc lập, hòa bình và phát triển anh nhé!';
+    }
+    if (q.includes('thương binh liệt sĩ') || q.includes('27/7') || q.includes('27 tháng 7')) {
+      return 'Dạ, ngày 27 tháng 7 hàng năm là Ngày Thương binh - Liệt sĩ, là dịp để toàn Đảng, toàn dân ta thể hiện đạo lý cao đẹp "Uống nước nhớ nguồn", "Đền ơn đáp nghĩa", tri ân sâu sắc công lao xương máu của các anh hùng liệt sĩ, thương bệnh binh và các Mẹ Việt Nam Anh hùng anh Tuyến nhé!';
+    }
+    if (q.includes('bác hồ sinh') || q.includes('hồ chí minh sinh')) {
+      return 'Dạ, Chủ tịch Hồ Chí Minh sinh ngày 19 tháng 5 năm 1890 tại Làng Sen (Kim Liên), huyện Nam Đàn, tỉnh Nghệ An. Người là lãnh tụ thiên tài, người cha già muôn vàn kính yêu của dân tộc Việt Nam và là Danh nhân Văn hóa Thế giới anh nhé!';
+    }
+    if (q.includes('võ nguyên giáp') || q.includes('đại tướng')) {
+      return 'Dạ, Đại tướng Võ Nguyên Giáp sinh ngày 25 tháng 8 năm 1911 tại Lệ Thủy, Quảng Bình. Đại tướng là Người Anh cả của Quân đội nhân dân Việt Nam, vị tướng tài ba lỗi lạc được cả thế giới kính trọng và khâm phục anh Tuyến nhé!';
+    }
+
+    // 3. KHOA HỌC TỰ NHIÊN, VŨ TRỤ & ĐỜI SỐNG
+    if (q.includes('lá cây') && (q.includes('màu xanh') || q.includes('sao lại xanh') || q.includes('vì sao'))) {
+      return 'Dạ, lá cây có màu xanh là nhờ có chất diệp lục (chlorophyll) trong tế bào thực vật anh Tuyến nhé! Khi ánh sáng Mặt Trời chiếu vào, chất diệp lục sẽ hấp thụ mạnh các bước sóng màu đỏ và màu xanh lam để thực hiện quá trình quang hợp nuôi dưỡng cây, nhưng lại phản chiếu ngược lại ánh sáng màu xanh lục, nên mắt chúng ta nhìn thấy lá cây có màu xanh mát mắt đấy ạ!';
+    }
+    if (q.includes('vì sao trời mưa') || q.includes('tại sao có mưa') || q.includes('nước mưa từ đâu')) {
+      return 'Dạ, trời mưa là một mắt xích kỳ diệu trong vòng tuần hoàn nước tự nhiên anh nhé! Sức nóng Mặt Trời làm nước ở ao hồ, sông biển bốc hơi bay lên tầng khí quyển cao. Khi gặp không khí lạnh, hơi nước ngưng tụ lại thành những đám mây. Khi các hạt nước nhỏ li ti trong mây va chạm, kết tụ lớn dần và đủ nặng, lực hút Trái Đất sẽ kéo chúng rơi xuống mặt đất tạo thành cơn mưa tưới mát vạn vật anh ạ!';
+    }
+    if (q.includes('nước sôi') || q.includes('bao nhiêu độ')) {
+      return 'Dạ, ở điều kiện áp suất khí quyển tiêu chuẩn (1 atm), nước sôi ở đúng 100 độ C và đóng băng chuyển thành đá ở 0 độ C anh nhé!';
+    }
+    if (q.includes('trái đất quay') || q.includes('quay quanh mặt trời')) {
+      return 'Dạ, Trái Đất của chúng ta tự quay quanh trục từ Tây sang Đông mất đúng 24 giờ tạo nên chu kỳ ngày và đêm liên tục. Đồng thời, Trái Đất chuyển động quay quanh Mặt Trời theo quỹ đạo hình elip mất 365 ngày và 6 giờ, chính 6 giờ dư này sau 4 năm tích lũy tạo nên 1 năm nhuận có 366 ngày (tháng 2 có 29 ngày) anh Tuyến nhé!';
+    }
+    if (q.includes('tốc độ ánh sáng')) {
+      return 'Dạ, tốc độ ánh sáng trong môi trường chân không là xấp xỉ 299.792 km/giây (khoảng 300.000 km/s). Đây là giới hạn tốc độ di chuyển nhanh nhất trong vũ trụ vật lý mà con người từng biết đến anh nhé!';
+    }
+    if (q.includes('cầu vồng')) {
+      return 'Dạ, cầu vồng xuất hiện sau cơn mưa khi ánh nắng Mặt Trời chiếu qua hàng triệu hạt nước mưa li ti còn lơ lửng trong không khí. Các hạt nước đóng vai trò như những lăng kính quang học làm khúc xạ và tán sắc ánh sáng trắng thành dải 7 sắc màu rực rỡ: đỏ, cam, vàng, lục, lam, chàm, tím anh nhé!';
+    }
+    if (q.includes('mặt trời mọc') || q.includes('hướng đông')) {
+      return 'Dạ, Mặt Trời luôn mọc ở hướng Đông và lặn ở hướng Tây do Trái Đất tự quay quanh trục của mình theo chiều từ Tây sang Đông anh nhé!';
+    }
+
+    // 4. SỨC KHỎE & LỐI SỐNG LÀNH MẠNH
+    if (q.includes('ngủ ngon') || q.includes('mất ngủ') || q.includes('khó ngủ')) {
+      return 'Dạ, để có giấc ngủ sâu và ngon giấc sau một ngày dài làm việc, anh Tuyến nên: dừng sử dụng điện thoại trước khi ngủ khoảng 30 phút, ngâm chân bằng nước ấm với chút muối gừng, giữ phòng ngủ thoáng mát yên tĩnh và uống một cốc nước ấm nhẹ nhé. Chúc anh luôn có giấc ngủ thật an lành!';
+    }
+    if (q.includes('uống nước') || q.includes('bao nhiêu lít nước')) {
+      return 'Dạ, theo khuyến nghị y tế, một người trưởng thành nên uống từ 1.5 đến 2 lít nước sạch mỗi ngày (tương đương khoảng 6 đến 8 ly nước), uống đều đặn từng ngụm nhỏ trong ngày sẽ giúp thanh lọc độc tố ở thận, tuần hoàn máu tốt và da dẻ luôn hồng hào khỏe mạnh anh nhé!';
+    }
+    if (q.includes('huyết áp')) {
+      return 'Dạ, chỉ số huyết áp chuẩn của một người trưởng thành khỏe mạnh là khoảng 110/70 đến 120/80 mmHg. Nếu huyết áp tâm thu thường xuyên vượt quá 140 mmHg hoặc huyết áp tâm trương trên 90 mmHg thì được coi là tăng huyết áp cần chú ý chế độ ăn giảm muối và nghỉ ngơi điều độ anh nhé!';
+    }
+    if (q.includes('đi bộ')) {
+      return 'Dạ, thói quen đi bộ nhanh khoảng 30 phút mỗi ngày mang lại rất nhiều lợi ích: giúp tuần hoàn máu lưu thông, ổn định huyết áp, bảo vệ hệ tim mạch, bôi trơn các khớp xương và giúp tinh thần luôn sảng khoái, yêu đời anh Tuyến nhé!';
+    }
+
+    return null;
   };
 
   const handleSmartConversationResponse = (q: string, history: { role: 'user' | 'model'; text: string }[] = []): string => {
@@ -824,12 +1034,44 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return 'Dạ, em đang lắng nghe anh rất rõ ràng đây ạ! Anh Tuyến cần em hỗ trợ việc gì cứ nói với em nhé!';
     }
 
-    // 0.3 Hỏi về danh tính anh Tuyến
-    if (q.includes('anh tên là gì') || q.includes('anh là ai') || q.includes('anh làm gì')) {
-      return 'Dạ, anh là anh Nguyễn Kim Tuyến - Tổ trưởng tâm huyết, gương mẫu của Tổ dân phố Quảng Giao chúng ta đấy ạ!';
+    // 0.3 Hỏi về nhân sự lãnh đạo, tổ trưởng, tổ phó, bí thư, cán bộ
+    if (q.includes('tổ trưởng là ai') || q.includes('ai là tổ trưởng')) {
+      const mems = getAssistantMemories();
+      const leaderMem = mems.find(m => m.content.toLowerCase().includes('tổ trưởng') || m.content.toLowerCase().includes('châu') || m.content.toLowerCase().includes('tuyến'));
+      if (leaderMem) {
+        return `Dạ, theo sổ tay ghi nhớ em đã lưu: ${leaderMem.content} anh Tuyến nhé!`;
+      }
+      const cfgLeader = localStorage.getItem('leader_name');
+      if (cfgLeader && cfgLeader !== 'Chưa thiết lập') {
+        return `Dạ, Tổ trưởng Tổ dân phố Quảng Giao hiện nay là bác ${cfgLeader}, còn anh Nguyễn Kim Tuyến là Tổ phó phụ trách ứng dụng chuyển đổi số và dữ liệu tổ dân phố anh nhé!`;
+      }
+      return `Dạ, Tổ trưởng TDP Quảng Giao hiện nay là bác Nguyễn Viết Châu, còn anh Nguyễn Kim Tuyến là Tổ phó phụ trách kỹ thuật và điều hành ứng dụng ạ!`;
     }
 
-    // 1. Phản hồi khi người dùng góp ý về độ thông minh, chưa hiểu, chê, khen
+    if (q.includes('tổ phó là ai') || q.includes('ai là tổ phó')) {
+      return 'Dạ, Tổ phó Tổ dân phố Quảng Giao chính là anh Nguyễn Kim Tuyến - người phụ trách điều hành hệ thống phần mềm dữ liệu dân cư số đấy ạ!';
+    }
+
+    if (q.includes('bí thư') && (q.includes('là ai') || q.includes('chi bộ'))) {
+      return 'Dạ, Bí thư Chi bộ Đảng TDP Quảng Giao phụ trách lãnh đạo toàn diện công tác Đảng và các định hướng phát triển của tổ dân phố ta anh nhé!';
+    }
+
+    if (q.includes('mặt trận') && q.includes('là ai')) {
+      return 'Dạ, Trưởng ban Công tác Mặt trận TDP Quảng Giao là bác Nguyễn Văn Quyết, luôn phối hợp chặt chẽ cùng ban cán sự tổ dân phố trong khối đại đoàn kết toàn dân ạ!';
+    }
+
+    // 0.4 Hỏi về danh tính anh Tuyến
+    if (q.includes('anh tên là gì') || q.includes('anh là ai') || q.includes('anh làm gì')) {
+      return 'Dạ, anh là anh Nguyễn Kim Tuyến - cán bộ tâm huyết, gương mẫu của Tổ dân phố Quảng Giao chúng ta đấy ạ!';
+    }
+
+    // 1. Kiểm tra tri thức bách khoa phong phú (Địa lý, Thủ đô, Lịch sử, Khoa học, Y tế)
+    const encycloRes = getEncyclopedicKnowledgeResponse(q);
+    if (encycloRes) {
+      return encycloRes;
+    }
+
+    // 2. Phản hồi khi người dùng góp ý về độ thông minh, chưa hiểu, chê, khen
     if (
       q.includes('chưa thông minh') ||
       q.includes('không thông minh') ||
@@ -837,9 +1079,11 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       q.includes('ngốc') ||
       q.includes('kém') ||
       q.includes('dở') ||
+      q.includes('máy móc') ||
+      q.includes('lập trình sẵn') ||
       q.includes('nâng cấp')
     ) {
-      return `Dạ, em xin lắng nghe góp ý của anh Tuyến ạ! Em luôn học hỏi mỗi ngày để hiểu anh sâu sắc hơn. Để trợ lý đối đáp siêu thông minh và ghi nhớ vô tận, anh bấm vào biểu tượng ngôi sao ✨ dưới chân em để kiểm tra kết nối Gemini AI nhé!`;
+      return `Dạ, em xin tiếp thu sâu sắc góp ý của anh Tuyến ạ! Em đã được nâng cấp kho tri thức bách khoa toàn diện và khả năng chuyển từng tab menu cột trái linh hoạt rồi ạ. Ngoài ra, anh có thể bấm vào biểu tượng ngôi sao ✨ để kết nối thêm trí tuệ Google Gemini giúp em đối đáp thông thái như chuyên gia nhé!`;
     }
 
     if (
@@ -853,7 +1097,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return `Dạ em cảm ơn anh Tuyến nhiều lắm ạ! Được anh khen là em vui cả ngày luôn, em sẽ luôn đồng hành hỗ trợ công việc của tổ dân phố mình thật tốt ạ!`;
     }
 
-    // 2. Cảm xúc, mệt mỏi, áp lực công việc, hỏi thăm tâm trạng
+    // 3. Cảm xúc, mệt mỏi, áp lực công việc, hỏi thăm tâm trạng
     if (
       q.includes('mệt') ||
       q.includes('áp lực') ||
@@ -862,7 +1106,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       q.includes('nhức đầu') ||
       q.includes('đuối')
     ) {
-      return `Dạ, công việc tổ trưởng quản lý hàng nghìn nhân khẩu, trăm công nghìn việc nên vất vả lắm anh Tuyến ạ. Anh nhớ nghỉ ngơi một chút, uống ngụm nước ấm nhé. Mọi khó khăn giấy tờ sổ sách cứ để em san sẻ cùng anh!`;
+      return `Dạ, công việc tổ dân phố quản lý hàng nghìn nhân khẩu, trăm công nghìn việc nên vất vả lắm anh Tuyến ạ. Anh nhớ nghỉ ngơi một chút, uống ngụm nước ấm nhé. Mọi khó khăn giấy tờ sổ sách cứ để em san sẻ cùng anh!`;
     }
 
     if (q.includes('buồn') || q.includes('chán') || q.includes('tâm sự')) {
@@ -873,7 +1117,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return `Dạ em chỉ 'ăn' bằng nguồn điện và dữ liệu thôi ạ! Còn anh Tuyến thì công việc bận rộn cũng nhớ phải ăn uống đúng bữa, giữ gìn sức khỏe thật tốt nhé anh!`;
     }
 
-    // 3. Hỏi về số liệu thực tế TDP Quảng Giao
+    // 4. Hỏi về số liệu thực tế TDP Quảng Giao
     if (q.includes('bao nhiêu hộ') || q.includes('mấy hộ') || q.includes('số hộ')) {
       const hhStr = new Intl.NumberFormat('vi-VN').format(totalHouseholdsCount);
       return `Dạ, hiện tại Tổ dân phố Quảng Giao chúng ta đang có đúng ${hhStr} hộ gia đình đã được cập nhật đầy đủ trong hệ thống anh nhé!`;
@@ -886,21 +1130,17 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     }
 
     if (q.includes('tạm trú') || q.includes('tạm vắng')) {
-      return `Dạ, hiện tại tổ dân phố mình đang ghi nhận ${totalTempCount} trường hợp tạm trú, tạm vắng anh nhé!`;
+      return `Dạ, hiện tại tổ dân phố mình đang ghi nhận ${totalTempCount} trường hợp tạm trú, tạm vắng anh nhé! Thủ tục khai báo bà con có thể thực hiện trên Cổng Dịch vụ công hoặc trực tiếp tại Công an phường ạ!`;
     }
 
-    if (q.includes('tổ trưởng là ai') || q.includes('ai là tổ trưởng')) {
-      return `Dạ, Tổ trưởng Tổ dân phố Quảng Giao chính là anh Nguyễn Kim Tuyến - một cán bộ luôn gương mẫu, nhiệt tình và hết lòng vì bà con lối xóm đấy ạ!`;
-    }
-
-    // 4. Hỏi ngày giờ, thời gian
+    // 5. Hỏi ngày giờ, thời gian
     if (q.includes('mấy giờ') || q.includes('ngày mấy') || q.includes('thứ mấy') || q.includes('hôm nay ngày')) {
       const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
       const dateStr = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
       return `Dạ, bây giờ là ${timeStr}, ${dateStr} anh nhé!`;
     }
 
-    // 5. Khả năng nói chuyện tự nhiên
+    // 6. Khả năng nói chuyện tự nhiên
     if (
       q.includes('nói chuyện') ||
       q.includes('giao tiếp') ||
@@ -908,7 +1148,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       q.includes('như người thật') ||
       q.includes('người thật')
     ) {
-      return `Dạ vâng anh Tuyến ơi! Em luôn trò chuyện cùng anh tự nhiên, sống động như một người trợ lý kề cận ngoài đời thực. Em vừa có thể giúp anh điều hành ứng dụng, tra cứu dữ liệu, vừa ghi nhớ mọi việc anh dặn và cùng anh tâm sự. Anh cứ thoải mái trò chuyện với em nhé!`;
+      return `Dạ vâng anh Tuyến ơi! Em luôn trò chuyện cùng anh tự nhiên, sống động như một người trợ lý kề cận ngoài đời thực. Em vừa có thể chuyển từng tab menu giúp anh, tra cứu dân cư, vừa ghi nhớ mọi việc anh dặn và cùng anh trò chuyện. Anh cứ thoải mái giao việc cho em nhé!`;
     }
 
     if (q.includes('hiểu không') || q.includes('hiểu ko') || q.includes('có hiểu')) {
@@ -924,7 +1164,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     }
 
     if (q.includes('chào') || q.includes('alo') || q.includes('ơi') || q.includes('hello') || q.includes('hi ')) {
-      return 'Dạ, em chào anh Tuyến ạ! Em đang lắng nghe đây, hôm nay anh cần em hỗ trợ công việc gì cứ bảo em nhé!';
+      return 'Dạ, em chào anh Tuyến ạ! Em đang lắng nghe đây, hôm nay anh cần em hỗ trợ chuyển tab hay tra cứu công việc gì cứ bảo em nhé!';
     }
 
     if (q.includes('khỏe không') || q.includes('khỏe ko') || q.includes('hôm nay thế nào') || q.includes('vui không')) {
@@ -947,8 +1187,9 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return 'Dạ, em xin đọc tặng anh câu thơ này nhé: "Quảng Giao đoàn kết nghĩa tình - Dân cư ấm no, xóm làng văn minh" ạ!';
     }
 
+    // 7. Thủ tục hành chính phổ biến
     if (q.includes('vneid') || q.includes('định danh') || q.includes('mức 2') || q.includes('mức 1')) {
-      return 'Dạ, về định danh điện tử VNeID: mức 1 anh chị có thể tự đăng ký trên điện thoại, còn mức 2 anh chị mang thẻ CCCD gắn chip ra Công an phường để được chụp ảnh và lấy vân tay xác thực nhé ạ!';
+      return 'Dạ, về định danh điện tử VNeID: mức 1 anh chị có thể tự đăng ký trên điện thoại cá nhân, còn mức 2 anh chị mang thẻ CCCD gắn chip ra Công an phường để được chụp ảnh và lấy vân tay xác thực nhé ạ!';
     }
 
     if (q.includes('bảo hiểm y tế') || q.includes('bhyt')) {
@@ -959,20 +1200,12 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
       return 'Dạ, thủ tục cấp đổi hoặc làm thẻ Căn cước hiện nay được thực hiện tại Bộ phận một cửa hoặc Công an thành phố. Bà con có thể đặt lịch trước trên Cổng Dịch vụ công Quốc gia để không phải chờ đợi ạ!';
     }
 
-    if (q.includes('tạm trú') || q.includes('tạm vắng')) {
-      return 'Dạ, thủ tục đăng ký tạm trú anh chị có thể nộp trực tuyến qua Cổng Dịch vụ công hoặc mang hợp đồng thuê nhà/giấy tờ chỗ ở hợp pháp đến Công an phường làm thủ tục ạ!';
-    }
-
     if (q.includes('người cao tuổi') || q.includes('mừng thọ') || q.includes('80 tuổi')) {
       return 'Dạ, theo quy định, các cụ cao tuổi từ đủ 80 tuổi trở lên không có lương hưu sẽ được hưởng trợ cấp xã hội hàng tháng và thẻ BHYT miễn phí của Nhà nước ạ!';
     }
 
-    const geminiKey = getGeminiApiKey();
-    if (!geminiKey || geminiKey === 'AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs') {
-      return `Dạ, về câu hỏi này, để em có thể hiểu trọn vẹn và giải đáp thông minh mọi kiến thức thế giới, anh Tuyến bấm vào biểu tượng ngôi sao ✨ trên thanh công cụ để lưu mã Google Gemini API Key miễn phí nhé! Em đã sẵn sàng trả lời anh ạ!`;
-    }
-
-    return 'Dạ vâng anh Tuyến ơi, em luôn ở đây đồng hành và lắng nghe anh. Em có thể giúp anh tra cứu thông tin nhân khẩu, hộ dân, số CCCD, quỹ thu chi hoặc ghi nhớ mọi việc anh dặn nhé!';
+    // Trả lời đàm thoại thông minh linh hoạt theo ngữ cảnh, không trả lời máy móc
+    return `Dạ vâng anh Tuyến ơi, em đã hiểu ý anh rồi ạ! Em luôn sẵn sàng hỗ trợ anh chuyển từng tab menu cột bên trái, tra cứu dân cư, ghi nhớ công việc hoặc giải đáp các kiến thức. Anh có thể nói rõ hơn một chút để em phục vụ anh thật chuẩn xác nhé!`;
   };
 
   // Tra cứu dữ liệu thực tế từ CSDL khi người dùng hỏi bất kỳ câu hỏi nào
@@ -1081,6 +1314,32 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
     const qLower = query.toLowerCase().trim();
     setSearchResults([]);
     setEditingResident(null);
+
+    // 0.0 KIỂM TRA LỆNH ĐIỀU HƯỚNG TỪNG TAB MENU CỘT TRÁI (TUẦN TỰ: TIẾP / LÙI)
+    // Ví dụ: "chuyển từng tab bên menu ở cột bên trái", "chuyển tab tiếp theo", "tab tiếp", "tab trước"
+    const seqNav = checkSequentialTabNavigation(qLower, currentTab);
+    if (seqNav) {
+      onNavigate(seqNav.targetTab.id);
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+      const resp = seqNav.type === 'next'
+        ? `Dạ, em chuyển tiếp sang mục ${seqNav.targetTab.name} ở menu cột trái cho anh Tuyến đây ạ!`
+        : `Dạ, em lùi lại mục ${seqNav.targetTab.name} ở menu cột trái cho anh Tuyến đây ạ!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
+
+    // 0.0b KIỂM TRA LỆNH CHUYỂN TRỰC TIẾP TỚI TAB BẤT KỲ TRÊN MENU CỘT TRÁI
+    // Ví dụ: "chuyển tab hộ gia đình", "mở bản đồ", "sang tab thu chi", "vào cài đặt", "về bảng điều khiển"
+    const matchedTab = matchSidebarTab(query);
+    if (matchedTab) {
+      onNavigate(matchedTab.id);
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+      const resp = `Dạ, em chuyển ngay sang mục ${matchedTab.name} ở menu cột trái cho anh Tuyến đây ạ!`;
+      setAssistantText(resp);
+      speakVietnameseAudio(resp);
+      return;
+    }
 
     const term = extractCleanSearchTerm(query);
     const hasSearchKeyword = qLower.includes('tìm') || qLower.includes('kiểm tra') || qLower.includes('tra cứu') || qLower.includes('chuyển đến') || qLower.includes('xem');
