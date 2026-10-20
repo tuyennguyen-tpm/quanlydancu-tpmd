@@ -1884,101 +1884,7 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
-      {/* 1. BẢNG PHỤ ĐỀ LỜI NÓI NỔI SIÊU GỌN - TỰ ĐỘNG BIẾN MẤT KHI NÓI XONG (KHÔNG CÒN HỘP THOẠI TO CHE MÀN HÌNH) */}
-      {showCaption && assistantText && (
-        <div 
-          style={{
-            maxWidth: '280px',
-            background: 'rgba(15, 23, 42, 0.88)',
-            backdropFilter: 'blur(12px)',
-            color: '#f8fafc',
-            borderRadius: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.35)',
-            padding: '10px 14px',
-            marginBottom: '10px',
-            position: 'relative',
-            animation: 'fadeInUp 0.25s ease-out',
-            fontSize: '0.8rem',
-            lineHeight: '1.45',
-            zIndex: 1000
-          }}
-        >
-          {/* Mũi tên chỉ xuống miệng cô gái */}
-          <div style={{
-            position: 'absolute',
-            bottom: '-7px',
-            left: '42px',
-            width: 0,
-            height: 0,
-            borderLeft: '7px solid transparent',
-            borderRight: '7px solid transparent',
-            borderTop: '7px solid rgba(15, 23, 42, 0.88)'
-          }} />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                background: isSpeaking ? '#38bdf8' : '#22c55e',
-                boxShadow: isSpeaking ? '0 0 8px #38bdf8' : 'none'
-              }} />
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8' }}>
-                {voiceType === 'namminh' ? 'Nam Minh' : voiceType === 'hoaimy' ? 'Hoài My' : 'Trợ lý Ảo'}
-              </span>
-              {isSpeaking && (
-                <span style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 600 }}>
-                  🔊 Đang nói...
-                </span>
-              )}
-            </div>
-
-            <button
-              onClick={() => setShowCaption(false)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#94a3b8',
-                cursor: 'pointer',
-                padding: '2px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-              title="Đóng phụ đề"
-            >
-              <X size={12} />
-            </button>
-          </div>
-
-          <div style={{ color: '#ffffff', fontWeight: 500, fontSize: '0.82rem' }}>
-            {assistantText}
-          </div>
-        </div>
-      )}
-
-      {/* 2. HUY HIỆU TRANSCRIPT NHẬN DIỆN KHI NGƯỜI DÙNG ĐANG NÓI VÀO MICRO */}
-      {liveTranscript && (
-        <div style={{
-          marginBottom: '8px',
-          background: 'rgba(239, 68, 68, 0.95)',
-          backdropFilter: 'blur(8px)',
-          color: 'white',
-          padding: '6px 12px',
-          borderRadius: '20px',
-          fontSize: '0.76rem',
-          fontWeight: 600,
-          boxShadow: '0 6px 18px rgba(239, 68, 68, 0.45)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          animation: 'fadeInUp 0.2s ease-out'
-        }}>
-          <Mic size={13} className="pulse" />
-          <span>"{liveTranscript}"</span>
-        </div>
-      )}
 
       {/* 3. THẺ KẾT QUẢ TÌM KIẾM NHÂN KHẨU (CHỈ XUẤT HIỆN KHI TÌM KIẾM, KHÔNG LÀM VƯỚNG MÀN HÌNH) */}
       {searchResults.length > 0 && !editingResident && (
@@ -2141,313 +2047,150 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
         </div>
       )}
 
-      {/* 5. HÌNH TƯỢNG CÔ GÁI ĐỨNG CỬ ĐỘNG NHƯ NGƯỜI THẬT */}
-      <div 
-        onClick={() => {
-          if (isSpeaking) {
-            // Đang nói -> Click vào để ngắt lời ngay lập tức
-            interruptSpeaking();
-            return;
-          }
-          setShowCaption(true);
-          const greetingText = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
-          setAssistantText(greetingText);
-          speakVietnameseAudio(greetingText);
-        }}
-        style={{
-          position: 'relative',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          userSelect: 'none',
-          animation: isSpeaking ? 'none' : 'floatingGirl 3.2s ease-in-out infinite'
-        }}
-        title={isSpeaking ? "Bấm vào để ngắt lời trợ lý!" : "Bấm vào để nói chuyện với trợ lý!"}
-      >
-        {/* Nút ngắt lời nổi khi trợ lý đang phát âm thanh */}
-        {isSpeaking && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
+      {/* THANH ĐIỀU KHIỂN TRỢ LÝ ẢO MINI SIÊU GỌN */}
+      <div style={{
+        background: 'rgba(15, 23, 42, 0.88)',
+        backdropFilter: 'blur(10px)',
+        color: 'white',
+        padding: '3px 8px',
+        borderRadius: '999px',
+        fontSize: '0.68rem',
+        fontWeight: '700',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        zIndex: 10
+      }}>
+        {/* Trạng thái mic */}
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isSpeaking) {
               interruptSpeaking();
-            }}
-            style={{
-              position: 'absolute',
-              top: '-36px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              whiteSpace: 'nowrap',
-              background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
-              color: 'white',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              fontSize: '0.74rem',
-              fontWeight: '700',
-              boxShadow: '0 6px 20px rgba(239, 68, 68, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: '2px solid rgba(255, 255, 255, 0.95)',
-              cursor: 'pointer',
-              zIndex: 100,
-              animation: 'bounceTap 1.2s infinite'
-            }}
-            title="Bấm vào đây hoặc nhấn phím CÁCH (Space) để cắt lời và nói ngay"
-          >
-            <Square size={11} fill="white" />
-            <span>🛑 Bấm / Phím Cách để ngắt lời</span>
-          </div>
-        )}
-        {/* Nút nhắc mở tiếng nếu trình duyệt chặn autoplay */}
-        {needsUserTapToPlay && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              setNeedsUserTapToPlay(false);
-              const greetingText = 'Dạ, em chào anh chị! Em là trợ lý của anh Nguyễn Kim Tuyến - Tổ dân phố Quảng Giao. Em đang lắng nghe đây ạ!';
-              setAssistantText(greetingText);
-              speakVietnameseAudio(greetingText);
-            }}
+            }
+            toggleAutoHandsFree();
+          }}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            cursor: 'pointer',
+            color: isListening ? '#f87171' : '#38bdf8'
+          }}
+          title={isAutoHandsFree ? 'Đang bật đàm thoại tự động rảnh tay (Bấm để tắt)' : 'Đang tắt tự động (Bấm để bật)'}
+        >
+          {isListening ? (
+            <>
+              <Radio size={11} className="pulse" />
+              <span>Đang nghe...</span>
+            </>
+          ) : (
+            <>
+              <Mic size={11} />
+              <span>{isAutoHandsFree ? 'Tự động' : 'Tắt mic'}</span>
+            </>
+          )}
+        </div>
 
-            style={{
-              position: 'absolute',
-              top: '-38px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              whiteSpace: 'nowrap',
-              background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
-              color: 'white',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '0.74rem',
-              fontWeight: '700',
-              boxShadow: '0 6px 18px rgba(234, 88, 12, 0.45)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: '2px solid rgba(255, 255, 255, 0.9)',
-              animation: 'bounceTap 1.5s infinite',
-              cursor: 'pointer',
-              zIndex: 100
-            }}
-            title="Bấm vào để kích hoạt âm thanh trợ lý"
-          >
-            <Volume2 size={13} />
-            <span>Bấm nghe tiếng trợ lý!</span>
-          </div>
-        )}
+        <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
 
-        {/* Nút tạm ẩn */}
+        {/* Nút đổi giọng nhanh */}
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setIsVisible(false);
+            const next: VoiceOption = voiceType === 'namminh' ? 'hoaimy' : voiceType === 'hoaimy' ? 'google' : 'namminh';
+            handleChangeVoice(next);
           }}
           style={{
-            position: 'absolute',
-            top: '0px',
-            right: '-10px',
-            background: 'rgba(15, 23, 42, 0.7)',
-            color: 'white',
+            background: 'none',
             border: 'none',
-            borderRadius: '50%',
-            width: '18px',
-            height: '18px',
-            fontSize: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            color: '#facc15',
             cursor: 'pointer',
-            zIndex: 10
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            padding: 0
           }}
-          title="Tạm ẩn trợ lý"
+          title="Bấm để đổi giọng: Nam Minh / Hoài My / Chị Google"
         >
-          ✕
+          {voiceType === 'namminh' ? '👨 Nam' : voiceType === 'hoaimy' ? '👩 My' : '🌐 GG'}
         </button>
 
-        {/* Vòng hào quang phát sáng khi nói hoặc nghe */}
-        {(isSpeaking || isListening) && (
-          <div style={{
-            position: 'absolute',
-            top: '20px',
-            width: '120px',
-            height: '120px',
-            borderRadius: '50%',
-            background: isSpeaking 
-              ? 'radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, rgba(56, 189, 248, 0) 70%)'
-              : 'radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, rgba(239, 68, 68, 0) 70%)',
-            animation: 'soundwavePulse 1.8s infinite ease-in-out',
-            pointerEvents: 'none',
-            zIndex: 1
-          }} />
-        )}
+        <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
 
-        {/* Ảnh nhân vật cô gái cử động nói chuyện & cử chỉ như người thật */}
-        <div style={{
-          position: 'relative',
-          width: '140px',
-          height: '185px',
-          transform: bodyGestureTransform,
-          transition: 'transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)'
-        }}>
-          <img 
-            src={activeFrame} 
-            alt="Cô gái Trợ lý Ảo" 
-            style={{ 
-              width: '100%', 
-              height: '100%', 
-              objectFit: 'contain',
-              filter: isSpeaking 
-                ? 'drop-shadow(0 8px 18px rgba(2, 132, 199, 0.65))' 
-                : isListening 
-                  ? 'drop-shadow(0 8px 18px rgba(239, 68, 68, 0.65))'
-                  : 'drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2))',
-              transition: 'filter 0.3s'
-            }} 
-          />
-        </div>
+        {/* Nút bật tắt âm thanh */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isSpeaking) {
+              interruptSpeaking();
+            }
+            const n = !voiceEnabled;
+            setVoiceEnabled(n);
+            if (!n) {
+              if (audioPlayerRef.current) audioPlayerRef.current.pause();
+              if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            }
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: voiceEnabled ? '#4ade80' : '#94a3b8',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: 0
+          }}
+          title={voiceEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+        >
+          {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+        </button>
 
-        {/* Thanh điều khiển mini trong suốt dưới chân cô gái */}
-        <div style={{
-          marginTop: '-4px',
-          background: 'rgba(15, 23, 42, 0.85)',
-          backdropFilter: 'blur(10px)',
-          color: 'white',
-          padding: '3px 8px',
-          borderRadius: '999px',
-          fontSize: '0.68rem',
-          fontWeight: '700',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          zIndex: 10
-        }}>
-          {/* Trạng thái mic */}
-          <div 
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleAutoHandsFree();
-            }}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px',
-              cursor: 'pointer',
-              color: isListening ? '#f87171' : '#38bdf8'
-            }}
-            title={isAutoHandsFree ? 'Đang bật đàm thoại tự động rảnh tay (Bấm để tắt)' : 'Đang tắt tự động (Bấm để bật)'}
-          >
-            {isListening ? (
-              <>
-                <Radio size={11} className="pulse" />
-                <span>Đang nghe...</span>
-              </>
-            ) : (
-              <>
-                <Mic size={11} />
-                <span>{isAutoHandsFree ? 'Tự động' : 'Tắt mic'}</span>
-              </>
-            )}
-          </div>
+        <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
 
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+        {/* Nút xem Sổ tay Ký ức / Trí nhớ */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setMemories(getAssistantMemories());
+            setShowMemoriesModal(true);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#c084fc',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: 0
+          }}
+          title={`Sổ tay ký ức (${memories.length} điều đã ghi nhớ)`}
+        >
+          <Brain size={12} />
+        </button>
 
-          {/* Nút đổi giọng nhanh */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const next: VoiceOption = voiceType === 'namminh' ? 'hoaimy' : voiceType === 'hoaimy' ? 'google' : 'namminh';
-              handleChangeVoice(next);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#facc15',
-              cursor: 'pointer',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              padding: 0
-            }}
-            title="Bấm để đổi giọng: Nam Minh / Hoài My / Chị Google"
-          >
-            {voiceType === 'namminh' ? '👨 Nam' : voiceType === 'hoaimy' ? '👩 My' : '🌐 GG'}
-          </button>
+        <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
 
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-
-          {/* Nút bật tắt âm thanh */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const n = !voiceEnabled;
-              setVoiceEnabled(n);
-              if (!n) {
-                if (audioPlayerRef.current) audioPlayerRef.current.pause();
-                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-              }
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: voiceEnabled ? '#4ade80' : '#94a3b8',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: 0
-            }}
-            title={voiceEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
-          >
-            {voiceEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
-          </button>
-
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-
-          {/* Nút xem Sổ tay Ký ức / Trí nhớ */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMemories(getAssistantMemories());
-              setShowMemoriesModal(true);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#c084fc',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: 0
-            }}
-            title={`Sổ tay ký ức (${memories.length} điều đã ghi nhớ)`}
-          >
-            <Brain size={12} />
-          </button>
-
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-
-          {/* Nút cài đặt Google Gemini AI */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowApiKeyModal(true);
-            }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#38bdf8',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: 0
-            }}
-            title="Cài đặt Google Gemini AI (Miễn phí 100%)"
-          >
-            <Sparkles size={12} />
-          </button>
-        </div>
+        {/* Nút cài đặt Google Gemini AI */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowApiKeyModal(true);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#38bdf8',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: 0
+          }}
+          title="Cài đặt Google Gemini AI (Miễn phí 100%)"
+        >
+          <Sparkles size={12} />
+        </button>
       </div>
 
       {/* MODAL CÀI ĐẶT GOOGLE GEMINI API KEY MIỄN PHÍ 100% */}
