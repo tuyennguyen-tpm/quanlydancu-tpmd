@@ -29,6 +29,7 @@ import {
   getGeminiApiKey, 
   setGeminiApiKey, 
   askGemini,
+  testGeminiApiKey,
   getAssistantMemories,
   saveAssistantMemory,
   removeAssistantMemory,
@@ -2772,17 +2773,15 @@ export const VirtualAssistant: React.FC<VirtualAssistantProps> = ({
                     return;
                   }
                   setIsTestingKey(true);
-                  setApiKeySavedStatus('Đang kiểm tra kết nối với Gemini...');
-                  setGeminiApiKey(key);
+                  setApiKeySavedStatus('Đang kiểm tra kết nối với Google Gemini...');
                   try {
-                    const testReply = await askGemini('Xin chào, bạn là trợ lý thông minh đúng không?');
-                    if (testReply) {
-                      setApiKeySavedStatus('✓ Kết nối thành công! Trợ lý đã sẵn sàng trò chuyện.');
+                    const result = await testGeminiApiKey(key);
+                    setApiKeySavedStatus(result.message);
+                    if (result.success) {
+                      setGeminiApiKey(key);
                       const resp = 'Dạ, kết nối Google Gemini thành công rồi ạ! Em đã sẵn sàng phục vụ anh chị!';
                       setAssistantText(resp);
                       speakVietnameseAudio(resp);
-                    } else {
-                      setApiKeySavedStatus('⚠️ Không nhận được phản hồi, vui lòng kiểm tra lại mã Key.');
                     }
                   } catch (e: any) {
                     setApiKeySavedStatus(`⚠️ Lỗi: ${e?.message || 'Không thể kết nối'}`);

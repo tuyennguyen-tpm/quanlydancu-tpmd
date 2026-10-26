@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, partyDb, checkAndSeedUser } from './services/db';
 import { appCache } from './services/cache';
-import { askGemini, setGeminiApiKey } from './services/ai';
+import { askGemini, setGeminiApiKey, testGeminiApiKey } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
 import Dashboard from './pages/Dashboard';
@@ -2279,6 +2279,8 @@ const App = () => {
     setRolePinThuQuyInput(localStorage.getItem('role_pin_thu_quy') || '7777');
     setLatestAppVersionInput(localStorage.getItem('latest_app_version') || APP_VERSION);
     setShowLeaderFundStats(localStorage.getItem('show_leader_fund_stats') !== 'false');
+    setGeminiKeyInput(localStorage.getItem('gemini_api_key') || '');
+    setGeminiKeyStatus('');
     
     // Load groups configuration
     const savedGroups = localStorage.getItem('tdp_groups_config');
@@ -2514,6 +2516,10 @@ const App = () => {
     const newShowLeaderStats = showLeaderFundStats ? 'true' : 'false';
     localStorage.setItem('show_leader_fund_stats', newShowLeaderStats);
     window.dispatchEvent(new CustomEvent('leader-stats-visibility-changed', { detail: showLeaderFundStats }));
+
+    // Tự động lưu và đồng bộ Google Gemini API Key
+    const cleanGeminiKey = geminiKeyInput.trim();
+    setGeminiApiKey(cleanGeminiKey);
 
     // Đồng bộ các cấu hình khác lên bảng app_config của Supabase
     if (supabase) {
@@ -5291,29 +5297,16 @@ const App = () => {
                     disabled={isTestingGeminiKey || !geminiKeyInput.trim()}
                     onClick={async () => {
                       setIsTestingGeminiKey(true);
-                      setGeminiKeyStatus('Đang kiểm tra kết nối...');
-                      const controller = new AbortController();
-                      const timeoutId = setTimeout(() => controller.abort(), 20000);
+                      setGeminiKeyStatus('Đang kiểm tra kết nối với Google Gemini...');
                       try {
-                        const key = geminiKeyInput.trim();
-                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(key)}`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ contents: [{ parts: [{ text: 'Xin chào' }] }] }),
-                          signal: controller.signal
-                        });
-                        const data = await res.json();
-                        if (res.ok && data?.candidates?.length) {
-                          setGeminiKeyStatus('✓ Kết nối thành công! Bấm "Lưu API Key" để áp dụng.');
-                        } else {
-                          setGeminiKeyStatus(`⚠️ Key không hợp lệ: ${data?.error?.message || res.status}`);
+                        const result = await testGeminiApiKey(geminiKeyInput);
+                        setGeminiKeyStatus(result.message);
+                        if (result.success) {
+                          setGeminiApiKey(geminiKeyInput.trim());
                         }
                       } catch (err: any) {
-                        setGeminiKeyStatus(err?.name === 'AbortError'
-                          ? '⚠️ Quá 20 giây không có phản hồi từ Google. Kiểm tra mạng Internet / tường lửa rồi thử lại.'
-                          : `⚠️ Lỗi kết nối: ${err?.message || err}`);
+                        setGeminiKeyStatus(`⚠️ Lỗi kiểm tra: ${err?.message || err}`);
                       } finally {
-                        clearTimeout(timeoutId);
                         setIsTestingGeminiKey(false);
                       }
                     }}

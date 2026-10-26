@@ -48,18 +48,65 @@ export function setGeminiApiKey(key: string): void {
 }
 
 const SUPPORTED_MODELS = [
-  "gemini-3.8-flash",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-flash-latest"
+  "gemini-3.8-flash"
 ];
 
-const GEMINI_TIMEOUT_MS = 20000;
+const GEMINI_TIMEOUT_MS = 10000;
 
 /**
- * Gọi Gemini qua REST với timeout cho từng model.
- * - 404 (model không còn): thử model tiếp theo.
- * - 400/401/403 (key sai, bị khóa, chưa bật billing): dừng ngay vì model khác cũng sẽ lỗi tương tự.
+ * Kiểm tra trực tiếp tính hợp lệ của mã Gemini API Key
+ */
+export async function testGeminiApiKey(key: string): Promise<{ success: boolean; message: string }> {
+  const cleanKey = key.trim();
+  if (!cleanKey) {
+    return { success: false, message: 'Vui lòng nhập mã Gemini API Key trước khi kiểm tra!' };
+  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(cleanKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: '1+1=' }] }] }),
+        signal: controller.signal
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      return { success: true, message: '✓ Kết nối Google Gemini thành công! Trợ lý AI đã sẵn sàng hoạt động siêu tốc.' };
+    }
+    const rawMsg = data?.error?.message || res.statusText;
+    if (res.status === 403 && rawMsg.toLowerCase().includes('leaked')) {
+      return {
+        success: false,
+        message: '⚠️ Mã API Key này đã bị Google khóa do bị lộ (Leaked). Vui lòng tạo mã mới tại aistudio.google.com/app/apikey!'
+      };
+    }
+    if ([400, 401, 403].includes(res.status)) {
+      return {
+        success: false,
+        message: `⚠️ Mã API Key không hợp lệ (${res.status}): ${rawMsg}`
+      };
+    }
+    return {
+      success: false,
+      message: `⚠️ Lỗi từ Google (${res.status}): ${rawMsg}`
+    };
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      return { success: false, message: '⚠️ Quá 10 giây không có phản hồi từ máy chủ Google. Vui lòng kiểm tra lại mạng Internet.' };
+    }
+    return { success: false, message: `⚠️ Lỗi kết nối: ${err?.message || err}` };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Gọi Gemini qua REST với timeout ngắn cho model 3.8-flash.
+ * - 400/401/403 (key sai, bị khóa, leak): dừng ngay và thông báo rõ ràng.
  */
 async function callGeminiREST(key: string, prompt: string): Promise<{ text: string; error: string }> {
   let lastError = '';
@@ -86,11 +133,16 @@ async function callGeminiREST(key: string, prompt: string): Promise<{ text: stri
         lastError = 'Gemini không trả về nội dung.';
         continue;
       }
-      lastError = `Gemini (${res.status}): ${data?.error?.message || res.statusText}`;
+      const rawMsg = data?.error?.message || res.statusText;
+      if (res.status === 403 && rawMsg.toLowerCase().includes('leaked')) {
+        lastError = 'Mã Gemini API Key đã bị Google khóa do bị lộ (Leaked). Vui lòng tạo mã mới tại aistudio.google.com/app/apikey.';
+        break;
+      }
+      lastError = `Gemini (${res.status}): ${rawMsg}`;
       console.warn(`[Gemini ${model}]`, lastError);
       if ([400, 401, 403].includes(res.status)) break;
     } catch (err: any) {
-      lastError = err?.name === 'AbortError' ? 'Gemini phản hồi quá lâu (hết thời gian chờ).' : `Gemini: ${err?.message || err}`;
+      lastError = err?.name === 'AbortError' ? 'Gemini phản hồi quá lâu (hết thời gian chờ 10s).' : `Gemini: ${err?.message || err}`;
       console.warn(`[Gemini ${model}]`, lastError);
     } finally {
       clearTimeout(timeoutId);
@@ -297,7 +349,7 @@ export async function askFreeCloudAI(prompt: string, systemInstruction?: string)
     messages.push({ role: 'user', content: prompt });
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     lastFreeCloudError = '';
     const response = await fetch('https://text.pollinations.ai/', {
@@ -317,12 +369,12 @@ export async function askFreeCloudAI(prompt: string, systemInstruction?: string)
       return text.trim();
     }
     lastFreeCloudError = (response.status === 402 || response.status === 429)
-      ? 'Máy chủ AI miễn phí giới hạn 1 câu trả lời / 30 giây. Vui lòng đợi rồi hỏi lại, hoặc nhập Gemini API Key trong Cài đặt.'
-      : `Máy chủ AI miễn phí lỗi ${response.status}.`;
+      ? 'Máy chủ AI miễn phí giới hạn lượt hỏi. Vui lòng nhập Gemini API Key trong Cài đặt để trả lời tức thì không giới hạn.'
+      : `Máy chủ AI miễn phí phản hồi chậm hoặc lỗi (${response.status}).`;
   } catch (e: any) {
     console.warn('[Free Cloud AI Error]:', e);
     lastFreeCloudError = e?.name === 'AbortError'
-      ? 'Máy chủ AI miễn phí phản hồi quá lâu.'
+      ? 'Máy chủ AI miễn phí phản hồi quá lâu (hết thời gian chờ 8s).'
       : `Không kết nối được máy chủ AI miễn phí: ${e?.message || e}`;
   }
   return '';
@@ -340,14 +392,18 @@ export async function askGemini(prompt: string): Promise<string> {
     const { text, error } = await callGeminiREST(primaryKey, prompt);
     if (text) return text;
     geminiError = error;
+    // Nếu key bị lỗi khóa / leak / sai cú pháp, báo ngay lập tức thay vì bắt người dùng chờ
+    if (error && (error.includes('khóa') || error.includes('Leaked') || error.includes('403') || error.includes('400') || error.includes('401'))) {
+      throw new Error(error);
+    }
   }
 
-  // Tự động kết nối Free Cloud AI nếu chưa có key Gemini hoặc Gemini lỗi
+  // Tự động kết nối Free Cloud AI nếu chưa có key Gemini hoặc lỗi tạm thời
   const freeText = await askFreeCloudAI(prompt);
   if (freeText) return freeText;
 
   const reasons = [
-    geminiError || 'Chưa có Gemini API Key (nhập tại Cài đặt → Cấu hình chung).',
+    geminiError || 'Chưa cấu hình Gemini API Key (nhập tại Cài đặt ⚙️ → Cấu hình chung).',
     lastFreeCloudError
   ].filter(Boolean);
   throw new Error(reasons.join('\n'));
@@ -504,9 +560,15 @@ Bối cảnh thực tế CSDL TDP Quảng Giao:
 
   // 1. Nếu người dùng có cấu hình mã Google Gemini riêng, ưu tiên gọi Gemini trước
   if (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) {
-    const { text: rawText } = await callGeminiREST(primaryKey, conversationPrompt);
+    const { text: rawText, error } = await callGeminiREST(primaryKey, conversationPrompt);
     if (rawText) {
       return parseAssistantReply(rawText);
+    }
+    // Nếu mã Key bị Google khóa hoặc sai, thông báo ngay lập tức
+    if (error && (error.includes('khóa') || error.includes('Leaked') || error.includes('403') || error.includes('400') || error.includes('401'))) {
+      return {
+        spokenReply: `Dạ, khóa Gemini API Key của anh đang bị lỗi: ${error}. Anh Tuyến vào phần Cài đặt để cập nhật mã mới nhé!`
+      };
     }
   }
 
@@ -520,9 +582,9 @@ Bối cảnh thực tế CSDL TDP Quảng Giao:
     console.warn('[Free Cloud AI Assistant Error]:', err);
   }
 
-  return null;
-
-  return null;
+  return {
+    spokenReply: "Dạ, hiện tại chưa nhận được phản hồi từ AI. Anh Tuyến vui lòng kiểm tra kết nối mạng hoặc nhập mã Gemini API Key trong phần Cài đặt để trợ lý trả lời siêu tốc nhé!"
+  };
 }
 
 /**
