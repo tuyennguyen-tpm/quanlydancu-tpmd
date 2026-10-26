@@ -51,7 +51,7 @@ const SUPPORTED_MODELS = [
   "gemini-3.8-flash"
 ];
 
-const GEMINI_TIMEOUT_MS = 10000;
+const GEMINI_TIMEOUT_MS = 15000;
 
 /**
  * Kiểm tra trực tiếp tính hợp lệ của mã Gemini API Key
@@ -62,7 +62,7 @@ export async function testGeminiApiKey(key: string): Promise<{ success: boolean;
     return { success: false, message: 'Vui lòng nhập mã Gemini API Key trước khi kiểm tra!' };
   }
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(cleanKey)}`,
@@ -96,7 +96,7 @@ export async function testGeminiApiKey(key: string): Promise<{ success: boolean;
     };
   } catch (err: any) {
     if (err?.name === 'AbortError') {
-      return { success: false, message: '⚠️ Quá 10 giây không có phản hồi từ máy chủ Google. Vui lòng kiểm tra lại mạng Internet.' };
+      return { success: false, message: '⚠️ Quá 15 giây không có phản hồi từ máy chủ Google. Vui lòng kiểm tra lại mạng Internet.' };
     }
     return { success: false, message: `⚠️ Lỗi kết nối: ${err?.message || err}` };
   } finally {
@@ -138,11 +138,15 @@ async function callGeminiREST(key: string, prompt: string): Promise<{ text: stri
         lastError = 'Mã Gemini API Key đã bị Google khóa do bị lộ (Leaked). Vui lòng tạo mã mới tại aistudio.google.com/app/apikey.';
         break;
       }
+      if (res.status === 503) {
+        lastError = 'Máy chủ Google Gemini đang quá tải tạm thời (503 High Demand).';
+        continue;
+      }
       lastError = `Gemini (${res.status}): ${rawMsg}`;
       console.warn(`[Gemini ${model}]`, lastError);
       if ([400, 401, 403].includes(res.status)) break;
     } catch (err: any) {
-      lastError = err?.name === 'AbortError' ? 'Gemini phản hồi quá lâu (hết thời gian chờ 10s).' : `Gemini: ${err?.message || err}`;
+      lastError = err?.name === 'AbortError' ? 'Gemini phản hồi quá lâu (hết thời gian chờ 15s).' : `Gemini: ${err?.message || err}`;
       console.warn(`[Gemini ${model}]`, lastError);
     } finally {
       clearTimeout(timeoutId);
@@ -402,10 +406,13 @@ export async function askGemini(prompt: string): Promise<string> {
   const freeText = await askFreeCloudAI(prompt);
   if (freeText) return freeText;
 
-  const reasons = [
-    geminiError || 'Chưa cấu hình Gemini API Key (nhập tại Cài đặt ⚙️ → Cấu hình chung).',
-    lastFreeCloudError
-  ].filter(Boolean);
+  const reasons: string[] = [];
+  if (geminiError) reasons.push(geminiError);
+  if (lastFreeCloudError) reasons.push(lastFreeCloudError);
+  if (!reasons.length) {
+    reasons.push('Chưa cấu hình Gemini API Key.');
+  }
+  reasons.push('👉 Hãy mở Cài đặt (⚙️) và nhập mã Gemini API Key của bạn để trợ lý phản hồi siêu tốc và ổn định 100%!');
   throw new Error(reasons.join('\n'));
 }
 
