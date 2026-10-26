@@ -342,40 +342,63 @@ export function clearAssistantMemories(): void {
 }
 
 /**
- * Gọi dịch vụ Cloud AI miễn phí không cần API Key để đảm bảo trợ lý luôn trả lời thông minh 100% mọi câu hỏi.
- * Sử dụng phương thức GET (nhanh hơn POST, không bị giới hạn 30s/lần như POST endpoint).
+ * Gọi dịch vụ Cloud AI miễn phí không cần API Key.
+ * Ưu tiên dùng Vercel Proxy /api/chat (cùng domain, không bị CORS hay mạng VN chặn).
+ * Fallback sang GET thẳng tới pollinations.ai nếu proxy không khả dụng.
  */
 export async function askFreeCloudAI(prompt: string, systemInstruction?: string): Promise<string> {
+  lastFreeCloudError = '';
+
+  // Ghép system instruction vào prompt nếu có
+  const fullPrompt = systemInstruction
+    ? `${systemInstruction}\n\nNgười dùng hỏi: ${prompt}`
+    : prompt;
+
+  // --- Cách 1: Gọi qua Vercel Proxy /api/chat (Vercel server gọi AI từ Mỹ/EU, nhanh hơn VN rất nhiều) ---
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-    lastFreeCloudError = '';
-
-    // Ghép system instruction vào prompt nếu có (để AI hiểu ngữ cảnh)
-    const fullPrompt = systemInstruction
-      ? `${systemInstruction}\n\nNgười dùng hỏi: ${prompt}`
-      : prompt;
-
-    // Dùng GET - nhanh hơn và ổn định hơn POST (tránh giới hạn 1 req/30s)
-    const url = 'https://text.pollinations.ai/' + encodeURIComponent(fullPrompt.slice(0, 2000));
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: fullPrompt.slice(0, 2000) }),
+      signal: controller.signal
+    });
     clearTimeout(timeoutId);
 
     if (response.ok) {
-      const text = await response.text();
-      if (text && text.trim()) return text.trim();
-      lastFreeCloudError = 'Máy chủ AI miễn phí không trả về nội dung.';
-      return '';
+      const data = await response.json().catch(() => null);
+      if (data && !data.error && data.text) {
+        return data.text;
+      }
+      if (data?.message) {
+        lastFreeCloudError = data.message;
+      }
     }
-    lastFreeCloudError = (response.status === 402 || response.status === 429)
-      ? 'Máy chủ AI miễn phí đang bận. Vui lòng đợi 30 giây rồi hỏi lại, hoặc nhập Gemini API Key trong Cài đặt để không bị giới hạn.'
-      : `Máy chủ AI miễn phí lỗi (${response.status}).`;
   } catch (e: any) {
-    console.warn('[Free Cloud AI Error]:', e);
+    // Proxy không khả dụng (chạy localhost dev hoặc route chưa deploy) → fallback
+    console.warn('[Proxy AI Error, falling back to direct]:', e?.message);
+  }
+
+  // --- Cách 2: Fallback - gọi thẳng GET tới pollinations.ai ---
+  try {
+    const controller2 = new AbortController();
+    const timeoutId2 = setTimeout(() => controller2.abort(), 25000);
+    const url = 'https://text.pollinations.ai/' + encodeURIComponent(fullPrompt.slice(0, 2000));
+    const response2 = await fetch(url, { signal: controller2.signal });
+    clearTimeout(timeoutId2);
+
+    if (response2.ok) {
+      const text = await response2.text();
+      if (text && text.trim()) return text.trim();
+    }
+    lastFreeCloudError = `Máy chủ AI miễn phí lỗi (${response2.status}). Vui lòng nhập Gemini API Key trong Cài đặt.`;
+  } catch (e: any) {
+    console.warn('[Free Cloud AI Direct Error]:', e);
     lastFreeCloudError = e?.name === 'AbortError'
-      ? 'Máy chủ AI miễn phí phản hồi quá lâu (hết thời gian chờ 25s). Vui lòng thử lại.'
-      : `Không kết nối được máy chủ AI miễn phí: ${e?.message || e}`;
+      ? 'Mạng kết nối tới máy chủ AI bị chậm. Vui lòng thử lại hoặc nhập Gemini API Key trong Cài đặt ⚙️.'
+      : `Không kết nối được máy chủ AI: ${e?.message || e}`;
   }
   return '';
 }
