@@ -436,21 +436,46 @@ export async function askGemini(prompt: string): Promise<string> {
  */
 export function generateLocalAssistantFallback(prompt: string): string {
   const p = prompt.toLowerCase();
+  const today = new Date();
+  const dateStr = `ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
 
   // 1. Chào hỏi, xưng hô
   if (/^(chào|xin chào|hello|hi|alo|em ơi|trợ lý ơi|bạn ơi)/.test(p) || p.length < 8) {
-    return `Dạ, em chào anh Nguyễn Kim Tuyến ạ! Em là Trợ lý AI của Tổ dân phố Quảng Giao. Em luôn sẵn sàng hỗ trợ anh soạn thảo văn bản, giấy mời, kế hoạch, xuất file Word hoặc tra cứu dữ liệu. Anh cần em làm gì cứ dặn em nhé!`;
+    return `Dạ, xin chào bạn! Tôi là Trợ lý AI hành chính. Tôi luôn sẵn sàng hỗ trợ soạn thảo văn bản, giấy mời, biên bản, kế hoạch, thông báo, xuất file Word hoặc tra cứu dữ liệu. Bạn cần soạn thảo nội dung gì hãy nhắn cho tôi nhé!`;
   }
 
-  // 2. Yêu cầu xuất file Word / tải văn bản
+  // 2. Yêu cầu xuất file Word / tải văn bản -> Viết đầy đủ nội dung để người dùng đọc trước trên màn hình
   if (p.includes('xuất') && (p.includes('word') || p.includes('phai') || p.includes('tệp') || p.includes('tải') || p.includes('file'))) {
-    return `Dạ, em đã xuất nội dung văn bản ra tệp Word (.docx) và tải xuống máy tính cho anh Kim Tuyến rồi ạ!\n\n📁 Tệp đã được lưu trong thư mục Tải xuống (Downloads). Anh mở lên là có thể xem, in hoặc chỉnh sửa trực tiếp trên Microsoft Word nhé!`;
+    return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+-------------------
+TỔ DÂN PHỐ QUẢNG GIAO - PHƯỜNG NAM SẦM SƠN
+
+VĂN BẢN TRIỂN KHAI NHIỆM VỤ CÔNG TÁC
+(Kính gửi cán bộ và bà con nhân dân)
+
+Căn cứ vào kế hoạch công tác và nhiệm vụ thực hiện phong trào thi đua tại cơ sở, Ban điều hành xin thông báo và triển khai các nội dung sau:
+
+1. Mục đích, yêu cầu:
+   - Triển khai đầy đủ, kịp thời các chủ trương, kế hoạch của cấp trên đến từng hộ gia đình và nhân dân.
+   - Phát huy tinh thần đoàn kết, tích cực đóng góp xây dựng khu dân cư văn minh, an toàn, sạch đẹp.
+
+2. Nội dung thực hiện cụ thể:
+   - Đảm bảo an ninh trật tự, an toàn phòng cháy chữa cháy trong khu dân cư.
+   - Duy trì công tác vệ sinh môi trường, đổ rác đúng nơi và đúng giờ quy định.
+   - Tham gia ủng hộ các phong trào đền ơn đáp nghĩa, tương thân tương ái.
+
+3. Tổ chức thực hiện:
+   - Đề nghị các ban ngành, chi hội đoàn thể và toàn thể bà con nhân dân cùng phối hợp triển khai thực hiện tốt.
+
+Quảng Giao, ${dateStr}
+
+ĐẠI DIỆN / NGƯỜI LẬP BIỂU
+(Ký, ghi rõ họ tên)`;
   }
 
   // 3. Yêu cầu soạn thảo Giấy mời / Thư mời
   if (p.includes('giấy mời') || p.includes('thư mời') || p.includes('mời họp')) {
-    const today = new Date();
-    const dateStr = `ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
     return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
 Độc lập - Tự do - Hạnh phúc
 -------------------
@@ -458,14 +483,14 @@ TỔ DÂN PHỐ QUẢNG GIAO
 Số: .../GM-TDP
 
 GIẤY MỜI HỌP
-Về việc triển khai công tác nhiệm vụ Tổ dân phố Quảng Giao
+Về việc triển khai công tác nhiệm vụ Tổ dân phố
 
-Kính gửi: Toàn thể bà con nhân dân / Cán bộ nhân dân Tổ dân phố Quảng Giao
+Kính gửi: Toàn thể cán bộ và bà con nhân dân
 
-Thực hiện kế hoạch công tác của UBND Phường Nam Sầm Sơn và Nghị quyết Chi bộ TDP Quảng Giao, Ban điều hành Tổ dân phố trân trọng kính mời các đồng chí và bà con nhân dân về dự buổi họp thường kỳ.
+Ban điều hành trân trọng kính mời các đồng chí và bà con nhân dân về dự buổi họp thường kỳ.
 
 1. Thời gian: 19 giờ 30 phút, ngày ... tháng ... năm ${today.getFullYear()}
-2. Địa điểm: Nhà văn hóa Tổ dân phố Quảng Giao
+2. Địa điểm: Nhà văn hóa Tổ dân phố
 3. Nội dung cuộc họp:
    - Đánh giá tình hình an ninh trật tự, vệ sinh môi trường, các phong trào thi đua tháng vừa qua.
    - Triển khai kế hoạch vận động quỹ, công tác an sinh xã hội và nhiệm vụ trọng tâm thời gian tới.
@@ -474,47 +499,45 @@ Thực hiện kế hoạch công tác của UBND Phường Nam Sầm Sơn và Ng
 Rất mong các đồng chí và bà con nhân dân sắp xếp thời gian đến dự đông đủ, đúng giờ để buổi họp đạt kết quả tốt đẹp.
 
 Quảng Giao, ${dateStr}
-TỔ TRƯỞNG TỔ DÂN PHỐ
-Nguyễn Kim Tuyến`;
+
+ĐẠI DIỆN BAN ĐIỀU HÀNH
+(Ký, ghi rõ họ tên)`;
   }
 
   // 4. Yêu cầu soạn thảo Biên bản họp
   if (p.includes('biên bản')) {
-    const today = new Date();
     return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
 Độc lập - Tự do - Hạnh phúc
 -------------------
 TỔ DÂN PHỐ QUẢNG GIAO
 
 BIÊN BẢN CUỘC HỌP
-Về việc triển khai nhiệm vụ công tác Tổ dân phố Quảng Giao
+Về việc triển khai nhiệm vụ công tác Tổ dân phố
 
 1. Thời gian: ... giờ ..., ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}
-2. Địa điểm: Nhà văn hóa Tổ dân phố Quảng Giao
+2. Địa điểm: Nhà văn hóa Tổ dân phố
 3. Thành phần tham dự:
-   - Chủ trì: Đồng chí Nguyễn Kim Tuyến - Tổ trưởng TDP
-   - Thư ký: Đồng chí Lê Thị Dung
-   - Đại diện các ban ngành, đoàn thể và đông đảo bà con nhân dân trong tổ.
+   - Chủ trì: Đồng chí đại diện Ban điều hành tổ dân phố
+   - Thư ký: Đồng chí phụ trách ghi biên bản
+   - Đại diện các ban ngành, đoàn thể và bà con nhân dân trong tổ.
 
 4. Nội dung cuộc họp:
-   - Đồng chí Tổ trưởng thông qua tình hình thực hiện nhiệm vụ kinh tế - xã hội, an ninh trật tự trên địa bàn.
+   - Thông qua tình hình thực hiện nhiệm vụ kinh tế - xã hội, an ninh trật tự trên địa bàn.
    - Thảo luận các nội dung trọng tâm: vệ sinh môi trường đường làng ngõ xóm, đóng góp các quỹ an sinh xã hội, chuẩn bị các ngày lễ kỷ niệm.
-   - Ý kiến phát biểu của bà con nhân dân: Nhất trí cao với phương hướng của Ban điều hành tổ dân phố.
+   - Ý kiến phát biểu của bà con nhân dân: Nhất trí cao với phương hướng được đề ra.
 
 5. Kết luận cuộc họp:
    - 100% đại biểu và nhân dân có mặt biểu quyết thống nhất thông qua các chỉ tiêu nhiệm vụ.
-   - Giao Ban điều hành tổ dân phố và các chi hội đoàn thể tổ chức thực hiện nghiêm túc.
+   - Giao Ban điều hành và các chi hội đoàn thể tổ chức thực hiện nghiêm túc.
 
 Cuộc họp kết thúc hồi ... giờ cùng ngày, biên bản được lập và đọc lại cho toàn thể hội nghị cùng nghe.
 
 THƯ KÝ CUỘC HỌP                    CHỦ TRÌ CUỘC HỌP
-                                TỔ TRƯỞNG TỔ DÂN PHỐ
-                                  Nguyễn Kim Tuyến`;
+(Ký, ghi rõ họ tên)               (Ký, ghi rõ họ tên)`;
   }
 
   // 5. Yêu cầu Kế hoạch / Tờ trình / Thông báo / Báo cáo
   if (p.includes('thông báo') || p.includes('kế hoạch') || p.includes('tờ trình') || p.includes('báo cáo') || p.includes('nghị quyết')) {
-    const today = new Date();
     return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
 Độc lập - Tự do - Hạnh phúc
 -------------------
@@ -523,30 +546,56 @@ TỔ DÂN PHỐ QUẢNG GIAO
 THÔNG BÁO TRIỂN KHAI NHIỆM VỤ CÔNG TÁC
 (Địa bàn Tổ dân phố Quảng Giao - Phường Nam Sầm Sơn)
 
-Kính gửi: Toàn thể cán bộ, đảng viên và nhân dân Tổ dân phố Quảng Giao
+Kính gửi: Toàn thể cán bộ, hội viên và nhân dân Tổ dân phố
 
-Căn cứ vào nhiệm vụ chính trị và kế hoạch hoạt động của Tổ dân phố Quảng Giao, Ban điều hành tổ dân phố trân trọng thông báo tới toàn thể bà con nhân dân các nội dung sau:
+Căn cứ vào nhiệm vụ chính trị và kế hoạch hoạt động của Tổ dân phố, Ban điều hành trân trọng thông báo tới toàn thể bà con nhân dân các nội dung sau:
 
 I. MỤC ĐÍCH, YÊU CẦU:
 - Nâng cao tinh thần đoàn kết, ý thức trách nhiệm của mỗi công dân trong xây dựng đời sống văn hóa khu dân cư.
 - Đảm bảo trật tự an toàn, giữ gìn vệ sinh môi trường xanh - sạch - đẹp.
 
 II. NỘI DUNG THỰC HIỆN:
-1. Vận động 100% các hộ gia đình chấp hành nghiêm chủ trương, chính sách của Đảng và pháp luật của Nhà nước.
+1. Chấp hành nghiêm chủ trương, chính sách của Đảng và pháp luật của Nhà nước.
 2. Tích cực tham gia các phong trào thi đua yêu nước, đóng góp các quỹ phúc lợi và giữ gìn an ninh ngõ xóm.
 3. Tổ chức tổng vệ sinh đường phố, khuôn viên nhà văn hóa định kỳ hàng tuần.
 
 III. TỔ CHỨC THỰC HIỆN:
-- Ban cán sự tổ, Chi bộ Đảng và các chi hội: Phụ nữ, Cựu chiến binh, Nông dân, Đoàn Thanh niên gương mẫu đi đầu, đôn đốc nhắc nhở hội viên.
-- Mọi thắc mắc xin liên hệ trực tiếp với Tổ trưởng để được hướng dẫn, giải quyết kịp thời.
+- Ban điều hành tổ dân phố và các chi hội: Phụ nữ, Cựu chiến binh, Nông dân, Đoàn Thanh niên gương mẫu đi đầu, đôn đốc nhắc nhở hội viên.
+- Mọi thắc mắc xin liên hệ trực tiếp với Ban điều hành để được hướng dẫn, giải quyết kịp thời.
 
-Quảng Giao, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}
-TỔ TRƯỞNG TỔ DÂN PHỐ
-Nguyễn Kim Tuyến`;
+Quảng Giao, ${dateStr}
+
+NGƯỜI LẬP / ĐẠI DIỆN
+(Ký, ghi rõ họ tên)`;
   }
 
-  // 6. Trường hợp mặc định: Trả lời chu đáo, hỗ trợ trực tiếp
-  return `Dạ vâng anh Kim Tuyến! Em đã ghi nhận yêu cầu của anh:\n"${prompt}"\n\nEm đã chuẩn bị sẵn nội dung và các biểu mẫu hành chính theo đúng quy định của Tổ dân phố Quảng Giao. Anh có thể bấm nút "Tải file Word" ngay bên dưới để tải văn bản về máy tính, hoặc dặn em chỉnh sửa bất kỳ chi tiết nào theo ý anh nhé!`;
+  // 6. Trường hợp mặc định: Soạn thảo văn bản hoàn chỉnh để người dùng xem trước
+  return `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+Độc lập - Tự do - Hạnh phúc
+-------------------
+TỔ DÂN PHỐ QUẢNG GIAO
+
+VĂN BẢN HÀNH CHÍNH
+Nội dung: ${prompt}
+
+Kính gửi: Toàn thể bà con nhân dân và các ban ngành đoàn thể
+
+Thực hiện nhiệm vụ công tác theo yêu cầu, nội dung được tóm tắt và triển khai như sau:
+
+1. Nội dung trọng tâm:
+   - Đảm bảo thực hiện nghiêm túc, đúng quy định và đạt hiệu quả cao nhất.
+   - Phối hợp chặt chẽ giữa các thành viên, hội viên và bà con nhân dân.
+
+2. Thời gian và tiến độ:
+   - Triển khai ngay theo kế hoạch đã đề ra.
+
+3. Phân công trách nhiệm:
+   - Đề nghị các cá nhân, bộ phận liên quan nghiêm túc thực hiện nhiệm vụ được giao.
+
+Quảng Giao, ${dateStr}
+
+ĐẠI DIỆN / NGƯỜI LẬP
+(Ký, ghi rõ họ tên)`;
 }
 
 export interface AssistantResponse {

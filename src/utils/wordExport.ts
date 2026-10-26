@@ -115,10 +115,10 @@ export async function exportTextToWordDocx(rawContent: string, docTitle?: string
     }
 
     // Chữ ký cuối trang nếu chưa có
-    const hasSignature = lines.some(l => l.includes('Nguyễn Kim Tuyến') || l.includes('Tổ trưởng') || l.includes('Bí thư'));
+    const hasSignature = lines.some(l => l.includes('(Ký') || l.includes('Ký, ghi rõ') || l.includes('Người lập') || l.includes('Đại diện') || l.includes('Tổ trưởng') || l.includes('Bí thư'));
     if (!hasSignature) {
       const today = new Date();
-      const dateStr = `Quảng Giao, ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
+      const dateStr = `Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}`;
 
       paragraphs.push(
         new Paragraph({ children: [new TextRun({ text: '' })], spacing: { before: 240 } }),
@@ -131,14 +131,14 @@ export async function exportTextToWordDocx(rawContent: string, docTitle?: string
         new Paragraph({
           alignment: AlignmentType.RIGHT,
           children: [
-            new TextRun({ text: 'TỔ TRƯỞNG TỔ DÂN PHỐ      ', bold: true, size: 26, font: 'Times New Roman' })
+            new TextRun({ text: 'NGƯỜI LẬP BIỂU / ĐẠI DIỆN      ', bold: true, size: 26, font: 'Times New Roman' })
           ],
-          spacing: { after: 600 }
+          spacing: { after: 500 }
         }),
         new Paragraph({
           alignment: AlignmentType.RIGHT,
           children: [
-            new TextRun({ text: 'Nguyễn Kim Tuyến      ', bold: true, size: 26, font: 'Times New Roman' })
+            new TextRun({ text: '(Ký, ghi rõ họ tên)      ', italics: true, size: 24, font: 'Times New Roman' })
           ]
         })
       );

@@ -576,20 +576,24 @@ const App = () => {
 
     const lower = text.toLowerCase();
 
-    // 1. THỰC HIỆN NGAY: Yêu cầu xuất văn bản / tải file Word
+    // 1. THỰC HIỆN: Yêu cầu xuất văn bản / tải file Word
     if (lower.includes('xuất') && (lower.includes('word') || lower.includes('phai') || lower.includes('tệp') || lower.includes('tải') || lower.includes('file'))) {
       setTimeout(() => {
-        // Lấy tin nhắn dài nhất hoặc gần nhất của AI để xuất ra Word
-        const lastAiMsg = [...miniChatMessages].reverse().find(m => m.role === 'ai' && m.content.length > 30);
+        // Tìm văn bản thảo luận gần nhất, nếu chưa có thì soạn thảo văn bản hoàn chỉnh
+        const lastAiMsg = [...miniChatMessages].reverse().find(m => m.role === 'ai' && m.content.length > 50 && !m.content.startsWith('⚠️'));
         const contentToExport = lastAiMsg ? lastAiMsg.content : generateLocalAssistantFallback(text);
         
-        exportTextToWordDocx(contentToExport, 'Van_ban_Kim_Tuyen');
+        // Tự động tải file Word về máy
+        exportTextToWordDocx(contentToExport, 'Van_ban_hanh_chinh');
         
+        // HIỂN THỊ TOÀN BỘ NỘI DUNG VĂN BẢN TRÊN MÀN HÌNH ĐỂ NGƯỜI DÙNG XEM VÀ DUYỆT TRƯỚC
+        const previewMessage = `📄 **NỘI DUNG VĂN BẢN (XEM TRƯỚC):**\n\n${contentToExport}\n\n---\n✅ *Tệp Word (.docx) đã được tạo và tải xuống máy tính. Bạn cũng có thể bấm nút **Tải Word (.docx)** bên dưới để tải lại bất cứ lúc nào!*`;
+
         setMiniChatMessages(prev => [
           ...prev,
           { 
             role: 'ai', 
-            content: `✅ Dạ em đã xuất nội dung văn bản ra tệp Word (.docx) và tải xuống máy tính cho anh Kim Tuyến thành công!\n\n📁 Tệp đã được lưu vào thư mục Tải xuống (Downloads). Anh mở lên là có thể xem, in ấn hoặc chỉnh sửa trên Word nhé!` 
+            content: previewMessage
           }
         ]);
         setMiniChatLoading(false);
@@ -6106,7 +6110,7 @@ const App = () => {
                     color: '#94a3b8', fontSize: '0.82rem', lineHeight: '1.5'
                   }}>
                     <Bot size={32} color="#bfdbfe" style={{ marginBottom: '8px' }} />
-                    <div>Xin chào! Tôi là Trợ lý AI của: Kim Tuyến.</div>
+                    <div>Xin chào! Tôi là Trợ lý AI hành chính.</div>
                     <div>Hãy hỏi tôi về văn bản hành chính, báo cáo, biên bản...</div>
                   </div>
                 )}
@@ -6132,7 +6136,7 @@ const App = () => {
                     {msg.role === 'ai' && msg.content && msg.content.length > 20 && !msg.content.startsWith('⚠️') && (
                       <div style={{ display: 'flex', gap: '6px', marginTop: '4px', marginLeft: '2px' }}>
                         <button
-                          onClick={() => exportTextToWordDocx(msg.content, 'Van_ban_Kim_Tuyen')}
+                          onClick={() => exportTextToWordDocx(msg.content, 'Van_ban_hanh_chinh')}
                           style={{
                             background: '#eff6ff',
                             border: '1px solid #bfdbfe',
