@@ -575,7 +575,7 @@ const App = () => {
       } catch (err) {
         console.error('[Gemini Error]', err);
         const errMsg = err instanceof Error ? err.message : String(err);
-        setMiniChatMessages(prev => [...prev, { role: 'ai', content: `⚠️ Lỗi: ${errMsg.slice(0, 200)}` }]);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: `⚠️ ${errMsg.slice(0, 400)}` }]);
       }
       setMiniChatLoading(false);
       setTimeout(() => {
@@ -5292,12 +5292,15 @@ const App = () => {
                     onClick={async () => {
                       setIsTestingGeminiKey(true);
                       setGeminiKeyStatus('Đang kiểm tra kết nối...');
+                      const controller = new AbortController();
+                      const timeoutId = setTimeout(() => controller.abort(), 20000);
                       try {
                         const key = geminiKeyInput.trim();
                         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(key)}`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ contents: [{ parts: [{ text: 'Xin chào' }] }] })
+                          body: JSON.stringify({ contents: [{ parts: [{ text: 'Xin chào' }] }] }),
+                          signal: controller.signal
                         });
                         const data = await res.json();
                         if (res.ok && data?.candidates?.length) {
@@ -5306,8 +5309,11 @@ const App = () => {
                           setGeminiKeyStatus(`⚠️ Key không hợp lệ: ${data?.error?.message || res.status}`);
                         }
                       } catch (err: any) {
-                        setGeminiKeyStatus(`⚠️ Lỗi kết nối: ${err?.message || err}`);
+                        setGeminiKeyStatus(err?.name === 'AbortError'
+                          ? '⚠️ Quá 20 giây không có phản hồi từ Google. Kiểm tra mạng Internet / tường lửa rồi thử lại.'
+                          : `⚠️ Lỗi kết nối: ${err?.message || err}`);
                       } finally {
+                        clearTimeout(timeoutId);
                         setIsTestingGeminiKey(false);
                       }
                     }}

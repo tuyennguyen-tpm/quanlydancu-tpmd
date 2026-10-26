@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tdp-app-cache-v1';
+const CACHE_NAME = 'tdp-app-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -30,6 +30,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = event.request.url;
+
+  // Không can thiệp request POST/PUT... và request sang máy chủ khác (Gemini, AI, Supabase...)
+  if (event.request.method !== 'GET' || new URL(url).origin !== self.location.origin) {
+    return;
+  }
 
   // Bỏ qua các API Supabase để không gây nhiễu
   if (url.includes('/rest/v1/') || url.includes('/auth/v1/')) {

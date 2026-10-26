@@ -1,5 +1,4 @@
 // src/services/ai.ts
-import { GoogleGenAI } from "@google/genai";
 import { supabase, getSessionUserId } from "./db";
 
 const DEFAULT_GEMINI_KEY = "AIzaSyCF5_57Wnt8HL-UBy3BRyoTX0eBU6lPASs";
@@ -48,25 +47,59 @@ export function setGeminiApiKey(key: string): void {
   }
 }
 
-function getAiClient(customKey?: string): GoogleGenAI | null {
-  const key = customKey || getGeminiApiKey();
-  if (!key) return null;
-  try {
-    return new GoogleGenAI({ apiKey: key });
-  } catch (e) {
-    console.warn('[Gemini Client Init Error]', e);
-    return null;
-  }
-}
-
 const SUPPORTED_MODELS = [
   "gemini-3.8-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-3.7-flash",
   "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
   "gemini-flash-latest"
 ];
+
+const GEMINI_TIMEOUT_MS = 20000;
+
+/**
+ * Gọi Gemini qua REST với timeout cho từng model.
+ * - 404 (model không còn): thử model tiếp theo.
+ * - 400/401/403 (key sai, bị khóa, chưa bật billing): dừng ngay vì model khác cũng sẽ lỗi tương tự.
+ */
+async function callGeminiREST(key: string, prompt: string): Promise<{ text: string; error: string }> {
+  let lastError = '';
+  for (const model of SUPPORTED_MODELS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: controller.signal
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const text = (data?.candidates?.[0]?.content?.parts || [])
+          .map((p: any) => p?.text || '')
+          .join('')
+          .trim();
+        if (text) return { text, error: '' };
+        lastError = 'Gemini không trả về nội dung.';
+        continue;
+      }
+      lastError = `Gemini (${res.status}): ${data?.error?.message || res.statusText}`;
+      console.warn(`[Gemini ${model}]`, lastError);
+      if ([400, 401, 403].includes(res.status)) break;
+    } catch (err: any) {
+      lastError = err?.name === 'AbortError' ? 'Gemini phản hồi quá lâu (hết thời gian chờ).' : `Gemini: ${err?.message || err}`;
+      console.warn(`[Gemini ${model}]`, lastError);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+  return { text: '', error: lastError };
+}
+
+let lastFreeCloudError = '';
 
 export interface AssistantMemory {
   id: string;
@@ -264,8 +297,9 @@ export async function askFreeCloudAI(prompt: string, systemInstruction?: string)
     messages.push({ role: 'user', content: prompt });
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+    lastFreeCloudError = '';
     const response = await fetch('https://text.pollinations.ai/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -282,8 +316,14 @@ export async function askFreeCloudAI(prompt: string, systemInstruction?: string)
       const text = await response.text();
       return text.trim();
     }
-  } catch (e) {
+    lastFreeCloudError = (response.status === 402 || response.status === 429)
+      ? 'Máy chủ AI miễn phí giới hạn 1 câu trả lời / 30 giây. Vui lòng đợi rồi hỏi lại, hoặc nhập Gemini API Key trong Cài đặt.'
+      : `Máy chủ AI miễn phí lỗi ${response.status}.`;
+  } catch (e: any) {
     console.warn('[Free Cloud AI Error]:', e);
+    lastFreeCloudError = e?.name === 'AbortError'
+      ? 'Máy chủ AI miễn phí phản hồi quá lâu.'
+      : `Không kết nối được máy chủ AI miễn phí: ${e?.message || e}`;
   }
   return '';
 }
@@ -294,32 +334,23 @@ export async function askFreeCloudAI(prompt: string, systemInstruction?: string)
  */
 export async function askGemini(prompt: string): Promise<string> {
   const primaryKey = getGeminiApiKey();
-  const keysToTry = (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) ? [primaryKey] : [];
+  let geminiError = '';
 
-  for (const k of keysToTry) {
-    const client = getAiClient(k);
-    if (!client) continue;
-
-    for (const model of SUPPORTED_MODELS) {
-      try {
-        const response = await client.models.generateContent({
-          model,
-          contents: prompt,
-        });
-        if (response && response.text) {
-          return response.text.trim();
-        }
-      } catch (err: any) {
-        console.warn(`[Gemini API Error with model ${model}]:`, err?.message || err);
-      }
-    }
+  if (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) {
+    const { text, error } = await callGeminiREST(primaryKey, prompt);
+    if (text) return text;
+    geminiError = error;
   }
 
-  // Tự động kết nối Free Cloud AI nếu chưa có key Gemini
+  // Tự động kết nối Free Cloud AI nếu chưa có key Gemini hoặc Gemini lỗi
   const freeText = await askFreeCloudAI(prompt);
   if (freeText) return freeText;
 
-  return "";
+  const reasons = [
+    geminiError || 'Chưa có Gemini API Key (nhập tại Cài đặt → Cấu hình chung).',
+    lastFreeCloudError
+  ].filter(Boolean);
+  throw new Error(reasons.join('\n'));
 }
 
 export interface AssistantResponse {
@@ -470,33 +501,12 @@ Bối cảnh thực tế CSDL TDP Quảng Giao:
   conversationPrompt += `Người dùng (Anh Tuyến) vừa nói: "${userQuery}"\n\nHãy trả lời tự nhiên, ấm áp, thông minh, đúng mực như người thật:`;
 
   const primaryKey = getGeminiApiKey();
-  const keysToTry = (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) ? [primaryKey] : [];
 
   // 1. Nếu người dùng có cấu hình mã Google Gemini riêng, ưu tiên gọi Gemini trước
-  if (keysToTry.length > 0) {
-    try {
-      for (const key of keysToTry) {
-        const client = getAiClient(key);
-        if (!client) continue;
-
-        for (const model of SUPPORTED_MODELS) {
-          try {
-            const response = await client.models.generateContent({
-              model,
-              contents: conversationPrompt,
-            });
-
-            const rawText = response.text?.trim() || "";
-            if (rawText) {
-              return parseAssistantReply(rawText);
-            }
-          } catch (err: any) {
-            console.warn(`[Gemini Assistant with model ${model} error]:`, err?.message || err);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('[Gemini Assistant Key Error, switching to Free Cloud AI]', err);
+  if (primaryKey && primaryKey !== DEFAULT_GEMINI_KEY) {
+    const { text: rawText } = await callGeminiREST(primaryKey, conversationPrompt);
+    if (rawText) {
+      return parseAssistantReply(rawText);
     }
   }
 
