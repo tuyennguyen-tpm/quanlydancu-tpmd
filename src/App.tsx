@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, partyDb, checkAndSeedUser } from './services/db';
 import { appCache } from './services/cache';
-import { askGemini } from './services/ai';
+import { askGemini, setGeminiApiKey } from './services/ai';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
 import Dashboard from './pages/Dashboard';
@@ -783,6 +783,17 @@ const App = () => {
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
   const [settingsTab, setSettingsTab] = useState<'general' | 'backup' | 'keys'>('general');
+  // Gemini API Key dùng chung cho mọi chức năng AI (đồng bộ theo tài khoản qua Supabase)
+  const [geminiKeyInput, setGeminiKeyInput] = useState('');
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [geminiKeyStatus, setGeminiKeyStatus] = useState('');
+  const [isTestingGeminiKey, setIsTestingGeminiKey] = useState(false);
+  useEffect(() => {
+    if (isSettingsOpen) {
+      setGeminiKeyInput(localStorage.getItem('gemini_api_key') || '');
+      setGeminiKeyStatus('');
+    }
+  }, [isSettingsOpen]);
   const [isExportingBackup, setIsExportingBackup] = useState(false);
   const [isImportingBackup, setIsImportingBackup] = useState(false);
   const [backupFileInfo, setBackupFileInfo] = useState<any | null>(null);
@@ -5226,6 +5237,91 @@ const App = () => {
                 <div style={{ marginTop: '10px', fontSize: '0.78rem', color: '#64748b', lineHeight: '1.5', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span><strong>Lưu ý CSDL:</strong> Nếu để trống, hệ thống dùng bộ nhớ cục bộ (LocalStorage).</span>
                   <span><strong>Lưu ý Google Auth:</strong> Vui lòng cấu hình URL Redirect trong Supabase Bảng điều khiển là <code>{window.location.origin}</code> để đăng nhập Google OAuth hoạt động chính xác.</span>
+                </div>
+              </div>
+
+              {/* ─── Phần 2.2: Gemini API Key dùng chung cho mọi chức năng AI ─── */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(124,58,237,0.06), rgba(124,58,237,0.02))',
+                border: '1.5px solid rgba(124,58,237,0.2)',
+                borderRadius: '12px',
+                padding: '16px 18px',
+                marginTop: '12px'
+              }}>
+                <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>
+                  🤖 Mã Google Gemini API Key (dùng chung cho mọi chức năng AI)
+                </div>
+                <div className="form-group">
+                  <label>Gemini API Key</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type={showGeminiKey ? 'text' : 'password'}
+                      value={geminiKeyInput}
+                      onChange={(e) => { setGeminiKeyInput(e.target.value); setGeminiKeyStatus(''); }}
+                      placeholder="Dán mã API Key (bắt đầu bằng AIza...)"
+                      autoComplete="off"
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setShowGeminiKey(v => !v)}
+                      style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+                    >
+                      {showGeminiKey ? 'Ẩn' : 'Hiện'}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ fontSize: '0.8rem', padding: '7px 14px' }}
+                    onClick={() => {
+                      setGeminiApiKey(geminiKeyInput);
+                      setGeminiKeyStatus(geminiKeyInput.trim() ? '✓ Đã lưu và đồng bộ API Key cho tài khoản.' : '✓ Đã xóa API Key.');
+                    }}
+                  >
+                    💾 Lưu API Key
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.8rem', padding: '7px 14px' }}
+                    disabled={isTestingGeminiKey || !geminiKeyInput.trim()}
+                    onClick={async () => {
+                      setIsTestingGeminiKey(true);
+                      setGeminiKeyStatus('Đang kiểm tra kết nối...');
+                      try {
+                        const key = geminiKeyInput.trim();
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(key)}`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ contents: [{ parts: [{ text: 'Xin chào' }] }] })
+                        });
+                        const data = await res.json();
+                        if (res.ok && data?.candidates?.length) {
+                          setGeminiKeyStatus('✓ Kết nối thành công! Bấm "Lưu API Key" để áp dụng.');
+                        } else {
+                          setGeminiKeyStatus(`⚠️ Key không hợp lệ: ${data?.error?.message || res.status}`);
+                        }
+                      } catch (err: any) {
+                        setGeminiKeyStatus(`⚠️ Lỗi kết nối: ${err?.message || err}`);
+                      } finally {
+                        setIsTestingGeminiKey(false);
+                      }
+                    }}
+                  >
+                    {isTestingGeminiKey ? 'Đang kiểm tra...' : '🔌 Kiểm tra Key'}
+                  </button>
+                </div>
+                {geminiKeyStatus && (
+                  <div style={{ marginTop: '8px', fontSize: '0.8rem', color: geminiKeyStatus.startsWith('✓') ? '#059669' : geminiKeyStatus.startsWith('⚠️') ? '#dc2626' : '#64748b' }}>
+                    {geminiKeyStatus}
+                  </div>
+                )}
+                <div style={{ marginTop: '10px', fontSize: '0.78rem', color: '#64748b', lineHeight: '1.5' }}>
+                  Lấy mã miễn phí tại <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: 600 }}>Google AI Studio</a>. Mã được dùng cho khung chat Trợ lý AI, trợ lý ảo, soạn văn bản... và tự đồng bộ sang các máy khác khi đăng nhập cùng tài khoản.
                 </div>
               </div>
 
