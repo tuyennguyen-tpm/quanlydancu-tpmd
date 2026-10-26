@@ -778,8 +778,10 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     setResidentSearch(res ? res.full_name : '');
     
     const inheritedGroup = getMemberPartyGroup(m);
+    const currentGender = m.gender || getMemberGender(m) || 'male';
     setForm({
       ...m,
+      gender: currentGender,
       party_group: m.party_group || (inheritedGroup !== 'Chưa phân tổ' ? inheritedGroup : '')
     });
     setShowModal(true);
@@ -798,17 +800,25 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     }
     try {
       let rId = form.resident_id || null;
+      let matchedResident: Resident | undefined = undefined;
+      if (rId) {
+        matchedResident = residents.find(r => r.id === rId);
+      }
       if (!rId) {
         const cleanFormName = form.full_name!.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim();
         const matchedRes = residents.find(r => r.full_name.toLowerCase().normalize('NFC').replace(/\s+/g, ' ').trim() === cleanFormName);
         if (matchedRes) {
           rId = matchedRes.id;
+          matchedResident = matchedRes;
         }
       }
+
+      const memberGender = form.gender || 'male';
 
       const payload: Omit<PartyMember, 'created_at'> & { created_at?: string } = {
         id: editing?.id || generateUUID(),
         full_name: form.full_name!.trim(),
+        gender: memberGender,
         party_code: form.party_code || '',
         join_date: form.join_date || undefined,
         probation_date: form.probation_date || undefined,
@@ -824,6 +834,16 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
         created_at: editing?.created_at,
       };
       await partyDb.savePartyMember(payload);
+
+      // Nếu đảng viên có liên kết với nhân khẩu, đồng bộ giới tính sang bản ghi nhân khẩu
+      if (matchedResident && matchedResident.gender !== memberGender) {
+        try {
+          await db.saveResident({ ...matchedResident, gender: memberGender });
+        } catch (syncErr) {
+          console.warn('Sync gender to resident error:', syncErr);
+        }
+      }
+
       showToast(editing ? 'Đã cập nhật đảng viên!' : 'Đã thêm đảng viên mới!', 'success');
       setShowModal(false);
       load();
@@ -1568,13 +1588,17 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
     if (m?.gender) return m.gender;
     if (!m) return 'male';
     const mName = m.full_name ? m.full_name.trim().toLowerCase() : '';
-    if (!m.resident_id && !mName) return 'male';
 
     const res = residents.find(r => 
       (m.resident_id && r.id === m.resident_id) || 
       (mName && r.full_name && r.full_name.trim().toLowerCase() === mName)
     );
-    return res?.gender || 'male';
+    if (res?.gender) return res.gender;
+
+    // Tự động nhận diện cho tên nữ giới Việt Nam (có chữ lót "Thị")
+    if (/\bthị\b/i.test(mName)) return 'female';
+
+    return 'male';
   }, [residents]);
 
   const uniquePartyGroups = useMemo(() => {
@@ -2205,7 +2229,7 @@ const MembersTab: React.FC<{ isGuest: boolean }> = ({ isGuest }) => {
                         key={r.id}
                         style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '0.82rem', color: '#1e293b', borderBottom: '1px solid #f1f5f9' }}
                         onMouseDown={() => {
-                          setForm(f => ({ ...f, resident_id: r.id, full_name: r.full_name }));
+                          setForm(f => ({ ...f, resident_id: r.id, full_name: r.full_name, gender: (r.gender as any) || f.gender || 'male' }));
                           setResidentSearch(r.full_name);
                           setShowResidentDrop(false);
                         }}

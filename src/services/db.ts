@@ -3457,11 +3457,13 @@ export const partyDb = {
           created_at: full.created_at || new Date().toISOString(),
         };
         if (full.party_group) safePayload.party_group = full.party_group;
+        if (full.gender) safePayload.gender = full.gender;
 
         const { error } = await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
         if (error) {
-          if (error.code === '42703' && safePayload.party_group) {
+          if (error.code === '42703') {
             delete safePayload.party_group;
+            delete safePayload.gender;
             await supabase.from('party_members').upsert(safePayload).select().maybeSingle();
           } else {
             console.warn('Supabase savePartyMember fallback note:', error.message);
@@ -3508,6 +3510,7 @@ export const partyDb = {
             created_at: full.created_at || new Date().toISOString(),
           };
           if (full.party_group) p.party_group = full.party_group;
+          if (full.gender) p.gender = full.gender;
           return p;
         });
 
@@ -3515,7 +3518,7 @@ export const partyDb = {
           const chunk = safePayloads.slice(i, i + 100);
           const { error } = await supabase.from('party_members').upsert(chunk);
           if (error && error.code === '42703') {
-            const strippedChunk = chunk.map(({ party_group, ...rest }: any) => rest);
+            const strippedChunk = chunk.map(({ party_group, gender, ...rest }: any) => rest);
             await supabase.from('party_members').upsert(strippedChunk);
           }
         }
