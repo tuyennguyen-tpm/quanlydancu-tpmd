@@ -342,43 +342,39 @@ export function clearAssistantMemories(): void {
 }
 
 /**
- * Gọi dịch vụ Cloud AI miễn phí không cần API Key để đảm bảo trợ lý luôn trả lời thông minh 100% mọi câu hỏi
+ * Gọi dịch vụ Cloud AI miễn phí không cần API Key để đảm bảo trợ lý luôn trả lời thông minh 100% mọi câu hỏi.
+ * Sử dụng phương thức GET (nhanh hơn POST, không bị giới hạn 30s/lần như POST endpoint).
  */
 export async function askFreeCloudAI(prompt: string, systemInstruction?: string): Promise<string> {
   try {
-    const messages: { role: string; content: string }[] = [];
-    if (systemInstruction) {
-      messages.push({ role: 'system', content: systemInstruction });
-    }
-    messages.push({ role: 'user', content: prompt });
-
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     lastFreeCloudError = '';
-    const response = await fetch('https://text.pollinations.ai/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages,
-        model: 'openai',
-        seed: Math.floor(Math.random() * 100000)
-      }),
-      signal: controller.signal
-    });
+
+    // Ghép system instruction vào prompt nếu có (để AI hiểu ngữ cảnh)
+    const fullPrompt = systemInstruction
+      ? `${systemInstruction}\n\nNgười dùng hỏi: ${prompt}`
+      : prompt;
+
+    // Dùng GET - nhanh hơn và ổn định hơn POST (tránh giới hạn 1 req/30s)
+    const url = 'https://text.pollinations.ai/' + encodeURIComponent(fullPrompt.slice(0, 2000));
+    const response = await fetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
 
     if (response.ok) {
       const text = await response.text();
-      return text.trim();
+      if (text && text.trim()) return text.trim();
+      lastFreeCloudError = 'Máy chủ AI miễn phí không trả về nội dung.';
+      return '';
     }
     lastFreeCloudError = (response.status === 402 || response.status === 429)
-      ? 'Máy chủ AI miễn phí giới hạn lượt hỏi. Vui lòng nhập Gemini API Key trong Cài đặt để trả lời tức thì không giới hạn.'
-      : `Máy chủ AI miễn phí phản hồi chậm hoặc lỗi (${response.status}).`;
+      ? 'Máy chủ AI miễn phí đang bận. Vui lòng đợi 30 giây rồi hỏi lại, hoặc nhập Gemini API Key trong Cài đặt để không bị giới hạn.'
+      : `Máy chủ AI miễn phí lỗi (${response.status}).`;
   } catch (e: any) {
     console.warn('[Free Cloud AI Error]:', e);
     lastFreeCloudError = e?.name === 'AbortError'
-      ? 'Máy chủ AI miễn phí phản hồi quá lâu (hết thời gian chờ 8s).'
+      ? 'Máy chủ AI miễn phí phản hồi quá lâu (hết thời gian chờ 25s). Vui lòng thử lại.'
       : `Không kết nối được máy chủ AI miễn phí: ${e?.message || e}`;
   }
   return '';
