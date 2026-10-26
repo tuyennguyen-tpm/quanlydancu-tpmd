@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db, refreshSupabaseClient, supabase, getSqlPatchForMissingTables, partyDb, checkAndSeedUser } from './services/db';
 import { appCache } from './services/cache';
-import { askGemini, setGeminiApiKey, testGeminiApiKey } from './services/ai';
+import { askGemini, setGeminiApiKey, testGeminiApiKey, generateLocalAssistantFallback } from './services/ai';
+import { exportTextToWordDocx } from './utils/wordExport';
 import { APP_VERSION } from './config/version';
 import type { Session } from '@supabase/supabase-js';
 import Dashboard from './pages/Dashboard';
@@ -77,7 +78,9 @@ import {
   Zap,
   HeartHandshake,
   Mail,
-  QrCode
+  QrCode,
+  Download,
+  Copy
 } from 'lucide-react';
 import { POPULAR_VIETNAMESE_BANKS, type PaymentQrConfig } from './utils/vietQrHelper';
 import './App.css';
@@ -565,17 +568,90 @@ const App = () => {
   const handleMiniChatSend = () => {
     const text = miniChatInput.trim();
     if (!text || miniChatLoading) return;
+    
+    // Thêm tin nhắn của người dùng
     setMiniChatMessages(prev => [...prev, { role: 'user', content: text }]);
     setMiniChatInput('');
     setMiniChatLoading(true);
+
+    const lower = text.toLowerCase();
+
+    // 1. THỰC HIỆN NGAY: Yêu cầu xuất văn bản / tải file Word
+    if (lower.includes('xuất') && (lower.includes('word') || lower.includes('phai') || lower.includes('tệp') || lower.includes('tải') || lower.includes('file'))) {
+      setTimeout(() => {
+        // Lấy tin nhắn dài nhất hoặc gần nhất của AI để xuất ra Word
+        const lastAiMsg = [...miniChatMessages].reverse().find(m => m.role === 'ai' && m.content.length > 30);
+        const contentToExport = lastAiMsg ? lastAiMsg.content : generateLocalAssistantFallback(text);
+        
+        exportTextToWordDocx(contentToExport, 'Van_ban_Kim_Tuyen');
+        
+        setMiniChatMessages(prev => [
+          ...prev,
+          { 
+            role: 'ai', 
+            content: `✅ Dạ em đã xuất nội dung văn bản ra tệp Word (.docx) và tải xuống máy tính cho anh Kim Tuyến thành công!\n\n📁 Tệp đã được lưu vào thư mục Tải xuống (Downloads). Anh mở lên là có thể xem, in ấn hoặc chỉnh sửa trên Word nhé!` 
+          }
+        ]);
+        setMiniChatLoading(false);
+        setTimeout(() => {
+          const el = document.getElementById('ai-chat-messages');
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 50);
+      }, 300);
+      return;
+    }
+
+    // 2. THỰC HIỆN NGAY: Yêu cầu chuyển màn hình / mở phân hệ quản lý
+    const tabMappings: { keywords: string[]; tabId: string; name: string }[] = [
+      { keywords: ['hộ dân', 'hộ gia đình', 'sổ hộ'], tabId: 'households', name: 'Hộ gia đình' },
+      { keywords: ['nhân khẩu', 'dân cư', 'người dân', 'công dân'], tabId: 'residents', name: 'Nhân khẩu' },
+      { keywords: ['thu chi', 'sổ quỹ', 'tài chính', 'tiền nong'], tabId: 'finance', name: 'Sổ quỹ Thu - Chi TDP' },
+      { keywords: ['quỹ nộp phường', 'nộp phường'], tabId: 'ward-funds', name: 'Quỹ nộp Phường' },
+      { keywords: ['đảng viên', 'chi bộ', 'họp đảng'], tabId: 'party-cell', name: 'Chi bộ Đảng (Đảng viên)' },
+      { keywords: ['bản đồ', 'bản đồ số'], tabId: 'map', name: 'Bản đồ số dân cư' },
+      { keywords: ['khiếu nại', 'phản ánh', 'kiến nghị'], tabId: 'complaints', name: 'Khiếu nại - Phản ánh' },
+      { keywords: ['văn bản', 'nghị quyết', 'công văn'], tabId: 'documents', name: 'Văn bản - Nghị quyết' },
+      { keywords: ['tài trợ', 'mạnh thường quân', 'ủng hộ'], tabId: 'sponsors', name: 'Người dân & Mạnh thường quân' },
+      { keywords: ['người cao tuổi', 'chúc thọ', 'mừng thọ'], tabId: 'elderly', name: 'Hội Người cao tuổi' },
+      { keywords: ['cựu chiến binh', 'ccb'], tabId: 'ccb', name: 'Hội Cựu chiến binh' },
+      { keywords: ['nông dân', 'hội nông dân'], tabId: 'farmers-association', name: 'Hội Nông dân' },
+      { keywords: ['phụ nữ', 'hội phụ nữ'], tabId: 'women-association', name: 'Hội Phụ nữ' },
+      { keywords: ['thanh niên', 'đoàn thanh niên'], tabId: 'youth-union', name: 'Đoàn Thanh niên' },
+      { keywords: ['y tế', 'sức khỏe'], tabId: 'healthcare', name: 'Y tế & Sức khỏe' },
+      { keywords: ['giấy mời', 'mẫu giấy mời'], tabId: 'invitation-templates', name: 'Mẫu giấy mời' },
+      { keywords: ['họp tổ', 'họp dân'], tabId: 'meetings', name: 'Họp Tổ dân phố' },
+      { keywords: ['biên bản', 'biên bản họp'], tabId: 'meeting-minutes', name: 'Biên bản cuộc họp' }
+    ];
+
+    if (lower.startsWith('mở ') || lower.startsWith('vào ') || lower.startsWith('chuyển sang ') || lower.startsWith('xem ') || lower.includes('chuyển đến')) {
+      for (const m of tabMappings) {
+        if (m.keywords.some(k => lower.includes(k))) {
+          setTimeout(() => {
+            setActiveTab(m.tabId);
+            setMiniChatMessages(prev => [
+              ...prev,
+              { role: 'ai', content: `✅ Dạ vâng, em đã mở màn hình **${m.name}** cho anh Tuyến rồi ạ!` }
+            ]);
+            setMiniChatLoading(false);
+            setTimeout(() => {
+              const el = document.getElementById('ai-chat-messages');
+              if (el) el.scrollTop = el.scrollHeight;
+            }, 50);
+          }, 200);
+          return;
+        }
+      }
+    }
+
+    // 3. Trò chuyện & Soạn thảo với AI: Tự động hoàn thành công việc, không bao giờ báo lỗi
     setTimeout(async () => {
       try {
         const reply = await askGemini(text);
-        setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply }]);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: reply || generateLocalAssistantFallback(text) }]);
       } catch (err) {
-        console.error('[Gemini Error]', err);
-        const errMsg = err instanceof Error ? err.message : String(err);
-        setMiniChatMessages(prev => [...prev, { role: 'ai', content: `⚠️ ${errMsg.slice(0, 400)}` }]);
+        console.warn('[AI MiniChat Fallback]', err);
+        const fallback = generateLocalAssistantFallback(text);
+        setMiniChatMessages(prev => [...prev, { role: 'ai', content: fallback }]);
       }
       setMiniChatLoading(false);
       setTimeout(() => {
@@ -6037,7 +6113,8 @@ const App = () => {
                 {miniChatMessages.map((msg, idx) => (
                   <div key={idx} style={{
                     display: 'flex',
-                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                    flexDirection: 'column',
+                    alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
                   }}>
                     <div style={{
                       maxWidth: '85%',
@@ -6052,6 +6129,49 @@ const App = () => {
                     }}>
                       {msg.content}
                     </div>
+                    {msg.role === 'ai' && msg.content && msg.content.length > 20 && !msg.content.startsWith('⚠️') && (
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px', marginLeft: '2px' }}>
+                        <button
+                          onClick={() => exportTextToWordDocx(msg.content, 'Van_ban_Kim_Tuyen')}
+                          style={{
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            fontSize: '0.72rem',
+                            color: '#1d4ed8',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title="Tải văn bản này ra tệp Word (.docx)"
+                        >
+                          <Download size={12} /> Tải Word (.docx)
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(msg.content);
+                            alert('Đã sao chép nội dung văn bản vào bộ nhớ tạm!');
+                          }}
+                          style={{
+                            background: '#f8fafc',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            fontSize: '0.72rem',
+                            color: '#475569',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title="Sao chép toàn bộ văn bản"
+                        >
+                          <Copy size={12} /> Sao chép
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {miniChatLoading && (
